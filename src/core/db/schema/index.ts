@@ -2,3 +2,4 @@
 // 业务的表放在 src/features/*/schema.ts，由 drizzle.config.ts 一并收录生成迁移。
 export * from "./auth";
 export * from "./credits";
+export * from "./billing";

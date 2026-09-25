@@ -31,3 +31,8 @@ export function createDbClient(url: string): DbClient {
   const pool = new PgPool({ connectionString: url });
   return { db: drizzlePg({ client: pool, schema }), close: () => pool.end() };
 }
+
+/** db.transaction() 回调拿到的事务对象；需要参与调用方事务的函数接收它。 */
+export type DbTransaction = Parameters<
+  Parameters<Database["transaction"]>[0]
+>[0];

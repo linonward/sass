@@ -131,16 +131,58 @@ export const billingSchema = z.strictObject({
     .default("USD"),
   plans: z
     .array(
-      z.strictObject({
-        // 名称和描述在 Landing.pricing.plans.<id>。
-        id: messageKeySchema,
-        // 以主币单位计的展示价格，例如 19 表示 $19。
-        price: z.number().nonnegative(),
-        interval: z.enum(["month", "year", "once"]),
-        // 每项文案在 Landing.pricing.features.<key>。
-        features: z.array(messageKeySchema).min(1),
-        highlighted: z.boolean().default(false),
-      }),
+      z
+        .strictObject({
+          // 名称和描述在 Landing.pricing.plans.<id>。
+          id: messageKeySchema,
+          // 以主币单位计的展示价格，例如 19 表示 $19。
+          price: z.number().nonnegative(),
+          interval: z.enum(["month", "year", "once"]),
+          // 每项文案在 Landing.pricing.features.<key>。
+          features: z.array(messageKeySchema).min(1),
+          highlighted: z.boolean().default(false),
+          // —— 交易字段（T301）——
+          // 省略时按 interval 推导：once → one_time，month / year → subscription。
+          type: z.enum(["subscription", "one_time"]).optional(),
+          // 支付服务商的产品 ID。免费套餐（price 为 0）不能填，付费套餐必填。
+          providerProductId: z.string().trim().min(1).optional(),
+          // 购买（一次性）或每个计费周期（订阅）发放的积分。免费套餐的积分何时发放由业务决定，
+          // billing 只处理付费事件。
+          credits: z.number().int().nonnegative().default(0),
+        })
+        .superRefine((plan, ctx) => {
+          const expected =
+            plan.interval === "once" ? "one_time" : "subscription";
+          if (plan.type && plan.type !== expected) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["interval"],
+              message:
+                plan.type === "one_time"
+                  ? 'must be "once" for one_time plans'
+                  : 'must be "month" or "year" for subscription plans',
+            });
+          }
+          if (plan.price === 0 && plan.providerProductId) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["providerProductId"],
+              message: "must be omitted for free plans (price 0)",
+            });
+          }
+          if (plan.price > 0 && !plan.providerProductId) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["providerProductId"],
+              message: "is required for paid plans",
+            });
+          }
+        })
+        .transform((plan) => ({
+          ...plan,
+          type: (plan.interval === "once" ? "one_time" : "subscription") as
+            "one_time" | "subscription",
+        })),
     )
     .refine((plans) => unique(plans.map((p) => p.id)), {
       message: "ids must not contain duplicates",

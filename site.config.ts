@@ -78,6 +78,7 @@ export default defineConfig({
         price: 0,
         interval: "month",
         features: ["credits100", "coreFeatures", "communitySupport"],
+        credits: 100,
       },
       {
         id: "pro",
@@ -85,12 +86,17 @@ export default defineConfig({
         interval: "month",
         features: ["credits2000", "coreFeatures", "prioritySupport"],
         highlighted: true,
+        // 占位值，接入支付服务商时（T303）换成真实的产品 ID。
+        providerProductId: "prod_placeholder_pro",
+        credits: 2000,
       },
       {
         id: "lifetime",
         price: 199,
         interval: "once",
         features: ["credits2000", "coreFeatures", "lifetimeUpdates"],
+        providerProductId: "prod_placeholder_lifetime",
+        credits: 2000,
       },
     ],
   },
