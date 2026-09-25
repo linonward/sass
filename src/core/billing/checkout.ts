@@ -9,8 +9,8 @@ import { localizedPath } from "@/core/seo/urls";
 import { getPlan } from "./plans";
 import type { PaymentProvider } from "./provider";
 
-/** 结账成功后回到的页面（不含语言前缀）。T304 会在这里读 `checkout=success` 显示处理中。 */
-export const CHECKOUT_SUCCESS_PATH = "/dashboard";
+/** 结账成功后回到的页面（不含语言前缀）。页面按服务商附带的订单或订阅 ID 轮询状态。 */
+export const CHECKOUT_SUCCESS_PATH = "/billing/success";
 /** 用户放弃结账时回到的定价区块。Creem 没有取消地址参数，仅供其他服务商使用。 */
 export const CHECKOUT_CANCEL_PATH = "/#pricing";
 
@@ -114,7 +114,7 @@ export async function startCheckout({
     userId: user.id,
     planId: plan.id,
     customerEmail: user.email,
-    successUrl: `${origin}${localizedPath(lang, CHECKOUT_SUCCESS_PATH)}?checkout=success`,
+    successUrl: `${origin}${localizedPath(lang, CHECKOUT_SUCCESS_PATH)}`,
     cancelUrl: `${origin}${localizedPath(lang, "/")}#pricing`,
   });
   return { ok: true, url: checkout.url };

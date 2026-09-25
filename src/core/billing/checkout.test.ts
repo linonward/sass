@@ -119,7 +119,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
         userId,
         planId: "pro",
         customerEmail: "buyer@example.com",
-        successUrl: "https://sass.test/dashboard?checkout=success",
+        successUrl: "https://sass.test/billing/success",
         cancelUrl: "https://sass.test/#pricing",
       },
     ]);
@@ -129,8 +129,8 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     await checkout("pro", { locale: "de" });
     await checkout("lifetime", { locale: "xx" });
     expect(fake.checkouts.map((c) => c.successUrl)).toEqual([
-      "https://sass.test/de/dashboard?checkout=success",
-      "https://sass.test/dashboard?checkout=success",
+      "https://sass.test/de/billing/success",
+      "https://sass.test/billing/success",
     ]);
     expect(fake.checkouts[0].cancelUrl).toBe("https://sass.test/de#pricing");
   });

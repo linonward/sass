@@ -6,5 +6,6 @@ import { legalPages } from "@/core/legal/pages";
  */
 export const marketingRoutes: readonly string[] = [
   "/",
+  "/pricing",
   ...Object.values(legalPages),
 ];

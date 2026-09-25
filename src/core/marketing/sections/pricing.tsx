@@ -1,18 +1,24 @@
 import { CheckIcon } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 
+import { PlanButton } from "@/core/billing/ui/plan-button";
 import type { Plan } from "@/core/config/schema";
 import { cn } from "@/core/lib/utils";
-import { Button } from "@/core/ui/button";
 
 import { Section, SectionHeading } from "./section";
 
 export function Pricing({
   plans,
   currency,
+  owned = {},
+  headingLevel = 2,
 }: {
   plans: Plan[];
   currency: string;
+  /** 当前用户已拥有的套餐（仅 /pricing 传入；落地页是静态页面，不区分用户）。 */
+  owned?: Record<string, "subscribed" | "purchased">;
+  /** /pricing 页面把区块标题作为页面的 h1。 */
+  headingLevel?: 1 | 2;
 }) {
   const t = useTranslations("Landing.pricing");
   const format = useFormatter();
@@ -24,7 +30,11 @@ export function Pricing({
 
   return (
     <Section id="pricing">
-      <SectionHeading title={t("title")} subtitle={t("subtitle")} />
+      <SectionHeading
+        title={t("title")}
+        subtitle={t("subtitle")}
+        level={headingLevel}
+      />
       <ul
         className={cn(
           "mx-auto grid max-w-5xl gap-6",
@@ -73,15 +83,13 @@ export function Pricing({
                 </li>
               ))}
             </ul>
-            {/* 仅展示；T304 接入结账。 */}
-            <Button
-              type="button"
-              size="lg"
-              variant={p.highlighted ? "default" : "outline"}
-              className="mt-8 w-full"
-            >
-              {t("cta", { plan: plan(p.id, "name") })}
-            </Button>
+            <PlanButton
+              planId={p.id}
+              label={t("cta", { plan: plan(p.id, "name") })}
+              free={p.price === 0}
+              highlighted={p.highlighted}
+              owned={owned[p.id]}
+            />
           </li>
         ))}
       </ul>

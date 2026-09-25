@@ -25,15 +25,19 @@ export function Section({
 export function SectionHeading({
   title,
   subtitle,
+  level = 2,
 }: {
   title: string;
   subtitle?: string;
+  /** 区块单独成页时（例如 /pricing）用作页面的 h1。 */
+  level?: 1 | 2;
 }) {
+  const Heading = level === 1 ? "h1" : "h2";
   return (
     <div className="mx-auto mb-12 max-w-2xl text-center">
-      <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+      <Heading className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
         {title}
-      </h2>
+      </Heading>
       {subtitle && (
         <p className="text-muted-foreground mt-4 text-lg text-pretty">
           {subtitle}

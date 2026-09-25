@@ -43,6 +43,26 @@ exports[`sitemap > 营销路由 × 语言，带 hreflang 1`] = `
   {
     "alternates": {
       "languages": {
+        "de": "https://sass.linonward.com/de/pricing",
+        "en": "https://sass.linonward.com/pricing",
+        "x-default": "https://sass.linonward.com/pricing",
+      },
+    },
+    "url": "https://sass.linonward.com/pricing",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://sass.linonward.com/de/pricing",
+        "en": "https://sass.linonward.com/pricing",
+        "x-default": "https://sass.linonward.com/pricing",
+      },
+    },
+    "url": "https://sass.linonward.com/de/pricing",
+  },
+  {
+    "alternates": {
+      "languages": {
         "de": "https://sass.linonward.com/de/privacy",
         "en": "https://sass.linonward.com/privacy",
         "x-default": "https://sass.linonward.com/privacy",

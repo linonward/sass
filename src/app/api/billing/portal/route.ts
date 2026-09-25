@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     userId: session.user.id,
   });
   return result.ok
-    ? Response.redirect(result.url, 303)
+    ? // 服务商可能返回站内相对地址（fake），补全成绝对地址。
+      Response.redirect(new URL(result.url, request.url), 303)
     : Response.json({ error: result.error }, { status: result.status });
 }
