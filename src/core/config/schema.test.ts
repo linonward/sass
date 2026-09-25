@@ -21,6 +21,14 @@ const valid: SiteConfigInput = {
     fromAddress: "noreply@example.com",
     replyTo: "support@example.com",
   },
+  auth: {
+    emailOtp: {
+      length: 6,
+      expiresIn: 300,
+      allowedAttempts: 3,
+      resendCooldown: 60,
+    },
+  },
 };
 
 describe("defineConfig", () => {
@@ -134,5 +142,27 @@ describe("email", () => {
     expect(() => defineConfig({ ...valid, email } as SiteConfigInput)).toThrow(
       `- ${path}: `,
     );
+  });
+});
+
+describe("auth", () => {
+  test.each([
+    ["auth.emailOtp.length", { length: 3 }],
+    ["auth.emailOtp.expiresIn", { expiresIn: 0 }],
+    ["auth.emailOtp.allowedAttempts", { allowedAttempts: 1.5 }],
+    ["auth.emailOtp.resendCooldown", { resendCooldown: -1 }],
+  ])("非法字段 %s 出现在报错中", (path, patch) => {
+    expect(() =>
+      defineConfig({
+        ...valid,
+        auth: { emailOtp: { ...valid.auth.emailOtp, ...patch } },
+      }),
+    ).toThrow(`- ${path}: `);
+  });
+
+  test("缺少 auth 时报错", () => {
+    const rest: Partial<SiteConfigInput> = { ...valid };
+    delete rest.auth;
+    expect(() => defineConfig(rest as SiteConfigInput)).toThrow("- auth: ");
   });
 });

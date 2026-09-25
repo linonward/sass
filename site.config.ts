@@ -100,4 +100,13 @@ export default defineConfig({
     fromAddress: "noreply@sass.linonward.com",
     replyTo: "support@example.com",
   },
+  // 邮箱验证码登录的参数（见 docs/plan.md 关键决策 7）。
+  auth: {
+    emailOtp: {
+      length: 6,
+      expiresIn: 300,
+      allowedAttempts: 3,
+      resendCooldown: 60,
+    },
+  },
 });

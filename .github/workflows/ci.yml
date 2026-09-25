@@ -30,6 +30,8 @@ jobs:
       DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/postgres
       # 生产构建默认用 Resend 发信并要求 RESEND_API_KEY；CI 改为写文件，e2e 从 .tmp/emails/ 读取。
       EMAIL_TRANSPORT: file
+      # 仅供 CI 使用的固定值；生产环境在 Vercel 上单独设置。
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production
     steps:
       - uses: actions/checkout@v7
 

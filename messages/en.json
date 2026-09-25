@@ -163,5 +163,43 @@
       "cta": "Get started",
       "signoff": "The {site} team"
     }
+  },
+  "Auth": {
+    "signIn": {
+      "metaTitle": "Sign in",
+      "title": "Sign in to {name}",
+      "subtitle": "New here? Enter your email and we'll create your account.",
+      "google": "Continue with Google",
+      "or": "or",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "sendCode": "Send code",
+      "sending": "Sending…",
+      "codeSent": "We sent a {length}-digit code to {email}. It expires in {minutes} minutes.",
+      "codeLabel": "Verification code",
+      "verify": "Sign in",
+      "verifying": "Signing in…",
+      "resend": "Resend code",
+      "resendIn": "Resend in {seconds}s",
+      "changeEmail": "Use a different email",
+      "legal": "By continuing, you agree to our <terms>Terms</terms> and <privacy>Privacy Policy</privacy>."
+    },
+    "errors": {
+      "invalidEmail": "Enter a valid email address.",
+      "invalidCode": "That code is incorrect or has expired. Try again or request a new one.",
+      "codeExpired": "This code has expired. Request a new one.",
+      "tooManyAttempts": "Too many incorrect attempts. Request a new code.",
+      "cooldown": "Please wait {seconds}s before requesting another code.",
+      "sendFailed": "We couldn't send the email. Please try again later.",
+      "sendFailedGoogle": "We couldn't send the email. Please try again later, or continue with Google.",
+      "rateLimited": "Too many requests. Please wait a moment and try again.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "dashboard": {
+      "metaTitle": "Dashboard",
+      "title": "Dashboard",
+      "signedInAs": "Signed in as {email}"
+    },
+    "signOut": "Sign out"
   }
 }
