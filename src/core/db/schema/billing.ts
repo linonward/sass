@@ -117,6 +117,8 @@ export const orders = pgTable(
   (t) => [
     uniqueIndex("orders_provider_order_idx").on(t.provider, t.providerOrderId),
     index("orders_user_idx").on(t.userId),
+    // 后台指标按时间区间统计收入。
+    index("orders_created_idx").on(t.createdAt),
   ],
 );
 

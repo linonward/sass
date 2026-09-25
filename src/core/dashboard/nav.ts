@@ -23,6 +23,7 @@ export const adminEntryNav: DashboardNavItem = {
 
 /** /admin 里的菜单。 */
 export const adminNav: readonly DashboardNavItem[] = [
+  { key: "adminMetrics", href: "/admin/metrics", icon: "chart" },
   { key: "adminUsers", href: "/admin/users", icon: "users" },
   { key: "adminOrders", href: "/admin/orders", icon: "creditCard" },
   { key: "adminSubscriptions", href: "/admin/subscriptions", icon: "layers" },

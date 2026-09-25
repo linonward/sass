@@ -255,6 +255,7 @@
       "billing": "Billing",
       "playground": "Playground",
       "admin": "Admin",
+      "adminMetrics": "Metrics",
       "adminUsers": "Users",
       "adminOrders": "Orders",
       "adminSubscriptions": "Subscriptions",
@@ -484,6 +485,62 @@
   },
   "Admin": {
     "metaTitle": "Admin",
+    "metrics": {
+      "title": "Metrics",
+      "description": "Sign-ups, revenue, credits and AI usage over the last {days} days (UTC).",
+      "range": {
+        "label": "Time range",
+        "days": "{days} days"
+      },
+      "chart": {
+        "showData": "Show data",
+        "day": "Day",
+        "value": "Value"
+      },
+      "users": {
+        "title": "Users",
+        "new": "New sign-ups",
+        "total": "Total users",
+        "banned": "Suspended",
+        "daily": "Sign-ups per day"
+      },
+      "revenue": {
+        "title": "Revenue",
+        "description": "Net of refunds, from orders created in this period. MRR and subscriptions are current.",
+        "net": "Net revenue",
+        "mrr": "MRR",
+        "mrrHint": "Active subscriptions at list price; yearly ÷ 12",
+        "unpriced": "{count, plural, one {# subscription} other {# subscriptions}} on a plan no longer in site.config.ts, not counted",
+        "activeSubscriptions": "Active subscriptions",
+        "payingUsers": "Paying customers",
+        "daily": "Net revenue per day ({currency})"
+      },
+      "credits": {
+        "title": "Credits",
+        "granted": "Granted",
+        "consumed": "Spent",
+        "refunded": "Refunded"
+      },
+      "ai": {
+        "title": "AI",
+        "description": "Failure rate counts failed calls out of finished ones; calls still running are left out.",
+        "calls": "Calls",
+        "failureRate": "Failure rate",
+        "empty": "No AI calls in this period.",
+        "columns": {
+          "kind": "Type",
+          "model": "Model",
+          "calls": "Calls",
+          "failed": "Failed",
+          "failureRate": "Failure rate"
+        },
+        "kind": {
+          "text": "Chat",
+          "image": "Image",
+          "video": "Video"
+        }
+      }
+    },
     "users": {
       "title": "Users",
       "description": "Search accounts, check their credits and billing, and suspend abuse.",

@@ -43,7 +43,7 @@
 | T601                   | logger         | `feat/logger`         | 阶段 1–5         | todo      |
 | T602                   | sentry         | `feat/sentry`         | T601             | todo      |
 | T603                   | web-analytics  | `feat/web-analytics`  | T601             | todo      |
-| T604                   | admin-metrics  | `feat/admin-metrics`  | T502             | todo      |
+| T604                   | admin-metrics  | `feat/admin-metrics`  | T502             | done      |
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
 

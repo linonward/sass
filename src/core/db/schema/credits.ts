@@ -70,6 +70,8 @@ export const creditTransactions = pgTable(
       table.userId,
       table.createdAt,
     ),
+    // 后台指标按时间区间统计积分。
+    index("credit_transactions_created_idx").on(table.createdAt),
     check(
       "credit_transactions_type_valid",
       sql`${table.type} in ('grant', 'deduct', 'refund', 'adjust')`,
