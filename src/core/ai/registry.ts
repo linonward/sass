@@ -1,3 +1,4 @@
+import { createAlibaba } from "@ai-sdk/alibaba";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -8,14 +9,19 @@ import type { AiModel, AiProvider } from "@/core/config/schema";
 import { aiProviderKeys } from "./env";
 
 type ProviderKeys = Partial<
-  Record<(typeof aiProviderKeys)[AiProvider], string | undefined>
+  Record<
+    (typeof aiProviderKeys)[AiProvider] | "ALIBABA_BASE_URL",
+    string | undefined
+  >
 >;
 
 const factories = {
   openai: (apiKey: string) => createOpenAI({ apiKey }),
   anthropic: (apiKey: string) => createAnthropic({ apiKey }),
   google: (apiKey: string) => createGoogleGenerativeAI({ apiKey }),
-} satisfies Record<AiProvider, (apiKey: string) => unknown>;
+  alibaba: (apiKey: string, keys: ProviderKeys) =>
+    createAlibaba({ apiKey, baseURL: keys.ALIBABA_BASE_URL }),
+} satisfies Record<AiProvider, (apiKey: string, keys: ProviderKeys) => unknown>;
 
 /** env 里配置了 key 的服务商。 */
 export function enabledProviders(keys: ProviderKeys): AiProvider[] {
@@ -34,7 +40,7 @@ export function createModelResolver(keys: ProviderKeys) {
     Object.fromEntries(
       providers.map((provider) => [
         provider,
-        factories[provider](keys[aiProviderKeys[provider]]!),
+        factories[provider](keys[aiProviderKeys[provider]]!, keys),
       ]),
     ),
   );

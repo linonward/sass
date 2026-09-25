@@ -187,6 +187,15 @@ export default defineConfig({
         creditCost: 1,
         maxOutputTokens: 2048,
       },
+      {
+        id: "deepseek",
+        provider: "alibaba",
+        model: "deepseek-v4-flash",
+        creditCost: 1,
+        maxOutputTokens: 2048,
+        // 百炼上的 deepseek-v4 默认开思考，按次计费时关掉。
+        reasoning: "none",
+      },
     ],
     defaultModel: "fast",
   },

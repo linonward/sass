@@ -28,6 +28,17 @@ describe("aiServerEnv", () => {
     ).not.toThrow();
   });
 
+  test("用到百炼时要求 ALIBABA_API_KEY，ALIBABA_BASE_URL 可选但必须是 URL", () => {
+    const production = { VERCEL_ENV: "production" };
+    expect(check(production, ["alibaba"])).toThrow("- ALIBABA_API_KEY: ");
+    expect(
+      check({ ...production, ALIBABA_API_KEY: "sk-x" }, ["alibaba"]),
+    ).not.toThrow();
+    expect(check({ ALIBABA_BASE_URL: "dashscope" }, ["alibaba"])).toThrow(
+      "- ALIBABA_BASE_URL: ",
+    );
+  });
+
   test("没用到的服务商不要求", () => {
     expect(
       check({ VERCEL_ENV: "production", OPENAI_API_KEY: "sk-x" }, ["openai"]),

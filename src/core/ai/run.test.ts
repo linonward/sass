@@ -87,6 +87,13 @@ const config = aiConfigSchema.parse({
     { id: "fast", provider: "openai", model: "gpt-5-mini", creditCost: 3 },
     { id: "free", provider: "openai", model: "gpt-5-nano", creditCost: 0 },
     {
+      id: "no-think",
+      provider: "openai",
+      model: "gpt-5-mini",
+      creditCost: 0,
+      reasoning: "none",
+    },
+    {
       id: "claude",
       provider: "anthropic",
       model: "claude-sonnet-5",
@@ -308,6 +315,25 @@ describe.skipIf(!url)("runAI", () => {
       status: "succeeded",
     });
     expect(await transactions(userId)).toHaveLength(0);
+  });
+
+  test("模型配置的 reasoning 传给模型，调用方传入的优先", async () => {
+    const userId = await newUser(0);
+    const { runAI, model } = setup();
+    for (const reasoning of [undefined, "high"] as const) {
+      const run = await runAI({
+        userId,
+        modelId: "no-think",
+        prompt: "Hi",
+        reasoning,
+      });
+      if (!run.ok) throw new Error(`unexpected ${run.status}`);
+      await run.settled;
+    }
+    expect(model.doStreamCalls.map((call) => call.reasoning)).toEqual([
+      "none",
+      "high",
+    ]);
   });
 
   test("调用方中止：记为 aborted，积分不退", async () => {

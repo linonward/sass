@@ -20,6 +20,7 @@
     "auth:generate": "SKIP_ENV_VALIDATION=1 auth generate --config src/core/auth/server.ts --output src/core/db/schema/auth.ts --yes && prettier --write src/core/db/schema/auth.ts"
   },
   "dependencies": {
+    "@ai-sdk/alibaba": "^2.0.54",
     "@ai-sdk/anthropic": "^4.0.62",
     "@ai-sdk/google": "^4.0.79",
     "@ai-sdk/openai": "^4.0.74",

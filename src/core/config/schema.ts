@@ -332,7 +332,24 @@ export const uploadConfigSchema = z.strictObject({
   public: z.boolean().default(false),
 });
 
-export const aiProviders = ["openai", "anthropic", "google"] as const;
+export const aiProviders = [
+  "openai",
+  "anthropic",
+  "google",
+  // 阿里云百炼（DashScope）：Qwen，以及百炼上托管的 DeepSeek、Kimi 等模型。
+  "alibaba",
+] as const;
+
+// AI SDK 的 reasoning 调用参数，各服务商映射成自己的思考开关或力度。
+export const aiReasoningLevels = [
+  "provider-default",
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+] as const;
 
 // AI 模型。v1 按次固定扣费（见 docs/plan.md 关键决策 6）。
 export const aiConfigSchema = z
@@ -354,6 +371,9 @@ export const aiConfigSchema = z
           creditCost: z.number().int().nonnegative(),
           // 单次输出的 token 上限。按次计费时建议设置，避免一次调用成本失控。
           maxOutputTokens: z.number().int().positive().optional(),
+          // 思考力度；不填用服务商默认。有的模型默认开思考（如百炼上的 deepseek-v4），
+          // 按次计费时可以设成 "none" 省掉思考的 token。
+          reasoning: z.enum(aiReasoningLevels).optional(),
         }),
       )
       .refine((models) => unique(models.map((m) => m.id)), {

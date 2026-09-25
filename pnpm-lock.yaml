@@ -166,6 +166,9 @@ importers:
 
   .:
     dependencies:
+      '@ai-sdk/alibaba':
+        specifier: ^2.0.54
+        version: 2.0.54(zod@4.6.5)
       '@ai-sdk/anthropic':
         specifier: ^4.0.62
         version: 4.0.62(zod@4.6.5)
@@ -350,6 +353,12 @@ packages:
   '@11ty/gray-matter@3.0.0':
     resolution: {integrity: sha512-mi6KB36DZCpCfCb9XP3NtDDNXe1N0jKtuFj9mTCZNy5H7vTabODyMgFmmOiGIGJKt+i8mJqEb/REtK+JTEzlpQ==}
     engines: {node: '>=11'}
+
+  '@ai-sdk/alibaba@2.0.54':
+    resolution: {integrity: sha512-/ZGlw5j0TxbIrV4GwSn+hI2t+4W2bcQ/fw9Hi+iWqcrkAw2dua6cSoar/q7KUVrvECFKjzybjN0R/O4Xgl57vQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
 
   '@ai-sdk/anthropic@4.0.62':
     resolution: {integrity: sha512-+3jlcfQ5yNlsbfhlWx36iKq6bEPISFz5crDaRsHOq6dWW8a9YkKiWDGahOBwenL++Pg3tqipinwFXoOoF4hAVQ==}
@@ -6313,6 +6322,12 @@ snapshots:
     dependencies:
       js-yaml: 5.4.2
       section-matter: 1.0.0
+
+  '@ai-sdk/alibaba@2.0.54(zod@4.6.5)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.18
+      '@ai-sdk/provider-utils': 5.0.47(zod@4.6.5)
+      zod: 4.6.5
 
   '@ai-sdk/anthropic@4.0.62(zod@4.6.5)':
     dependencies:
