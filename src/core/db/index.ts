@@ -2,7 +2,7 @@ import { env } from "@/core/env";
 
 import { createDbClient, type Database } from "./client";
 
-export type { Database } from "./client";
+export type { Database, DbTransaction } from "./client";
 
 let client: ReturnType<typeof createDbClient> | undefined;
 
