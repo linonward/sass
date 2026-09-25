@@ -1,6 +1,6 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 
-import { getSession } from "@/core/auth/session";
+import { requirePageSession } from "@/core/auth/session";
 import { getBillingOverview } from "@/core/billing/overview";
 import { creditsEnabled, getBalance, listTransactions } from "@/core/credits";
 import { getDb } from "@/core/db";
@@ -37,16 +37,17 @@ export default async function BillingPage({
   const t = await getTranslations({ locale, namespace: "Billing.page" });
   const tp = await getTranslations({ locale, namespace: "Landing.pricing" });
   const format = await getFormatter({ locale });
-  // (app) 的 layout 已确保已登录。
-  const userId = (await getSession())!.user.id;
-  const { subscription, purchasedPlanIds, hasCustomer } =
-    await getBillingOverview({ db: getDb(), userId });
-  const [balance, transactions] = creditsEnabled
-    ? await Promise.all([
-        getBalance(userId),
-        listTransactions(userId, { limit: 20 }),
-      ])
-    : [0, []];
+  const userId = (await requirePageSession(locale)).user.id;
+  // 账单状态、余额和流水互不依赖，并行查询。
+  const [
+    { subscription, purchasedPlanIds, hasCustomer },
+    balance,
+    transactions,
+  ] = await Promise.all([
+    getBillingOverview({ db: getDb(), userId }),
+    creditsEnabled ? getBalance(userId) : 0,
+    creditsEnabled ? listTransactions(userId, { limit: 20 }) : [],
+  ]);
 
   const planName = (id: string | null) =>
     id ? tp(`plans.${id}.name` as "plans.free.name") : "";

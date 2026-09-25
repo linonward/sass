@@ -6,7 +6,7 @@ import {
   LocaleForm,
   NameForm,
 } from "@/core/account/settings-forms";
-import { getSession } from "@/core/auth/session";
+import { requirePageSession } from "@/core/auth/session";
 import { routing } from "@/core/i18n/routing";
 import { buildMetadata } from "@/core/seo/metadata";
 import {
@@ -35,8 +35,7 @@ export default async function SettingsPage({
 }: PageProps<"/[locale]/settings">) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Account" });
-  // (app) 的 layout 已确保已登录。
-  const user = (await getSession())!.user;
+  const { user } = await requirePageSession(locale);
 
   return (
     <div className="flex flex-col gap-6">

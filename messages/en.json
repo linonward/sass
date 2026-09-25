@@ -440,7 +440,6 @@
       "wait": "This usually takes 10–40 seconds.",
       "recent": "Recent",
       "empty": "Images you generate will show up here.",
-      "loading": "Loading…",
       "buyCredits": "Get more credits"
     },
     "video": {
@@ -459,7 +458,6 @@
       "wait": "Usually 1–5 minutes. You can leave this page.",
       "recent": "Recent videos",
       "empty": "Videos you generate will show up here.",
-      "loading": "Loading…",
       "buyCredits": "Get more credits",
       "errors": {
         "video_failed": "A video couldn't be generated. Your credits have been refunded.",

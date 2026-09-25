@@ -5,7 +5,10 @@ import { useId, useState, type ReactNode } from "react";
 
 import { cn } from "@/core/lib/utils";
 
-/** Playground 的标签页。只有一个标签时不显示标签栏。 */
+/**
+ * Playground 的标签页。只有一个标签时不显示标签栏。
+ * 标签第一次打开时才挂载，之后切走只隐藏（保留对话和表单状态）；没打开过的标签不加载视频等资源。
+ */
 export function PlaygroundTabs({
   tabs,
 }: {
@@ -13,6 +16,7 @@ export function PlaygroundTabs({
 }) {
   const t = useTranslations("Playground.tabs");
   const [active, setActive] = useState(tabs[0]!.id);
+  const [opened, setOpened] = useState(() => new Set([tabs[0]!.id]));
   const baseId = useId();
   if (tabs.length === 1) return <>{tabs[0]!.content}</>;
 
@@ -27,7 +31,12 @@ export function PlaygroundTabs({
             id={`${baseId}-${tab.id}-tab`}
             aria-selected={active === tab.id}
             aria-controls={`${baseId}-${tab.id}`}
-            onClick={() => setActive(tab.id)}
+            onClick={() => {
+              setActive(tab.id);
+              setOpened((set) =>
+                set.has(tab.id) ? set : new Set(set).add(tab.id),
+              );
+            }}
             className={cn(
               "rounded-md px-3 py-1 text-sm font-medium transition-colors",
               active === tab.id
@@ -47,7 +56,7 @@ export function PlaygroundTabs({
           aria-labelledby={`${baseId}-${tab.id}-tab`}
           hidden={active !== tab.id}
         >
-          {tab.content}
+          {opened.has(tab.id) ? tab.content : null}
         </div>
       ))}
     </div>

@@ -10,6 +10,7 @@ import {
   type OrderStatus,
   type SubscriptionStatus,
 } from "@/core/db/schema";
+import { runAfterResponse } from "@/core/lib/after-response";
 
 import type { BillingEvent } from "./events";
 import "./hooks";
@@ -54,7 +55,8 @@ export async function handleBillingEvent(
 ): Promise<HandleBillingEventResult> {
   const afterCommit: AfterCommitCallback[] = [];
   const result = await processInTransaction(db, event, afterCommit);
-  await runAfterCommit(afterCommit);
+  // 邮件等提交后的回调放到响应之后，不拖慢 webhook 的回复（服务商有超时和重试）。
+  await runAfterResponse(() => runAfterCommit(afterCommit));
   return result;
 }
 

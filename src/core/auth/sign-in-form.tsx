@@ -70,10 +70,14 @@ export function SignInForm({ callbackURL, googleEnabled, otp }: Props) {
 
   const secondsLeft = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
 
-  // 倒计时：冷却期间每秒刷新一次。
+  // 倒计时：冷却期间每秒刷新一次，到 0 就停。
   useEffect(() => {
     if (cooldownUntil <= Date.now()) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= cooldownUntil) clearInterval(timer);
+    }, 1000);
     return () => clearInterval(timer);
   }, [cooldownUntil]);
 
