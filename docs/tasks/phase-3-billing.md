@@ -23,8 +23,9 @@
   - `subscriptions`
   - `orders`
   - `webhook_events`：`(provider, event_id)` 唯一
-  
+
   这些表只使用通用字段，服务商的原始数据存在 `raw jsonb` 里
+
 - `handleBillingEvent(event)`：在一个事务里完成三件事：幂等检查、更新订阅和订单状态、触发 `onBillingEvent` 钩子
 - 在配置中加入 `billing.plans` 的交易字段：`type`（`subscription` 或 `one_time`）、`interval`、`providerProductId`、`credits`
 - 测试用的 `FakeProvider`

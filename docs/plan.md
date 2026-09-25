@@ -16,25 +16,25 @@
 
 ### v1 做
 
-| 模块 | 选型 |
-|---|---|
-| 框架 | Next.js App Router + TypeScript + pnpm |
-| UI | shadcn/ui + Tailwind，主题色由配置驱动 |
-| 多语言 | next-intl，默认只开 `en`，加语言 = 加一个 `messages/<locale>.json` |
-| 落地页 | Hero / Features / Pricing / FAQ / CTA 区块，内容由配置和文案驱动 |
-| SEO | metadata、sitemap、robots、OG 图、hreflang |
-| 法律页 | 隐私政策、服务条款（Creem 审核需要） |
-| 数据库 | Neon Postgres + Drizzle ORM + drizzle-kit 迁移 |
-| 认证 | Better Auth：Google OAuth + 邮箱验证码（`emailOTP` 插件，Resend 发送）；admin 插件管角色 |
-| 邮件 | Resend + React Email |
-| 支付 | `PaymentProvider` 接口，v1 只实现 Creem |
-| 积分 | Postgres 账本 |
-| AI | Vercel AI SDK |
-| 限流 | Upstash Redis + `@upstash/ratelimit` |
-| 文件 | Cloudflare R2 预签名上传 |
-| 博客 | content-collections + MDX |
-| 后台 | 用户、订单、积分调整 |
-| 部署 | Vercel + Neon |
+| 模块   | 选型                                                                                     |
+| ------ | ---------------------------------------------------------------------------------------- |
+| 框架   | Next.js App Router + TypeScript + pnpm                                                   |
+| UI     | shadcn/ui + Tailwind，主题色由配置驱动                                                   |
+| 多语言 | next-intl，默认只开 `en`，加语言 = 加一个 `messages/<locale>.json`                       |
+| 落地页 | Hero / Features / Pricing / FAQ / CTA 区块，内容由配置和文案驱动                         |
+| SEO    | metadata、sitemap、robots、OG 图、hreflang                                               |
+| 法律页 | 隐私政策、服务条款（Creem 审核需要）                                                     |
+| 数据库 | Neon Postgres + Drizzle ORM + drizzle-kit 迁移                                           |
+| 认证   | Better Auth：Google OAuth + 邮箱验证码（`emailOTP` 插件，Resend 发送）；admin 插件管角色 |
+| 邮件   | Resend + React Email                                                                     |
+| 支付   | `PaymentProvider` 接口，v1 只实现 Creem                                                  |
+| 积分   | Postgres 账本                                                                            |
+| AI     | Vercel AI SDK                                                                            |
+| 限流   | Upstash Redis + `@upstash/ratelimit`                                                     |
+| 文件   | Cloudflare R2 预签名上传                                                                 |
+| 博客   | content-collections + MDX                                                                |
+| 后台   | 用户、订单、积分调整                                                                     |
+| 部署   | Vercel + Neon                                                                            |
 
 ### v1 不做
 
@@ -59,14 +59,14 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 
 ### 目录边界
 
-| 路径 | 归属 | 说明 |
-|---|---|---|
-| `src/core/**` | 套件 | 业务项目尽量不改，改了会增加合并上游的冲突 |
-| `src/app/[locale]/(marketing)/**` | 套件 | 落地页、定价、法律页、博客路由 |
-| `src/app/[locale]/(app)/**` | 业务 | 登录后的业务页面 |
-| `src/features/**` | 业务 | 业务逻辑与组件 |
-| `site.config.ts` | 业务 | 品牌、域名、功能开关、套餐、限流阈值 |
-| `messages/**`、`content/**` | 业务 | 文案、博客文章 |
+| 路径                              | 归属 | 说明                                       |
+| --------------------------------- | ---- | ------------------------------------------ |
+| `src/core/**`                     | 套件 | 业务项目尽量不改，改了会增加合并上游的冲突 |
+| `src/app/[locale]/(marketing)/**` | 套件 | 落地页、定价、法律页、博客路由             |
+| `src/app/[locale]/(app)/**`       | 业务 | 登录后的业务页面                           |
+| `src/features/**`                 | 业务 | 业务逻辑与组件                             |
+| `site.config.ts`                  | 业务 | 品牌、域名、功能开关、套餐、限流阈值       |
+| `messages/**`、`content/**`       | 业务 | 文案、博客文章                             |
 
 业务项目用 `git remote add upstream <本仓库>` 合并套件更新，规则写进 `UPGRADING.md`。
 
@@ -91,12 +91,12 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 
 ### Redis（Upstash，只做限流）
 
-| 场景 | 是否用 Redis |
-|---|---|
-| AI、上传预签名接口限流 | 是：按用户 + IP 的滑动窗口，阈值写在配置里 |
+| 场景                       | 是否用 Redis                               |
+| -------------------------- | ------------------------------------------ |
+| AI、上传预签名接口限流     | 是：按用户 + IP 的滑动窗口，阈值写在配置里 |
 | 登录、验证码发送与校验频率 | 否：用 Better Auth 自带的限流，存 Postgres |
-| 积分余额 | 否：必须和账本在同一个事务里 |
-| Session 缓存、队列 | v1 不做 |
+| 积分余额                   | 否：必须和账本在同一个事务里               |
+| Session 缓存、队列         | v1 不做                                    |
 
 - 生产环境只要开了 `ai` 或 `upload`，就强制要求 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`。
 - 本地未配置时跳过限流，并打印警告。
@@ -115,16 +115,16 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 
 ## 外部依赖
 
-| 服务 | 首次需要 |
-|---|---|
-| GitHub、Vercel、域名 | T108 |
-| Neon | T201 |
-| Resend（需验证域名） | T202 |
-| Google Cloud OAuth Client | T203 |
-| Creem（先用测试模式） | T302 |
-| Upstash Redis | T401 |
-| AI 服务商 key（至少一个） | T402 |
-| Cloudflare R2 | T403 |
+| 服务                      | 首次需要 |
+| ------------------------- | -------- |
+| GitHub、Vercel、域名      | T108     |
+| Neon                      | T201     |
+| Resend（需验证域名）      | T202     |
+| Google Cloud OAuth Client | T203     |
+| Creem（先用测试模式）     | T302     |
+| Upstash Redis             | T401     |
+| AI 服务商 key（至少一个） | T402     |
+| Cloudflare R2             | T403     |
 
 ## 推迟项
 
