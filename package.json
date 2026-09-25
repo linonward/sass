@@ -17,7 +17,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "email:dev": "email dev --dir src/core/email/templates --port 3030",
-    "auth:generate": "SKIP_ENV_VALIDATION=1 auth generate --config src/core/auth/server.ts --output src/core/db/schema/auth.ts --yes && prettier --write src/core/db/schema/auth.ts"
+    "auth:generate": "SKIP_ENV_VALIDATION=1 auth generate --config src/core/auth/server.ts --output src/core/db/schema/auth.ts --yes && prettier --write src/core/db/schema/auth.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ai-sdk/alibaba": "^2.0.54",
@@ -56,6 +57,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "@content-collections/cli": "^0.1.9",
     "@content-collections/core": "^0.15.3",
     "@content-collections/next": "^0.2.11",
@@ -76,7 +79,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "jsdom": "^30.1.1",
+    "lint-staged": "^17.5.1",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
