@@ -4,6 +4,7 @@ import { createHmac } from "node:crypto";
 import { APIError } from "creem/models/errors";
 import { describe, expect, test, vi } from "vitest";
 
+import siteConfig from "../../../../site.config";
 import { WebhookVerificationError } from "../provider";
 import {
   creemSample,
@@ -243,8 +244,9 @@ describe("createCheckout", () => {
       checkoutId: "ch_1",
       url: "https://checkout.creem.io/ch_1",
     });
+    const pro = siteConfig.billing.plans.find((p) => p.id === "pro");
     expect(client.checkouts.create).toHaveBeenCalledWith({
-      productId: "prod_placeholder_pro",
+      productId: pro?.providerProductId,
       requestId: "user_1:pro",
       successUrl: "https://sass.linonward.com/dashboard?checkout=success",
       customer: { email: "a@example.com" },

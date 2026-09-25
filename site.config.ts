@@ -11,7 +11,8 @@ export default defineConfig({
   locales: ["en"],
   defaultLocale: "en",
   features: {
-    credits: false,
+    // 演示站点开启积分，付费套餐按 billing.plans 的 credits 发放。
+    credits: true,
     ai: false,
     blog: false,
     upload: false,
@@ -86,9 +87,10 @@ export default defineConfig({
         interval: "month",
         features: ["credits2000", "coreFeatures", "prioritySupport"],
         highlighted: true,
-        // Creem 的产品 ID。占位值（prod_placeholder_*）不允许结账：换成 Creem 里创建的产品 ID，
+        // Creem 的产品 ID。占位值（prod_placeholder_*）不允许结账。
         // 测试模式和生产模式的产品 ID 不同，切换 CREEM_MODE 时一起换（见 README 上线清单）。
-        providerProductId: "prod_placeholder_pro",
+        // 当前是 Creem 测试模式的产品。
+        providerProductId: "prod_31E1j5WjJjaC4L3nSGOPSm",
         credits: 2000,
       },
       {
@@ -96,8 +98,8 @@ export default defineConfig({
         price: 199,
         interval: "once",
         features: ["credits2000", "coreFeatures", "lifetimeUpdates"],
-        // 同上，换成 Creem 的一次性付款产品 ID。
-        providerProductId: "prod_placeholder_lifetime",
+        // 同上：Creem 测试模式的一次性付款产品。
+        providerProductId: "prod_5uhJLXA1d1LwEmPjIUXyU9",
         credits: 2000,
       },
     ],
