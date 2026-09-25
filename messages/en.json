@@ -203,7 +203,8 @@
     "toggleSidebar": "Toggle sidebar",
     "nav": {
       "home": "Dashboard",
-      "settings": "Settings"
+      "settings": "Settings",
+      "billing": "Billing"
     },
     "userMenu": {
       "open": "Account menu",
@@ -258,6 +259,68 @@
       "cancel": "Cancel",
       "confirm": "Delete account",
       "deleting": "Deleting…"
+    }
+  },
+  "Billing": {
+    "pricing": {
+      "metaTitle": "Pricing",
+      "metaDescription": "Simple, transparent pricing. Start for free and upgrade when you need more."
+    },
+    "actions": {
+      "manage": "Manage subscription",
+      "purchased": "Purchased",
+      "redirecting": "Redirecting to checkout…"
+    },
+    "errors": {
+      "billing_not_configured": "Payments aren't available right now. Please try again later.",
+      "plan_not_configured": "This plan isn't available yet.",
+      "invalid_plan": "This plan doesn't exist.",
+      "no_customer": "You don't have any billing history yet.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "success": {
+      "metaTitle": "Payment",
+      "processingTitle": "Processing your payment…",
+      "processingDescription": "This usually takes a few seconds. You can keep this page open.",
+      "completeTitle": "Payment successful",
+      "completeDescription": "Your {plan} plan is now active.",
+      "credits": "Your credit balance is now {balance, number}.",
+      "failedTitle": "Payment failed",
+      "failedDescription": "Your payment didn't go through. You can try again or update your payment method.",
+      "timeoutTitle": "This is taking longer than usual",
+      "timeoutDescription": "Your payment is still being confirmed. If it doesn't show up in a few minutes, contact us at <link>{email}</link>.",
+      "missingTitle": "We couldn't find this payment",
+      "missingDescription": "Check your billing page, or contact us at <link>{email}</link>.",
+      "toBilling": "Go to billing",
+      "toDashboard": "Go to dashboard"
+    },
+    "page": {
+      "metaTitle": "Billing",
+      "title": "Billing",
+      "description": "Your plan, purchases and credits.",
+      "planTitle": "Plan",
+      "freePlan": "You're on the free plan.",
+      "viewPlans": "View plans",
+      "status": {
+        "active": "Active",
+        "past_due": "Payment overdue",
+        "canceled": "Canceled",
+        "expired": "Expired"
+      },
+      "renewsOn": "Renews on {date}",
+      "endsOn": "Ends on {date}",
+      "purchasesTitle": "One-time purchases",
+      "manage": "Manage subscription",
+      "creditsTitle": "Credits",
+      "balance": "{balance, number} credits",
+      "transactionsTitle": "Recent activity",
+      "noTransactions": "No credit activity yet.",
+      "type": {
+        "grant": "Added",
+        "deduct": "Used",
+        "refund": "Refunded",
+        "adjust": "Adjusted"
+      }
     }
   }
 }

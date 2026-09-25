@@ -7,6 +7,8 @@ import { signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
 const configured = Boolean(
   process.env.CREEM_API_KEY && process.env.CREEM_WEBHOOK_SECRET,
 );
+// CI 用 fake 服务商跑完整的结账流程（见 pricing.spec.ts），这时 Creem 路由视为未配置。
+const fake = process.env.BILLING_PROVIDER === "fake";
 
 test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
@@ -28,7 +30,7 @@ test("webhook 不接受未签名的请求", async ({ request }) => {
   const response = await request.post("/api/webhooks/creem", {
     data: { id: "evt_x", eventType: "checkout.completed", object: {} },
   });
-  if (configured) {
+  if (configured && !fake) {
     expect(response.status()).toBe(401);
   } else {
     expect(response.status()).toBe(503);
@@ -36,15 +38,22 @@ test("webhook 不接受未签名的请求", async ({ request }) => {
   }
 });
 
-test("登录后调用结账：未配置 Creem 或产品 ID 仍是占位值时返回 503", async ({
+test("登录后调用结账：fake 模式返回站内结账页，未配置 Creem 时返回 503", async ({
   page,
 }) => {
   await signIn(page, uniqueEmail("checkout"));
   const response = await page.request.post("/api/billing/checkout", {
     data: { planId: "pro" },
   });
-  expect(response.status()).toBe(503);
-  expect(await response.json()).toEqual({
-    error: configured ? "plan_not_configured" : "billing_not_configured",
-  });
+  if (fake) {
+    expect(response.status()).toBe(200);
+    expect((await response.json()).url).toMatch(
+      /^\/api\/billing\/fake\/checkout\?token=/,
+    );
+  } else if (configured) {
+    expect(response.ok()).toBe(true);
+  } else {
+    expect(response.status()).toBe(503);
+    expect(await response.json()).toEqual({ error: "billing_not_configured" });
+  }
 });

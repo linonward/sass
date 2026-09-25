@@ -3,6 +3,7 @@ import type { DashboardNavItem, SiteConfig } from "@/core/config/schema";
 /** 套件自带的菜单项。业务项写在 site.config.ts 的 dashboard.nav，排在这些之后。 */
 export const suiteNav: readonly DashboardNavItem[] = [
   { key: "home", href: "/dashboard", icon: "home" },
+  { key: "billing", href: "/billing", icon: "creditCard" },
   { key: "settings", href: "/settings", icon: "settings" },
 ];
 

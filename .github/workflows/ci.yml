@@ -32,6 +32,10 @@ jobs:
       EMAIL_TRANSPORT: file
       # 仅供 CI 使用的固定值；生产环境在 Vercel 上单独设置。
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production
+      # e2e 用站内的 fake 支付服务商模拟结账和 webhook（Vercel 上会被 env 校验拒绝）。
+      BILLING_PROVIDER: fake
+      # 成功页等待 webhook 的时长，调短以便测试超时提示。
+      BILLING_SUCCESS_TIMEOUT_MS: 8000
     steps:
       - uses: actions/checkout@v7
 

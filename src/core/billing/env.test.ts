@@ -3,7 +3,7 @@
 import { describe, expect, test } from "vitest";
 
 import { createAppEnv } from "../create-env";
-import { billingServerEnv } from "./env";
+import { billingServerEnv, fakeBillingAllowed } from "./env";
 
 function check(
   runtimeEnv: Record<string, string | undefined>,
@@ -43,5 +43,31 @@ describe("billingServerEnv", () => {
     expect(check({})().CREEM_MODE).toBe("test");
     expect(check({ CREEM_MODE: "live" })().CREEM_MODE).toBe("live");
     expect(check({ CREEM_MODE: "prod" })).toThrow("- CREEM_MODE: ");
+  });
+
+  test("fake 服务商只在本地和 CI 允许", () => {
+    expect(check({ BILLING_PROVIDER: "fake" })).not.toThrow();
+    expect(check({ BILLING_PROVIDER: "fake", VERCEL_ENV: "preview" })).toThrow(
+      "- BILLING_PROVIDER: ",
+    );
+    expect(
+      check({ BILLING_PROVIDER: "fake", VERCEL_ENV: "production", ...creem }),
+    ).toThrow("- BILLING_PROVIDER: ");
+    expect(check({ BILLING_PROVIDER: "fake", CREEM_MODE: "live" })).toThrow(
+      "- BILLING_PROVIDER: ",
+    );
+    expect(fakeBillingAllowed({})).toBe(true);
+    expect(fakeBillingAllowed({ VERCEL_ENV: "development" })).toBe(false);
+  });
+
+  test("成功页超时默认 60 秒，可以调短", () => {
+    expect(check({})().BILLING_SUCCESS_TIMEOUT_MS).toBe(60_000);
+    expect(
+      check({ BILLING_SUCCESS_TIMEOUT_MS: "5000" })()
+        .BILLING_SUCCESS_TIMEOUT_MS,
+    ).toBe(5000);
+    expect(check({ BILLING_SUCCESS_TIMEOUT_MS: "0" })).toThrow(
+      "- BILLING_SUCCESS_TIMEOUT_MS: ",
+    );
   });
 });
