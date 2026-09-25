@@ -3,3 +3,4 @@
 export * from "./auth";
 export * from "./credits";
 export * from "./billing";
+export * from "./notifications";

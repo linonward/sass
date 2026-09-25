@@ -28,7 +28,7 @@
 | T302                   | credits        | `feat/credits`        | T201             | done      |
 | T303                   | creem          | `feat/creem`          | T301, T302, T203 | done      |
 | T304                   | pricing        | `feat/pricing`        | T303, T105       | in-review |
-| T305                   | billing-emails | `feat/billing-emails` | T303, T202       | todo      |
+| T305                   | billing-emails | `feat/billing-emails` | T303, T202       | in-review |
 | **阶段 4：AI 工具**    |                |                       |                  |           |
 | T401                   | ratelimit      | `feat/ratelimit`      | T102             | todo      |
 | T402                   | ai             | `feat/ai`             | T302, T401, T203 | todo      |

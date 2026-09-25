@@ -46,14 +46,18 @@ function consoleTransport(): Send {
   };
 }
 
+// 进程内递增序号：同一毫秒内写入的多封邮件，文件名也按发送顺序排列。
+let fileSeq = 0;
+
 function fileTransport(dir: string): Send {
   return async (email) => {
     const id = randomUUID();
     const sentAt = new Date().toISOString();
     const stored: StoredEmail = { ...email, id, sentAt };
     await mkdir(dir, { recursive: true });
-    // 文件名以时间开头，按名字排序即按发送顺序。
-    const name = `${sentAt.replace(/[:.]/g, "-")}-${id}.json`;
+    // 文件名是「时间-序号-id」，按名字排序即按发送顺序。
+    const seq = String(fileSeq++ % 1_000_000).padStart(6, "0");
+    const name = `${sentAt.replace(/[:.]/g, "-")}-${seq}-${id}.json`;
     await writeFile(path.join(dir, name), JSON.stringify(stored, null, 2));
     return { id };
   };

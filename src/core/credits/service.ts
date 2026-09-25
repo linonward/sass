@@ -18,7 +18,32 @@ import {
 export type Executor =
   Parameters<Parameters<Database["transaction"]>[0]>[0] | Database;
 
-export type WriteOptions = { tx?: Executor };
+export type AfterCommitCallback = () => Promise<void> | void;
+
+export type WriteOptions = {
+  tx?: Executor;
+  /**
+   * 传入外部事务时，由调用方提供：登记在调用方事务提交之后执行的回调（例如余额偏低提醒邮件）。
+   * 没传 tx 时积分服务自己提交事务，不需要这个参数。
+   * 传了 tx 却没传 afterCommit，余额偏低提醒会被跳过（无法得知事务何时提交）。
+   */
+  afterCommit?: (fn: AfterCommitCallback) => void;
+};
+
+/**
+ * 一次扣减让余额从 >= threshold 降到 < threshold 时调用 onCross。
+ * onCross 在扣减的事务里执行（可以用 executor 写去重记录），要发邮件等副作用用 schedule
+ * 登记到事务提交之后。
+ */
+export type LowBalanceHook = {
+  threshold: number;
+  onCross: (context: {
+    executor: Executor;
+    userId: string;
+    balance: number;
+    schedule: (fn: AfterCommitCallback) => void;
+  }) => Promise<void>;
+};
 
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 
@@ -91,6 +116,7 @@ type Entry = {
 export function createCredits(options: {
   db: Database | (() => Database);
   enabled: boolean;
+  lowBalance?: LowBalanceHook;
 }) {
   const getDb = () =>
     typeof options.db === "function" ? options.db() : options.db;
@@ -200,13 +226,47 @@ export function createCredits(options: {
     },
 
     /** 扣减积分。余额不足时抛出 InsufficientCreditsError，余额和流水都不变。 */
-    async deductCredits(input: DeductInput, { tx }: WriteOptions = {}) {
+    async deductCredits(
+      input: DeductInput,
+      { tx, afterCommit }: WriteOptions = {},
+    ) {
       const { amount, ...rest } = deductInput.parse(input);
-      return write(
+      const hook = options.lowBalance;
+      // 自己提交事务时，回调攒到提交之后执行；用调用方的事务时交给调用方的 afterCommit。
+      const pending: AfterCommitCallback[] = [];
+      const schedule = tx
+        ? afterCommit
+        : (fn: AfterCommitCallback) => pending.push(fn);
+
+      const result = await write(
         { ...rest, type: "deduct", amount: -amount },
         tx,
-        (executor) => decrease(executor, rest.userId, amount),
+        async (executor) => {
+          const balance = await decrease(executor, rest.userId, amount);
+          const crossed =
+            hook &&
+            hook.threshold > 0 &&
+            balance + amount >= hook.threshold &&
+            balance < hook.threshold;
+          if (crossed && schedule) {
+            await hook.onCross({
+              executor,
+              userId: rest.userId,
+              balance,
+              schedule,
+            });
+          }
+          return balance;
+        },
       );
+      for (const fn of pending) {
+        try {
+          await fn();
+        } catch (error) {
+          console.error("[credits] afterCommit callback failed", error);
+        }
+      }
+      return result;
     },
 
     /**

@@ -1,5 +1,7 @@
 import { creditsEnabled, grantCredits } from "@/core/credits";
+import { sendEmail } from "@/core/email/send";
 
+import { createBillingEmailHandler } from "./emails";
 import { createGrantCreditsHandler } from "./grant-credits";
 import { registerOnBillingEvent } from "./on-billing-event";
 
@@ -7,4 +9,10 @@ import { registerOnBillingEvent } from "./on-billing-event";
 registerOnBillingEvent(
   "billing:grant-credits",
   createGrantCreditsHandler({ enabled: creditsEnabled, grantCredits }),
+);
+
+// 付款成功、付款失败、订阅取消的通知邮件；在事务提交后发送。
+registerOnBillingEvent(
+  "billing:emails",
+  createBillingEmailHandler({ send: sendEmail, creditsEnabled }),
 );

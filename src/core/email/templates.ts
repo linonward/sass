@@ -1,9 +1,25 @@
 import type { ComponentType } from "react";
 
+import CreditsLowEmail, {
+  creditsLowSubject,
+  type CreditsLowProps,
+} from "./templates/credits-low";
+import PaymentFailedEmail, {
+  paymentFailedSubject,
+  type PaymentFailedProps,
+} from "./templates/payment-failed";
+import PaymentSucceededEmail, {
+  paymentSucceededSubject,
+  type PaymentSucceededProps,
+} from "./templates/payment-succeeded";
 import SignInCodeEmail, {
   signInCodeSubject,
   type SignInCodeProps,
 } from "./templates/sign-in-code";
+import SubscriptionCanceledEmail, {
+  subscriptionCanceledSubject,
+  type SubscriptionCanceledProps,
+} from "./templates/subscription-canceled";
 import WelcomeEmail, {
   welcomeSubject,
   type WelcomeProps,
@@ -25,6 +41,22 @@ export const emailTemplates = {
     Component: WelcomeEmail,
     subject: welcomeSubject,
   } satisfies TemplateDefinition<WelcomeProps>,
+  "payment-succeeded": {
+    Component: PaymentSucceededEmail,
+    subject: paymentSucceededSubject,
+  } satisfies TemplateDefinition<PaymentSucceededProps>,
+  "payment-failed": {
+    Component: PaymentFailedEmail,
+    subject: paymentFailedSubject,
+  } satisfies TemplateDefinition<PaymentFailedProps>,
+  "subscription-canceled": {
+    Component: SubscriptionCanceledEmail,
+    subject: subscriptionCanceledSubject,
+  } satisfies TemplateDefinition<SubscriptionCanceledProps>,
+  "credits-low": {
+    Component: CreditsLowEmail,
+    subject: creditsLowSubject,
+  } satisfies TemplateDefinition<CreditsLowProps>,
 };
 
 export type EmailTemplateName = keyof typeof emailTemplates;
@@ -32,6 +64,10 @@ export type EmailTemplateName = keyof typeof emailTemplates;
 export type EmailTemplateProps = {
   "sign-in-code": SignInCodeProps;
   welcome: WelcomeProps;
+  "payment-succeeded": PaymentSucceededProps;
+  "payment-failed": PaymentFailedProps;
+  "subscription-canceled": SubscriptionCanceledProps;
+  "credits-low": CreditsLowProps;
 };
 
 /** 按模板名取定义，props 类型随模板名收窄。 */

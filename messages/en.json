@@ -162,6 +162,51 @@
       "body": "Thanks for signing up. Your account is ready, and you can start using {site} right away.",
       "cta": "Get started",
       "signoff": "The {site} team"
+    },
+    "details": {
+      "plan": "Plan",
+      "amount": "Amount",
+      "date": "Date",
+      "renewsOn": "Renews on",
+      "credits": "Credits added",
+      "creditsValue": "{credits, plural, one {# credit} other {# credits}}",
+      "accessUntil": "Access until",
+      "balance": "Current balance"
+    },
+    "paymentSucceeded": {
+      "subject": "Payment received for {plan} · {name}",
+      "preview": "Thanks — your {plan} payment went through",
+      "heading": "Payment received",
+      "bodySubscription": "Thanks for your payment. Your {plan} subscription is active.",
+      "bodyOneTime": "Thanks for your purchase. {plan} is now available on your account.",
+      "cta": "View billing",
+      "receipt": "Your receipt and invoices are available from the billing page."
+    },
+    "paymentFailed": {
+      "subject": "Your payment didn't go through · {name}",
+      "preview": "Please update your payment method to keep your subscription",
+      "heading": "Payment failed",
+      "body": "We couldn't process the payment for your {plan} subscription. Please update your payment method to keep your access.",
+      "bodyGeneric": "We couldn't process your latest payment. Please update your payment method to keep your access.",
+      "cta": "Update payment method",
+      "note": "We'll retry the payment automatically. If it keeps failing, your subscription may be paused."
+    },
+    "subscriptionCanceled": {
+      "subject": "Your subscription has been canceled · {name}",
+      "preview": "We're sorry to see you go",
+      "heading": "Subscription canceled",
+      "body": "Your {plan} subscription has been canceled.",
+      "bodyUntil": "Your {plan} subscription has been canceled. You can keep using it until {date}.",
+      "cta": "Resubscribe",
+      "note": "Changed your mind? You can resubscribe anytime from the billing page."
+    },
+    "creditsLow": {
+      "subject": "You're running low on credits · {name}",
+      "preview": "Only {balance} credits left",
+      "heading": "Running low on credits",
+      "body": "Your balance is down to {balance, plural, one {# credit} other {# credits}}, below {threshold}. Top up or upgrade your plan so you don't get interrupted.",
+      "cta": "Get more credits",
+      "note": "We send this reminder at most once a day."
     }
   },
   "Auth": {

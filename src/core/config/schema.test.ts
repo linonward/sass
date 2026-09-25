@@ -203,3 +203,19 @@ describe("dashboard", () => {
     ).toThrow(`- ${path}: `);
   });
 });
+
+describe("credits", () => {
+  test("lowBalanceThreshold 默认 100，可以设为 0 关闭提醒", () => {
+    expect(defineConfig(valid).credits.lowBalanceThreshold).toBe(100);
+    expect(
+      defineConfig({ ...valid, credits: { lowBalanceThreshold: 0 } }).credits
+        .lowBalanceThreshold,
+    ).toBe(0);
+  });
+
+  test.each([-1, 1.5])("lowBalanceThreshold 非法值 %s 报错", (value) => {
+    expect(() =>
+      defineConfig({ ...valid, credits: { lowBalanceThreshold: value } }),
+    ).toThrow("- credits.lowBalanceThreshold: ");
+  });
+});
