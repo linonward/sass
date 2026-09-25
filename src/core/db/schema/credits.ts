@@ -55,6 +55,10 @@ export const creditTransactions = pgTable(
     reason: text("reason"),
     source: text("source").notNull(),
     sourceId: text("source_id").notNull(),
+    // 手动调整（adjust）时操作的管理员。管理员账户删除后置空，流水本身保留。
+    actorId: text("actor_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [

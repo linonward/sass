@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { Resend } from "resend";
@@ -58,7 +58,10 @@ function fileTransport(dir: string): Send {
     // 文件名是「时间-序号-id」，按名字排序即按发送顺序。
     const seq = String(fileSeq++ % 1_000_000).padStart(6, "0");
     const name = `${sentAt.replace(/[:.]/g, "-")}-${seq}-${id}.json`;
-    await writeFile(path.join(dir, name), JSON.stringify(stored, null, 2));
+    // 先写临时文件再改名：e2e 并行轮询 outbox 时不会读到写了一半的文件。
+    const file = path.join(dir, name);
+    await writeFile(`${file}.tmp`, JSON.stringify(stored, null, 2));
+    await rename(`${file}.tmp`, file);
     return { id };
   };
 }

@@ -91,6 +91,8 @@ export function SignInForm({ callbackURL, googleEnabled, otp }: Props) {
         return te("codeExpired");
       case "TOO_MANY_ATTEMPTS":
         return te("tooManyAttempts");
+      case "BANNED_USER":
+        return te("banned");
       case RESEND_COOLDOWN:
         return te("cooldown", {
           seconds: err.retryAfter ?? otp.resendCooldown,

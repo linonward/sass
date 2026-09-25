@@ -84,6 +84,7 @@ export function AppSidebar({
       <SidebarContent>
         <NavGroup items={nav.suite} label={t("suiteNav")} />
         <NavGroup items={nav.business} label={t("businessNav")} />
+        <NavGroup items={nav.admin ?? []} label={t("adminNav")} />
       </SidebarContent>
       <SidebarFooter>{footer}</SidebarFooter>
       <SidebarRail aria-label={t("toggleSidebar")} title={t("toggleSidebar")} />

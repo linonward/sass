@@ -4,6 +4,7 @@ import { expect, type Page } from "@playwright/test";
 import pg from "pg";
 
 import messages from "../messages/en.json";
+import { cooldownIdentifier } from "../src/core/auth/cooldown";
 import { waitForEmail } from "../src/core/email/testing";
 
 /** 每个用例用独立的邮箱，互不干扰。 */
@@ -35,9 +36,15 @@ export async function requestCode(
 ) {
   const since = new Date(Date.now() - 1000);
   if (!page.url().includes("/sign-in")) await page.goto(signInPath);
-  await page.getByLabel(copy.Auth.signIn.emailLabel).fill(email);
-  await page.getByRole("button", { name: copy.Auth.signIn.sendCode }).click();
-  await expect(page.getByLabel(copy.Auth.signIn.codeLabel)).toBeVisible();
+  // hydration 完成前填的值会被 React 重置，点击后只会提示邮箱无效（不会发出请求），
+  // 所以重复"填写并发送"，直到出现验证码输入框。
+  await expect(async () => {
+    await page.getByLabel(copy.Auth.signIn.emailLabel).fill(email);
+    await page.getByRole("button", { name: copy.Auth.signIn.sendCode }).click();
+    await expect(page.getByLabel(copy.Auth.signIn.codeLabel)).toBeVisible({
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 15_000 });
   const mail = await waitForEmail(
     { to: email, template: "sign-in-code", since },
     outboxDir ? { dir: outboxDir } : undefined,
@@ -75,6 +82,15 @@ export async function signIn(
   await enterCode(page, code, options.copy);
   // 等跳转完成（session cookie 已写入）再继续。
   await page.waitForURL((url) => !url.pathname.endsWith("/sign-in"));
+}
+
+/** 清掉某个邮箱的验证码重发冷却，让同一用例里可以马上再登录一次。 */
+export async function clearResendCooldown(email: string) {
+  await withDatabase((client) =>
+    client.query("delete from verification where identifier = $1", [
+      cooldownIdentifier(email),
+    ]),
+  );
 }
 
 /** 按邮箱查用户 id；不存在时为 undefined。 */

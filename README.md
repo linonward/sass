@@ -69,6 +69,12 @@ pnpm dev              # http://localhost:3000
   - 各语言的文章相互独立，同名文件视为同一篇的翻译（hreflang 只列出有翻译的语言）；没有文章的语言，列表页为空且 noindex。
   - frontmatter 必须是合法 YAML，值里有 `: ` 时加引号。写错的文件会让 `build` 失败并指出文件名；`dev` 里只打印错误。
   - 关闭 `features.blog` 时，把 `nav` 里的 Blog 链接一起删掉。
+- 后台（`src/core/admin/`，`features.admin`）：`/admin` 下有用户、订单、订阅三个列表，都在服务端分页。不是管理员（包括未登录）访问 `/admin` 下任何页面都返回 404，不跳转登录页。
+  - 角色和封禁由 Better Auth 的 admin 插件提供（插件一直启用，`user` 表多了 `role`、`banned` 等字段）。v1 去掉了模拟登录（impersonate）权限。
+  - 首个管理员：把邮箱写进 `ADMIN_EMAILS`，用这个邮箱登录（邮箱已验证）时自动获得 `admin` 角色。只提升不降级，从名单里删掉邮箱不会收回角色。管理员在 dashboard 侧边栏里会看到 Admin 入口。
+  - 用户：按邮箱或名称搜索；详情页可以封禁 / 解封（封禁会让用户所有 session 失效，之后无法登录），调整积分（必须填原因，写一条 `adjust` 流水，`actor_id` 记录操作的管理员，同一次提交重复发送只生效一次），并查看该用户的订阅和订单。
+  - 订单、订阅：可按状态筛选。
+  - 新增后台页面放在 `src/app/[locale]/(admin)/admin/` 下，页面开头调用 `await requireAdmin()`（`src/core/admin/session.ts`）；Server Action 里用 `getAdminSession()` 再校验一次。layout 和 page 并行渲染，只在 layout 里检查挡不住 page。
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
 - 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。
@@ -130,6 +136,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET`                 | 开启 `features.upload` 时 Production 必填（见下文"文件上传（Cloudflare R2）"）。Preview 不填时上传接口返回 503。                     |
 | `R2_PUBLIC_URL`                                                                             | bucket 的公开域名（`https://files.example.com`），只在 `upload.public` 为 true 时需要。                                              |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `ALIBABA_API_KEY` | 开启 `features.ai` 时，Production 必须填上 `ai.models` 用到的每家服务商的 key（见下文"AI 服务商"）。Preview 不填时对应模型返回 503。 |
+| `ADMIN_EMAILS`                                                                              | 开启 `features.admin` 时 Production 必填：逗号分隔的邮箱，用这些邮箱登录即成为管理员（见"配置"里的后台）。Preview 可以不填。         |
 | `ALIBABA_BASE_URL`                                                                          | 可选。百炼 key 所在地域的地址，不填是国际站；北京地域填 `https://dashscope.aliyuncs.com/compatible-mode/v1`。                        |
 
 ### 4. 按已开启的模块准备外部账号
@@ -143,6 +150,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 | `features.rateLimit` / `ai` / `upload` | Upstash Redis               | 生产环境开启任一模块时   |
 | `features.ai`                          | AI 模型服务商               | 开启 AI 时               |
 | `features.upload`                      | Cloudflare R2               | 开启上传时               |
+| `features.admin`                       | 无（只需 `ADMIN_EMAILS`）   | 开启后台时               |
 
 具体变量名由对应模块的任务补充到本节。
 

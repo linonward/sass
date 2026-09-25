@@ -37,7 +37,7 @@
 | T405                   | ai-video       | `feat/ai-video`       | T404             | done |
 | **阶段 5：内容与运营** |                |                       |                  |      |
 | T501                   | blog           | `feat/blog`           | T104, T106       | done |
-| T502                   | admin          | `feat/admin`          | T203, T302, T303 | todo |
+| T502                   | admin          | `feat/admin`          | T203, T302, T303 | done |
 | T503                   | starter-guide  | `docs/starter-guide`  | 阶段 1–5 全部    | todo |
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
