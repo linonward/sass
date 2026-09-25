@@ -42,6 +42,7 @@
 **做**
 
 - 接入 Vercel AI SDK，使用 provider registry：支持 OpenAI、Anthropic、Google 三家，env 里有哪家的 key 就启用哪家
+- 补充（合入后追加）：支持阿里云百炼（`provider: "alibaba"`，`@ai-sdk/alibaba`），`ALIBABA_BASE_URL` 切地域；模型配置加可选的 `reasoning`，可以关掉默认开启的思考
 - 在配置中加入 `ai.models`：`[{ id, provider, model, creditCost }]`，以及 `ai.defaultModel`
 - 服务端封装 `runAI({ userId, modelId, ... })`，按顺序执行：
   1. 检查登录
