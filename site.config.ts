@@ -86,7 +86,8 @@ export default defineConfig({
         interval: "month",
         features: ["credits2000", "coreFeatures", "prioritySupport"],
         highlighted: true,
-        // 占位值，接入支付服务商时（T303）换成真实的产品 ID。
+        // Creem 的产品 ID。占位值（prod_placeholder_*）不允许结账：换成 Creem 里创建的产品 ID，
+        // 测试模式和生产模式的产品 ID 不同，切换 CREEM_MODE 时一起换（见 README 上线清单）。
         providerProductId: "prod_placeholder_pro",
         credits: 2000,
       },
@@ -95,6 +96,7 @@ export default defineConfig({
         price: 199,
         interval: "once",
         features: ["credits2000", "coreFeatures", "lifetimeUpdates"],
+        // 同上，换成 Creem 的一次性付款产品 ID。
         providerProductId: "prod_placeholder_lifetime",
         credits: 2000,
       },

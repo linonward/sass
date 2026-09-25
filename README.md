@@ -102,14 +102,16 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
 
-| 变量                                        | 说明                                                                                      |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。    |
-| `RESEND_API_KEY`                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。   |
-| `EMAIL_TRANSPORT`                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。 |
-| `BETTER_AUTH_SECRET`                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。     |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。 |
-| `BETTER_AUTH_URL`                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。             |
+| 变量                                        | 说明                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。      |
+| `RESEND_API_KEY`                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。     |
+| `EMAIL_TRANSPORT`                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。   |
+| `BETTER_AUTH_SECRET`                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。       |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。   |
+| `BETTER_AUTH_URL`                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。               |
+| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`    | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。 |
+| `CREEM_MODE`                                | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -153,6 +155,20 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 2. 把 Client ID 和 Client secret 填到 Vercel Production 的 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`；本地需要测试 Google 登录时填到 `.env.local`。
 3. 预览部署的地址每次都不同，无法登记为回调地址，所以预览只提供邮箱验证码登录。以后需要时可以接入 Better Auth 的 `oauth-proxy` 插件。
 4. 账户关联：同一邮箱先用验证码注册、再用 Google 登录，会进入同一个账户（`google` 是可信 provider）。
+
+#### 支付（Creem）
+
+1. 在 Creem 后台用左下角的开关切到 **Test Mode**，创建产品：订阅套餐选 recurring（每月或每年，与 `site.config.ts` 的 `interval` 一致），一次性套餐选 one-time。把产品 ID（`prod_...`）填进 `site.config.ts` 对应套餐的 `providerProductId`。占位值 `prod_placeholder_*` 不允许结账。
+2. Developers 里拿 API key 和 webhook secret，填到 Vercel Production 的 `CREEM_API_KEY`、`CREEM_WEBHOOK_SECRET`；`CREEM_MODE` 不填（默认 `test`）。
+3. Developers → Webhooks 添加地址 `https://<domain>/api/webhooks/creem`。
+   - Vercel 的预览部署默认开启 Deployment Protection，外部请求会被拦截，所以 webhook 不能指向预览地址。测试模式的 webhook 也指向生产域名；本地调试用 [Creem CLI](https://docs.creem.io/code/cli) 的本地转发或 ngrok 之类的隧道。
+   - 用了 Cloudflare 代理或 WAF 时，给 webhook 路径放行，不要被 Bot Fight Mode 拦住。
+4. 测试卡 `4111 1111 1111 1111`（任意未来日期和 CVV）完成一次订阅和一次一次性付款，检查 `subscriptions`、`orders`、`credit_transactions` 表。
+5. 切到生产模式（真实收款）：
+   - Creem 后台关掉 Test Mode，重新创建同样的产品，把生产模式的产品 ID 换进 `site.config.ts`。
+   - 换成生产模式的 `CREEM_API_KEY` 和 `CREEM_WEBHOOK_SECRET`，并把 `CREEM_MODE` 设为 `live`。
+   - 在生产模式的 Developers → Webhooks 重新添加同一个 webhook 地址。
+6. 删除账户时会先在 Creem 取消该用户仍在计费的订阅；取消失败时删除中止。退款只更新订单状态，v1 不扣回已发的积分。
 
 ### 5. GitHub
 

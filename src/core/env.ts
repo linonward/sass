@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+import siteConfig from "../../site.config";
 import { authServerEnv } from "./auth/env";
+import { billingServerEnv } from "./billing/env";
 import { createAppEnv } from "./create-env";
 import { emailServerEnv } from "./email/env";
 
@@ -14,6 +16,9 @@ export const env = createAppEnv({
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     ...emailServerEnv(process.env),
     ...authServerEnv(process.env),
+    ...billingServerEnv(process.env, {
+      hasPaidPlans: siteConfig.billing.plans.some((plan) => plan.price > 0),
+    }),
   },
   runtimeEnv: process.env,
 });
