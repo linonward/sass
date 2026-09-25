@@ -35,7 +35,7 @@ echo "套件目录：${paths[*]}"
 echo "分叉点：$(git log -1 --format='%h %s (%cs)' "$base")"
 echo "上游：$upstream $(git log -1 --format='%h (%cs)' "$upstream")"
 
-section "本项目改过的套件文件（git diff $base -- ...）" \
+section "本项目改过的套件文件（含未提交的改动）" \
   "$(git diff --stat "$base" -- "${paths[@]}")"
 section "上游改过的套件文件" \
   "$(git diff --stat "$base" "$upstream" -- "${paths[@]}")"
