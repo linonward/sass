@@ -62,6 +62,7 @@ pnpm dev              # http://localhost:3000
 - e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。Vercel 上（任何环境）或 `CREEM_MODE=live` 时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404。
 - 接口限流（`src/core/ratelimit/`）：`checkRateLimit(policy, { userId, ip })` 按 `site.config.ts` 的 `rateLimit.policies` 做滑动窗口计数，用户和 IP 各计一次，任一超限即拒绝；被拒绝时 `return rateLimitResponse(result)`（超限 429、Redis 不可用 503，都带 `Retry-After`）。IP 用 `getClientIp(request.headers)` 取。本地没配 Upstash 时跳过限流并警告一次；Redis 出错或超时（1 秒）时按 `rateLimit.failMode` 处理：`open`（默认）放行并记录错误，`closed` 返回 503。登录限流由 Better Auth 负责，不走这里。
 - 文件上传（`src/core/upload/`，`features.upload`）：浏览器直传 Cloudflare R2。`POST /api/upload/presign`（body `{ mime, size }`，需要登录，走 `upload` 限流）按 `site.config.ts` 的 `upload.allowedMimeTypes` / `maxFileSize` 校验，登记一条 `pending` 的 `files` 记录，返回预签名 PUT 地址（10 分钟有效，签名覆盖 Content-Type 和 Content-Length，类型或大小不同时 R2 返回 403）；上传后 `POST /api/upload/complete`（body `{ fileId }`）用 HeadObject 确认对象存在、大小和类型一致，改为 `uploaded`。对象 key 为 `<userId>/<yyyy-mm>/<uuid>.<ext>`，扩展名由类型决定。`upload.public` 为 false（默认）时通过 1 小时有效的签名 GET 地址访问，`GET /api/upload/files/<id>` 会跳转过去，可以直接用作 `<img src>`；为 true 时用 `R2_PUBLIC_URL` 下的地址。前端用 `uploadFile(file)`（`src/core/upload/client.ts`）；开启后 Dashboard 首页有一个上传示例。删除账户时 `files` 记录随之删除，R2 上的对象和一直是 `pending` 的记录 v1 不清理。
+- AI（`src/core/ai/`，`features.ai` 控制）：`site.config.ts` 的 `ai.models` 列出可用模型（`id`、`provider`（`openai` / `anthropic` / `google`）、`model`、`creditCost`，可选 `maxOutputTokens`），`ai.defaultModel` 是默认模型。env 里配了哪家的 key 就启用哪家，没配 key 的模型调用返回 503。服务端调用 `runAI({ userId, ip, modelId, prompt | messages, ... })`：检查登录 → `ai` 策略限流（429）→ 在一个事务里预扣 `creditCost` 并写入 `ai_usage`（余额不足 402）→ 流式调用模型；模型报错时按 `ai_usage.id` 退回积分（流水里是一条 `refund`），成功时记录 token 用量和耗时。返回的 `result` 是 AI SDK 的 `streamText` 结果；路由里用 `after(() => run.settled)` 保证响应结束后记账跑完。示例接口 `POST /api/ai/chat`（useChat 的 UI message 流，请求体上限 64 KB），示例页 `/playground`。v1 按次固定扣费，不存对话历史。开启收费模型（`creditCost > 0`）需要同时开启 `features.credits`。
 - 法律页：`/privacy`、`/terms`、`/refund`，正文模板在 `content/legal/`（归业务方所有），主体信息取自 `site.config.ts` 的 `legal`。**模板仅供参考，不构成法律意见**，上线前请结合业务和适用法律自行审阅，必要时咨询律师。
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
@@ -108,21 +109,34 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
 
-| 变量                                                                        | 说明                                                                                                                |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                              |
-| `RESEND_API_KEY`                                                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                             |
-| `EMAIL_TRANSPORT`                                                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。                           |
-| `BETTER_AUTH_SECRET`                                                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                               |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                 | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                           |
-| `BETTER_AUTH_URL`                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                       |
-| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                    | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。                         |
-| `CREEM_MODE`                                                                | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                        |
-| `BILLING_PROVIDER`                                                          | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e，Vercel 上设置会启动失败。                                      |
-| `BILLING_SUCCESS_TIMEOUT_MS`                                                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                     |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`                       | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。 |
-| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` | 开启 `features.upload` 时 Production 必填（见下文"文件上传（Cloudflare R2）"）。Preview 不填时上传接口返回 503。    |
-| `R2_PUBLIC_URL`                                                             | bucket 的公开域名（`https://files.example.com`），只在 `upload.public` 为 true 时需要。                             |
+| 变量                                                                        | 说明                                                                                                                                 |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                                                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                                               |
+| `RESEND_API_KEY`                                                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                                              |
+| `EMAIL_TRANSPORT`                                                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。                                            |
+| `BETTER_AUTH_SECRET`                                                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                                                |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                 | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                                            |
+| `BETTER_AUTH_URL`                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                                        |
+| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                    | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。                                          |
+| `CREEM_MODE`                                                                | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                                         |
+| `BILLING_PROVIDER`                                                          | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e，Vercel 上设置会启动失败。                                                       |
+| `BILLING_SUCCESS_TIMEOUT_MS`                                                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                                      |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`                       | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。                  |
+| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` | 开启 `features.upload` 时 Production 必填（见下文"文件上传（Cloudflare R2）"）。Preview 不填时上传接口返回 503。                     |
+| `R2_PUBLIC_URL`                                                             | bucket 的公开域名（`https://files.example.com`），只在 `upload.public` 为 true 时需要。                                              |
+| 变量                                                                        | 说明                                                                                                                                 |
+| -----------------------------------------------------------------------     | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                                                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                                               |
+| `RESEND_API_KEY`                                                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                                              |
+| `EMAIL_TRANSPORT`                                                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。                                            |
+| `BETTER_AUTH_SECRET`                                                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                                                |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                 | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                                            |
+| `BETTER_AUTH_URL`                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                                        |
+| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                    | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。                                          |
+| `CREEM_MODE`                                                                | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                                         |
+| `BILLING_PROVIDER`                                                          | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e，Vercel 上设置会启动失败。                                                       |
+| `BILLING_SUCCESS_TIMEOUT_MS`                                                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                                      |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY`     | 开启 `features.ai` 时，Production 必须填上 `ai.models` 用到的每家服务商的 key（见下文"AI 服务商"）。Preview 不填时对应模型返回 503。 |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -180,6 +194,13 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
    - 换成生产模式的 `CREEM_API_KEY` 和 `CREEM_WEBHOOK_SECRET`，并把 `CREEM_MODE` 设为 `live`。
    - 在生产模式的 Developers → Webhooks 重新添加同一个 webhook 地址。
 6. 删除账户时会先在 Creem 取消该用户仍在计费的订阅；取消失败时删除中止。退款只更新订单状态，v1 不扣回已发的积分。
+
+#### AI 服务商
+
+1. 在用到的服务商后台创建 API key：[OpenAI](https://platform.openai.com/api-keys)、[Anthropic](https://console.anthropic.com/settings/keys)、[Google AI Studio](https://aistudio.google.com/apikey)，并设置用量上限。
+2. 填到 Vercel Production 的 `OPENAI_API_KEY`、`ANTHROPIC_API_KEY`、`GOOGLE_GENERATIVE_AI_API_KEY`（只填 `ai.models` 用到的）。
+3. 按模型的实际成本调整 `creditCost` 和 `maxOutputTokens`：按次固定扣费，`maxOutputTokens` 决定单次调用成本的上限。
+4. 上线后在 `/playground` 调用一次，检查 `ai_usage` 有记录、积分流水里有对应的扣减。
 
 #### 限流（Upstash）
 

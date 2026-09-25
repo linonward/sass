@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import siteConfig from "../../site.config";
+import { aiServerEnv } from "./ai/env";
 import { authServerEnv } from "./auth/env";
 import { billingServerEnv } from "./billing/env";
 import { createAppEnv } from "./create-env";
@@ -20,6 +21,10 @@ export const env = createAppEnv({
     ...authServerEnv(process.env),
     ...billingServerEnv(process.env, {
       hasPaidPlans: siteConfig.billing.plans.some((plan) => plan.price > 0),
+    }),
+    ...aiServerEnv(process.env, {
+      enabled: siteConfig.features.ai,
+      providers: siteConfig.ai.models.map((model) => model.provider),
     }),
     ...rateLimitServerEnv(process.env, {
       enabled:

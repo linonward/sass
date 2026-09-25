@@ -13,6 +13,7 @@ export const protectedPrefixes: readonly string[] = [
   "/dashboard",
   "/settings",
   "/billing",
+  "/playground",
 ];
 
 export function isProtectedPath(path: string) {

@@ -249,7 +249,8 @@
     "nav": {
       "home": "Dashboard",
       "settings": "Settings",
-      "billing": "Billing"
+      "billing": "Billing",
+      "playground": "Playground"
     },
     "userMenu": {
       "open": "Account menu",
@@ -383,6 +384,33 @@
         "refund": "Refunded",
         "adjust": "Adjusted"
       }
+    }
+  },
+  "Playground": {
+    "metaTitle": "Playground",
+    "title": "Playground",
+    "description": "Try the AI models configured for this site. Conversations aren't saved.",
+    "model": "Model",
+    "cost": "{cost, plural, one {# credit} other {# credits}} per message",
+    "free": "Free",
+    "empty": "Send a message to get started.",
+    "you": "You",
+    "assistant": "Assistant",
+    "thinking": "Thinking…",
+    "placeholder": "Ask anything…",
+    "send": "Send",
+    "stop": "Stop",
+    "buyCredits": "Get more credits",
+    "errors": {
+      "insufficient_credits": "You don't have enough credits for this model.",
+      "rate_limited": "You're sending messages too quickly. Please wait a moment.",
+      "unavailable": "The service is temporarily unavailable. Please try again shortly.",
+      "model_unavailable": "This model isn't available right now.",
+      "invalid_model": "This model doesn't exist.",
+      "too_large": "The conversation is too long. Refresh the page to start over.",
+      "unauthorized": "Your session has expired. Please sign in again.",
+      "model_error": "The model ran into an error. Your credits have been refunded.",
+      "generic": "Something went wrong. Please try again."
     }
   }
 }
