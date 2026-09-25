@@ -29,7 +29,7 @@ test("切换语言后 URL 与文案都变化，并能切回默认语言", async 
     localizedNav.getByRole("link", { name: tr(messages.Nav.pricing) }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: tr(messages.Home.cta) }),
+    page.getByRole("link", { name: tr(messages.Landing.hero.primaryCta) }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: tr(messages.Locale.switch) }).click();
@@ -42,7 +42,7 @@ test("直接访问带前缀的路径返回对应语言", async ({ page }) => {
   const response = await page.goto(`/${TEST_LOCALE}`);
   expect(response?.status()).toBe(200);
   await expect(
-    page.getByRole("link", { name: tr(messages.Home.cta) }),
+    page.getByRole("link", { name: tr(messages.Landing.hero.primaryCta) }),
   ).toBeVisible();
 });
 

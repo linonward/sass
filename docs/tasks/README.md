@@ -14,7 +14,7 @@
 | T102                   | config         | `feat/config`         | T101             | done |
 | T103                   | ui-shell       | `feat/ui-shell`       | T102             | done |
 | T104                   | i18n           | `feat/i18n`           | T103             | done |
-| T105                   | landing        | `feat/landing`        | T104             | todo |
+| T105                   | landing        | `feat/landing`        | T104             | done |
 | T106                   | seo            | `feat/seo`            | T104             | done |
 | T107                   | legal          | `feat/legal`          | T104             | done |
 | T108                   | deploy         | `chore/deploy`        | T105, T106, T107 | todo |

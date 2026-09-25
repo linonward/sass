@@ -3,17 +3,21 @@ import { NextIntlClientProvider } from "next-intl";
 import { expect, test } from "vitest";
 
 import messages from "../../../../messages/en.json";
-import siteConfig from "../../../../site.config";
 import Home from "./page";
 
-test("首页渲染站点名称和 CTA 文案", () => {
+test("首页渲染 Hero 标题和主 CTA", () => {
   render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <Home />
     </NextIntlClientProvider>,
   );
   expect(
-    screen.getByRole("heading", { level: 1, name: siteConfig.name }),
+    screen.getByRole("heading", {
+      level: 1,
+      name: messages.Landing.hero.title,
+    }),
   ).toBeDefined();
-  expect(screen.getByRole("link", { name: messages.Home.cta })).toBeDefined();
+  expect(
+    screen.getByRole("link", { name: messages.Landing.hero.primaryCta }),
+  ).toBeDefined();
 });
