@@ -2,30 +2,82 @@
 
 可复用的出海 SaaS 模板：改配置即可得到登录、支付（Creem）、积分、AI、多语言、SEO 等基础设施，只需编写业务功能。
 
-当前处于搭建阶段，进度见任务表。
+v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性购买）、积分账本、AI（文字、图片、视频，按次扣积分）、文件上传（R2）、多语言、SEO、法律页、MDX 博客、后台。
 
 - 方案：[docs/plan.md](docs/plan.md)
+- 合并模板更新：[UPGRADING.md](UPGRADING.md)
 - 任务路径：[docs/tasks/README.md](docs/tasks/README.md)
 - 开发流程：[docs/workflow.md](docs/workflow.md)
 
-## 快速开始
+## 快速开始：从 fork 到上线
 
-1. 在 GitHub 上点 **Use this template** 创建新仓库，然后克隆到本地。
-2. 修改 `site.config.ts`：
-   - `name`、`domain`（不带协议，比如 `acme.com`）、`description`
-   - `brand`：主色和 logo
-   - `legal`：公司或个人名称、联系邮箱、适用法域、生效日期
-   - `landing`、`billing.plans`：首页区块和定价展示
-3. 修改 `messages/en.json` 里的文案，替换 `public/` 下的 logo 和 Hero 图。
-4. 本地运行：
+按顺序做，每一步都能单独验证。预计耗时是熟悉流程后的参考值，第一次做可以在"实际"一栏记下来，卡住的地方补进本文档。
 
-   ```bash
-   pnpm install
-   pnpm dev          # http://localhost:3000
-   pnpm test -u      # 改了 domain 或路由后，更新 sitemap 快照
-   ```
+| #   | 步骤                                                          | 预计     | 实际 |
+| --- | ------------------------------------------------------------- | -------- | ---- |
+| 1   | [用模板建仓库](#1-用模板建仓库)                               | 5 分钟   |      |
+| 2   | [本地跑起来](#2-本地跑起来)                                   | 15 分钟  |      |
+| 3   | [改成自己的站点](#3-改成自己的站点)                           | 1 小时   |      |
+| 4   | [准备外部账号](#4-准备外部账号)                               | 1–2 小时 |      |
+| 5   | [部署到 Vercel](#5-部署到-vercel)                             | 30 分钟  |      |
+| 6   | [走一遍上线清单，打开真实收款](#6-走一遍上线清单打开真实收款) | 30 分钟  |      |
 
-5. 按下面的[上线清单](#上线清单)部署。
+### 1. 用模板建仓库
+
+在 GitHub 上点 **Use this template → Create a new repository**，然后克隆到本地，并添加模板为 `upstream`，以后用它合并模板更新（见 [UPGRADING.md](UPGRADING.md)）：
+
+```bash
+git clone https://github.com/<you>/<project>.git && cd <project>
+git remote add upstream https://github.com/linonward/sass.git
+```
+
+### 2. 本地跑起来
+
+需要 Node 24（`.nvmrc`）、pnpm（版本见 `package.json` 的 `packageManager`）和 Docker。
+
+```bash
+docker run -d --name <project>-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:18
+cp .env.example .env.local
+# 编辑 .env.local：DATABASE_URL 用上面的地址，BETTER_AUTH_SECRET 填 `openssl rand -base64 32` 的输出
+pnpm install
+pnpm db:migrate
+pnpm dev                 # http://localhost:3000
+```
+
+本地不需要任何外部账号：邮件打印在终端（验证码从这里看），支付、限流、上传、AI 没配 key 时各自返回 503 或跳过。打开 `/sign-in` 用任意邮箱登录，能进入 `/dashboard` 就说明跑通了。
+
+### 3. 改成自己的站点
+
+- `site.config.ts`（写错时 `dev` / `build` 直接报出字段名）：
+  - `name`、`domain`（不带协议，比如 `acme.com`）、`description`、`brand`（主色、logo）
+  - `features`：用不到的模块关掉，对应的环境变量就不再要求
+  - `legal`：公司或个人名称、联系邮箱、适用法域、生效日期
+  - `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分
+  - `email`：发件人名称和地址（域名要在 Resend 验证）
+  - `ai.models`：开启 AI 时的模型和每次调用的积分成本
+- `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`public/`：logo、Hero 图。
+- 示例业务模块 `src/features/example/`（一个扣积分的宣传语生成器）演示了业务代码怎么调用 `runAI`、`deductCredits`，以及怎么在 `dashboard.nav` 里加菜单。看完后删掉：`src/features/example/`、`src/app/[locale]/(app)/example/`、`e2e/example.spec.ts`，以及 `site.config.ts` 里 `dashboard.nav` 的那一项。
+- 改完运行 `pnpm test -u`（域名和路由变了，sitemap 快照要更新）和 `pnpm build`。
+
+写业务功能前先看一眼 [UPGRADING.md](UPGRADING.md) 的目录边界：业务代码放 `src/features/`，尽量不改 `src/core/`。
+
+### 4. 准备外部账号
+
+按[上线清单](#上线清单)第 4 节，只准备已开启模块需要的服务：Neon（数据库）、Resend（邮件，配好 SPF / DKIM）、Google OAuth（登录）、Creem（收款，先在测试模式建好产品，把产品 ID 填进 `billing.plans`）；开启 AI、上传时还有 Upstash、R2 和模型服务商。
+
+### 5. 部署到 Vercel
+
+按上线清单第 1–3 节：导入仓库、接入 Neon 集成、绑定域名、填写环境变量。Vercel 构建时会先执行 `pnpm db:migrate`，缺少必需的变量时构建直接失败并列出变量名。开启后台（`features.admin`）时记得填 `ADMIN_EMAILS`。
+
+### 6. 走一遍上线清单，打开真实收款
+
+在线上环境依次确认：
+
+1. 首页、`/pricing`、法律页、`/sitemap.xml`、`/robots.txt` 能打开，证书有效。
+2. 用邮箱验证码和 Google 各登录一次，收到欢迎邮件。
+3. 在 Creem 测试模式买一次付费套餐：成功页显示完成，`/billing` 里套餐和积分正确，收到付款邮件。
+4. 用 `ADMIN_EMAILS` 里的邮箱登录，打开 `/admin` 能看到这笔订单。
+5. 一切正常后，在 Creem 切到生产模式：换成生产环境的 API key、webhook secret 和产品 ID，设置 `CREEM_MODE=live`，重新部署。
 
 ## 本地开发
 
@@ -81,7 +133,7 @@ pnpm dev              # http://localhost:3000
   - 账单邮件：付款成功、付款失败、订阅取消由 `onBillingEvent` 钩子触发（`src/core/billing/emails.ts`），余额跌破 `credits.lowBalanceThreshold` 时发 `credits-low`（同一用户 24 小时内最多一封）。邮件都在数据库事务提交之后才发送：钩子通过 `afterCommit(fn)` 登记，事务回滚时不会发出；同一笔付款、同一订阅的取消只通知一次（`notification_log` 表去重）。发信失败只记日志，不影响 webhook 和扣减。
   - 生产构建默认使用 `resend`，本地没有 key 时用 `EMAIL_TRANSPORT=console pnpm build`。
 - 登录：Better Auth（`src/core/auth/`），Google 登录和邮箱验证码登录，路由 `/sign-in`、`/api/auth/*`。验证码参数在 `site.config.ts` 的 `auth.emailOtp`。
-  - 需要登录的页面放在 `src/app/[locale]/(app)/` 下，并在 `src/core/auth/routes.ts` 的 `protectedPrefixes` 登记：proxy 按 cookie 快速拦截，(app) 的 layout 再校验 session。
+  - 需要登录的页面放在 `src/app/[locale]/(app)/` 下：(app) 的 layout 校验 session，未登录时跳转登录页。写进 `site.config.ts` 的 `dashboard.nav` 的路径，proxy 还会按 cookie 提前拦截并带上回跳地址（`src/core/auth/routes.ts` 的 `protectedPrefixes`）。
   - 服务端取当前用户：`getSession()`（`src/core/auth/session.ts`）；客户端：`authClient`（`src/core/auth/client.ts`）。
   - auth 相关的表由 `pnpm auth:generate` 生成到 `src/core/db/schema/auth.ts`，再 `pnpm db:generate` 生成迁移。
 - 登录后的外框：`src/core/dashboard/`，侧边栏 + 用户菜单（头像、邮箱、切换语言、退出登录）。

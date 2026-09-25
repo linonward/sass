@@ -125,9 +125,11 @@ export default defineConfig({
     },
   },
   // 登录后侧边栏里业务自己的菜单项，文案在 messages 的 Dashboard.nav.<key>。
-  // 例如 { key: "projects", href: "/projects", icon: "layers" }；新增的一级路由还要登记到 src/core/auth/routes.ts。
+  // 例如 { key: "projects", href: "/projects", icon: "layers" }；这些路径自动需要登录。
+  // 不在侧边栏里的业务页面（放在 (app) 下）也会由 layout 校验登录，只是跳转登录页时不带回跳地址。
   dashboard: {
-    nav: [],
+    // 示例业务模块（src/features/example/）。删除示例时把这一项一起删掉。
+    nav: [{ key: "example", href: "/example", icon: "sparkles" }],
   },
   credits: {
     // 余额跌破这个值时提醒用户充值（credits-low 邮件）。

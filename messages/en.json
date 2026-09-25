@@ -257,7 +257,8 @@
       "admin": "Admin",
       "adminUsers": "Users",
       "adminOrders": "Orders",
-      "adminSubscriptions": "Subscriptions"
+      "adminSubscriptions": "Subscriptions",
+      "example": "Taglines"
     },
     "userMenu": {
       "open": "Account menu",
@@ -593,6 +594,26 @@
       "insufficient": "The balance can't go below 0.",
       "cannotBanSelf": "You can't suspend your own account.",
       "generic": "Something went wrong. Please try again."
+    }
+  },
+  "Example": {
+    "title": "Tagline generator",
+    "description": "An example feature: describe your product and get three taglines. Each generation costs credits.",
+    "cardTitle": "Your product",
+    "balance": "You have {balance, number} credits.",
+    "creditsDisabled": "Turn on features.credits to use this example.",
+    "productLabel": "What does your product do?",
+    "productPlaceholder": "An invoicing app for freelancers",
+    "quick": "Quick ({cost, plural, one {# credit} other {# credits}})",
+    "ai": "With AI ({cost, plural, one {# credit} other {# credits}})",
+    "results": "Taglines",
+    "errors": {
+      "invalid": "Describe your product in 3 to 200 characters.",
+      "unauthorized": "Your session has expired. Sign in again.",
+      "insufficient_credits": "Not enough credits. Buy more on the billing page.",
+      "rate_limited": "Too many requests. Wait a minute and try again.",
+      "ai_unavailable": "AI isn't available right now.",
+      "failed": "Something went wrong. Your credits were not used."
     }
   }
 }
