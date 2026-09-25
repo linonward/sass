@@ -256,6 +256,37 @@ export const creditsConfigSchema = z.strictObject({
   lowBalanceThreshold: z.number().int().nonnegative().default(100),
 });
 
+// 滑动窗口时长，格式同 @upstash/ratelimit 的 Duration，例如 "60 s"、"1 m"、"1 h"。
+const durationSchema = z
+  .string()
+  .regex(
+    /^\d+ ?(ms|s|m|h|d)$/,
+    'must be a duration such as "60 s", "1 m" or "1 h"',
+  )
+  .refine((value) => Number.parseInt(value, 10) > 0, {
+    message: "must be greater than 0",
+  });
+
+// 接口限流（Upstash Redis）。只用于 AI、上传等接口；登录限流由 Better Auth 负责。
+export const rateLimitConfigSchema = z.strictObject({
+  // Redis 出错或超时时：open 放行并记录错误日志（积分扣减兜底），closed 返回 503。
+  failMode: z.enum(["open", "closed"]).default("open"),
+  // 按名称定义的滑动窗口；每条策略同时按用户和按 IP 计数，任一超限即拒绝。
+  policies: z
+    .record(
+      messageKeySchema,
+      z.strictObject({
+        // 窗口内允许的请求数。
+        limit: z.number().int().positive(),
+        window: durationSchema,
+      }),
+    )
+    .default({
+      ai: { limit: 20, window: "1 m" },
+      upload: { limit: 10, window: "1 m" },
+    }),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -293,6 +324,7 @@ export const siteConfigSchema = z
     auth: authSchema,
     dashboard: dashboardSchema.default(dashboardSchema.parse({})),
     credits: creditsConfigSchema.default(creditsConfigSchema.parse({})),
+    rateLimit: rateLimitConfigSchema.default(rateLimitConfigSchema.parse({})),
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -313,6 +345,7 @@ export type AuthConfig = SiteConfig["auth"];
 export type DashboardIcon = (typeof dashboardIcons)[number];
 export type DashboardNavItem = SiteConfig["dashboard"]["nav"][number];
 export type CreditsConfig = SiteConfig["credits"];
+export type RateLimitConfig = SiteConfig["rateLimit"];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

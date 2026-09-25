@@ -6,37 +6,37 @@
 
 ## 总览
 
-| ID                     | topic          | 分支                  | 依赖             | 状态      |
-| ---------------------- | -------------- | --------------------- | ---------------- | --------- |
-| T001                   | plan           | `docs/plan`           | —                | done      |
-| **阶段 1：落地站**     |                |                       |                  |           |
-| T101                   | scaffold       | `chore/scaffold`      | T001             | done      |
-| T102                   | config         | `feat/config`         | T101             | done      |
-| T103                   | ui-shell       | `feat/ui-shell`       | T102             | done      |
-| T104                   | i18n           | `feat/i18n`           | T103             | done      |
-| T105                   | landing        | `feat/landing`        | T104             | done      |
-| T106                   | seo            | `feat/seo`            | T104             | done      |
-| T107                   | legal          | `feat/legal`          | T104             | done      |
-| T108                   | deploy         | `chore/deploy`        | T105, T106, T107 | done      |
-| **阶段 2：登录**       |                |                       |                  |           |
-| T201                   | db             | `feat/db`             | T102             | done      |
-| T202                   | email          | `feat/email`          | T102, T104       | done      |
-| T203                   | auth           | `feat/auth`           | T201, T202, T103 | done      |
-| T204                   | dashboard      | `feat/dashboard`      | T203             | done      |
-| **阶段 3：收款**       |                |                       |                  |           |
-| T301                   | billing-core   | `feat/billing-core`   | T201             | done      |
-| T302                   | credits        | `feat/credits`        | T201             | done      |
-| T303                   | creem          | `feat/creem`          | T301, T302, T203 | done      |
-| T304                   | pricing        | `feat/pricing`        | T303, T105       | in-review |
-| T305                   | billing-emails | `feat/billing-emails` | T303, T202       | in-review |
-| **阶段 4：AI 工具**    |                |                       |                  |           |
-| T401                   | ratelimit      | `feat/ratelimit`      | T102             | todo      |
-| T402                   | ai             | `feat/ai`             | T302, T401, T203 | todo      |
-| T403                   | upload         | `feat/upload`         | T401, T203       | todo      |
-| **阶段 5：内容与运营** |                |                       |                  |           |
-| T501                   | blog           | `feat/blog`           | T104, T106       | todo      |
-| T502                   | admin          | `feat/admin`          | T203, T302, T303 | todo      |
-| T503                   | starter-guide  | `docs/starter-guide`  | 阶段 1–5 全部    | todo      |
+| ID                     | topic          | 分支                  | 依赖             | 状态 |
+| ---------------------- | -------------- | --------------------- | ---------------- | ---- |
+| T001                   | plan           | `docs/plan`           | —                | done |
+| **阶段 1：落地站**     |                |                       |                  |      |
+| T101                   | scaffold       | `chore/scaffold`      | T001             | done |
+| T102                   | config         | `feat/config`         | T101             | done |
+| T103                   | ui-shell       | `feat/ui-shell`       | T102             | done |
+| T104                   | i18n           | `feat/i18n`           | T103             | done |
+| T105                   | landing        | `feat/landing`        | T104             | done |
+| T106                   | seo            | `feat/seo`            | T104             | done |
+| T107                   | legal          | `feat/legal`          | T104             | done |
+| T108                   | deploy         | `chore/deploy`        | T105, T106, T107 | done |
+| **阶段 2：登录**       |                |                       |                  |      |
+| T201                   | db             | `feat/db`             | T102             | done |
+| T202                   | email          | `feat/email`          | T102, T104       | done |
+| T203                   | auth           | `feat/auth`           | T201, T202, T103 | done |
+| T204                   | dashboard      | `feat/dashboard`      | T203             | done |
+| **阶段 3：收款**       |                |                       |                  |      |
+| T301                   | billing-core   | `feat/billing-core`   | T201             | done |
+| T302                   | credits        | `feat/credits`        | T201             | done |
+| T303                   | creem          | `feat/creem`          | T301, T302, T203 | done |
+| T304                   | pricing        | `feat/pricing`        | T303, T105       | done |
+| T305                   | billing-emails | `feat/billing-emails` | T303, T202       | done |
+| **阶段 4：AI 工具**    |                |                       |                  |      |
+| T401                   | ratelimit      | `feat/ratelimit`      | T102             | done |
+| T402                   | ai             | `feat/ai`             | T302, T401, T203 | todo |
+| T403                   | upload         | `feat/upload`         | T401, T203       | todo |
+| **阶段 5：内容与运营** |                |                       |                  |      |
+| T501                   | blog           | `feat/blog`           | T104, T106       | todo |
+| T502                   | admin          | `feat/admin`          | T203, T302, T303 | todo |
+| T503                   | starter-guide  | `docs/starter-guide`  | 阶段 1–5 全部    | todo |
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
 

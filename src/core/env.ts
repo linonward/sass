@@ -5,6 +5,7 @@ import { authServerEnv } from "./auth/env";
 import { billingServerEnv } from "./billing/env";
 import { createAppEnv } from "./create-env";
 import { emailServerEnv } from "./email/env";
+import { rateLimitServerEnv } from "./ratelimit/env";
 
 export { createAppEnv, requiredWhen } from "./create-env";
 
@@ -18,6 +19,12 @@ export const env = createAppEnv({
     ...authServerEnv(process.env),
     ...billingServerEnv(process.env, {
       hasPaidPlans: siteConfig.billing.plans.some((plan) => plan.price > 0),
+    }),
+    ...rateLimitServerEnv(process.env, {
+      enabled:
+        siteConfig.features.rateLimit ||
+        siteConfig.features.ai ||
+        siteConfig.features.upload,
     }),
   },
   runtimeEnv: process.env,
