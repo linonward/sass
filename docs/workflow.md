@@ -9,13 +9,13 @@
 
 ## 命名
 
-| 项 | 规则 | 例子 |
-|---|---|---|
-| topic | 小写 kebab-case，来自任务表 | `i18n` |
-| 分支 | `<type>/<topic>`，type 取 `feat` / `fix` / `docs` / `chore` | `feat/i18n` |
-| worktree | `../sass-<topic>` | `../sass-i18n` |
-| PR 标题 | `<任务ID> <type>: <描述>` | `T104 feat: next-intl 多语言路由` |
-| 提交信息 | Conventional Commits | `feat(i18n): add locale switcher` |
+| 项       | 规则                                                        | 例子                              |
+| -------- | ----------------------------------------------------------- | --------------------------------- |
+| topic    | 小写 kebab-case，来自任务表                                 | `i18n`                            |
+| 分支     | `<type>/<topic>`，type 取 `feat` / `fix` / `docs` / `chore` | `feat/i18n`                       |
+| worktree | `../sass-<topic>`                                           | `../sass-i18n`                    |
+| PR 标题  | `<任务ID> <type>: <描述>`                                   | `T104 feat: next-intl 多语言路由` |
+| 提交信息 | Conventional Commits                                        | `feat(i18n): add locale switcher` |
 
 ## 开始一个任务
 
