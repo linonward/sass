@@ -2,7 +2,7 @@ import { defineConfig } from "./src/core/config/schema";
 
 export default defineConfig({
   name: "Acme",
-  domain: "example.com",
+  domain: "sass.linonward.com",
   description: "Ship your SaaS in a day.",
   brand: {
     primaryColor: "#4f46e5",
