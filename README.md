@@ -47,6 +47,7 @@ pnpm dev              # http://localhost:3000
 | `pnpm db:generate`                  | 根据 schema 生成迁移文件（`drizzle/`，需提交）                           |
 | `pnpm db:migrate`                   | 对 `DATABASE_URL` 执行迁移                                               |
 | `pnpm db:studio`                    | 打开 Drizzle Studio 浏览数据                                             |
+| `pnpm email:dev`                    | 预览邮件模板（http://localhost:3030）                                    |
 
 数据库：`DATABASE_URL` 必填（见 `.env.example`）。本地可以用 Docker 起一个 Postgres，再执行 `pnpm db:migrate`。设置了 `DATABASE_URL_TEST` 时，`pnpm test` 会运行数据库测试；未设置时跳过（CI 中必须设置）。
 
@@ -59,6 +60,8 @@ pnpm dev              # http://localhost:3000
 - 法律页：`/privacy`、`/terms`、`/refund`，正文模板在 `content/legal/`（归业务方所有），主体信息取自 `site.config.ts` 的 `legal`。**模板仅供参考，不构成法律意见**，上线前请结合业务和适用法律自行审阅，必要时咨询律师。
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
+- 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。
+  - 生产构建默认使用 `resend`，本地没有 key 时用 `EMAIL_TRANSPORT=console pnpm build`。
 - UI 组件：shadcn/ui（Base UI），生成到 `src/core/ui/`。新增组件用 `pnpm dlx shadcn@latest add <name>`。
 - 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验。
 
@@ -86,9 +89,11 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
 
-| 变量           | 环境                 | 来源                                  |
-| -------------- | -------------------- | ------------------------------------- |
-| `DATABASE_URL` | Production / Preview | Neon 的 Vercel 集成自动注入（见下文） |
+| 变量              | 说明                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| `DATABASE_URL`    | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。    |
+| `RESEND_API_KEY`  | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。   |
+| `EMAIL_TRANSPORT` | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。 |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -110,6 +115,17 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 2. Vercel 项目 → Integrations，从 Marketplace 安装 **Neon**，关联上一步的 Neon 项目，并开启 **Create a branch for each preview deployment**。集成会为 Production 注入主分支的 `DATABASE_URL`，为每个预览部署创建独立的数据库分支并注入对应的 `DATABASE_URL`，预览不会连到生产库。
 3. 迁移随部署自动执行：`vercel.json` 的构建命令是 `pnpm db:migrate && pnpm build`，预览部署迁移自己的分支，生产部署迁移主分支。迁移失败时本次部署会失败，线上仍是上一个版本。
    - 迁移会在新代码上线前执行，线上旧代码会短暂面对新表结构。所以迁移应保持向后兼容：先加列或加表，删列放到下一次发布。
+
+#### 邮件（Resend）
+
+1. 在 Resend → Domains 添加发信域名，与 `site.config.ts` 的 `email.fromAddress` 的域名一致（比如 `sass.linonward.com`）。建议用子域名发信，不影响根域名的邮件信誉。
+2. 在 DNS 服务商处添加 Resend 给出的记录：
+   - SPF：`send` 子域名下的 `MX` 和 `TXT`（`v=spf1 include:amazonses.com ~all`）
+   - DKIM：`resend._domainkey` 的 `TXT`
+   - DMARC（建议）：`_dmarc` 的 `TXT`，例如 `v=DMARC1; p=none; rua=mailto:<你的邮箱>`
+   - 使用 Cloudflare 时，这些记录都设为 **DNS only**。
+3. 等 Resend 显示域名已验证，然后在 API Keys 创建一个只有发送权限（Sending access）的 key，填到 Vercel 的 `RESEND_API_KEY`。
+4. 部署后触发一次真实发信（比如登录验证码），确认邮件进了收件箱而不是垃圾箱。
 
 ### 5. GitHub
 

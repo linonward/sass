@@ -94,4 +94,10 @@ export default defineConfig({
       },
     ],
   },
+  // 事务邮件（登录验证码、欢迎邮件等）的发件信息。发件域名需在 Resend 验证。
+  email: {
+    fromName: "Acme",
+    fromAddress: "noreply@sass.linonward.com",
+    replyTo: "support@example.com",
+  },
 });

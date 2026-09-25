@@ -20,7 +20,7 @@
 | T108                   | deploy         | `chore/deploy`        | T105, T106, T107 | done      |
 | **阶段 2：登录**       |                |                       |                  |           |
 | T201                   | db             | `feat/db`             | T102             | in-review |
-| T202                   | email          | `feat/email`          | T102, T104       | todo      |
+| T202                   | email          | `feat/email`          | T102, T104       | in-review |
 | T203                   | auth           | `feat/auth`           | T201, T202, T103 | todo      |
 | T204                   | dashboard      | `feat/dashboard`      | T203             | todo      |
 | **阶段 3：收款**       |                |                       |                  |           |

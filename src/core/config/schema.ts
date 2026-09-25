@@ -148,6 +148,21 @@ export const billingSchema = z.strictObject({
     .default([]),
 });
 
+// 事务邮件的发件信息；发件域名需在 Resend 验证（见 README 上线清单）。
+export const emailSchema = z.strictObject({
+  fromName: z.string().trim().min(1),
+  fromAddress: z.email(),
+  replyTo: z.email().optional(),
+  // 邮件页眉的 logo（public/ 下的 PNG 或 JPG）。Gmail 等客户端不显示 SVG，不填则只显示站点名。
+  logo: z
+    .string()
+    .regex(
+      /^\/.+\.(png|jpe?g)$/i,
+      'must be a PNG or JPG path under public/ such as "/email-logo.png"',
+    )
+    .optional(),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -181,6 +196,7 @@ export const siteConfigSchema = z
     legal: legalSchema,
     landing: landingSchema.default(landingSchema.parse({})),
     billing: billingSchema.default(billingSchema.parse({})),
+    email: emailSchema,
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -196,6 +212,7 @@ export type LegalInfo = SiteConfig["legal"];
 export type LandingSectionId = (typeof landingSectionIds)[number];
 export type LandingConfig = SiteConfig["landing"];
 export type Plan = SiteConfig["billing"]["plans"][number];
+export type EmailConfig = SiteConfig["email"];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

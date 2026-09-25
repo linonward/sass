@@ -16,6 +16,11 @@ const valid: SiteConfigInput = {
     jurisdiction: "the State of Delaware, United States",
     effectiveDate: "2026-01-31",
   },
+  email: {
+    fromName: "Acme",
+    fromAddress: "noreply@example.com",
+    replyTo: "support@example.com",
+  },
 };
 
 describe("defineConfig", () => {
@@ -102,5 +107,32 @@ describe("legal", () => {
     expect(() =>
       defineConfig({ ...valid, legal: { ...valid.legal!, ...patch } }),
     ).toThrow(`- ${path}: `);
+  });
+});
+
+describe("email", () => {
+  test("合法的 email 原样保留，logo 可省略", () => {
+    expect(defineConfig(valid).email).toEqual({
+      fromName: "Acme",
+      fromAddress: "noreply@example.com",
+      replyTo: "support@example.com",
+    });
+  });
+
+  test("缺少 email 时报错", () => {
+    const { email: _email, ...rest } = valid;
+    void _email;
+    expect(() => defineConfig(rest as SiteConfigInput)).toThrow("- email: ");
+  });
+
+  test.each([
+    ["email.fromAddress", { fromName: "A", fromAddress: "not-an-email" }],
+    ["email.replyTo", { fromName: "A", fromAddress: "a@b.co", replyTo: "x" }],
+    ["email.fromName", { fromName: " ", fromAddress: "a@b.co" }],
+    ["email.logo", { fromName: "A", fromAddress: "a@b.co", logo: "/logo.svg" }],
+  ])("非法字段 %s 出现在报错中", (path, email) => {
+    expect(() => defineConfig({ ...valid, email } as SiteConfigInput)).toThrow(
+      `- ${path}: `,
+    );
   });
 });
