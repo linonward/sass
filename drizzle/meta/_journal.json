@@ -36,6 +36,13 @@
       "when": 1790337341108,
       "tag": "0004_billing_core",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790342797186,
+      "tag": "0005_notification_log",
+      "breakpoints": true
     }
   ]
 }

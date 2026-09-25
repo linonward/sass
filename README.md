@@ -64,6 +64,7 @@ pnpm dev              # http://localhost:3000
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
 - 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。
+  - 账单邮件：付款成功、付款失败、订阅取消由 `onBillingEvent` 钩子触发（`src/core/billing/emails.ts`），余额跌破 `credits.lowBalanceThreshold` 时发 `credits-low`（同一用户 24 小时内最多一封）。邮件都在数据库事务提交之后才发送：钩子通过 `afterCommit(fn)` 登记，事务回滚时不会发出；同一笔付款、同一订阅的取消只通知一次（`notification_log` 表去重）。发信失败只记日志，不影响 webhook 和扣减。
   - 生产构建默认使用 `resend`，本地没有 key 时用 `EMAIL_TRANSPORT=console pnpm build`。
 - 登录：Better Auth（`src/core/auth/`），Google 登录和邮箱验证码登录，路由 `/sign-in`、`/api/auth/*`。验证码参数在 `site.config.ts` 的 `auth.emailOtp`。
   - 需要登录的页面放在 `src/app/[locale]/(app)/` 下，并在 `src/core/auth/routes.ts` 的 `protectedPrefixes` 登记：proxy 按 cookie 快速拦截，(app) 的 layout 再校验 session。

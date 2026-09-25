@@ -13,7 +13,11 @@ import {
 
 import type { BillingEvent } from "./events";
 import "./hooks";
-import { runOnBillingEvent } from "./on-billing-event";
+import {
+  runAfterCommit,
+  runOnBillingEvent,
+  type AfterCommitCallback,
+} from "./on-billing-event";
 
 export type HandleBillingEventResult =
   /** 首次处理。stale 为 true 表示是乱序到达的旧事件，没有改动订阅状态。 */
@@ -42,10 +46,22 @@ export class UnresolvedBillingUserError extends Error {
  * 2. 更新订阅、订单和客户映射；
  * 3. 触发 onBillingEvent 钩子（接收同一个事务）。
  * 任何一步失败都会整体回滚，webhook_events 里也不会留下记录，重试时重新处理。
+ * 钩子用 afterCommit 登记的回调（例如发邮件）在事务提交成功后才执行。
  */
 export async function handleBillingEvent(
   event: BillingEvent,
   { db = defaultDb }: { db?: Database } = {},
+): Promise<HandleBillingEventResult> {
+  const afterCommit: AfterCommitCallback[] = [];
+  const result = await processInTransaction(db, event, afterCommit);
+  await runAfterCommit(afterCommit);
+  return result;
+}
+
+function processInTransaction(
+  db: Database,
+  event: BillingEvent,
+  afterCommit: AfterCommitCallback[],
 ): Promise<HandleBillingEventResult> {
   return db.transaction(async (tx) => {
     const [recorded] = await tx
@@ -79,7 +95,12 @@ export async function handleBillingEvent(
         .where(eq(webhookEvents.id, recorded.id));
     }
 
-    await runOnBillingEvent(event, { tx, stale, userId });
+    await runOnBillingEvent(event, {
+      tx,
+      stale,
+      userId,
+      afterCommit: (fn) => afterCommit.push(fn),
+    });
     return { status: "processed" as const, userId, stale };
   });
 }

@@ -250,6 +250,12 @@ export const dashboardSchema = z.strictObject({
     .default([]),
 });
 
+// 积分相关的设置；只在 features.credits 开启时生效。
+export const creditsConfigSchema = z.strictObject({
+  // 一次扣减让余额从 >= 阈值降到 < 阈值时，发送 credits-low 邮件（24 小时内最多一封）。0 表示不提醒。
+  lowBalanceThreshold: z.number().int().nonnegative().default(100),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -286,6 +292,7 @@ export const siteConfigSchema = z
     email: emailSchema,
     auth: authSchema,
     dashboard: dashboardSchema.default(dashboardSchema.parse({})),
+    credits: creditsConfigSchema.default(creditsConfigSchema.parse({})),
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -305,6 +312,7 @@ export type EmailConfig = SiteConfig["email"];
 export type AuthConfig = SiteConfig["auth"];
 export type DashboardIcon = (typeof dashboardIcons)[number];
 export type DashboardNavItem = SiteConfig["dashboard"]["nav"][number];
+export type CreditsConfig = SiteConfig["credits"];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

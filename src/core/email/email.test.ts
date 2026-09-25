@@ -89,10 +89,92 @@ describe("renderEmail", () => {
   test.each([
     ["sign-in-code", signIn.props],
     ["welcome", { name: "Ada" }],
+    [
+      "payment-succeeded",
+      {
+        planName: "Pro",
+        kind: "subscription",
+        amount: 1900,
+        currency: "USD",
+        paidAt: "2026-09-25T12:00:00.000Z",
+        renewsAt: "2026-10-25T12:00:00.000Z",
+        credits: 2000,
+        manageUrl: "https://sass.linonward.com/billing",
+      },
+    ],
+    [
+      "payment-failed",
+      {
+        planName: "Pro",
+        amount: 1900,
+        currency: "USD",
+        manageUrl: "https://sass.linonward.com/billing",
+      },
+    ],
+    [
+      "subscription-canceled",
+      {
+        planName: "Pro",
+        endsAt: "2026-10-25T12:00:00.000Z",
+        manageUrl: "https://sass.linonward.com/billing",
+      },
+    ],
+    [
+      "credits-low",
+      {
+        balance: 80,
+        threshold: 100,
+        topUpUrl: "https://sass.linonward.com/pricing",
+      },
+    ],
   ] as const)("%s 模板渲染快照", async (template, props) => {
     const email = await renderEmail({ to: "a@b.co", template, props } as never);
     expect(email.html).toMatchSnapshot("html");
     expect(email.text).toMatchSnapshot("text");
+  });
+});
+
+describe("账单邮件模板", () => {
+  test("主题、金额和日期随语言切换", async () => {
+    const props = {
+      planName: "Pro",
+      kind: "one_time",
+      amount: 19900,
+      currency: "USD",
+      paidAt: "2026-09-25T12:00:00.000Z",
+      manageUrl: "https://sass.linonward.com/billing",
+    } as const;
+    const en = await renderEmail({
+      to: "a@b.co",
+      template: "payment-succeeded",
+      props,
+    });
+    expect(en.subject).toBe(`Payment received for Pro · ${siteConfig.name}`);
+    expect(en.text).toContain("$199.00");
+    expect(en.text).toContain("September 25, 2026");
+    // 一次性购买没有续费日期
+    expect(en.text).not.toContain("Renews on");
+
+    const de = await renderEmail({
+      to: "a@b.co",
+      template: "payment-succeeded",
+      props,
+      locale: "de",
+    });
+    expect(de.subject.startsWith("[de] ")).toBe(true);
+    expect(de.html).toContain('lang="de"');
+    // 德语的日期格式
+    expect(de.text).toContain("25. September 2026");
+  });
+
+  test("可选字段缺失时对应的行不显示", async () => {
+    const email = await renderEmail({
+      to: "a@b.co",
+      template: "payment-failed",
+      props: { manageUrl: "https://sass.linonward.com/billing" },
+    });
+    expect(email.text).toContain("couldn't process your latest payment");
+    expect(email.text).not.toContain("Amount");
   });
 });
 

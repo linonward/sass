@@ -1,17 +1,21 @@
 import { getDb } from "@/core/db";
+import { sendEmail } from "@/core/email/send";
 
 import siteConfig from "../../../site.config";
+import { createLowBalanceHook } from "./low-balance";
 import { createCredits } from "./service";
 
 export * from "./errors";
 export type {
   AdjustInput,
+  AfterCommitCallback,
   CreditTransaction,
   Credits,
   DeductInput,
   Executor,
   GrantInput,
   RefundInput,
+  WriteOptions,
   WriteResult,
 } from "./service";
 
@@ -26,4 +30,12 @@ export const {
   refundCredits,
   adjustCredits,
   listTransactions,
-} = createCredits({ db: getDb, enabled: creditsEnabled });
+} = createCredits({
+  db: getDb,
+  enabled: creditsEnabled,
+  // 余额跌破 credits.lowBalanceThreshold 时发 credits-low 邮件（24 小时内最多一封）。
+  lowBalance: createLowBalanceHook({
+    threshold: siteConfig.credits.lowBalanceThreshold,
+    send: sendEmail,
+  }),
+});

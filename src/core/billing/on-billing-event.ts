@@ -12,7 +12,14 @@ export type BillingEventContext = {
   stale: boolean;
   /** 解析出的用户 ID。 */
   userId: string;
+  /**
+   * 登记一个在事务提交之后才执行的回调，用于发邮件等撤不回来的副作用。
+   * 事务回滚（包括后面的钩子失败）时不会执行；回调失败只记日志，不影响 webhook 的结果。
+   */
+  afterCommit: (fn: AfterCommitCallback) => void;
 };
+
+export type AfterCommitCallback = () => Promise<void> | void;
 
 export type OnBillingEventHandler = (
   event: BillingEvent,
@@ -52,6 +59,17 @@ export class OnBillingEventError extends Error {
   ) {
     super(`onBillingEvent handler "${handler}" failed`);
     this.name = "OnBillingEventError";
+  }
+}
+
+/** 依次执行 afterCommit 登记的回调；某个失败只记日志，继续执行后面的。 */
+export async function runAfterCommit(callbacks: AfterCommitCallback[]) {
+  for (const callback of callbacks) {
+    try {
+      await callback();
+    } catch (error) {
+      console.error("[billing] afterCommit callback failed", error);
+    }
   }
 }
 

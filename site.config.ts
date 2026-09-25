@@ -124,4 +124,8 @@ export default defineConfig({
   dashboard: {
     nav: [],
   },
+  credits: {
+    // 余额跌破这个值时提醒用户充值（credits-low 邮件）。
+    lowBalanceThreshold: 100,
+  },
 });
