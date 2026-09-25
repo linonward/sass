@@ -27,9 +27,6 @@
   "Locale": {
     "switch": "Change language"
   },
-  "Home": {
-    "cta": "Get started"
-  },
   "NotFound": {
     "title": "Page not found",
     "description": "The page you are looking for doesn't exist or has been moved.",
@@ -43,5 +40,104 @@
   },
   "Metadata": {
     "description": "Ship your SaaS in a day."
+  },
+  "Landing": {
+    "hero": {
+      "badge": "Next.js SaaS starter",
+      "title": "Launch your SaaS this weekend",
+      "subtitle": "Auth, payments, credits, AI and SEO are already wired up. Change the config, write your product, ship.",
+      "primaryCta": "Get started",
+      "secondaryCta": "See features",
+      "imageAlt": "Product dashboard preview"
+    },
+    "features": {
+      "title": "Everything you need to ship",
+      "subtitle": "The boring parts are done, so you can focus on what makes your product different.",
+      "items": {
+        "auth": {
+          "title": "Authentication",
+          "description": "Google sign-in and email one-time codes, with sessions and roles built in."
+        },
+        "billing": {
+          "title": "Payments",
+          "description": "Subscriptions and one-time purchases through a provider-agnostic billing layer."
+        },
+        "i18n": {
+          "title": "Internationalization",
+          "description": "Localized routes and messages. Adding a language is just a config change."
+        },
+        "ai": {
+          "title": "AI ready",
+          "description": "Call any model with the Vercel AI SDK and charge per request in credits."
+        },
+        "seo": {
+          "title": "SEO built in",
+          "description": "Metadata, sitemap, hreflang and Open Graph images out of the box."
+        },
+        "fast": {
+          "title": "Fast by default",
+          "description": "Static rendering, optimized fonts and images, and a tiny client bundle."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Simple, transparent pricing",
+      "subtitle": "Start for free. Upgrade when you need more.",
+      "popular": "Most popular",
+      "cta": "Choose {plan}",
+      "interval": {
+        "month": "/ month",
+        "year": "/ year",
+        "once": "one-time"
+      },
+      "plans": {
+        "free": {
+          "name": "Free",
+          "description": "For trying things out."
+        },
+        "pro": {
+          "name": "Pro",
+          "description": "For growing products."
+        },
+        "lifetime": {
+          "name": "Lifetime",
+          "description": "Pay once, use forever."
+        }
+      },
+      "features": {
+        "credits100": "100 credits per month",
+        "credits2000": "2,000 credits per month",
+        "coreFeatures": "All core features",
+        "communitySupport": "Community support",
+        "prioritySupport": "Priority email support",
+        "lifetimeUpdates": "Lifetime updates"
+      }
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "items": {
+        "stack": {
+          "question": "What is it built with?",
+          "answer": "Next.js, TypeScript, Tailwind CSS and shadcn/ui, with Postgres for data."
+        },
+        "payments": {
+          "question": "Which payment providers are supported?",
+          "answer": "Creem is supported out of the box. Other providers can be added behind the same billing interface."
+        },
+        "customize": {
+          "question": "How do I customize it?",
+          "answer": "Edit site.config.ts for branding, sections and plans, and messages for copy. Your product code lives outside the core folder."
+        },
+        "license": {
+          "question": "Can I use it for commercial projects?",
+          "answer": "Yes. Build and sell as many products as you like."
+        }
+      }
+    },
+    "cta": {
+      "title": "Ready to ship?",
+      "subtitle": "Go from idea to paying customers in a day.",
+      "button": "Start building"
+    }
   }
 }

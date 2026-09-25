@@ -50,4 +50,48 @@ export default defineConfig({
     jurisdiction: "the State of Delaware, United States",
     effectiveDate: "2026-01-01",
   },
+  landing: {
+    sections: ["hero", "features", "pricing", "faq", "cta"],
+    hero: {
+      image: {
+        src: "/landing/hero.svg",
+        darkSrc: "/landing/hero-dark.svg",
+        width: 1200,
+        height: 720,
+      },
+    },
+    features: [
+      { key: "auth", icon: "shield" },
+      { key: "billing", icon: "creditCard" },
+      { key: "i18n", icon: "globe" },
+      { key: "ai", icon: "sparkles" },
+      { key: "seo", icon: "chart" },
+      { key: "fast", icon: "zap" },
+    ],
+    faq: ["stack", "payments", "customize", "license"],
+  },
+  billing: {
+    currency: "USD",
+    plans: [
+      {
+        id: "free",
+        price: 0,
+        interval: "month",
+        features: ["credits100", "coreFeatures", "communitySupport"],
+      },
+      {
+        id: "pro",
+        price: 19,
+        interval: "month",
+        features: ["credits2000", "coreFeatures", "prioritySupport"],
+        highlighted: true,
+      },
+      {
+        id: "lifetime",
+        price: 199,
+        interval: "once",
+        features: ["credits2000", "coreFeatures", "lifetimeUpdates"],
+      },
+    ],
+  },
 });

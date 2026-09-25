@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
+    setupFiles: ["./vitest.setup.ts"],
     // next-intl 引用 `next/navigation`（无扩展名），需经 Vite 处理才能解析。
     server: { deps: { inline: ["next-intl"] } },
   },
