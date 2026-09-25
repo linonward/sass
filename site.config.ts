@@ -11,10 +11,11 @@ export default defineConfig({
   locales: ["en"],
   defaultLocale: "en",
   features: {
-    // 演示站点开启积分和文件上传；积分按 billing.plans 的 credits 发放。
+    // 演示站点开启积分、博客和文件上传；积分按 billing.plans 的 credits 发放。
+    // 博客文章放在 content/blog/<locale>/<slug>.mdx，字段见 content-collections.ts。
     credits: true,
     ai: false,
-    blog: false,
+    blog: true,
     upload: true,
     admin: false,
     rateLimit: false,
@@ -24,6 +25,8 @@ export default defineConfig({
       { key: "features", href: "/#features" },
       { key: "pricing", href: "/#pricing" },
       { key: "faq", href: "/#faq" },
+      // 关闭 features.blog 时把 Blog 链接一起删掉。
+      { key: "blog", href: "/blog" },
     ],
     footer: [
       {
@@ -32,6 +35,7 @@ export default defineConfig({
           { key: "features", href: "/#features" },
           { key: "pricing", href: "/#pricing" },
           { key: "faq", href: "/#faq" },
+          { key: "blog", href: "/blog" },
         ],
       },
       {

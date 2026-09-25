@@ -13,6 +13,9 @@ vi.mock("@/core/i18n/routing", () => ({
   routing: { locales: ["en", "de"], defaultLocale: "en" },
 }));
 
+// 博客条目在 src/core/blog/blog.test.ts 里用固定数据测试，这里不受示例文章影响。
+vi.mock("content-collections", () => ({ allPosts: [] }));
+
 const origin = `https://${siteConfig.domain}`;
 
 describe("urls", () => {
@@ -23,6 +26,14 @@ describe("urls", () => {
     ["de", "/privacy", "/de/privacy"],
   ])("%s %s → %s", (locale, path, expected) => {
     expect(localizedPath(locale, path)).toBe(expected);
+  });
+
+  test("只有部分语言的页面，x-default 优先指向默认语言", () => {
+    expect(languageAlternates("/blog/a", ["de"])).toEqual({
+      de: `${origin}/de/blog/a`,
+      "x-default": `${origin}/de/blog/a`,
+    });
+    expect(languageAlternates("/blog/a", [])).toEqual({});
   });
 
   test("hreflang 包含每个语言和 x-default", () => {

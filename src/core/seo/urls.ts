@@ -16,12 +16,21 @@ export function absoluteUrl(locale: string, path: string): string {
   return localized === "/" ? siteUrl : `${siteUrl}${localized}`;
 }
 
-/** hreflang 映射：每个语言一项，外加指向默认语言的 `x-default`。 */
-export function languageAlternates(path: string): Record<string, string> {
+/**
+ * hreflang 映射：每个语言一项，外加 `x-default`。
+ * 页面只有部分语言的版本时（如博客文章）传入 `locales`；x-default 优先指向默认语言，没有就指向第一个。
+ */
+export function languageAlternates(
+  path: string,
+  locales: readonly string[] = routing.locales,
+): Record<string, string> {
+  const fallback = locales.includes(routing.defaultLocale)
+    ? routing.defaultLocale
+    : locales[0];
   return {
     ...Object.fromEntries(
-      routing.locales.map((locale) => [locale, absoluteUrl(locale, path)]),
+      locales.map((locale) => [locale, absoluteUrl(locale, path)]),
     ),
-    "x-default": absoluteUrl(routing.defaultLocale, path),
+    ...(fallback && { "x-default": absoluteUrl(fallback, path) }),
   };
 }

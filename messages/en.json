@@ -3,6 +3,7 @@
     "features": "Features",
     "pricing": "Pricing",
     "faq": "FAQ",
+    "blog": "Blog",
     "product": "Product",
     "legal": "Legal",
     "privacy": "Privacy Policy",
@@ -412,5 +413,22 @@
       "model_error": "The model ran into an error. Your credits have been refunded.",
       "generic": "Something went wrong. Please try again."
     }
+  },
+  "Blog": {
+    "title": "Blog",
+    "description": "Product updates, guides and stories from the team.",
+    "feedTitle": "{name} Blog",
+    "rss": "RSS feed",
+    "empty": "No posts yet. Check back soon.",
+    "draft": "Draft",
+    "back": "All posts",
+    "tags": "Tags",
+    "tagTitle": "Posts tagged “{tag}”",
+    "tagDescription": "All posts on the {name} blog tagged “{tag}”.",
+    "pageTitle": "{title} (page {page})",
+    "pagination": "Pagination",
+    "newer": "Newer posts",
+    "older": "Older posts",
+    "pageOf": "Page {page} of {total}"
   }
 }

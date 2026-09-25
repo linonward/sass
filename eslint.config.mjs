@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "playwright-report/**",
     "test-results/**",
+    // content-collections 生成的文章数据
+    ".content-collections/**",
   ]),
 ]);
 
