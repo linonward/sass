@@ -30,6 +30,15 @@ pnpm install   # T101 合入之后才有
 
 开工前确认任务的依赖都已合入 `main`。
 
+## 提交前的检查
+
+`pnpm install` 会通过 `prepare` 脚本装好 git 钩子（husky，`.husky/`）：
+
+- `pre-commit`：lint-staged 只处理暂存的文件，代码文件先 `eslint --fix` 再 `prettier --write`，其他文件 `prettier --write`（配置在 `lint-staged.config.mjs`）。ESLint 报错时提交中止，暂存区恢复原样。
+- `commit-msg`：commitlint 检查提交信息是否符合 Conventional Commits（`commitlint.config.mjs`），例如 `feat(i18n): add locale switcher`。合并提交会跳过。
+
+钩子只挡本地提交，CI 仍然完整跑一遍 lint、format、typecheck、test。临时跳过用 `git commit --no-verify`，但 CI 不会放过。
+
 ## 提交 PR
 
 ```bash

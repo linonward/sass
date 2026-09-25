@@ -101,6 +101,8 @@ pnpm dev              # http://localhost:3000
 | `pnpm db:studio`                    | 打开 Drizzle Studio 浏览数据                                             |
 | `pnpm email:dev`                    | 预览邮件模板（http://localhost:3030）                                    |
 
+`pnpm install` 同时装好 git 钩子：提交时自动用 ESLint 和 Prettier 处理暂存的文件，并用 commitlint 检查提交信息（Conventional Commits），见 [docs/workflow.md](docs/workflow.md#提交前的检查)。
+
 数据库：`DATABASE_URL` 必填（见 `.env.example`）。本地可以用 Docker 起一个 Postgres，再执行 `pnpm db:migrate`。设置了 `DATABASE_URL_TEST` 时，`pnpm test` 会运行数据库测试；未设置时跳过（CI 中必须设置）。
 
 ## 配置
