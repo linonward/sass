@@ -28,6 +28,8 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/postgres
+      # 生产构建默认用 Resend 发信并要求 RESEND_API_KEY；CI 改为写文件，e2e 从 .tmp/emails/ 读取。
+      EMAIL_TRANSPORT: file
     steps:
       - uses: actions/checkout@v7
 

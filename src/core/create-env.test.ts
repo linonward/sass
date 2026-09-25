@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { z } from "zod";
 
 import { createAppEnv, requiredWhen } from "./create-env";
+import { emailServerEnv, resolveEmailTransport } from "./email/env";
 
 function aiEnv(ai: boolean, runtimeEnv: Record<string, string | undefined>) {
   return createAppEnv({
@@ -44,5 +45,46 @@ describe("createAppEnv", () => {
 
   test("SKIP_ENV_VALIDATION 跳过校验", () => {
     expect(() => aiEnv(true, { SKIP_ENV_VALIDATION: "1" })).not.toThrow();
+  });
+});
+
+describe("邮件变量", () => {
+  function emailEnv(runtimeEnv: Record<string, string | undefined>) {
+    return createAppEnv({ server: emailServerEnv(runtimeEnv), runtimeEnv });
+  }
+
+  test.each([
+    [{}, "console"],
+    [{ NODE_ENV: "test" }, "console"],
+    [{ NODE_ENV: "production", RESEND_API_KEY: "re_x" }, "resend"],
+    [{ NODE_ENV: "production", EMAIL_TRANSPORT: "file" }, "file"],
+    [{ EMAIL_TRANSPORT: "resend", RESEND_API_KEY: "re_x" }, "resend"],
+  ])("%o 解析为 %s", (runtimeEnv, expected) => {
+    expect(resolveEmailTransport(runtimeEnv)).toBe(expected);
+    expect(() => emailEnv(runtimeEnv)).not.toThrow();
+  });
+
+  test("生产环境缺少 RESEND_API_KEY 时报错并指出变量名", () => {
+    expect(() => emailEnv({ NODE_ENV: "production" })).toThrow(
+      "- RESEND_API_KEY: ",
+    );
+  });
+
+  test("本地未设置任何变量时不要求 RESEND_API_KEY", () => {
+    expect(
+      emailEnv({ NODE_ENV: "development" }).RESEND_API_KEY,
+    ).toBeUndefined();
+  });
+
+  test("RESEND_API_KEY 格式不对时报错", () => {
+    expect(() =>
+      emailEnv({ EMAIL_TRANSPORT: "resend", RESEND_API_KEY: "sk-123" }),
+    ).toThrow("- RESEND_API_KEY: ");
+  });
+
+  test("EMAIL_TRANSPORT 取值非法时报错", () => {
+    expect(() => emailEnv({ EMAIL_TRANSPORT: "smtp" })).toThrow(
+      "- EMAIL_TRANSPORT: ",
+    );
   });
 });

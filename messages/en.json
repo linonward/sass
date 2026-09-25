@@ -139,5 +139,29 @@
       "subtitle": "Go from idea to paying customers in a day.",
       "button": "Start building"
     }
+  },
+  "Email": {
+    "layout": {
+      "footer": "You are receiving this email because of your account at {name}.",
+      "help": "Questions? Just reply to this email."
+    },
+    "signInCode": {
+      "subject": "Your {name} sign-in code",
+      "preview": "{code} is your {name} sign-in code",
+      "heading": "Your sign-in code",
+      "intro": "Enter this code to sign in to {name}:",
+      "expires": "This code expires in {minutes, plural, one {# minute} other {# minutes}}.",
+      "ignore": "If you didn't try to sign in, you can safely ignore this email."
+    },
+    "welcome": {
+      "subject": "Welcome to {name}",
+      "preview": "Thanks for joining {name}",
+      "heading": "Welcome to {name}",
+      "greeting": "Hi {name},",
+      "greetingAnonymous": "Hi there,",
+      "body": "Thanks for signing up. Your account is ready, and you can start using {site} right away.",
+      "cta": "Get started",
+      "signoff": "The {site} team"
+    }
   }
 }
