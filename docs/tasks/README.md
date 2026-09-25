@@ -39,6 +39,11 @@
 | T501                   | blog           | `feat/blog`           | T104, T106       | done      |
 | T502                   | admin          | `feat/admin`          | T203, T302, T303 | done      |
 | T503                   | starter-guide  | `docs/starter-guide`  | 阶段 1–5 全部    | in-review |
+| **阶段 6：可观测性**   |                |                       |                  |           |
+| T601                   | logger         | `feat/logger`         | 阶段 1–5         | todo      |
+| T602                   | sentry         | `feat/sentry`         | T601             | todo      |
+| T603                   | web-analytics  | `feat/web-analytics`  | T601             | todo      |
+| T604                   | admin-metrics  | `feat/admin-metrics`  | T502             | todo      |
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
 
@@ -64,6 +69,10 @@
 阶段 5   T104, T106 → T501
          T203, T302, T303 → T502
          全部 → T503
+
+阶段 6   T601 ─┬→ T602
+               └→ T603
+         T502 → T604
 ```
 
 ## 推荐顺序
@@ -72,7 +81,7 @@
 
 T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 → T202 → T203 → T204 → T301 → T302 → T303 → T304 → T305 → T401 → T402 → T403 → T404 → T405 → T501 → T502 → T503
 
-可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做。
+可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做；T601 / T604；T602 / T603。
 
 ## 任务详情
 
@@ -81,3 +90,4 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 - [阶段 3：收款](phase-3-billing.md)
 - [阶段 4：AI 工具](phase-4-ai.md)
 - [阶段 5：内容与运营](phase-5-content-ops.md)
+- [阶段 6：可观测性](phase-6-observability.md)

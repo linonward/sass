@@ -35,6 +35,7 @@
 | 博客   | content-collections + MDX                                                                |
 | 后台   | 用户、订单、积分调整                                                                     |
 | 部署   | Vercel + Neon                                                                            |
+| 可观测 | 结构化日志 + OpenTelemetry、Sentry、Vercel Analytics、后台业务指标（阶段 6）             |
 
 ### v1 不做
 
@@ -73,7 +74,7 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 ## 关键决策
 
 1. **模板仓库，不做包。** 自用阶段维护 npm 包的发版成本不值得。代价是上游更新靠 git merge，所以目录边界必须严守。
-2. **模块开关放在配置里。** `site.config.ts` 的 `features: { credits, ai, blog, upload, admin, rateLimit }` 控制路由、导航和 env 校验。关掉的模块不要求对应的 key。
+2. **模块开关放在配置里。** `site.config.ts` 的 `features: { credits, ai, blog, upload, admin, rateLimit, observability }` 控制路由、导航和 env 校验。关掉的模块不要求对应的 key。
 3. **积分用账本。** `credit_transactions` 记流水，`user_credits.balance` 作余额缓存。扣减用 `UPDATE … SET balance = balance - n WHERE balance >= n` 保证原子性。需要事务的地方用 Neon WebSocket `Pool` 驱动（HTTP 驱动不支持交互式事务）。
 4. **webhook 幂等。** `webhook_events` 表以 `(provider, event_id)` 做唯一约束，重复推送不重复发积分。
 5. **支付回跳不依赖 webhook 已到。** 成功页轮询订单状态，webhook 未到时显示"处理中"。
@@ -102,6 +103,22 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 - 本地未配置时跳过限流，并打印警告。
 - Upstash 不可用时默认放行并记录错误日志（`rateLimit.failMode: "open"`），可切换成 `"closed"`。积分扣减是最后一道防线。
 
+### 可观测性（阶段 6）
+
+分四块，各自独立开关，关掉的部分不要求对应的 key：
+
+| 块         | 选型                              | 回答的问题                             |
+| ---------- | --------------------------------- | -------------------------------------- |
+| 日志与追踪 | 结构化 JSON 日志 + `@vercel/otel` | 某个请求 / webhook / AI 调用发生了什么 |
+| 错误追踪   | Sentry（`@sentry/nextjs`）        | 线上哪里报错、影响了谁                 |
+| 流量与性能 | Vercel Analytics + Speed Insights | 谁来了、页面快不快                     |
+| 业务指标   | `/admin/metrics`，直接查 Postgres | 注册、付费、MRR、积分和 AI 用量        |
+
+- 总开关 `features.observability`；细项在 `site.config.ts` 的 `observability` 字段（`otel`、`sentry`、`analytics`、`speedInsights`）。
+- `src/core` 里统一用 `logger`，不再直接 `console.error`。`logger.error` 是错误上报的唯一入口，开了 Sentry 就同时上报。
+- 日志和上报都不带邮箱、token、支付信息等敏感字段；用户只记 ID。
+- 业务指标跟随 `features.admin`，不依赖 `features.observability`，也不引入图表库。
+
 ## 风险
 
 - **最脆弱的假设**：业务代码遵守目录边界。一旦大量改动 `src/core`，上游更新就合不回去。缓解：在 T503 加 `UPGRADING.md`，并用 lint 规则标记业务项目对 `src/core` 的改动。
@@ -125,6 +142,7 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 | Upstash Redis             | T401     |
 | AI 服务商 key（至少一个） | T402     |
 | Cloudflare R2             | T403     |
+| Sentry（可选）            | T602     |
 
 ## 推迟项
 
