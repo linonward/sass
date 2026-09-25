@@ -54,3 +54,12 @@ test.describe("375px 宽度", () => {
     }
   });
 });
+
+test("法律页使用统一的 SEO metadata", async ({ page }) => {
+  await page.goto(legalPages.privacy);
+  await expect(page).toHaveTitle(new RegExp(`\\| ${siteConfig.name}$`));
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `https://${siteConfig.domain}${legalPages.privacy}`,
+  );
+});

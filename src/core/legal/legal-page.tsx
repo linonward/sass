@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import { buildMetadata } from "@/core/seo/metadata";
 
 import siteConfig from "../../../site.config";
 import type { LegalDocument } from "./document";
 
-export function legalMetadata(document: LegalDocument): Metadata {
-  return { title: document.title, description: document.description };
+/** 生成法律页的 `generateMetadata`，canonical / hreflang 等由 buildMetadata 统一处理。 */
+export function legalMetadata(document: LegalDocument, path: string) {
+  return async ({ params }: { params: Promise<{ locale: string }> }) =>
+    buildMetadata({
+      locale: (await params).locale,
+      path,
+      title: document.title,
+      description: document.description,
+    });
 }
 
 function formatDate(isoDate: string) {
