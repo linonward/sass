@@ -11,11 +11,11 @@ export default defineConfig({
   locales: ["en"],
   defaultLocale: "en",
   features: {
-    // 演示站点开启积分，付费套餐按 billing.plans 的 credits 发放。
+    // 演示站点开启积分和文件上传；积分按 billing.plans 的 credits 发放。
     credits: true,
     ai: false,
     blog: false,
-    upload: false,
+    upload: true,
     admin: false,
     rateLimit: false,
   },
@@ -148,6 +148,7 @@ export default defineConfig({
     // 单个文件的大小上限（字节）。
     maxFileSize: 10 * 1024 * 1024,
     // false：私有文件，只能通过有时效的签名地址访问；true：通过 R2_PUBLIC_URL 公开访问。
-    public: false,
+    // 演示站点用 R2 自定义域名公开访问（R2_PUBLIC_URL=https://s3.sass.linonward.com）。
+    public: true,
   },
 });
