@@ -73,8 +73,8 @@
 
 - `observability.analytics` 开启时在根布局挂 `@vercel/analytics` 的 `<Analytics />`；`observability.speedInsights` 开启时挂 `<SpeedInsights />`
 - 转化事件（统一封装在 `src/core/observability/track.ts`，关闭时为空操作）：
-  - 客户端：`sign_up`、`checkout_started`
-  - 服务端（`@vercel/analytics/server`）：`purchase`（在 billing 付款成功事件里触发，带套餐 ID，不带金额以外的支付信息）
+  - 客户端：`checkout_started`
+  - 服务端（`@vercel/analytics/server`）：`sign_up`（Better Auth 创建用户后；客户端分不清验证码登录是新用户还是老用户）、`purchase`（在 billing 的 `checkout.completed` 里触发，只带套餐 ID）
 - 事件名和属性列在代码常量里，业务可扩展
 - README 说明：Vercel Analytics 的自定义事件需要 Pro 计划，Hobby 只有页面浏览
 
