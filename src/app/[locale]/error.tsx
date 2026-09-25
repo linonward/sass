@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 
 import { Button } from "@/core/ui/button";
@@ -11,24 +12,22 @@ export default function Error({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
+  const t = useTranslations("Error");
+
   useEffect(() => {
     console.error(error);
   }, [error]);
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
-      <h1 className="text-3xl font-semibold tracking-tight">
-        Something went wrong
-      </h1>
-      <p className="text-muted-foreground">
-        An unexpected error occurred. Please try again.
-      </p>
+      <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
+      <p className="text-muted-foreground">{t("description")}</p>
       {error.digest && (
         <p className="text-muted-foreground font-mono text-xs">
-          Error ID: {error.digest}
+          {t("id", { digest: error.digest })}
         </p>
       )}
-      <Button onClick={() => retry()}>Try again</Button>
+      <Button onClick={() => retry()}>{t("retry")}</Button>
     </main>
   );
 }

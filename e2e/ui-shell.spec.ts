@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import messages from "../messages/en.json";
 import siteConfig from "../site.config";
 
 function hexToRgb(hex: string) {
@@ -65,8 +66,32 @@ test.describe("375px 宽度", () => {
     await page.getByRole("button", { name: "Open menu" }).click();
     const menu = page.getByRole("navigation", { name: "Mobile" });
     const first = siteConfig.nav.header[0];
-    await menu.getByRole("link", { name: first.label }).click();
+    await menu
+      .getByRole("link", { name: messages.Nav[first.key as "features"] })
+      .click();
     await expect(menu).toBeHidden();
     await expect(page).toHaveURL(first.href);
+  });
+});
+
+test.describe("只有一门语言时", () => {
+  test("不显示语言切换器", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("button", { name: "Toggle theme" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: messages.Locale.switch }),
+    ).toHaveCount(0);
+  });
+
+  test("未启用的语言前缀返回 404", async ({ page }) => {
+    const response = await page.goto("/zh");
+    expect(response?.status()).toBe(404);
+  });
+
+  test("被 proxy 跳过的带扩展名路径也返回 404", async ({ page }) => {
+    const response = await page.goto("/missing.png");
+    expect(response?.status()).toBe(404);
   });
 });

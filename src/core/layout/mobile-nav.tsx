@@ -1,10 +1,10 @@
 "use client";
 
 import { MenuIcon } from "lucide-react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import type { NavLink } from "@/core/config/schema";
+import { Link } from "@/core/i18n/navigation";
 import { Button } from "@/core/ui/button";
 import {
   Sheet,
@@ -19,8 +19,9 @@ export function MobileNav({
   links,
 }: {
   title: string;
-  links: NavLink[];
+  links: { href: string; label: string }[];
 }) {
+  const t = useTranslations("Header");
   const [open, setOpen] = useState(false);
 
   return (
@@ -31,7 +32,7 @@ export function MobileNav({
             variant="ghost"
             size="icon"
             className="md:hidden"
-            aria-label="Open menu"
+            aria-label={t("openMenu")}
           />
         }
       >
@@ -41,7 +42,7 @@ export function MobileNav({
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
-        <nav className="flex flex-col gap-1 px-4" aria-label="Mobile">
+        <nav className="flex flex-col gap-1 px-4" aria-label={t("mobile")}>
           {links.map((link) => (
             <Link
               key={link.href}
