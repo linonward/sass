@@ -15,9 +15,11 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@t3-oss/env-nextjs": "^0.13.11",
     "next": "16.3.6",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

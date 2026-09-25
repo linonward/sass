@@ -26,4 +26,9 @@ pnpm dev              # http://localhost:3000
 | `pnpm test:e2e`                     | Playwright e2e（`e2e/`，首次需 `pnpm exec playwright install chromium`） |
 | `pnpm build`                        | 生产构建                                                                 |
 
+## 配置
+
+- `site.config.ts`：站点名称、域名、品牌色、语言、功能开关（`features`）。由 `defineConfig()` 校验，写错时 `dev` / `build` 直接失败，并指出出错字段。
+- 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验。
+
 CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test → build → e2e 顺序执行。
