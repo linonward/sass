@@ -163,6 +163,20 @@ export const emailSchema = z.strictObject({
     .optional(),
 });
 
+// 登录参数。显式写出，不依赖 Better Auth 插件的默认值。
+export const authSchema = z.strictObject({
+  emailOtp: z.strictObject({
+    // 验证码位数。
+    length: z.number().int().min(4).max(10),
+    // 有效期（秒）。
+    expiresIn: z.number().int().positive(),
+    // 允许输错的次数，用完后验证码作废。
+    allowedAttempts: z.number().int().positive(),
+    // 同一邮箱两次发送之间的最短间隔（秒）。
+    resendCooldown: z.number().int().nonnegative(),
+  }),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -197,6 +211,7 @@ export const siteConfigSchema = z
     landing: landingSchema.default(landingSchema.parse({})),
     billing: billingSchema.default(billingSchema.parse({})),
     email: emailSchema,
+    auth: authSchema,
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -213,6 +228,7 @@ export type LandingSectionId = (typeof landingSectionIds)[number];
 export type LandingConfig = SiteConfig["landing"];
 export type Plan = SiteConfig["billing"]["plans"][number];
 export type EmailConfig = SiteConfig["email"];
+export type AuthConfig = SiteConfig["auth"];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

@@ -9,22 +9,14 @@
  */
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { TEST_LOCALE } from "./test-locale.ts";
+import { i18nCopyDir, pseudoTranslate, TEST_LOCALE } from "./test-locale.ts";
 
 const PORT = process.env.I18N_PORT ?? "3001";
 
 const root = path.resolve(import.meta.dirname, "../..");
-const dest = path.join(os.tmpdir(), `sass-e2e-i18n-${PORT}`);
-
-function pseudoTranslate(value: unknown): unknown {
-  if (typeof value === "string") return `[${TEST_LOCALE}] ${value}`;
-  return Object.fromEntries(
-    Object.entries(value as object).map(([k, v]) => [k, pseudoTranslate(v)]),
-  );
-}
+const dest = i18nCopyDir(PORT);
 
 fs.rmSync(dest, { recursive: true, force: true });
 const files = execFileSync(

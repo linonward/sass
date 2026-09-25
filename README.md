@@ -62,6 +62,10 @@ pnpm dev              # http://localhost:3000
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
 - 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。
   - 生产构建默认使用 `resend`，本地没有 key 时用 `EMAIL_TRANSPORT=console pnpm build`。
+- 登录：Better Auth（`src/core/auth/`），Google 登录和邮箱验证码登录，路由 `/sign-in`、`/api/auth/*`。验证码参数在 `site.config.ts` 的 `auth.emailOtp`。
+  - 需要登录的页面放在 `src/app/[locale]/(app)/` 下，并在 `src/core/auth/routes.ts` 的 `protectedPrefixes` 登记：proxy 按 cookie 快速拦截，(app) 的 layout 再校验 session。
+  - 服务端取当前用户：`getSession()`（`src/core/auth/session.ts`）；客户端：`authClient`（`src/core/auth/client.ts`）。
+  - auth 相关的表由 `pnpm auth:generate` 生成到 `src/core/db/schema/auth.ts`，再 `pnpm db:generate` 生成迁移。
 - UI 组件：shadcn/ui（Base UI），生成到 `src/core/ui/`。新增组件用 `pnpm dlx shadcn@latest add <name>`。
 - 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验。
 
@@ -89,11 +93,14 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
 
-| 变量              | 说明                                                                                      |
-| ----------------- | ----------------------------------------------------------------------------------------- |
-| `DATABASE_URL`    | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。    |
-| `RESEND_API_KEY`  | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。   |
-| `EMAIL_TRANSPORT` | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。 |
+| 变量                                        | 说明                                                                                      |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。    |
+| `RESEND_API_KEY`                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。   |
+| `EMAIL_TRANSPORT`                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。 |
+| `BETTER_AUTH_SECRET`                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。     |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。 |
+| `BETTER_AUTH_URL`                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。             |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -126,6 +133,17 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
    - 使用 Cloudflare 时，这些记录都设为 **DNS only**。
 3. 等 Resend 显示域名已验证，然后在 API Keys 创建一个只有发送权限（Sending access）的 key，填到 Vercel 的 `RESEND_API_KEY`。
 4. 部署后触发一次真实发信（比如登录验证码），确认邮件进了收件箱而不是垃圾箱。
+
+#### 登录（Google）
+
+1. Google Cloud Console → APIs & Services：
+   - OAuth consent screen：填写应用名称、支持邮箱、`site.config.ts` 的域名和隐私政策 / 服务条款地址（`https://<domain>/privacy`、`/terms`），发布状态设为 In production。
+   - Credentials → Create credentials → OAuth client ID，类型选 **Web application**。
+     - Authorized JavaScript origins：`https://<domain>`、`http://localhost:3000`
+     - Authorized redirect URIs：`https://<domain>/api/auth/callback/google`、`http://localhost:3000/api/auth/callback/google`
+2. 把 Client ID 和 Client secret 填到 Vercel Production 的 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`；本地需要测试 Google 登录时填到 `.env.local`。
+3. 预览部署的地址每次都不同，无法登记为回调地址，所以预览只提供邮箱验证码登录。以后需要时可以接入 Better Auth 的 `oauth-proxy` 插件。
+4. 账户关联：同一邮箱先用验证码注册、再用 Google 登录，会进入同一个账户（`google` 是可信 provider）。
 
 ### 5. GitHub
 

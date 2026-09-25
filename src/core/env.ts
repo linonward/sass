@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { authServerEnv } from "./auth/env";
 import { createAppEnv } from "./create-env";
 import { emailServerEnv } from "./email/env";
 
@@ -12,6 +13,7 @@ export const env = createAppEnv({
     // Postgres 连接地址。Neon 地址（*.neon.tech）走 WebSocket 驱动，其他走 node-postgres。
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     ...emailServerEnv(process.env),
+    ...authServerEnv(process.env),
   },
   runtimeEnv: process.env,
 });

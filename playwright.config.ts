@@ -1,4 +1,12 @@
+import { existsSync } from "node:fs";
+
 import { defineConfig, devices } from "@playwright/test";
+
+// 本地读取 .env.local（不覆盖已有变量）：dev server、i18n 副本和需要直连数据库的用例都用它。
+// CI 通过 workflow 的 env 提供。
+for (const file of [".env.local", ".env"]) {
+  if (existsSync(file)) process.loadEnvFile(file);
+}
 
 const port = Number(process.env.E2E_PORT ?? 3000);
 const baseURL = `http://localhost:${port}`;
