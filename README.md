@@ -154,7 +154,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 ### 1. Vercel
 
 - 在 Vercel 导入 GitHub 仓库。仓库根目录的 `vercel.json` 已把 Framework 设为 Next.js，其他保持默认；Node 版本取自 `package.json` 的 `engines`（24.x），pnpm 版本取自 `packageManager`。
-- 导入后，`main` 自动部署到生产环境，每个 PR 自动生成预览部署。
+- 导入后，只有 `main` 自动部署到生产环境：`vercel.json` 的 `git.deploymentEnabled` 关掉了其他分支和 PR 的自动预览部署，省 Hobby 套餐的部署额度（每天有上限，超了要等 24 小时）。需要预览时在本地运行 `vercel deploy` 手动部署一次；想恢复每个 PR 自动预览，删掉 `git.deploymentEnabled` 即可。下文关于预览部署的说明在手动或恢复自动预览时适用。
 - `vercel.json` 的 `ignoreCommand`：自上次部署以来只改了 `docs/` 或 `*.md` 时跳过构建，节省部署次数（Hobby 套餐每天 100 次，账号内所有项目共用）。
 - 如果导入时找不到仓库：到 GitHub → Settings → Applications → Vercel → Configure，在 Repository access 里加上这个仓库。
 
