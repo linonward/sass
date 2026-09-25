@@ -18,4 +18,21 @@ export default defineConfig({
     admin: false,
     rateLimit: false,
   },
+  nav: {
+    header: [
+      { label: "Features", href: "/#features" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "FAQ", href: "/#faq" },
+    ],
+    footer: [
+      {
+        title: "Product",
+        links: [
+          { label: "Features", href: "/#features" },
+          { label: "Pricing", href: "/#pricing" },
+          { label: "FAQ", href: "/#faq" },
+        ],
+      },
+    ],
+  },
 });
