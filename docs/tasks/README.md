@@ -12,7 +12,7 @@
 | **阶段 1：落地站**     |                |                       |                  |      |
 | T101                   | scaffold       | `chore/scaffold`      | T001             | done |
 | T102                   | config         | `feat/config`         | T101             | done |
-| T103                   | ui-shell       | `feat/ui-shell`       | T102             | todo |
+| T103                   | ui-shell       | `feat/ui-shell`       | T102             | done |
 | T104                   | i18n           | `feat/i18n`           | T103             | todo |
 | T105                   | landing        | `feat/landing`        | T104             | todo |
 | T106                   | seo            | `feat/seo`            | T104             | todo |

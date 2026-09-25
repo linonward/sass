@@ -18,6 +18,25 @@ export const featuresSchema = z.strictObject({
   rateLimit: z.boolean().default(false),
 });
 
+const linkSchema = z.strictObject({
+  label: z.string().trim().min(1),
+  href: z
+    .string()
+    .regex(/^(\/|#|https:\/\/)/, 'must start with "/", "#" or "https://"'),
+});
+
+export const navSchema = z.strictObject({
+  header: z.array(linkSchema).default([]),
+  footer: z
+    .array(
+      z.strictObject({
+        title: z.string().trim().min(1),
+        links: z.array(linkSchema).min(1),
+      }),
+    )
+    .default([]),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -47,6 +66,7 @@ export const siteConfigSchema = z
       }),
     defaultLocale: localeSchema,
     features: featuresSchema.default(featuresSchema.parse({})),
+    nav: navSchema.default(navSchema.parse({})),
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -57,6 +77,7 @@ export type SiteConfigInput = z.input<typeof siteConfigSchema>;
 export type SiteConfig = z.output<typeof siteConfigSchema>;
 export type Features = SiteConfig["features"];
 export type Feature = keyof Features;
+export type NavLink = z.output<typeof linkSchema>;
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

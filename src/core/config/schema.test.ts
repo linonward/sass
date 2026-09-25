@@ -55,3 +55,19 @@ describe("defineConfig", () => {
     ).toThrow(/features: .*ratelimit/);
   });
 });
+
+describe("nav", () => {
+  test("省略 nav 时 header 与 footer 为空", () => {
+    expect(defineConfig(valid).nav).toEqual({ header: [], footer: [] });
+  });
+
+  test.each([
+    ["nav.header.0.href", { header: [{ label: "A", href: "http://x.com" }] }],
+    ["nav.header.0.label", { header: [{ label: "", href: "/a" }] }],
+    ["nav.footer.0.links", { footer: [{ title: "Product", links: [] }] }],
+  ])("非法字段 %s 出现在报错中", (path, nav) => {
+    expect(() => defineConfig({ ...valid, nav } as SiteConfigInput)).toThrow(
+      `- ${path}: `,
+    );
+  });
+});
