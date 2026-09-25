@@ -2,7 +2,7 @@
 
 exports[`robots > 禁止抓取 API、dashboard、admin（含语言前缀）并指向 sitemap 1`] = `
 {
-  "host": "https://example.com",
+  "host": "https://sass.linonward.com",
   "rules": {
     "allow": "/",
     "disallow": [
@@ -14,7 +14,7 @@ exports[`robots > 禁止抓取 API、dashboard、admin（含语言前缀）并�
     ],
     "userAgent": "*",
   },
-  "sitemap": "https://example.com/sitemap.xml",
+  "sitemap": "https://sass.linonward.com/sitemap.xml",
 }
 `;
 
@@ -23,82 +23,82 @@ exports[`sitemap > 营销路由 × 语言，带 hreflang 1`] = `
   {
     "alternates": {
       "languages": {
-        "de": "https://example.com/de",
-        "en": "https://example.com",
-        "x-default": "https://example.com",
+        "de": "https://sass.linonward.com/de",
+        "en": "https://sass.linonward.com",
+        "x-default": "https://sass.linonward.com",
       },
     },
-    "url": "https://example.com",
+    "url": "https://sass.linonward.com",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://example.com/de",
-        "en": "https://example.com",
-        "x-default": "https://example.com",
+        "de": "https://sass.linonward.com/de",
+        "en": "https://sass.linonward.com",
+        "x-default": "https://sass.linonward.com",
       },
     },
-    "url": "https://example.com/de",
+    "url": "https://sass.linonward.com/de",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://example.com/de/privacy",
-        "en": "https://example.com/privacy",
-        "x-default": "https://example.com/privacy",
+        "de": "https://sass.linonward.com/de/privacy",
+        "en": "https://sass.linonward.com/privacy",
+        "x-default": "https://sass.linonward.com/privacy",
       },
     },
-    "url": "https://example.com/privacy",
+    "url": "https://sass.linonward.com/privacy",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://example.com/de/privacy",
-        "en": "https://example.com/privacy",
-        "x-default": "https://example.com/privacy",
+        "de": "https://sass.linonward.com/de/privacy",
+        "en": "https://sass.linonward.com/privacy",
+        "x-default": "https://sass.linonward.com/privacy",
       },
     },
-    "url": "https://example.com/de/privacy",
+    "url": "https://sass.linonward.com/de/privacy",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://example.com/de/terms",
-        "en": "https://example.com/terms",
-        "x-default": "https://example.com/terms",
+        "de": "https://sass.linonward.com/de/terms",
+        "en": "https://sass.linonward.com/terms",
+        "x-default": "https://sass.linonward.com/terms",
       },
     },
-    "url": "https://example.com/terms",
+    "url": "https://sass.linonward.com/terms",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://example.com/de/terms",
-        "en": "https://example.com/terms",
-        "x-default": "https://example.com/terms",
+        "de": "https://sass.linonward.com/de/terms",
+        "en": "https://sass.linonward.com/terms",
+        "x-default": "https://sass.linonward.com/terms",
       },
     },
-    "url": "https://example.com/de/terms",
+    "url": "https://sass.linonward.com/de/terms",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://example.com/de/refund",
-        "en": "https://example.com/refund",
-        "x-default": "https://example.com/refund",
+        "de": "https://sass.linonward.com/de/refund",
+        "en": "https://sass.linonward.com/refund",
+        "x-default": "https://sass.linonward.com/refund",
       },
     },
-    "url": "https://example.com/refund",
+    "url": "https://sass.linonward.com/refund",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://example.com/de/refund",
-        "en": "https://example.com/refund",
-        "x-default": "https://example.com/refund",
+        "de": "https://sass.linonward.com/de/refund",
+        "en": "https://sass.linonward.com/refund",
+        "x-default": "https://sass.linonward.com/refund",
       },
     },
-    "url": "https://example.com/de/refund",
+    "url": "https://sass.linonward.com/de/refund",
   },
 ]
 `;

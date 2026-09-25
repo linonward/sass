@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 
+import siteConfig from "../../../site.config";
 import { serializeJsonLd } from "./json-ld";
 import { buildMetadata } from "./metadata";
 import { languageAlternates, localizedPath } from "./urls";
@@ -11,6 +12,8 @@ import { languageAlternates, localizedPath } from "./urls";
 vi.mock("@/core/i18n/routing", () => ({
   routing: { locales: ["en", "de"], defaultLocale: "en" },
 }));
+
+const origin = `https://${siteConfig.domain}`;
 
 describe("urls", () => {
   test.each([
@@ -24,9 +27,9 @@ describe("urls", () => {
 
   test("hreflang 包含每个语言和 x-default", () => {
     expect(languageAlternates("/privacy")).toEqual({
-      en: "https://example.com/privacy",
-      de: "https://example.com/de/privacy",
-      "x-default": "https://example.com/privacy",
+      en: `${origin}/privacy`,
+      de: `${origin}/de/privacy`,
+      "x-default": `${origin}/privacy`,
     });
   });
 });
@@ -38,9 +41,9 @@ describe("buildMetadata", () => {
       default: "Acme",
       template: "%s | Acme",
     });
-    expect(metadata.alternates?.canonical).toBe("https://example.com/de");
+    expect(metadata.alternates?.canonical).toBe(`${origin}/de`);
     expect(metadata.openGraph).toMatchObject({
-      url: "https://example.com/de",
+      url: `${origin}/de`,
       locale: "de",
       images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
     });
@@ -56,7 +59,7 @@ describe("buildMetadata", () => {
     });
     expect(metadata.title).toEqual({ absolute: "Privacy Policy | Acme" });
     expect(metadata.description).toBe("How we handle data.");
-    expect(metadata.alternates?.canonical).toBe("https://example.com/privacy");
+    expect(metadata.alternates?.canonical).toBe(`${origin}/privacy`);
     expect(metadata.openGraph).toMatchObject({
       title: "Privacy Policy | Acme",
       images: [{ url: "/privacy-og.png" }],
