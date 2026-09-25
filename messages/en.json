@@ -389,7 +389,7 @@
   "Playground": {
     "metaTitle": "Playground",
     "title": "Playground",
-    "description": "Try the AI models configured for this site. Conversations aren't saved.",
+    "description": "Try the AI models configured for this site. Chats aren't saved; generated images are kept in your recent list.",
     "model": "Model",
     "cost": "{cost, plural, one {# credit} other {# credits}} per message",
     "free": "Free",
@@ -410,7 +410,27 @@
       "too_large": "The conversation is too long. Refresh the page to start over.",
       "unauthorized": "Your session has expired. Please sign in again.",
       "model_error": "The model ran into an error. Your credits have been refunded.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "storage_unavailable": "File storage isn't configured, so images can't be saved.",
+      "invalid_prompt": "Enter a prompt of up to 2,000 characters."
+    },
+    "tabs": {
+      "chat": "Chat",
+      "image": "Image"
+    },
+    "image": {
+      "model": "Model",
+      "aspectRatio": "Aspect ratio",
+      "cost": "{cost, plural, one {# credit} other {# credits}} per image",
+      "free": "Free",
+      "placeholder": "Describe the image you want…",
+      "generate": "Generate",
+      "generating": "Generating…",
+      "wait": "This usually takes 10–40 seconds.",
+      "recent": "Recent",
+      "empty": "Images you generate will show up here.",
+      "loading": "Loading…",
+      "buyCredits": "Get more credits"
     }
   }
 }

@@ -320,7 +320,7 @@ describe("ai", () => {
   test("省略时没有模型", () => {
     expect(
       defineConfig({ ...valid, features: undefined, ai: undefined }).ai,
-    ).toEqual({ models: [] });
+    ).toEqual({ models: [], imageModels: [] });
   });
 
   test("合法的模型列表和默认模型", () => {
@@ -353,6 +353,68 @@ describe("ai", () => {
     ["ai.models", { models: [] }],
   ])("非法字段 %s 出现在报错中", (path, ai) => {
     expect(() => defineConfig(withAi(ai))).toThrow(`- ${path}: `);
+  });
+
+  describe("imageModels", () => {
+    const image = {
+      id: "qwen-image",
+      provider: "alibaba",
+      model: "qwen-image-3.0",
+      creditCost: 5,
+    } as const;
+    const base = { models: [...models], defaultModel: "fast" };
+
+    test("省略时为空，合法时保留", () => {
+      expect(defineConfig(withAi(base)).ai.imageModels).toEqual([]);
+      const config = defineConfig(
+        withAi({
+          ...base,
+          imageModels: [image],
+          defaultImageModel: "qwen-image",
+        }),
+      );
+      expect(config.ai.imageModels).toEqual([image]);
+      expect(config.ai.defaultImageModel).toBe("qwen-image");
+    });
+
+    test.each([
+      [
+        "ai.imageModels.0.provider",
+        {
+          imageModels: [{ ...image, provider: "anthropic" }],
+          defaultImageModel: "qwen-image",
+        },
+      ],
+      [
+        "ai.imageModels",
+        { imageModels: [image, image], defaultImageModel: "qwen-image" },
+      ],
+      ["ai.defaultImageModel", { imageModels: [image] }],
+      [
+        "ai.defaultImageModel",
+        { imageModels: [image], defaultImageModel: "nope" },
+      ],
+    ])("非法字段 %s 出现在报错中", (path, ai) => {
+      expect(() => defineConfig(withAi({ ...base, ...ai }))).toThrow(
+        `- ${path}: `,
+      );
+    });
+
+    test("收费图片模型要求开启 features.credits", () => {
+      expect(() =>
+        defineConfig(
+          withAi(
+            {
+              models: [{ ...models[0], creditCost: 0 }],
+              defaultModel: "fast",
+              imageModels: [image],
+              defaultImageModel: "qwen-image",
+            },
+            { ai: true, credits: false },
+          ),
+        ),
+      ).toThrow("- ai.imageModels: creditCost > 0 requires features.credits");
+    });
   });
 
   test("收费模型要求开启 features.credits，免费模型不要求", () => {

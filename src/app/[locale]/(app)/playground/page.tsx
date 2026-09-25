@@ -1,8 +1,17 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { aiEnabled, aiModels, defaultAiModel } from "@/core/ai";
+import {
+  aiEnabled,
+  aiImageEnabled,
+  aiImageModels,
+  aiModels,
+  defaultAiImageModel,
+  defaultAiModel,
+} from "@/core/ai";
+import { ImageStudio } from "@/core/ai/image-studio";
 import { Playground } from "@/core/ai/playground";
+import { PlaygroundTabs } from "@/core/ai/playground-tabs";
 import { buildMetadata } from "@/core/seo/metadata";
 
 export async function generateMetadata({
@@ -32,7 +41,36 @@ export default async function PlaygroundPage({
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground">{t("description")}</p>
       </div>
-      <Playground models={aiModels} defaultModel={defaultAiModel!} />
+      <PlaygroundTabs
+        tabs={[
+          ...(aiModels.length > 0
+            ? [
+                {
+                  id: "chat" as const,
+                  content: (
+                    <Playground
+                      models={aiModels}
+                      defaultModel={defaultAiModel!}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          ...(aiImageEnabled
+            ? [
+                {
+                  id: "image" as const,
+                  content: (
+                    <ImageStudio
+                      models={aiImageModels}
+                      defaultModel={defaultAiImageModel!}
+                    />
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
     </div>
   );
 }

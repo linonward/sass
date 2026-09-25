@@ -48,6 +48,22 @@ describe("R2 预签名地址", () => {
   });
 });
 
+describe("putObject", () => {
+  test("写入 bucket，带上类型和内容", async () => {
+    const send = vi
+      .spyOn(S3Client.prototype, "send")
+      .mockResolvedValue({} as never);
+    const body = new Uint8Array([1, 2, 3]);
+    await storage.putObject({ key: "k.png", mime: "image/png", body });
+    expect(send.mock.calls[0][0].input).toEqual({
+      Bucket: "uploads",
+      Key: "k.png",
+      ContentType: "image/png",
+      Body: body,
+    });
+  });
+});
+
 describe("head", () => {
   test("返回对象的大小和类型", async () => {
     const send = vi.spyOn(S3Client.prototype, "send").mockResolvedValue({

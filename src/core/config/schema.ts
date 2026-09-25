@@ -351,6 +351,16 @@ export const aiReasoningLevels = [
   "xhigh",
 ] as const;
 
+// 有图片生成模型的服务商（Anthropic 没有）。
+export const aiImageProviders = ["openai", "google", "alibaba"] as const;
+
+const aiModelIdSchema = z
+  .string()
+  .regex(
+    /^[a-z0-9][a-z0-9._-]*$/,
+    'must be lowercase letters, digits, ".", "_" or "-", such as "fast"',
+  );
+
 // AI 模型。v1 按次固定扣费（见 docs/plan.md 关键决策 6）。
 export const aiConfigSchema = z
   .strictObject({
@@ -358,12 +368,7 @@ export const aiConfigSchema = z
       .array(
         z.strictObject({
           // 站内使用的模型 ID，前端和接口按它选模型，例如 "fast"。
-          id: z
-            .string()
-            .regex(
-              /^[a-z0-9][a-z0-9._-]*$/,
-              'must be lowercase letters, digits, ".", "_" or "-", such as "fast"',
-            ),
+          id: aiModelIdSchema,
           provider: z.enum(aiProviders),
           // 服务商那边的模型名，例如 "gpt-5-mini"、"claude-haiku-4-5-20251001"。
           model: z.string().trim().min(1),
@@ -382,6 +387,22 @@ export const aiConfigSchema = z
       .default([]),
     // 请求里没指定模型时使用。有模型时必填，且必须是 models 里的 id。
     defaultModel: z.string().optional(),
+    // 图片生成模型。每次生成一张，按 creditCost 预扣；结果存进 R2（需要 features.upload）。
+    imageModels: z
+      .array(
+        z.strictObject({
+          id: aiModelIdSchema,
+          provider: z.enum(aiImageProviders),
+          // 服务商那边的模型名，例如 "qwen-image-3.0"、"gpt-image-1"。
+          model: z.string().trim().min(1),
+          creditCost: z.number().int().nonnegative(),
+        }),
+      )
+      .refine((models) => unique(models.map((m) => m.id)), {
+        message: "ids must not contain duplicates",
+      })
+      .default([]),
+    defaultImageModel: z.string().optional(),
   })
   .superRefine((ai, ctx) => {
     if (ai.models.length > 0 && !ai.defaultModel) {
@@ -396,6 +417,23 @@ export const aiConfigSchema = z
         code: "custom",
         path: ["defaultModel"],
         message: "must be one of models[].id",
+      });
+    }
+    if (ai.imageModels.length > 0 && !ai.defaultImageModel) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultImageModel"],
+        message: "is required when imageModels is not empty",
+      });
+    }
+    if (
+      ai.defaultImageModel &&
+      !ai.imageModels.some((m) => m.id === ai.defaultImageModel)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultImageModel"],
+        message: "must be one of imageModels[].id",
       });
     }
   });
@@ -458,6 +496,16 @@ export const siteConfigSchema = z
       message: "creditCost > 0 requires features.credits",
       path: ["ai", "models"],
     },
+  )
+  .refine(
+    (config) =>
+      !config.features.ai ||
+      config.features.credits ||
+      config.ai.imageModels.every((m) => m.creditCost === 0),
+    {
+      message: "creditCost > 0 requires features.credits",
+      path: ["ai", "imageModels"],
+    },
   );
 
 export type SiteConfigInput = z.input<typeof siteConfigSchema>;
@@ -479,6 +527,8 @@ export type UploadConfig = SiteConfig["upload"];
 export type AiConfig = SiteConfig["ai"];
 export type AiModel = AiConfig["models"][number];
 export type AiProvider = (typeof aiProviders)[number];
+export type AiImageModel = AiConfig["imageModels"][number];
+export type AiImageProvider = (typeof aiImageProviders)[number];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {
