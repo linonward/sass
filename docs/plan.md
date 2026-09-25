@@ -25,7 +25,7 @@
 | SEO | metadata、sitemap、robots、OG 图、hreflang |
 | 法律页 | 隐私政策、服务条款（Creem 审核需要） |
 | 数据库 | Neon Postgres + Drizzle ORM + drizzle-kit 迁移 |
-| 认证 | Better Auth：Google OAuth + 邮箱 magic link；admin 插件管角色 |
+| 认证 | Better Auth：Google OAuth + 邮箱验证码（`emailOTP` 插件，Resend 发送）；admin 插件管角色 |
 | 邮件 | Resend + React Email |
 | 支付 | `PaymentProvider` 接口，v1 只实现 Creem |
 | 积分 | Postgres 账本 |
@@ -78,11 +78,12 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 4. **webhook 幂等。** `webhook_events` 表以 `(provider, event_id)` 做唯一约束，重复推送不重复发积分。
 5. **支付回跳不依赖 webhook 已到。** 成功页轮询订单状态，webhook 未到时显示"处理中"。
 6. **AI 计费 v1 按次固定扣费。** 每个模型每次调用的积分成本写在配置里。调用前预扣，失败时退回，写入账本并注明原因。按 token 计费不在 v1。
-7. **优先用官方和生态方案。** 实现时依赖版本以官方文档的最新稳定版为准，不凭记忆写。
+7. **邮箱登录用验证码，不用 magic link。** 验证码可以跨设备输入（电脑上登录、手机上看邮件），也不会被企业邮箱的链接扫描提前消耗。只维护一种邮箱登录方式。参数显式配置，不依赖插件默认值：6 位数字，5 分钟有效，最多尝试 3 次，重发冷却 60 秒。
+8. **优先用官方和生态方案。** 实现时依赖版本以官方文档的最新稳定版为准，不凭记忆写。
 
 ### 邮件（Resend）
 
-- 用于 magic link 和事务邮件：欢迎、支付成功、续费失败、积分不足。
+- 用于登录验证码和事务邮件：欢迎、支付成功、续费失败、积分不足。
 - 模板放在 `src/core/email/templates/`，跟随用户 locale。
 - 本地没配 `RESEND_API_KEY` 时，把邮件内容打印到控制台；生产环境缺 key 则启动失败。
 - 发件人名称、发件地址、回复地址放在 `site.config.ts` 的 `email` 字段。
@@ -93,7 +94,7 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 | 场景 | 是否用 Redis |
 |---|---|
 | AI、上传预签名接口限流 | 是：按用户 + IP 的滑动窗口，阈值写在配置里 |
-| 登录、magic link 频率 | 否：用 Better Auth 自带的限流，存 Postgres |
+| 登录、验证码发送与校验频率 | 否：用 Better Auth 自带的限流，存 Postgres |
 | 积分余额 | 否：必须和账本在同一个事务里 |
 | Session 缓存、队列 | v1 不做 |
 
@@ -104,13 +105,13 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 ## 风险
 
 - **最脆弱的假设**：业务代码遵守目录边界。一旦大量改动 `src/core`，上游更新就合不回去。缓解：在 T503 加 `UPGRADING.md`，并用 lint 规则标记业务项目对 `src/core` 的改动。
-- **外部服务失效**：Creem webhook 延迟时，靠轮询 + 幂等；Upstash 挂掉时放行 + 积分兜底；Resend 挂掉时 magic link 发不出，页面上提示稍后重试。
+- **外部服务失效**：Creem webhook 延迟时，靠轮询 + 幂等；Upstash 挂掉时放行 + 积分兜底；Resend 挂掉时验证码发不出，页面提示稍后重试，并引导用户改用 Google 登录。
 - **回滚**：全新仓库，没有现存数据，每个 PR 都能单独 revert。
 
 ## 测试
 
 - **Vitest**：积分扣减（余额充足、余额不足、并发）、webhook（签名错误、重复事件、未知类型）、env 校验（关闭模块后不再要求 key）、限流（超阈值返回 429、Redis 不可用时的行为）。
-- **Playwright 冒烟**：落地页多语言切换 → magic link 登录（开发环境邮件打到控制台）→ Creem 测试模式付款 → 积分到账 → 调一次 AI 并扣积分。
+- **Playwright 冒烟**：落地页多语言切换 → 邮箱验证码登录（测试环境从 `.tmp/emails/` 读取验证码）→ Creem 测试模式付款 → 积分到账 → 调一次 AI 并扣积分。
 
 ## 外部依赖
 

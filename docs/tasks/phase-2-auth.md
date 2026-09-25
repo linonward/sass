@@ -48,7 +48,7 @@
   - `console`：本地默认，把邮件打印到终端
   - `file`：测试用，把邮件写成 JSON 放到 `.tmp/emails/`，供 e2e 读取
 - 在配置中加入 `email`：发件人名称、发件地址、回复地址
-- 模板放在 `src/core/email/templates/`：基础布局（带品牌）、`magic-link`、`welcome`；文案来自 `messages`
+- 模板放在 `src/core/email/templates/`：基础布局（带品牌）、`sign-in-code`（登录验证码）、`welcome`；文案来自 `messages`
 - 脚本 `email:dev`：本地预览模板
 - 在 README 的上线清单里加入 Resend 域名验证步骤（SPF / DKIM）
 
@@ -73,21 +73,27 @@
 **做**
 
 - 接入 Better Auth，使用 Drizzle adapter，并生成 auth 相关的表
-- 登录方式：Google OAuth，以及 magic link 插件（通过 `sendEmail` 发送）
-- 页面：`/sign-in`、登录回调，以及退出登录
+- 登录方式：Google OAuth，以及邮箱验证码（Better Auth `emailOTP` 插件，通过 `sendEmail` 发送 `sign-in-code` 模板）
+- 验证码参数写进配置 `auth.emailOtp`，不依赖插件默认值：`length: 6`、`expiresIn: 300` 秒、`allowedAttempts: 3`、`resendCooldown: 60` 秒。实现时对照插件文档；插件原生不支持的参数（例如重发冷却），在调用发送前由 `src/core/auth` 自己校验
+- 开启 Better Auth 的账户关联，把 `google` 设为可信 provider，这样同一个邮箱用两种方式登录会进入同一个账户
+- 登录页流程：输入邮箱 → 发送验证码 → 输入 6 位验证码 → 进入登录态；首次使用邮箱即自动注册
+- 验证码输入框支持粘贴和自动填充（`autocomplete="one-time-code"`），重发按钮显示倒计时
+- 页面：`/sign-in`（Google 按钮 + 邮箱验证码表单）、OAuth 回调，以及退出登录
 - 保护 `(app)` 路由组：proxy 中先做基于 cookie 的快速判断，layout 中再做服务端 session 校验
 - Better Auth 自带限流，存储选 `database`
 - 用户首次注册时发送 `welcome` 邮件
 - 登录后跳回原来的页面（`callbackURL`）
 
-**不做**：admin 插件（放在 T502）、密码登录、其他 OAuth 服务商
+**不做**：admin 插件（放在 T502）、magic link、密码登录、其他 OAuth 服务商
 
 **验收**
 
-- [ ] 用 Google 登录、magic link 登录都能进入 `/dashboard`
+- [ ] 用 Google 登录、邮箱验证码登录都能进入 `/dashboard`
+- [ ] 验证码输错 3 次后失效，过期后失效，60 秒内不能重发
+- [ ] 同一邮箱先用验证码注册、再用 Google 登录，进入的是同一个账户
 - [ ] 未登录访问 `(app)` 下的页面时，跳转到登录页，登录后再跳回原页面
 
-**测试**：e2e 用 `EMAIL_TRANSPORT=file` 读取 magic link 完成登录；Google 登录做人工验证
+**测试**：e2e 用 `EMAIL_TRANSPORT=file` 读取验证码完成登录，并覆盖输错、过期、重发冷却；Google 登录和账户关联做人工验证
 
 ---
 
