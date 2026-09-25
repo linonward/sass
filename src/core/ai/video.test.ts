@@ -313,9 +313,14 @@ describe.skipIf(!url)("videoService", () => {
       status: "failed",
       error: "FAILED: DataInspectionFailed",
     });
+    // 并发的查询里，先结束的那次已经把任务记为 failed 时，后面的直接读库、不再查服务商，
+    // 所以调用次数是 1 到 3 次；要保证的是只退一次款（上面已检查）。已结束的任务不再查询。
+    const calls = s.client.status.mock.calls.length;
+    expect(calls).toBeGreaterThanOrEqual(1);
+    expect(calls).toBeLessThanOrEqual(3);
     const later = await s.pollVideo({ userId, id: started.job.id });
     expect(later.ok && later.job.status).toBe("failed");
-    expect(s.client.status).toHaveBeenCalledTimes(3);
+    expect(s.client.status).toHaveBeenCalledTimes(calls);
   });
 
   test("超时仍未完成：退款，记为 failed", async () => {

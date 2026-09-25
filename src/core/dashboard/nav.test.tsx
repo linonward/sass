@@ -106,7 +106,12 @@ describe("AppSidebar", () => {
   });
 
   test("没有业务项时不渲染业务分组", () => {
-    renderSidebar(defineConfig(siteConfig as SiteConfigInput));
+    renderSidebar(
+      defineConfig({
+        ...(siteConfig as SiteConfigInput),
+        dashboard: { nav: [] },
+      }),
+    );
     expect(
       screen.queryByRole("list", { name: messages.Dashboard.businessNav }),
     ).toBeNull();
