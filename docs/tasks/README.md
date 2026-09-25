@@ -31,7 +31,7 @@
 | T305                   | billing-emails | `feat/billing-emails` | T303, T202       | done |
 | **阶段 4：AI 工具**    |                |                       |                  |      |
 | T401                   | ratelimit      | `feat/ratelimit`      | T102             | done |
-| T402                   | ai             | `feat/ai`             | T302, T401, T203 | todo |
+| T402                   | ai             | `feat/ai`             | T302, T401, T203 | done |
 | T403                   | upload         | `feat/upload`         | T401, T203       | done |
 | **阶段 5：内容与运营** |                |                       |                  |      |
 | T501                   | blog           | `feat/blog`           | T104, T106       | todo |

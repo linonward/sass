@@ -10,6 +10,13 @@ const valid: SiteConfigInput = {
   locales: ["en", "zh-CN"],
   defaultLocale: "en",
   features: { ai: true },
+  // features.ai 开启时必须有模型；免费模型不要求开启 features.credits。
+  ai: {
+    models: [
+      { id: "free", provider: "openai", model: "gpt-5-mini", creditCost: 0 },
+    ],
+    defaultModel: "free",
+  },
   legal: {
     companyName: "Acme Inc.",
     contactEmail: "support@example.com",
@@ -293,5 +300,77 @@ describe("upload", () => {
     expect(() => defineConfig({ ...valid, upload } as SiteConfigInput)).toThrow(
       `- ${path}: `,
     );
+  });
+});
+
+describe("ai", () => {
+  const models = [
+    { id: "fast", provider: "openai", model: "gpt-5-mini", creditCost: 1 },
+    {
+      id: "smart",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      creditCost: 5,
+      maxOutputTokens: 4096,
+    },
+  ] as const;
+  const withAi = (ai: unknown, features = { ai: true, credits: true }) =>
+    ({ ...valid, features, ai }) as SiteConfigInput;
+
+  test("省略时没有模型", () => {
+    expect(
+      defineConfig({ ...valid, features: undefined, ai: undefined }).ai,
+    ).toEqual({ models: [] });
+  });
+
+  test("合法的模型列表和默认模型", () => {
+    const config = defineConfig(
+      withAi({ models: [...models], defaultModel: "smart" }),
+    );
+    expect(config.ai.defaultModel).toBe("smart");
+    expect(config.ai.models[1]?.maxOutputTokens).toBe(4096);
+  });
+
+  test.each([
+    ["ai.models", { models: [models[0], models[0]], defaultModel: "fast" }],
+    [
+      "ai.models.0.provider",
+      { models: [{ ...models[0], provider: "x" }], defaultModel: "fast" },
+    ],
+    [
+      "ai.models.0.id",
+      {
+        models: [{ ...models[0], id: "Fast Model" }],
+        defaultModel: "Fast Model",
+      },
+    ],
+    [
+      "ai.models.0.creditCost",
+      { models: [{ ...models[0], creditCost: -1 }], defaultModel: "fast" },
+    ],
+    ["ai.defaultModel", { models: [...models] }],
+    ["ai.defaultModel", { models: [...models], defaultModel: "nope" }],
+    ["ai.models", { models: [] }],
+  ])("非法字段 %s 出现在报错中", (path, ai) => {
+    expect(() => defineConfig(withAi(ai))).toThrow(`- ${path}: `);
+  });
+
+  test("收费模型要求开启 features.credits，免费模型不要求", () => {
+    expect(() =>
+      defineConfig(
+        withAi(
+          { models: [...models], defaultModel: "fast" },
+          { ai: true, credits: false },
+        ),
+      ),
+    ).toThrow("- ai.models: creditCost > 0 requires features.credits");
+    expect(() =>
+      defineConfig(
+        withAi(
+          { models: [{ ...models[0], creditCost: 0 }], defaultModel: "fast" },
+          { ai: true, credits: false },
+        ),
+      ),
+    ).not.toThrow();
   });
 });

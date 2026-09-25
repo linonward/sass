@@ -12,11 +12,21 @@ export type DashboardNav = {
   business: readonly DashboardNavItem[];
 };
 
-/** 侧边栏的两组菜单：套件项和业务项。 */
+// 只在对应模块开启时显示的套件项，排在 Dashboard 之后。
+const playgroundNav: DashboardNavItem = {
+  key: "playground",
+  href: "/playground",
+  icon: "sparkles",
+};
+
+/** 侧边栏的两组菜单：套件项和业务项。`features.ai` 开启时套件项里多一个 Playground。 */
 export function dashboardNav(
-  config: Pick<SiteConfig, "dashboard">,
+  config: Pick<SiteConfig, "dashboard" | "features">,
 ): DashboardNav {
-  return { suite: suiteNav, business: config.dashboard.nav };
+  const suite = config.features.ai
+    ? [suiteNav[0]!, playgroundNav, ...suiteNav.slice(1)]
+    : suiteNav;
+  return { suite, business: config.dashboard.nav };
 }
 
 /** 当前路径是否属于该菜单项：本身或其子页面。 */

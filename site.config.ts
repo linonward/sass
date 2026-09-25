@@ -150,4 +150,39 @@ export default defineConfig({
     // false：私有文件，只能通过有时效的签名地址访问；true：通过 R2_PUBLIC_URL 公开访问。
     public: false,
   },
+  // AI 模型（features.ai 开启时生效）。每次调用按 creditCost 预扣积分，失败退回。
+  // env 里只配了某几家的 key 时，其他服务商的模型调用返回 503；生产环境会要求这里用到的每家 key。
+  ai: {
+    models: [
+      {
+        id: "fast",
+        provider: "anthropic",
+        model: "claude-haiku-4-5-20251001",
+        creditCost: 1,
+        maxOutputTokens: 2048,
+      },
+      {
+        id: "smart",
+        provider: "anthropic",
+        model: "claude-sonnet-5",
+        creditCost: 5,
+        maxOutputTokens: 4096,
+      },
+      {
+        id: "gpt",
+        provider: "openai",
+        model: "gpt-5-mini",
+        creditCost: 1,
+        maxOutputTokens: 2048,
+      },
+      {
+        id: "gemini",
+        provider: "google",
+        model: "gemini-flash-latest",
+        creditCost: 1,
+        maxOutputTokens: 2048,
+      },
+    ],
+    defaultModel: "fast",
+  },
 });

@@ -20,6 +20,10 @@
     "auth:generate": "SKIP_ENV_VALIDATION=1 auth generate --config src/core/auth/server.ts --output src/core/db/schema/auth.ts --yes && prettier --write src/core/db/schema/auth.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.62",
+    "@ai-sdk/google": "^4.0.79",
+    "@ai-sdk/openai": "^4.0.74",
+    "@ai-sdk/react": "^4.0.116",
     "@aws-sdk/client-s3": "^3.1139.0",
     "@aws-sdk/s3-request-presigner": "^3.1139.0",
     "@base-ui/react": "^1.8.0",
@@ -27,6 +31,7 @@
     "@t3-oss/env-nextjs": "^0.13.11",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
+    "ai": "^7.0.113",
     "better-auth": "^1.7.5",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",

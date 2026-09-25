@@ -66,6 +66,23 @@ describe("dashboardNav", () => {
     expect(nav.business.map((i) => i.href)).toEqual(["/projects"]);
   });
 
+  test("features.ai 开启时，Dashboard 之后多一个 Playground", () => {
+    const base = configWithProjects();
+    expect(dashboardNav(base).suite.map((i) => i.href)).not.toContain(
+      "/playground",
+    );
+    const nav = dashboardNav({
+      ...base,
+      features: { ...base.features, ai: true },
+    });
+    expect(nav.suite.map((i) => i.href)).toEqual([
+      "/dashboard",
+      "/playground",
+      "/billing",
+      "/settings",
+    ]);
+  });
+
   test.each([
     ["/dashboard", "/dashboard", true],
     ["/projects/42", "/projects", true],

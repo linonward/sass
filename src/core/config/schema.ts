@@ -332,6 +332,54 @@ export const uploadConfigSchema = z.strictObject({
   public: z.boolean().default(false),
 });
 
+export const aiProviders = ["openai", "anthropic", "google"] as const;
+
+// AI 模型。v1 按次固定扣费（见 docs/plan.md 关键决策 6）。
+export const aiConfigSchema = z
+  .strictObject({
+    models: z
+      .array(
+        z.strictObject({
+          // 站内使用的模型 ID，前端和接口按它选模型，例如 "fast"。
+          id: z
+            .string()
+            .regex(
+              /^[a-z0-9][a-z0-9._-]*$/,
+              'must be lowercase letters, digits, ".", "_" or "-", such as "fast"',
+            ),
+          provider: z.enum(aiProviders),
+          // 服务商那边的模型名，例如 "gpt-5-mini"、"claude-haiku-4-5-20251001"。
+          model: z.string().trim().min(1),
+          // 每次调用预扣的积分；0 表示免费（不需要开启 features.credits）。
+          creditCost: z.number().int().nonnegative(),
+          // 单次输出的 token 上限。按次计费时建议设置，避免一次调用成本失控。
+          maxOutputTokens: z.number().int().positive().optional(),
+        }),
+      )
+      .refine((models) => unique(models.map((m) => m.id)), {
+        message: "ids must not contain duplicates",
+      })
+      .default([]),
+    // 请求里没指定模型时使用。有模型时必填，且必须是 models 里的 id。
+    defaultModel: z.string().optional(),
+  })
+  .superRefine((ai, ctx) => {
+    if (ai.models.length > 0 && !ai.defaultModel) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultModel"],
+        message: "is required when models is not empty",
+      });
+    }
+    if (ai.defaultModel && !ai.models.some((m) => m.id === ai.defaultModel)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultModel"],
+        message: "must be one of models[].id",
+      });
+    }
+  });
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -371,11 +419,26 @@ export const siteConfigSchema = z
     credits: creditsConfigSchema.default(creditsConfigSchema.parse({})),
     rateLimit: rateLimitConfigSchema.default(rateLimitConfigSchema.parse({})),
     upload: uploadConfigSchema.default(uploadConfigSchema.parse({})),
+    ai: aiConfigSchema.default(aiConfigSchema.parse({})),
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
     path: ["defaultLocale"],
-  });
+  })
+  .refine((config) => !config.features.ai || config.ai.models.length > 0, {
+    message: "must not be empty when features.ai is on",
+    path: ["ai", "models"],
+  })
+  .refine(
+    (config) =>
+      !config.features.ai ||
+      config.features.credits ||
+      config.ai.models.every((m) => m.creditCost === 0),
+    {
+      message: "creditCost > 0 requires features.credits",
+      path: ["ai", "models"],
+    },
+  );
 
 export type SiteConfigInput = z.input<typeof siteConfigSchema>;
 export type SiteConfig = z.output<typeof siteConfigSchema>;
@@ -393,6 +456,9 @@ export type DashboardNavItem = SiteConfig["dashboard"]["nav"][number];
 export type CreditsConfig = SiteConfig["credits"];
 export type RateLimitConfig = SiteConfig["rateLimit"];
 export type UploadConfig = SiteConfig["upload"];
+export type AiConfig = SiteConfig["ai"];
+export type AiModel = AiConfig["models"][number];
+export type AiProvider = (typeof aiProviders)[number];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

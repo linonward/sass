@@ -1,0 +1,38 @@
+import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
+
+import { aiEnabled, aiModels, defaultAiModel } from "@/core/ai";
+import { Playground } from "@/core/ai/playground";
+import { buildMetadata } from "@/core/seo/metadata";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/playground">) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Playground" });
+  return buildMetadata({
+    locale,
+    path: "/playground",
+    title: t("metaTitle"),
+    noIndex: true,
+  });
+}
+
+/** AI 示例页，由 features.ai 控制。业务可以照着它写自己的 AI 功能页，或直接删掉。 */
+export default async function PlaygroundPage({
+  params,
+}: PageProps<"/[locale]/playground">) {
+  if (!aiEnabled) notFound();
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Playground" });
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("description")}</p>
+      </div>
+      <Playground models={aiModels} defaultModel={defaultAiModel!} />
+    </div>
+  );
+}
