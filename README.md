@@ -70,6 +70,10 @@ pnpm dev              # http://localhost:3000
   - 业务的菜单项写在 `site.config.ts` 的 `dashboard.nav`（`key`、`href`、`icon`），文案在 `messages/*.json` 的 `Dashboard.nav.<key>`；套件自带 Dashboard 和 Settings 两项。
   - 设置页 `/settings`：修改名称、偏好语言（`user.locale`，给用户发事务邮件时用 `preferredLocale()` 取）、删除账户。
   - 删除账户会先依次执行 `onUserDelete` 钩子（`src/core/account/on-user-delete.ts`），任何一个失败就中止删除；然后删除用户，session、account 由外键级联删除。业务表引用 `user.id` 时设 `onDelete: "cascade"`，或者注册钩子自行清理（在 `src/core/account/hooks.ts` 里 import 注册文件）。
+- 积分：`src/core/credits/`，由 `features.credits` 开启（关闭时 API 抛 `CreditsDisabledError`，调用方先判断 `creditsEnabled`）。`user_credits` 存余额，`credit_transactions` 记流水（`amount` 带符号，余额恒等于流水之和）。
+  - API：`getBalance`、`grantCredits`、`deductCredits`（余额不足抛 `InsufficientCreditsError`）、`refundCredits`（按扣减的 `source` / `sourceId` 退还，每笔只能退一次）、`adjustCredits`、`listTransactions`。
+  - 幂等：同一 `(source, sourceId)` 只生效一次，重复调用返回 `{ status: "duplicate" }`，不抛错。`refund` 是保留的来源名。
+  - 写操作都接受 `{ tx }`：传入外部事务时作为它的一部分提交或回滚；余额不足等错误只回滚这一步。
 - UI 组件：shadcn/ui（Base UI），生成到 `src/core/ui/`。新增组件用 `pnpm dlx shadcn@latest add <name>`。
 - 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验。
 
