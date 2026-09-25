@@ -5,24 +5,20 @@ import {
   type LanguageModelUsage,
   type Prompt,
 } from "ai";
-import { eq } from "drizzle-orm";
 
 import type { AiConfig, AiModel } from "@/core/config/schema";
-import {
-  InsufficientCreditsError,
-  type AfterCommitCallback,
-  type Credits,
-} from "@/core/credits";
+import type { Credits } from "@/core/credits";
 import type { Database } from "@/core/db/client";
-import { aiUsage, type AiUsageStatus } from "@/core/db/schema";
+import type { AiUsageStatus } from "@/core/db/schema";
 import type {
   RateLimitIdentifiers,
   RateLimitResult,
 } from "@/core/ratelimit/limiter";
 import { rateLimitResponse } from "@/core/ratelimit/limiter";
 
-/** 积分流水的 source；sourceId 是 ai_usage.id。 */
-export const AI_CREDIT_SOURCE = "ai";
+import { reserveUsage, settleUsage, type UsageDeps } from "./usage";
+
+export { AI_CREDIT_SOURCE } from "./usage";
 
 export type RunAIInput = Prompt &
   LanguageModelCallOptions & {
@@ -80,11 +76,6 @@ function fail(status: 400 | 401 | 402 | 503, error: string) {
   };
 }
 
-function errorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.slice(0, 1000);
-}
-
 /**
  * 创建 runAI。默认实例见 `./index.ts`；测试注入 mock 模型、数据库和限流。
  *
@@ -100,7 +91,11 @@ export function createRunAI({
   now = Date.now,
   logError = console.error,
 }: RunAIDeps) {
-  const getDb = () => (typeof db === "function" ? db() : db);
+  const usageDeps: UsageDeps = {
+    db: () => (typeof db === "function" ? db() : db),
+    credits,
+    logError,
+  };
 
   return async function runAI(input: RunAIInput): Promise<RunAIResult> {
     const { userId, ip, modelId, abortSignal, ...options } = input;
@@ -123,47 +118,12 @@ export function createRunAI({
     }
 
     // 预扣和 ai_usage 在同一个事务里：要么都写入，要么都没有。
-    const afterCommit: AfterCommitCallback[] = [];
-    let usageId: string;
-    try {
-      usageId = await getDb().transaction(async (tx) => {
-        const [row] = await tx
-          .insert(aiUsage)
-          .values({
-            userId,
-            modelId: model.id,
-            provider: model.provider,
-            model: model.model,
-            credits: model.creditCost,
-          })
-          .returning({ id: aiUsage.id });
-        if (model.creditCost > 0) {
-          await credits.deductCredits(
-            {
-              userId,
-              amount: model.creditCost,
-              source: AI_CREDIT_SOURCE,
-              sourceId: row!.id,
-              reason: `ai:${model.id}`,
-            },
-            { tx, afterCommit: (fn) => afterCommit.push(fn) },
-          );
-        }
-        return row!.id;
-      });
-    } catch (error) {
-      if (error instanceof InsufficientCreditsError) {
-        return fail(402, "insufficient_credits");
-      }
-      throw error;
-    }
-    for (const fn of afterCommit) {
-      try {
-        await fn();
-      } catch (error) {
-        logError("[ai] afterCommit callback failed", error);
-      }
-    }
+    const usageId = await reserveUsage(usageDeps, {
+      userId,
+      kind: "text",
+      model,
+    });
+    if (!usageId) return fail(402, "insufficient_credits");
 
     const startedAt = now();
     let settle!: (status: AiUsageStatus) => void;
@@ -179,32 +139,17 @@ export function createRunAI({
     ) {
       if (finished) return;
       finished = true;
-      try {
-        if (status === "failed" && model!.creditCost > 0) {
-          await credits.refundCredits({
-            userId: userId!,
-            source: AI_CREDIT_SOURCE,
-            sourceId: usageId,
-            reason: `ai_failed:${model!.id}`,
-          });
-        }
-        await getDb()
-          .update(aiUsage)
-          .set({
-            status,
-            inputTokens: details.usage?.inputTokens ?? null,
-            outputTokens: details.usage?.outputTokens ?? null,
-            error:
-              details.error === undefined ? null : errorMessage(details.error),
-            durationMs: Math.max(0, Math.round(now() - startedAt)),
-            finishedAt: new Date(),
-          })
-          .where(eq(aiUsage.id, usageId));
-      } catch (error) {
-        logError(`[ai] failed to settle usage ${usageId}`, error);
-      } finally {
-        settle(status);
-      }
+      await settleUsage(usageDeps, {
+        userId: userId!,
+        usageId: usageId!,
+        model: model!,
+        status,
+        durationMs: now() - startedAt,
+        inputTokens: details.usage?.inputTokens,
+        outputTokens: details.usage?.outputTokens,
+        error: details.error,
+      });
+      settle(status);
     }
 
     let result: StreamResult;

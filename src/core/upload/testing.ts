@@ -7,6 +7,7 @@ import type { ObjectStorage } from "./storage";
 export class MemoryStorage implements ObjectStorage {
   readonly objects = new Map<string, { size: number; mime: string | null }>();
   readonly deleted: string[] = [];
+  readonly bodies = new Map<string, Uint8Array>();
 
   put(key: string, object: { size: number; mime: string | null }) {
     this.objects.set(key, object);
@@ -19,6 +20,15 @@ export class MemoryStorage implements ObjectStorage {
     expiresIn,
   }: Parameters<ObjectStorage["presignPut"]>[0]) {
     return `https://r2.test/put/${key}?mime=${encodeURIComponent(mime)}&size=${size}&expires=${expiresIn}`;
+  }
+
+  async putObject({
+    key,
+    mime,
+    body,
+  }: Parameters<ObjectStorage["putObject"]>[0]) {
+    this.objects.set(key, { size: body.byteLength, mime });
+    this.bodies.set(key, body);
   }
 
   async presignGet({ key, expiresIn }: { key: string; expiresIn: number }) {

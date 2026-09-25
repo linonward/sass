@@ -2,9 +2,17 @@ import { createAlibaba } from "@ai-sdk/alibaba";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
+import type { ImageModelV4 } from "@ai-sdk/provider";
 import { createProviderRegistry, type LanguageModel } from "ai";
 
-import type { AiModel, AiProvider } from "@/core/config/schema";
+import type {
+  AiImageModel,
+  AiImageProvider,
+  AiModel,
+  AiProvider,
+} from "@/core/config/schema";
+
+import { createAlibabaImageModel } from "./alibaba-image";
 
 import { aiProviderKeys } from "./env";
 
@@ -47,5 +55,30 @@ export function createModelResolver(keys: ProviderKeys) {
   return (model: AiModel): LanguageModel | null =>
     providers.includes(model.provider)
       ? registry.languageModel(`${model.provider}:${model.model}` as never)
+      : null;
+}
+
+const imageFactories = {
+  openai: (model: string, apiKey: string) =>
+    createOpenAI({ apiKey }).image(model),
+  google: (model: string, apiKey: string) =>
+    createGoogleGenerativeAI({ apiKey }).image(model),
+  alibaba: (model: string, apiKey: string, keys: ProviderKeys) =>
+    createAlibabaImageModel(model, { apiKey, baseURL: keys.ALIBABA_BASE_URL }),
+} satisfies Record<
+  AiImageProvider,
+  (model: string, apiKey: string, keys: ProviderKeys) => ImageModelV4
+>;
+
+/** 图片模型：服务商没有 key 时返回 null，由 runImage 转成 503。 */
+export function createImageModelResolver(keys: ProviderKeys) {
+  const providers = enabledProviders(keys);
+  return (model: AiImageModel): ImageModelV4 | null =>
+    providers.includes(model.provider)
+      ? imageFactories[model.provider](
+          model.model,
+          keys[aiProviderKeys[model.provider]]!,
+          keys,
+        )
       : null;
 }
