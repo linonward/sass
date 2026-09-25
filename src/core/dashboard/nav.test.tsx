@@ -30,10 +30,11 @@ beforeAll(() => {
   })) as unknown as typeof window.matchMedia;
 });
 
-/** 模拟业务项目在 site.config.ts 里加了一项 dashboard.nav。 */
+/** 模拟业务项目在 site.config.ts 里加了一项 dashboard.nav。AI 固定关闭，不受演示站点的开关影响。 */
 function configWithProjects() {
   return defineConfig({
     ...(siteConfig as SiteConfigInput),
+    features: { ...siteConfig.features, ai: false },
     dashboard: {
       nav: [{ key: "projects", href: "/projects", icon: "layers" }],
     },

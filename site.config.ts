@@ -11,11 +11,11 @@ export default defineConfig({
   locales: ["en"],
   defaultLocale: "en",
   features: {
-    // 演示站点开启积分、博客、文件上传和后台；积分按 billing.plans 的 credits 发放。
+    // 演示站点开启积分、AI、博客、文件上传和后台；积分按 billing.plans 的 credits 发放。
     // 后台 /admin：用 ADMIN_EMAILS 里的邮箱登录即成为管理员。
     // 博客文章放在 content/blog/<locale>/<slug>.mdx，字段见 content-collections.ts。
     credits: true,
-    ai: false,
+    ai: true,
     blog: true,
     upload: true,
     admin: true,
@@ -161,46 +161,34 @@ export default defineConfig({
   // AI 模型（features.ai 开启时生效）。每次调用按 creditCost 预扣积分，失败退回。
   // env 里只配了某几家的 key 时，其他服务商的模型调用返回 503；生产环境会要求这里用到的每家 key。
   ai: {
+    // 演示站点只用阿里云百炼（ALIBABA_API_KEY）；换成 OpenAI、Anthropic、Google 时改 provider 和 model。
+    // 百炼上的这些模型默认开思考，按次计费的轻量模型用 reasoning: "none" 关掉。
     models: [
-      {
-        id: "fast",
-        provider: "anthropic",
-        model: "claude-haiku-4-5-20251001",
-        creditCost: 1,
-        maxOutputTokens: 2048,
-      },
-      {
-        id: "smart",
-        provider: "anthropic",
-        model: "claude-sonnet-5",
-        creditCost: 5,
-        maxOutputTokens: 4096,
-      },
-      {
-        id: "gpt",
-        provider: "openai",
-        model: "gpt-5-mini",
-        creditCost: 1,
-        maxOutputTokens: 2048,
-      },
-      {
-        id: "gemini",
-        provider: "google",
-        model: "gemini-flash-latest",
-        creditCost: 1,
-        maxOutputTokens: 2048,
-      },
       {
         id: "deepseek",
         provider: "alibaba",
         model: "deepseek-v4-flash",
         creditCost: 1,
         maxOutputTokens: 2048,
-        // 百炼上的 deepseek-v4 默认开思考，按次计费时关掉。
         reasoning: "none",
       },
+      {
+        id: "qwen-flash",
+        provider: "alibaba",
+        model: "qwen3.8-flash",
+        creditCost: 1,
+        maxOutputTokens: 2048,
+        reasoning: "none",
+      },
+      {
+        id: "qwen-max",
+        provider: "alibaba",
+        model: "qwen3.8-max",
+        creditCost: 5,
+        maxOutputTokens: 4096,
+      },
     ],
-    defaultModel: "fast",
+    defaultModel: "deepseek",
     // 图片模型（还需要 features.upload：结果存进 R2）。creditCost 按服务商的单张价格定。
     imageModels: [
       {
