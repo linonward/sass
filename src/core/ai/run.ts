@@ -213,6 +213,7 @@ export function createRunAI({
         ...options,
         model: languageModel,
         maxOutputTokens: options.maxOutputTokens ?? model.maxOutputTokens,
+        reasoning: options.reasoning ?? model.reasoning,
         abortSignal,
         onError: ({ error }) => {
           logError(`[ai] model ${model.id} failed`, error);

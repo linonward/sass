@@ -11,6 +11,7 @@ export const aiProviderKeys = {
   openai: "OPENAI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
   google: "GOOGLE_GENERATIVE_AI_API_KEY",
+  alibaba: "ALIBABA_API_KEY",
 } as const satisfies Record<AiProvider, string>;
 
 /**
@@ -29,5 +30,9 @@ export function aiServerEnv(
     OPENAI_API_KEY: key("openai"),
     ANTHROPIC_API_KEY: key("anthropic"),
     GOOGLE_GENERATIVE_AI_API_KEY: key("google"),
+    ALIBABA_API_KEY: key("alibaba"),
+    // 百炼的 OpenAI 兼容地址，key 所在地域决定用哪个。不填用 AI SDK 默认的国际站（新加坡）；
+    // 北京地域填 https://dashscope.aliyuncs.com/compatible-mode/v1。
+    ALIBABA_BASE_URL: z.url().optional(),
   };
 }
