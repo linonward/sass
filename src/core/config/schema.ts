@@ -287,6 +287,51 @@ export const rateLimitConfigSchema = z.strictObject({
     }),
 });
 
+// 允许上传的 MIME 类型及对应的对象扩展名。扩展名由类型决定，不取用户的文件名。
+// 不含 SVG 和 HTML：公开访问时它们会在站点的文件域名下执行脚本。
+export const uploadMimeTypes = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/avif": "avif",
+  "application/pdf": "pdf",
+  "text/plain": "txt",
+  "text/csv": "csv",
+  "application/json": "json",
+  "application/zip": "zip",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+} as const;
+export type UploadMimeType = keyof typeof uploadMimeTypes;
+
+// 单次 PUT 上传的上限是 5 GiB（S3 / R2 的限制），更大的文件需要分片上传，v1 不做。
+const MAX_SINGLE_PUT_BYTES = 5 * 1024 ** 3;
+
+// 文件上传（Cloudflare R2）；只在 features.upload 开启时生效。
+export const uploadConfigSchema = z.strictObject({
+  allowedMimeTypes: z
+    .array(
+      z.enum(
+        Object.keys(uploadMimeTypes) as [UploadMimeType, ...UploadMimeType[]],
+      ),
+    )
+    .min(1)
+    .refine(unique, { message: "must not contain duplicates" })
+    .default(["image/png", "image/jpeg", "image/webp", "application/pdf"]),
+  // 单个文件的大小上限（字节）。
+  maxFileSize: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_SINGLE_PUT_BYTES, "must be at most 5 GiB (single PUT limit)")
+    .default(10 * 1024 * 1024),
+  // true：文件通过 R2 的公开域名访问（R2_PUBLIC_URL）；false：只能通过有时效的签名地址访问。
+  public: z.boolean().default(false),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -325,6 +370,7 @@ export const siteConfigSchema = z
     dashboard: dashboardSchema.default(dashboardSchema.parse({})),
     credits: creditsConfigSchema.default(creditsConfigSchema.parse({})),
     rateLimit: rateLimitConfigSchema.default(rateLimitConfigSchema.parse({})),
+    upload: uploadConfigSchema.default(uploadConfigSchema.parse({})),
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -346,6 +392,7 @@ export type DashboardIcon = (typeof dashboardIcons)[number];
 export type DashboardNavItem = SiteConfig["dashboard"]["nav"][number];
 export type CreditsConfig = SiteConfig["credits"];
 export type RateLimitConfig = SiteConfig["rateLimit"];
+export type UploadConfig = SiteConfig["upload"];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

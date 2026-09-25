@@ -61,6 +61,7 @@ pnpm dev              # http://localhost:3000
 - 购买流程：落地页的定价区块和 `/pricing` 共用购买按钮，未登录时先登录，登录后回到 `/pricing?plan=<id>` 自动继续结账；已订阅显示"管理订阅"（客户门户）。结账回跳 `/billing/success`，按回跳附带的订阅或订单 ID 轮询 `/api/billing/status`，webhook 未到时显示"处理中"，超过 `BILLING_SUCCESS_TIMEOUT_MS`（默认 60 秒）提示联系支持。账单页 `/billing` 显示当前套餐、续费日期、积分余额和最近 20 条流水。
 - e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。Vercel 上（任何环境）或 `CREEM_MODE=live` 时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404。
 - 接口限流（`src/core/ratelimit/`）：`checkRateLimit(policy, { userId, ip })` 按 `site.config.ts` 的 `rateLimit.policies` 做滑动窗口计数，用户和 IP 各计一次，任一超限即拒绝；被拒绝时 `return rateLimitResponse(result)`（超限 429、Redis 不可用 503，都带 `Retry-After`）。IP 用 `getClientIp(request.headers)` 取。本地没配 Upstash 时跳过限流并警告一次；Redis 出错或超时（1 秒）时按 `rateLimit.failMode` 处理：`open`（默认）放行并记录错误，`closed` 返回 503。登录限流由 Better Auth 负责，不走这里。
+- 文件上传（`src/core/upload/`，`features.upload`）：浏览器直传 Cloudflare R2。`POST /api/upload/presign`（body `{ mime, size }`，需要登录，走 `upload` 限流）按 `site.config.ts` 的 `upload.allowedMimeTypes` / `maxFileSize` 校验，登记一条 `pending` 的 `files` 记录，返回预签名 PUT 地址（10 分钟有效，签名覆盖 Content-Type 和 Content-Length，类型或大小不同时 R2 返回 403）；上传后 `POST /api/upload/complete`（body `{ fileId }`）用 HeadObject 确认对象存在、大小和类型一致，改为 `uploaded`。对象 key 为 `<userId>/<yyyy-mm>/<uuid>.<ext>`，扩展名由类型决定。`upload.public` 为 false（默认）时通过 1 小时有效的签名 GET 地址访问，`GET /api/upload/files/<id>` 会跳转过去，可以直接用作 `<img src>`；为 true 时用 `R2_PUBLIC_URL` 下的地址。前端用 `uploadFile(file)`（`src/core/upload/client.ts`）；开启后 Dashboard 首页有一个上传示例。删除账户时 `files` 记录随之删除，R2 上的对象和一直是 `pending` 的记录 v1 不清理。
 - 法律页：`/privacy`、`/terms`、`/refund`，正文模板在 `content/legal/`（归业务方所有），主体信息取自 `site.config.ts` 的 `legal`。**模板仅供参考，不构成法律意见**，上线前请结合业务和适用法律自行审阅，必要时咨询律师。
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
@@ -107,19 +108,21 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
 
-| 变量                                                  | 说明                                                                                                                |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                        | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                              |
-| `RESEND_API_KEY`                                      | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                             |
-| `EMAIL_TRANSPORT`                                     | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。                           |
-| `BETTER_AUTH_SECRET`                                  | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                               |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`           | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                           |
-| `BETTER_AUTH_URL`                                     | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                       |
-| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`              | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。                         |
-| `CREEM_MODE`                                          | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                        |
-| `BILLING_PROVIDER`                                    | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e，Vercel 上设置会启动失败。                                      |
-| `BILLING_SUCCESS_TIMEOUT_MS`                          | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                     |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。 |
+| 变量                                                                        | 说明                                                                                                                |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                              |
+| `RESEND_API_KEY`                                                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                             |
+| `EMAIL_TRANSPORT`                                                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。                           |
+| `BETTER_AUTH_SECRET`                                                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                               |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                 | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                           |
+| `BETTER_AUTH_URL`                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                       |
+| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                    | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。                         |
+| `CREEM_MODE`                                                                | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                        |
+| `BILLING_PROVIDER`                                                          | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e，Vercel 上设置会启动失败。                                      |
+| `BILLING_SUCCESS_TIMEOUT_MS`                                                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                     |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`                       | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。 |
+| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` | 开启 `features.upload` 时 Production 必填（见下文"文件上传（Cloudflare R2）"）。Preview 不填时上传接口返回 503。    |
+| `R2_PUBLIC_URL`                                                             | bucket 的公开域名（`https://files.example.com`），只在 `upload.public` 为 true 时需要。                             |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -183,6 +186,26 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 1. 在 [Upstash](https://console.upstash.com) 创建一个 Redis 数据库，区域选离 Vercel 函数最近的（默认 `iad1` 对应 US East）。
 2. 把 REST API 的 URL 和 token 填到 Vercel Production 的 `UPSTASH_REDIS_REST_URL`、`UPSTASH_REDIS_REST_TOKEN`；也可以从 Vercel Marketplace 安装 Upstash 集成自动注入（变量名相同）。
 3. 阈值在 `site.config.ts` 的 `rateLimit.policies` 调整，默认 `ai` 每分钟 20 次、`upload` 每分钟 10 次。
+
+#### 文件上传（Cloudflare R2）
+
+1. Cloudflare 后台 → R2 创建 bucket（生产和预览可以分开建）。`R2_ACCOUNT_ID` 是 R2 概览页右侧的 Account ID（32 位十六进制）。
+2. R2 → Manage API tokens 创建一个 **Object Read & Write** 权限、只作用于这个 bucket 的 token，把 Access Key ID 和 Secret Access Key 填到 `R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`，bucket 名填到 `R2_BUCKET`。
+3. 浏览器直传需要 CORS。bucket → Settings → CORS Policy 填入（把域名换成自己的；本地调试再加 `http://localhost:3000`）：
+
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://<domain>"],
+       "AllowedMethods": ["PUT", "GET"],
+       "AllowedHeaders": ["content-type"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+4. 公开访问（`upload.public: true`）：bucket → Settings → Custom Domains 绑定一个子域名（例如 `files.<domain>`），填到 `R2_PUBLIC_URL`。不要用 `r2.dev` 地址上线，它有限速。私有文件（默认）不需要这一步。
+5. 开启 `features.upload` 后登录 Dashboard，用首页的上传示例传一个文件，检查 `files` 表里的状态变成 `uploaded`，并能打开文件链接。
 
 ### 5. GitHub
 

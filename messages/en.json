@@ -265,6 +265,23 @@
       "emptyTitle": "Welcome to {name}",
       "emptyDescription": "There's nothing here yet. Your product's overview will live on this page.",
       "emptyCta": "Go to settings"
+    },
+    "upload": {
+      "title": "Upload a file",
+      "description": "Files go straight from your browser to storage. Use this to check that uploads are configured.",
+      "choose": "Choose a file",
+      "uploading": "Uploading…",
+      "done": "Uploaded:",
+      "errors": {
+        "invalid_type": "This file type isn't allowed.",
+        "invalid_size": "This file is empty or its size can't be read.",
+        "too_large": "This file is too large.",
+        "rate_limited": "Too many uploads. Try again in a minute.",
+        "upload_not_configured": "Uploads aren't configured yet.",
+        "put_failed": "The upload to storage failed. Check the bucket's CORS settings.",
+        "mismatch": "The uploaded file didn't match what was requested.",
+        "unknown": "Something went wrong. Please try again."
+      }
     }
   },
   "Account": {

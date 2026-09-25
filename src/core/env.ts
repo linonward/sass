@@ -6,6 +6,7 @@ import { billingServerEnv } from "./billing/env";
 import { createAppEnv } from "./create-env";
 import { emailServerEnv } from "./email/env";
 import { rateLimitServerEnv } from "./ratelimit/env";
+import { uploadServerEnv } from "./upload/env";
 
 export { createAppEnv, requiredWhen } from "./create-env";
 
@@ -25,6 +26,10 @@ export const env = createAppEnv({
         siteConfig.features.rateLimit ||
         siteConfig.features.ai ||
         siteConfig.features.upload,
+    }),
+    ...uploadServerEnv(process.env, {
+      enabled: siteConfig.features.upload,
+      isPublic: siteConfig.upload.public,
     }),
   },
   runtimeEnv: process.env,

@@ -265,3 +265,33 @@ describe("rateLimit", () => {
     ).toThrow(`- ${path}: `);
   });
 });
+
+describe("upload", () => {
+  test("默认只允许常见图片和 PDF，上限 10 MB，私有访问", () => {
+    expect(defineConfig(valid).upload).toEqual({
+      allowedMimeTypes: [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "application/pdf",
+      ],
+      maxFileSize: 10 * 1024 * 1024,
+      public: false,
+    });
+  });
+
+  test.each([
+    ["upload.allowedMimeTypes.0", { allowedMimeTypes: ["image/svg+xml"] }],
+    ["upload.allowedMimeTypes", { allowedMimeTypes: [] }],
+    [
+      "upload.allowedMimeTypes",
+      { allowedMimeTypes: ["image/png", "image/png"] },
+    ],
+    ["upload.maxFileSize", { maxFileSize: 0 }],
+    ["upload.maxFileSize", { maxFileSize: 6 * 1024 ** 3 }],
+  ])("非法字段 %s 出现在报错中", (path, upload) => {
+    expect(() => defineConfig({ ...valid, upload } as SiteConfigInput)).toThrow(
+      `- ${path}: `,
+    );
+  });
+});
