@@ -44,6 +44,11 @@ pnpm dev              # http://localhost:3000
 | `pnpm test`                         | Vitest 单测（`src/**/*.test.{ts,tsx}`）                                  |
 | `pnpm test:e2e`                     | Playwright e2e（`e2e/`，首次需 `pnpm exec playwright install chromium`） |
 | `pnpm build`                        | 生产构建                                                                 |
+| `pnpm db:generate`                  | 根据 schema 生成迁移文件（`drizzle/`，需提交）                           |
+| `pnpm db:migrate`                   | 对 `DATABASE_URL` 执行迁移                                               |
+| `pnpm db:studio`                    | 打开 Drizzle Studio 浏览数据                                             |
+
+数据库：`DATABASE_URL` 必填（见 `.env.example`）。本地可以用 Docker 起一个 Postgres，再执行 `pnpm db:migrate`。设置了 `DATABASE_URL_TEST` 时，`pnpm test` 会运行数据库测试；未设置时跳过（CI 中必须设置）。
 
 ## 配置
 
@@ -79,7 +84,11 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 ### 3. 环境变量
 
-在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。当前阶段不需要任何变量。
+在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
+
+| 变量           | 环境                 | 来源                                  |
+| -------------- | -------------------- | ------------------------------------- |
+| `DATABASE_URL` | Production / Preview | Neon 的 Vercel 集成自动注入（见下文） |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -94,6 +103,13 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 | `features.upload`                      | Cloudflare R2               | 开启上传时               |
 
 具体变量名由对应模块的任务补充到本节。
+
+#### 数据库（Neon）
+
+1. 在 Neon 创建项目，默认分支作为生产库。
+2. Vercel 项目 → Integrations，从 Marketplace 安装 **Neon**，关联上一步的 Neon 项目，并开启 **Create a branch for each preview deployment**。集成会为 Production 注入主分支的 `DATABASE_URL`，为每个预览部署创建独立的数据库分支并注入对应的 `DATABASE_URL`，预览不会连到生产库。
+3. 迁移随部署自动执行：`vercel.json` 的构建命令是 `pnpm db:migrate && pnpm build`，预览部署迁移自己的分支，生产部署迁移主分支。迁移失败时本次部署会失败，线上仍是上一个版本。
+   - 迁移会在新代码上线前执行，线上旧代码会短暂面对新表结构。所以迁移应保持向后兼容：先加列或加表，删列放到下一次发布。
 
 ### 5. GitHub
 
