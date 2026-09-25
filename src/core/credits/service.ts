@@ -75,6 +75,8 @@ const grantInput = z.object({ ...sourceFields, amount: positiveInt });
 const deductInput = grantInput;
 const adjustInput = z.object({
   ...sourceFields,
+  /** 操作者（通常是后台的管理员），记录在流水的 actor_id 上。 */
+  actorId: z.string().min(1).optional(),
   amount: z
     .number()
     .int()
@@ -104,6 +106,7 @@ type Entry = {
   source: string;
   sourceId: string;
   reason?: string;
+  actorId?: string;
 };
 
 /**

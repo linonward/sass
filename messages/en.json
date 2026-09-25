@@ -239,19 +239,25 @@
       "sendFailed": "We couldn't send the email. Please try again later.",
       "sendFailedGoogle": "We couldn't send the email. Please try again later, or continue with Google.",
       "rateLimited": "Too many requests. Please wait a moment and try again.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "banned": "This account has been suspended. Contact support if you think this is a mistake."
     }
   },
   "Dashboard": {
     "sidebar": "Sidebar",
     "suiteNav": "Main",
     "businessNav": "Product",
+    "adminNav": "Admin",
     "toggleSidebar": "Toggle sidebar",
     "nav": {
       "home": "Dashboard",
       "settings": "Settings",
       "billing": "Billing",
-      "playground": "Playground"
+      "playground": "Playground",
+      "admin": "Admin",
+      "adminUsers": "Users",
+      "adminOrders": "Orders",
+      "adminSubscriptions": "Subscriptions"
     },
     "userMenu": {
       "open": "Account menu",
@@ -430,5 +436,117 @@
     "newer": "Newer posts",
     "older": "Older posts",
     "pageOf": "Page {page} of {total}"
+  },
+  "Admin": {
+    "metaTitle": "Admin",
+    "users": {
+      "title": "Users",
+      "description": "Search accounts, check their credits and billing, and suspend abuse.",
+      "search": "Search by email or name",
+      "searchButton": "Search",
+      "empty": "No users found.",
+      "columns": {
+        "user": "User",
+        "role": "Role",
+        "status": "Status",
+        "credits": "Credits",
+        "joined": "Joined"
+      }
+    },
+    "roles": {
+      "admin": "Admin",
+      "user": "User"
+    },
+    "status": {
+      "active": "Active",
+      "banned": "Suspended"
+    },
+    "user": {
+      "back": "All users",
+      "metaTitle": "User",
+      "noName": "No name",
+      "profileTitle": "Profile",
+      "email": "Email",
+      "emailVerified": "Verified",
+      "emailUnverified": "Not verified",
+      "role": "Role",
+      "joined": "Joined",
+      "id": "User ID",
+      "banTitle": "Account access",
+      "banDescription": "Suspending signs the user out everywhere and blocks new sign-ins until you lift it.",
+      "bannedNotice": "This account is suspended.",
+      "bannedReason": "Reason: {reason}",
+      "banReason": "Reason (optional)",
+      "ban": "Suspend account",
+      "unban": "Lift suspension",
+      "creditsTitle": "Credits",
+      "balance": "{balance, number} credits",
+      "amount": "Amount",
+      "amountHint": "Use a negative number to remove credits.",
+      "reason": "Reason",
+      "reasonPlaceholder": "Shown in the ledger, e.g. “Refund for outage on May 3”",
+      "adjust": "Adjust credits",
+      "adjusted": "Credits adjusted.",
+      "duplicate": "This adjustment was already applied.",
+      "transactionsTitle": "Recent activity",
+      "noTransactions": "No credit activity yet.",
+      "by": "by {email}",
+      "deletedActor": "by a deleted admin",
+      "subscriptionsTitle": "Subscriptions",
+      "noSubscriptions": "No subscriptions.",
+      "ordersTitle": "Orders",
+      "noOrders": "No orders."
+    },
+    "orders": {
+      "title": "Orders",
+      "description": "Payments from one-time purchases and subscriptions.",
+      "empty": "No orders.",
+      "columns": {
+        "date": "Date",
+        "user": "User",
+        "plan": "Plan",
+        "amount": "Amount",
+        "status": "Status",
+        "reference": "Reference"
+      },
+      "refunded": "{amount} refunded"
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "description": "Every subscription and its current state.",
+      "empty": "No subscriptions.",
+      "columns": {
+        "created": "Started",
+        "user": "User",
+        "plan": "Plan",
+        "status": "Status",
+        "periodEnd": "Current period ends",
+        "reference": "Reference"
+      }
+    },
+    "orderStatus": {
+      "failed": "Failed",
+      "paid": "Paid",
+      "partially_refunded": "Partially refunded",
+      "refunded": "Refunded"
+    },
+    "filter": {
+      "label": "Filter by status",
+      "all": "All"
+    },
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "summary": "Page {page} of {totalPages} · {total, number} total"
+    },
+    "errors": {
+      "forbidden": "You don't have permission to do that.",
+      "invalidAmount": "Enter a whole number other than 0.",
+      "reasonRequired": "Enter a reason for this adjustment.",
+      "insufficient": "The balance can't go below 0.",
+      "cannotBanSelf": "You can't suspend your own account.",
+      "generic": "Something went wrong. Please try again."
+    }
   }
 }

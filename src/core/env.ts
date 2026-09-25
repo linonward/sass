@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import siteConfig from "../../site.config";
+import { adminServerEnv } from "./admin/env";
 import { aiServerEnv } from "./ai/env";
 import { authServerEnv } from "./auth/env";
 import { billingServerEnv } from "./billing/env";
@@ -32,6 +33,7 @@ export const env = createAppEnv({
         siteConfig.features.ai ||
         siteConfig.features.upload,
     }),
+    ...adminServerEnv(process.env, { enabled: siteConfig.features.admin }),
     ...uploadServerEnv(process.env, {
       enabled: siteConfig.features.upload,
       isPublic: siteConfig.upload.public,

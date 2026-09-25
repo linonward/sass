@@ -10,7 +10,23 @@ export const suiteNav: readonly DashboardNavItem[] = [
 export type DashboardNav = {
   suite: readonly DashboardNavItem[];
   business: readonly DashboardNavItem[];
+  /** 后台菜单：管理员在 dashboard 里看到一个入口，在 /admin 里看到完整菜单。 */
+  admin?: readonly DashboardNavItem[];
 };
+
+/** 管理员在 dashboard 侧边栏里看到的后台入口。 */
+export const adminEntryNav: DashboardNavItem = {
+  key: "admin",
+  href: "/admin",
+  icon: "users",
+};
+
+/** /admin 里的菜单。 */
+export const adminNav: readonly DashboardNavItem[] = [
+  { key: "adminUsers", href: "/admin/users", icon: "users" },
+  { key: "adminOrders", href: "/admin/orders", icon: "creditCard" },
+  { key: "adminSubscriptions", href: "/admin/subscriptions", icon: "layers" },
+];
 
 // 只在对应模块开启时显示的套件项，排在 Dashboard 之后。
 const playgroundNav: DashboardNavItem = {
