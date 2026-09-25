@@ -310,9 +310,19 @@ describe("observability", () => {
       logLevel: "info",
       otel: false,
       sentry: false,
+      sentryTracesSampleRate: 0.1,
       analytics: false,
       speedInsights: false,
     });
+  });
+
+  test("Sentry 采样率必须在 0 到 1 之间", () => {
+    expect(() =>
+      defineConfig({
+        ...valid,
+        observability: { sentryTracesSampleRate: 1.5 },
+      } as unknown as SiteConfigInput),
+    ).toThrow("- observability.sentryTracesSampleRate: ");
   });
 
   test("非法日志级别和拼错的字段会被指出", () => {

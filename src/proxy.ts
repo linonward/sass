@@ -32,7 +32,7 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // 跳过 API、Next 内部路径、带扩展名的静态文件（含 sitemap.xml / robots.txt）
-  // 以及根目录的 opengraph-image。
-  matcher: "/((?!api|trpc|_next|_vercel|opengraph-image|.*\\..*).*)",
+  // 跳过 API、Next 内部路径、带扩展名的静态文件（含 sitemap.xml / robots.txt）、
+  // 根目录的 opengraph-image，以及 Sentry 的转发路径（SENTRY_TUNNEL_ROUTE，matcher 只能写字面量）。
+  matcher: "/((?!api|trpc|_next|_vercel|opengraph-image|monitoring|.*\\..*).*)",
 };

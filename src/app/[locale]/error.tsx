@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 
+import { captureError } from "@/core/observability/sentry";
 import { Button } from "@/core/ui/button";
 
 export default function Error({
@@ -16,6 +17,7 @@ export default function Error({
 
   useEffect(() => {
     console.error(error);
+    captureError(error);
   }, [error]);
 
   return (

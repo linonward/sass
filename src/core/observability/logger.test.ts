@@ -200,6 +200,7 @@ describe("loggerOptionsFromConfig", () => {
     logLevel: "debug" as const,
     otel: false,
     sentry: false,
+    sentryTracesSampleRate: 0.1,
     analytics: false,
     speedInsights: false,
   };

@@ -22,6 +22,7 @@ import siteConfig from "../../../site.config";
 import { cooldownIdentifier, otpResendCooldown } from "./cooldown";
 import { googleCredentials, resolveAuthBaseURL } from "./env";
 import { EMAIL_SEND_FAILED } from "./errors";
+import { identifySessionUser } from "./identify";
 import { resolveRequestLocale } from "./locale";
 
 const otp = siteConfig.auth.emailOtp;
@@ -104,6 +105,7 @@ export const auth = betterAuth({
     },
   },
   plugins: [
+    identifySessionUser(),
     otpResendCooldown({ seconds: otp.resendCooldown }),
     emailOTP({
       otpLength: otp.length,

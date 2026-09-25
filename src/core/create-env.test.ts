@@ -46,6 +46,21 @@ describe("createAppEnv", () => {
   test("SKIP_ENV_VALIDATION 跳过校验", () => {
     expect(() => aiEnv(true, { SKIP_ENV_VALIDATION: "1" })).not.toThrow();
   });
+
+  test("client 变量同样按开关校验", () => {
+    const publicEnv = (enabled: boolean, runtimeEnv: Record<string, string>) =>
+      createAppEnv({
+        server: {},
+        client: { NEXT_PUBLIC_DSN: requiredWhen(enabled, z.url()) },
+        runtimeEnv,
+      });
+    expect(() => publicEnv(true, {})).toThrow("- NEXT_PUBLIC_DSN: ");
+    expect(publicEnv(false, {}).NEXT_PUBLIC_DSN).toBeUndefined();
+    expect(
+      publicEnv(true, { NEXT_PUBLIC_DSN: "https://k@o1.ingest.sentry.io/1" })
+        .NEXT_PUBLIC_DSN,
+    ).toBe("https://k@o1.ingest.sentry.io/1");
+  });
 });
 
 describe("邮件变量", () => {

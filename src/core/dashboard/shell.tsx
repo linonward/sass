@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { signOut } from "@/core/auth/actions";
 import type { Session } from "@/core/auth/server";
 import { routing } from "@/core/i18n/routing";
+import { IdentifyUser } from "@/core/observability/identify-user";
 import { ThemeToggle } from "@/core/theme/theme-toggle";
 import {
   SidebarInset,
@@ -36,6 +37,7 @@ export async function DashboardShell({
 
   return (
     <TooltipProvider>
+      <IdentifyUser userId={session.user.id} />
       <SidebarProvider defaultOpen={sidebarOpen}>
         <AppSidebar
           nav={nav}

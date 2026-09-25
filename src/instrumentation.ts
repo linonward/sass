@@ -14,15 +14,29 @@ export async function register() {
     const { registerOTel } = await import("@vercel/otel");
     registerOTel({ serviceName: siteConfig.name });
   }
+  // 放在 OTel 之后：同时开启时 Sentry 沿用已注册的 tracer provider。
+  // OBSERVABILITY_SENTRY 由 next.config.ts 在构建时写死，关闭时整段连同 SDK 都不会打进产物。
+  if (process.env.OBSERVABILITY_SENTRY === "true") {
+    if (process.env.NEXT_RUNTIME === "nodejs") {
+      await import("@/core/observability/sentry.server");
+    } else if (process.env.NEXT_RUNTIME === "edge") {
+      await import("@/core/observability/sentry.edge");
+    }
+  }
 }
 
 // 未捕获的请求错误（页面渲染、路由处理、Server Action、proxy）。
-export const onRequestError: Instrumentation.onRequestError = (
+export const onRequestError: Instrumentation.onRequestError = async (
   error,
   request,
   context,
 ) => {
   if (!features.observability) return;
+  if (process.env.OBSERVABILITY_SENTRY === "true") {
+    // 先交给 Sentry（带请求上下文）；同一个错误对象 Sentry 只收一次，下面 logger.error 的上报会被跳过。
+    const { captureRequestError } = await import("@sentry/nextjs");
+    captureRequestError(error, request, context);
+  }
   logger.error("request.error", {
     error,
     method: request.method,

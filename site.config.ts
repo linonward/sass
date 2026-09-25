@@ -165,6 +165,9 @@ export default defineConfig({
     logLevel: "info",
     // OpenTelemetry 追踪：Vercel 上开启 Tracing 或 OTel 集成，其他环境填 OTEL_EXPORTER_OTLP_ENDPOINT。
     otel: false,
+    // Sentry 错误上报：开启后填 NEXT_PUBLIC_SENTRY_DSN；再填 SENTRY_AUTH_TOKEN / SENTRY_ORG /
+    // SENTRY_PROJECT 会在构建时上传 source map。只发用户 ID，不发邮箱和 IP。
+    sentry: false,
   },
   // AI 模型（features.ai 开启时生效）。每次调用按 creditCost 预扣积分，失败退回。
   // env 里只配了某几家的 key 时，其他服务商的模型调用返回 503；生产环境会要求这里用到的每家 key。
