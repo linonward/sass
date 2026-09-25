@@ -320,7 +320,7 @@ describe("ai", () => {
   test("省略时没有模型", () => {
     expect(
       defineConfig({ ...valid, features: undefined, ai: undefined }).ai,
-    ).toEqual({ models: [], imageModels: [] });
+    ).toEqual({ models: [], imageModels: [], videoModels: [] });
   });
 
   test("合法的模型列表和默认模型", () => {
@@ -414,6 +414,61 @@ describe("ai", () => {
           ),
         ),
       ).toThrow("- ai.imageModels: creditCost > 0 requires features.credits");
+    });
+  });
+
+  describe("videoModels", () => {
+    const video = {
+      id: "wan-i2v",
+      provider: "alibaba",
+      model: "wan2.7-i2v",
+      input: "image",
+      creditCost: 20,
+    } as const;
+    const base = { models: [...models], defaultModel: "fast" };
+
+    test("时长默认 5 秒、分辨率默认 720P", () => {
+      const config = defineConfig(
+        withAi({ ...base, videoModels: [video], defaultVideoModel: "wan-i2v" }),
+      );
+      expect(config.ai.videoModels[0]).toEqual({
+        ...video,
+        duration: 5,
+        resolution: "720P",
+      });
+    });
+
+    test.each([
+      [
+        "ai.videoModels.0.duration",
+        {
+          videoModels: [{ ...video, duration: 30 }],
+          defaultVideoModel: "wan-i2v",
+        },
+      ],
+      [
+        "ai.videoModels.0.input",
+        {
+          videoModels: [{ ...video, input: "audio" }],
+          defaultVideoModel: "wan-i2v",
+        },
+      ],
+      [
+        "ai.videoModels.0.provider",
+        {
+          videoModels: [{ ...video, provider: "openai" }],
+          defaultVideoModel: "wan-i2v",
+        },
+      ],
+      ["ai.defaultVideoModel", { videoModels: [video] }],
+      [
+        "ai.defaultVideoModel",
+        { videoModels: [video], defaultVideoModel: "nope" },
+      ],
+    ])("非法字段 %s 出现在报错中", (path, ai) => {
+      expect(() => defineConfig(withAi({ ...base, ...ai }))).toThrow(
+        `- ${path}: `,
+      );
     });
   });
 

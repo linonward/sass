@@ -19,10 +19,13 @@ const knownErrors = [
   "storage_unavailable",
   "invalid_model",
   "invalid_prompt",
+  "invalid_aspect_ratio",
+  "invalid_image",
   "unauthorized",
   "model_error",
 ] as const;
 type KnownError = (typeof knownErrors)[number];
+export type ImageErrorCode = KnownError | "generic";
 
 /** 接口的错误响应是 JSON `{ error }`；限流返回 429（响应体不一定带 error）。 */
 export async function imageErrorCode(
@@ -67,7 +70,9 @@ export function ImageStudio({
     fetch("/api/ai/generations")
       .then((res) => (res.ok ? res.json() : { generations: [] }))
       .then((body: { generations: Generation[] }) => {
-        if (!cancelled) setGenerations(body.generations);
+        if (!cancelled) {
+          setGenerations(body.generations.filter((g) => g.kind === "image"));
+        }
       })
       .catch(() => {
         if (!cancelled) setGenerations([]);
@@ -220,24 +225,14 @@ export function ImageStudio({
                   rel="noreferrer"
                   className="bg-muted block overflow-hidden rounded-lg border"
                 >
-                  {generation.kind === "video" ? (
-                    <video
-                      src={generation.url}
-                      muted
-                      loop
-                      playsInline
-                      className="aspect-square w-full object-cover"
-                    />
-                  ) : (
-                    // 生成的图片在 R2 上，尺寸不定；不走 next/image 的优化。
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={generation.url}
-                      alt={generation.prompt}
-                      loading="lazy"
-                      className="aspect-square w-full object-cover"
-                    />
-                  )}
+                  {/* 生成的图片在 R2 上，尺寸不定；不走 next/image 的优化。 */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={generation.url}
+                    alt={generation.prompt}
+                    loading="lazy"
+                    className="aspect-square w-full object-cover"
+                  />
                 </a>
                 <p
                   className="text-muted-foreground mt-1 line-clamp-2 text-xs"

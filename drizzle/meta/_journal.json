@@ -64,6 +64,13 @@
       "when": 1790349890859,
       "tag": "0008_ai_generations",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790351008618,
+      "tag": "0009_ai_video_operation",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { getClientIp } from "@/core/ratelimit/limiter";
 
 import type { Generation, RunImageInput, RunImageResult } from "./image";
+import type { StartVideoInput, VideoService } from "./video";
 
 // 请求体上限：只有提示词和几个选项。
 export const MAX_IMAGE_BODY_BYTES = 16 * 1024;
@@ -67,12 +68,75 @@ export async function handleGenerations(
     enabled,
     getUserId,
     listGenerations,
-  }: BaseDeps & { listGenerations: (userId: string) => Promise<Generation[]> },
+    listPendingVideos = async () => [],
+  }: BaseDeps & {
+    listGenerations: (userId: string) => Promise<Generation[]>;
+    listPendingVideos?: (userId: string) => Promise<unknown[]>;
+  },
 ): Promise<Response> {
   if (!enabled) return Response.json({ error: "not_found" }, { status: 404 });
   const userId = await getUserId(request);
   if (!userId) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
-  return Response.json({ generations: await listGenerations(userId) });
+  const [generations, pendingVideos] = await Promise.all([
+    listGenerations(userId),
+    listPendingVideos(userId),
+  ]);
+  return Response.json({ generations, pendingVideos });
+}
+
+/**
+ * `POST /api/ai/video`：body 为 `{ prompt, modelId?, aspectRatio?, imageFileId? }`，
+ * 提交异步任务，返回 `{ job: { id, status: "pending" } }`，之后用 GET /api/ai/video/:id 查询。
+ */
+export async function handleVideoStart(
+  request: Request,
+  {
+    enabled,
+    getUserId,
+    startVideo,
+  }: BaseDeps & {
+    startVideo: (
+      input: StartVideoInput,
+    ) => ReturnType<VideoService["startVideo"]>;
+  },
+): Promise<Response> {
+  if (!enabled) return Response.json({ error: "not_found" }, { status: 404 });
+  const userId = await getUserId(request);
+  if (!userId) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const { body, error } = await readJson(request, MAX_IMAGE_BODY_BYTES);
+  if (error) return error;
+  const result = await startVideo({
+    userId,
+    ip: getClientIp(request.headers),
+    prompt: body.prompt,
+    modelId: body.modelId,
+    aspectRatio: body.aspectRatio,
+    imageFileId: body.imageFileId,
+  });
+  if (!result.ok) return result.response;
+  return Response.json({ job: result.job }, { status: 202 });
+}
+
+/** `GET /api/ai/video/:id`：查询并推进任务，返回 `{ job }`（pending / failed / succeeded）。 */
+export async function handleVideoStatus(
+  request: Request,
+  id: string,
+  {
+    enabled,
+    getUserId,
+    pollVideo,
+  }: BaseDeps & { pollVideo: VideoService["pollVideo"] },
+): Promise<Response> {
+  if (!enabled) return Response.json({ error: "not_found" }, { status: 404 });
+  const userId = await getUserId(request);
+  if (!userId) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const result = await pollVideo({ userId, id });
+  if (!result.ok) return result.response;
+  return Response.json({ job: result.job });
 }
