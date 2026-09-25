@@ -4,6 +4,8 @@ import { useLocale } from "next-intl";
 import { useState } from "react";
 
 import { getPathname } from "@/core/i18n/navigation";
+import { trackEvents } from "@/core/observability/events";
+import { track } from "@/core/observability/track";
 
 export type CheckoutErrorKey =
   | "billing_not_configured"
@@ -51,6 +53,7 @@ export function useCheckout() {
       };
       if (response.ok && body.url) {
         // 服务商的结账页（fake 模式下是站内的模拟页）。
+        track(trackEvents.checkoutStarted, { plan: planId });
         go(body.url);
         return;
       }
