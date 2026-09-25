@@ -7,6 +7,7 @@ import {
   userCredits,
   type CreditTransactionType,
 } from "@/core/db/schema";
+import { runAfterResponse } from "@/core/lib/after-response";
 
 import {
   CreditsDisabledError,
@@ -262,13 +263,16 @@ export function createCredits(options: {
           return balance;
         },
       );
-      for (const fn of pending) {
-        try {
-          await fn();
-        } catch (error) {
-          console.error("[credits] afterCommit callback failed", error);
+      // 余额不足提醒等回调放到响应之后，不拖慢扣费的调用方。
+      await runAfterResponse(async () => {
+        for (const fn of pending) {
+          try {
+            await fn();
+          } catch (error) {
+            console.error("[credits] afterCommit callback failed", error);
+          }
         }
-      }
+      });
       return result;
     },
 

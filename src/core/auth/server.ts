@@ -15,6 +15,7 @@ import * as schema from "@/core/db/schema";
 import { sendEmail } from "@/core/email";
 import { env } from "@/core/env";
 import { routing } from "@/core/i18n/routing";
+import { runAfterResponse } from "@/core/lib/after-response";
 
 import siteConfig from "../../../site.config";
 import { cooldownIdentifier, otpResendCooldown } from "./cooldown";
@@ -77,20 +78,23 @@ export const auth = betterAuth({
     },
     user: {
       create: {
-        // 首次注册发欢迎邮件；发信失败不影响注册。
+        // 首次注册发欢迎邮件，放到响应之后发，不拖慢首次登录；发信失败不影响注册。
         after: async (user, ctx) => {
-          try {
-            await sendEmail({
-              to: user.email,
-              template: "welcome",
-              props: { name: user.name || undefined },
-              locale: resolveRequestLocale(
-                ctx?.headers ?? ctx?.request?.headers,
-              ),
-            });
-          } catch (error) {
-            console.error("[auth] failed to send welcome email", error);
-          }
+          const locale = resolveRequestLocale(
+            ctx?.headers ?? ctx?.request?.headers,
+          );
+          await runAfterResponse(async () => {
+            try {
+              await sendEmail({
+                to: user.email,
+                template: "welcome",
+                props: { name: user.name || undefined },
+                locale,
+              });
+            } catch (error) {
+              console.error("[auth] failed to send welcome email", error);
+            }
+          });
         },
       },
     },

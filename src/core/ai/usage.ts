@@ -11,6 +11,7 @@ import {
   type AiUsageKind,
   type AiUsageStatus,
 } from "@/core/db/schema";
+import { runAfterResponse } from "@/core/lib/after-response";
 
 /** 积分流水的 source；sourceId 是 ai_usage.id。 */
 export const AI_CREDIT_SOURCE = "ai";
@@ -80,13 +81,16 @@ export async function reserveUsage(
     if (error instanceof InsufficientCreditsError) return null;
     throw error;
   }
-  for (const fn of afterCommit) {
-    try {
-      await fn();
-    } catch (error) {
-      logError("[ai] afterCommit callback failed", error);
+  // 余额不足提醒等回调放到响应之后，不拖慢模型调用的开始。
+  await runAfterResponse(async () => {
+    for (const fn of afterCommit) {
+      try {
+        await fn();
+      } catch (error) {
+        logError("[ai] afterCommit callback failed", error);
+      }
     }
-  }
+  });
   return usageId;
 }
 

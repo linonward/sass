@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { imageErrorCode } from "./image-studio";
+import { imageErrorCode } from "./errors";
 
 describe("imageErrorCode", () => {
   test.each([

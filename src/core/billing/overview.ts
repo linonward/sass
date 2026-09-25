@@ -28,45 +28,46 @@ export async function getBillingOverview({
   userId: string;
   now?: Date;
 }): Promise<BillingOverview> {
-  const [subscription] = await db
-    .select({
-      planId: subscriptions.planId,
-      status: subscriptions.status,
-      currentPeriodEnd: subscriptions.currentPeriodEnd,
-      canceledAt: subscriptions.canceledAt,
-    })
-    .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.userId, userId),
-        or(
-          inArray(subscriptions.status, ["active", "past_due"]),
-          and(
-            eq(subscriptions.status, "canceled"),
-            gt(subscriptions.currentPeriodEnd, now),
+  // 三个查询互不依赖，并行执行。
+  const [[subscription], purchases, [customer]] = await Promise.all([
+    db
+      .select({
+        planId: subscriptions.planId,
+        status: subscriptions.status,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+        canceledAt: subscriptions.canceledAt,
+      })
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.userId, userId),
+          or(
+            inArray(subscriptions.status, ["active", "past_due"]),
+            and(
+              eq(subscriptions.status, "canceled"),
+              gt(subscriptions.currentPeriodEnd, now),
+            ),
           ),
         ),
+      )
+      .orderBy(desc(subscriptions.lastEventAt))
+      .limit(1),
+    db
+      .selectDistinct({ planId: orders.planId })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.userId, userId),
+          eq(orders.status, "paid"),
+          isNull(orders.providerSubscriptionId),
+        ),
       ),
-    )
-    .orderBy(desc(subscriptions.lastEventAt))
-    .limit(1);
-
-  const purchases = await db
-    .selectDistinct({ planId: orders.planId })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.userId, userId),
-        eq(orders.status, "paid"),
-        isNull(orders.providerSubscriptionId),
-      ),
-    );
-
-  const [customer] = await db
-    .select({ id: billingCustomers.id })
-    .from(billingCustomers)
-    .where(eq(billingCustomers.userId, userId))
-    .limit(1);
+    db
+      .select({ id: billingCustomers.id })
+      .from(billingCustomers)
+      .where(eq(billingCustomers.userId, userId))
+      .limit(1),
+  ]);
 
   return {
     subscription: subscription ?? null,

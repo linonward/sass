@@ -2,20 +2,18 @@
 
 import { CheckIcon, Loader2Icon, UploadIcon, VideoIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { Button, buttonVariants } from "@/core/ui/button";
 import { uploadFile } from "@/core/upload/client";
 
-import type { Generation } from "./image";
-import { imageErrorCode, type ImageErrorCode } from "./image-studio";
+import { useGenerations } from "./generations-context";
+import { imageErrorCode, type ImageErrorCode } from "./errors";
 import type { VideoJob } from "./video";
 
 const aspectRatios = ["16:9", "9:16", "1:1", "4:3", "3:4"] as const;
-// 视频通常 1–5 分钟完成。
-const POLL_INTERVAL_MS = 5000;
 
 type VideoModelOption = {
   id: string;
@@ -23,12 +21,11 @@ type VideoModelOption = {
   input: "text" | "image";
   duration: number;
 };
-type PendingVideo = { id: string; prompt: string };
 type FirstFrame = { fileId: string; url: string };
 
 /**
  * 示例视频生成：文生视频或图生视频（首帧选最近生成的图片，或上传一张）。
- * 提交后轮询任务状态；刷新页面后会继续轮询还没完成的任务。
+ * 提交后由 GenerationsProvider 轮询任务状态；刷新页面后会继续轮询还没完成的任务。
  */
 export function VideoStudio({
   models,
@@ -47,65 +44,22 @@ export function VideoStudio({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [images, setImages] = useState<Generation[]>([]);
-  const [videos, setVideos] = useState<Generation[] | null>(null);
-  const [pending, setPending] = useState<PendingVideo[]>([]);
+  const {
+    generations,
+    pendingVideos: pending,
+    videoFailed,
+    addPendingVideo,
+    clearVideoFailed,
+  } = useGenerations();
+  const images = generations.filter((g) => g.kind === "image");
+  // 本页的错误优先；否则显示轮询发现的失败任务（已退款）。
+  const shownError = error ?? (videoFailed ? "video_failed" : null);
+  const videos = generations.filter((g) => g.kind === "video");
   const fileInput = useRef<HTMLInputElement>(null);
   const modelSelectId = useId();
   const ratioSelectId = useId();
   const promptId = useId();
   const model = models.find((m) => m.id === modelId) ?? models[0]!;
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/ai/generations")
-      .then((res) => (res.ok ? res.json() : {}))
-      .then(
-        (body: {
-          generations?: Generation[];
-          pendingVideos?: PendingVideo[];
-        }) => {
-          if (cancelled) return;
-          const all = body.generations ?? [];
-          setImages(all.filter((g) => g.kind === "image"));
-          setVideos(all.filter((g) => g.kind === "video"));
-          setPending(body.pendingVideos ?? []);
-        },
-      )
-      .catch(() => {
-        if (!cancelled) setVideos([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const settle = useCallback((job: VideoJob) => {
-    if (job.status === "pending") return;
-    setPending((list) => list.filter((p) => p.id !== job.id));
-    if (job.status === "succeeded") {
-      setVideos((list) => [job.generation, ...(list ?? [])]);
-    } else {
-      setError("video_failed");
-    }
-  }, []);
-
-  // 轮询还在生成的任务；每次查询都会在服务端推进状态（完成时转存，失败时退款）。
-  const pendingIds = pending.map((p) => p.id).join(",");
-  useEffect(() => {
-    if (!pendingIds) return;
-    const timer = setInterval(() => {
-      for (const id of pendingIds.split(",")) {
-        fetch(`/api/ai/video/${id}`)
-          .then((res) => (res.ok ? res.json() : null))
-          .then((body: { job: VideoJob } | null) => body && settle(body.job))
-          .catch(() => {
-            // 网络错误下次再查。
-          });
-      }
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, [pendingIds, settle]);
 
   async function upload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -133,6 +87,7 @@ export function VideoStudio({
     }
     setSubmitting(true);
     setError(null);
+    clearVideoFailed();
     try {
       const response = await fetch("/api/ai/video", {
         method: "POST",
@@ -149,7 +104,7 @@ export function VideoStudio({
         return;
       }
       const { job } = (await response.json()) as { job: VideoJob };
-      setPending((list) => [{ id: job.id, prompt: text }, ...list]);
+      addPendingVideo({ id: job.id, prompt: text });
     } catch {
       setError("generic");
     } finally {
@@ -302,12 +257,12 @@ export function VideoStudio({
         </div>
       </form>
 
-      {error && (
+      {shownError && (
         <p role="alert" className="text-destructive text-sm">
-          {error === "video_failed" || error === "upload_failed"
-            ? t(`errors.${error}`)
-            : tErrors(error as ImageErrorCode)}{" "}
-          {error === "insufficient_credits" && (
+          {shownError === "video_failed" || shownError === "upload_failed"
+            ? t(`errors.${shownError}`)
+            : tErrors(shownError as ImageErrorCode)}{" "}
+          {shownError === "insufficient_credits" && (
             <Link
               href="/pricing"
               className={buttonVariants({ variant: "link", size: "sm" })}
@@ -322,12 +277,7 @@ export function VideoStudio({
         <h2 id={`${promptId}-recent`} className="text-sm font-medium">
           {t("recent")}
         </h2>
-        {videos === null ? (
-          <Loader2Icon
-            className="text-muted-foreground size-4 animate-spin"
-            aria-label={t("loading")}
-          />
-        ) : videos.length === 0 && pending.length === 0 ? (
+        {videos.length === 0 && pending.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("empty")}</p>
         ) : (
           <ul

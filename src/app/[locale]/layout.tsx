@@ -1,8 +1,9 @@
 import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { getTranslations } from "next-intl/server";
+import { getMessages, getTranslations } from "next-intl/server";
 import { Geist } from "next/font/google";
 import { notFound } from "next/navigation";
 
+import { pickClientMessages } from "@/core/i18n/client-messages";
 import { routing } from "@/core/i18n/routing";
 import { cn } from "@/core/lib/utils";
 import { JsonLd, siteJsonLd } from "@/core/seo/json-ld";
@@ -32,6 +33,7 @@ export default async function RootLayout({
 }: LayoutProps<"/[locale]">) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
+  const messages = pickClientMessages(await getMessages({ locale }));
 
   return (
     // next-themes 在客户端给 <html> 加 class，需要忽略这一处的 hydration 差异。
@@ -45,7 +47,7 @@ export default async function RootLayout({
       </head>
       <body>
         <JsonLd data={siteJsonLd(locale)} />
-        <NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             {children}
             <Toaster />

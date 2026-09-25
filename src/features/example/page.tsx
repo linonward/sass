@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getTranslations } from "next-intl/server";
 
 import { aiEnabled, aiModels, defaultAiModel } from "@/core/ai";
-import { getSession } from "@/core/auth/session";
+import { requirePageSession } from "@/core/auth/session";
 import { creditsEnabled, getBalance } from "@/core/credits";
 import { buildMetadata } from "@/core/seo/metadata";
 import {
@@ -41,8 +41,7 @@ export default async function ExamplePage({
 }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Example" });
-  // (app) 的 layout 已确保已登录。
-  const userId = (await getSession())!.user.id;
+  const userId = (await requirePageSession(locale)).user.id;
   const balance = creditsEnabled ? await getBalance(userId) : 0;
   const aiCost = aiEnabled
     ? (aiModels.find((model) => model.id === defaultAiModel)?.creditCost ??

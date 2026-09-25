@@ -2,44 +2,16 @@
 
 import { ImageIcon, Loader2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { Button, buttonVariants } from "@/core/ui/button";
 
+import { imageErrorCode, type ImageErrorCode } from "./errors";
+import { useGenerations } from "./generations-context";
 import type { Generation } from "./image";
 
 const aspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4"] as const;
-
-const knownErrors = [
-  "insufficient_credits",
-  "rate_limited",
-  "unavailable",
-  "model_unavailable",
-  "storage_unavailable",
-  "invalid_model",
-  "invalid_prompt",
-  "invalid_aspect_ratio",
-  "invalid_image",
-  "unauthorized",
-  "model_error",
-] as const;
-type KnownError = (typeof knownErrors)[number];
-export type ImageErrorCode = KnownError | "generic";
-
-/** 接口的错误响应是 JSON `{ error }`；限流返回 429（响应体不一定带 error）。 */
-export async function imageErrorCode(
-  response: Response,
-): Promise<KnownError | "generic"> {
-  if (response.status === 429) return "rate_limited";
-  const code = await response
-    .json()
-    .then((body: { error?: unknown }) => body?.error)
-    .catch(() => undefined);
-  return knownErrors.includes(code as KnownError)
-    ? (code as KnownError)
-    : "generic";
-}
 
 /** 示例图片生成：选模型和画幅、输入提示词，同步出图；下方列出最近生成。 */
 export function ImageStudio({
@@ -56,31 +28,15 @@ export function ImageStudio({
     useState<(typeof aspectRatios)[number]>("1:1");
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<KnownError | "generic" | null>(null);
-  const [generations, setGenerations] = useState<Generation[] | null>(null);
+  const [error, setError] = useState<ImageErrorCode | null>(null);
+  const { generations: all, addGeneration } = useGenerations();
+  const generations = all.filter((g) => g.kind === "image");
   // 本次页面里刚生成的那张，在列表里高亮。
   const [latestId, setLatestId] = useState<string | null>(null);
   const modelSelectId = useId();
   const ratioSelectId = useId();
   const promptId = useId();
   const cost = models.find((m) => m.id === modelId)?.creditCost ?? 0;
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/ai/generations")
-      .then((res) => (res.ok ? res.json() : { generations: [] }))
-      .then((body: { generations: Generation[] }) => {
-        if (!cancelled) {
-          setGenerations(body.generations.filter((g) => g.kind === "image"));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setGenerations([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -101,7 +57,7 @@ export function ImageStudio({
       const { generation } = (await response.json()) as {
         generation: Generation;
       };
-      setGenerations((list) => [generation, ...(list ?? [])]);
+      addGeneration(generation);
       setLatestId(generation.id);
     } catch {
       setError("generic");
@@ -198,12 +154,7 @@ export function ImageStudio({
         <h2 id={`${promptId}-recent`} className="text-sm font-medium">
           {t("recent")}
         </h2>
-        {generations === null ? (
-          <Loader2Icon
-            className="text-muted-foreground size-4 animate-spin"
-            aria-label={t("loading")}
-          />
-        ) : generations.length === 0 ? (
+        {generations.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("empty")}</p>
         ) : (
           <ul
