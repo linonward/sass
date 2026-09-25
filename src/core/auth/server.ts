@@ -3,11 +3,13 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
+import { z } from "zod";
 
 import { db } from "@/core/db";
 import * as schema from "@/core/db/schema";
 import { sendEmail } from "@/core/email";
 import { env } from "@/core/env";
+import { routing } from "@/core/i18n/routing";
 
 import siteConfig from "../../../site.config";
 import { cooldownIdentifier, otpResendCooldown } from "./cooldown";
@@ -26,6 +28,17 @@ export const auth = betterAuth({
   socialProviders: google
     ? { google: { ...google, prompt: "select_account" } }
     : undefined,
+  user: {
+    additionalFields: {
+      // 偏好语言：设置页里修改，事务邮件优先使用。只接受站点启用的语言。
+      locale: {
+        type: "string",
+        required: false,
+        input: true,
+        validator: { input: z.enum(routing.locales as [string, ...string[]]) },
+      },
+    },
+  },
   account: {
     // 同一邮箱先用验证码注册、再用 Google 登录时，进入同一个账户。
     accountLinking: { enabled: true, trustedProviders: ["google"] },

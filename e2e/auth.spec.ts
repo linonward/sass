@@ -5,6 +5,7 @@ import siteConfig from "../site.config";
 import { waitForEmail } from "../src/core/email/testing";
 import {
   enterCode,
+  openUserMenu,
   requestCode,
   uniqueEmail,
   useRandomIp,
@@ -26,7 +27,7 @@ test("验证码登录后进入 dashboard，首次注册收到欢迎邮件", asyn
 
   await expect(page).toHaveURL("/dashboard");
   await expect(page.getByTestId("signed-in-as")).toHaveText(
-    t.dashboard.signedInAs.replace("{email}", email),
+    messages.Dashboard.home.welcome.replace("{email}", email),
   );
   const welcome = await waitForEmail({ to: email, template: "welcome" });
   expect(welcome.subject).toContain(siteConfig.name);
@@ -137,12 +138,15 @@ test("站外的 callbackURL 被忽略", async ({ page }) => {
   await expect(page).toHaveURL("/dashboard");
 });
 
-test("退出登录后不能再访问 dashboard", async ({ page }) => {
+test("从用户菜单退出登录后不能再访问 dashboard", async ({ page, isMobile }) => {
   const { code } = await requestCode(page, uniqueEmail("signout"));
   await enterCode(page, code);
   await expect(page).toHaveURL("/dashboard");
 
-  await page.getByRole("button", { name: t.signOut }).click();
+  await openUserMenu(page, isMobile);
+  await page
+    .getByRole("menuitem", { name: messages.Dashboard.userMenu.signOut })
+    .click();
   await expect(page).toHaveURL("/sign-in");
 
   await page.goto("/dashboard");

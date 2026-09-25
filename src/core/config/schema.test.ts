@@ -166,3 +166,40 @@ describe("auth", () => {
     expect(() => defineConfig(rest as SiteConfigInput)).toThrow("- auth: ");
   });
 });
+
+describe("dashboard", () => {
+  test("省略 dashboard 时业务菜单为空", () => {
+    expect(defineConfig(valid).dashboard).toEqual({ nav: [] });
+  });
+
+  test("合法的业务菜单项通过校验", () => {
+    const config = defineConfig({
+      ...valid,
+      dashboard: {
+        nav: [{ key: "projects", href: "/projects", icon: "layers" }],
+      },
+    });
+    expect(config.dashboard.nav).toHaveLength(1);
+  });
+
+  test.each([
+    [
+      "dashboard.nav.0.href",
+      [{ key: "a", href: "https://x.com", icon: "home" }],
+    ],
+    ["dashboard.nav.0.href", [{ key: "a", href: "//x.com", icon: "home" }]],
+    ["dashboard.nav.0.icon", [{ key: "a", href: "/a", icon: "rocket" }]],
+    ["dashboard.nav.0.key", [{ key: "My projects", href: "/a", icon: "home" }]],
+    [
+      "dashboard.nav",
+      [
+        { key: "a", href: "/a", icon: "home" },
+        { key: "b", href: "/a", icon: "home" },
+      ],
+    ],
+  ])("非法字段 %s 出现在报错中", (path, nav) => {
+    expect(() =>
+      defineConfig({ ...valid, dashboard: { nav } } as SiteConfigInput),
+    ).toThrow(`- ${path}: `);
+  });
+});
