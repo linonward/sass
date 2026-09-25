@@ -199,6 +199,31 @@ describe("发送方式", () => {
     expect(output).toContain("123456");
   });
 
+  test("file：同一毫秒内连续写入，文件名顺序仍与发送顺序一致", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "emails-"));
+    try {
+      const transport = createTransport("file", { outboxDir: dir });
+      const ids: string[] = [];
+      for (let i = 0; i < 50; i++) {
+        const code = String(i).padStart(6, "0");
+        ids.push(
+          (await transport({ ...email, props: { ...email.props, code } })).id,
+        );
+      }
+      const files = (await readdir(dir)).sort();
+      const order = await Promise.all(
+        files.map(
+          async (f) => JSON.parse(await readFile(path.join(dir, f), "utf8")).id,
+        ),
+      );
+      expect(order).toEqual(ids);
+      const latest = await readLatestEmail({ to: "ada@example.com" }, dir);
+      expect(latest?.props.code).toBe("000049");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   test("file：写入 JSON，readLatestEmail / waitForEmail 能读到", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "emails-"));
     try {
