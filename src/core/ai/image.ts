@@ -10,6 +10,8 @@ import {
 import type { Credits } from "@/core/credits";
 import type { Database } from "@/core/db/client";
 import { files } from "@/core/db/schema";
+import { logger, type LogFn } from "@/core/observability/logger";
+import { withSpan } from "@/core/observability/trace";
 import type {
   RateLimitIdentifiers,
   RateLimitResult,
@@ -74,7 +76,7 @@ export type RunImageDeps = {
   // 对象的访问地址（公开域名或签名地址），见 upload 模块的 fileUrl。
   fileUrl: (key: string) => Promise<string>;
   now?: () => number;
-  logError?: (message: string, error: unknown) => void;
+  logError?: LogFn;
 };
 
 function fail(status: 400 | 401 | 402 | 502 | 503, error: string) {
@@ -106,14 +108,17 @@ export function createRunImage({
   getStorage,
   fileUrl,
   now = Date.now,
-  logError = console.error,
+  logError = logger.error,
 }: RunImageDeps) {
   const getDb = () => (typeof db === "function" ? db() : db);
   const usageDeps: UsageDeps = { db: getDb, credits, logError };
 
-  return async function runImage(
-    input: RunImageInput,
-  ): Promise<RunImageResult> {
+  // 整个调用放在一个 span 里，结束时由 settleUsage 补充模型、积分和结果。
+  return function runImage(input: RunImageInput): Promise<RunImageResult> {
+    return withSpan("ai.image", {}, () => generate(input));
+  };
+
+  async function generate(input: RunImageInput): Promise<RunImageResult> {
     const { userId, ip, abortSignal, maxRetries } = input;
     if (!userId) return fail(401, "unauthorized");
 
@@ -195,7 +200,7 @@ export function createRunImage({
         },
       };
     } catch (error) {
-      logError(`[ai] image model ${model.id} failed`, error);
+      logError("ai.model_failed", { error, kind: "image", modelId: model.id });
       await settleUsage(usageDeps, {
         userId,
         usageId,
@@ -206,7 +211,7 @@ export function createRunImage({
       });
       return fail(502, "model_error");
     }
-  };
+  }
 }
 
 export type RunImage = ReturnType<typeof createRunImage>;

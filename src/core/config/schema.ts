@@ -16,6 +16,8 @@ export const featuresSchema = z.strictObject({
   upload: z.boolean().default(false),
   admin: z.boolean().default(false),
   rateLimit: z.boolean().default(false),
+  // 可观测性总开关；细项在 observability 字段。
+  observability: z.boolean().default(false),
 });
 
 // 文案 key，对应 messages/<locale>.json 里 Nav 下的字段。
@@ -332,6 +334,20 @@ export const uploadConfigSchema = z.strictObject({
   public: z.boolean().default(false),
 });
 
+// 可观测性（features.observability 开启时生效），见 docs/plan.md 的可观测性一节。
+export const observabilityConfigSchema = z.strictObject({
+  // 日志级别：低于这个级别的日志不输出。
+  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  // OpenTelemetry 追踪（@vercel/otel）。
+  otel: z.boolean().default(false),
+  // Sentry 错误上报（T602）。
+  sentry: z.boolean().default(false),
+  // Vercel Analytics（T603）。
+  analytics: z.boolean().default(false),
+  // Vercel Speed Insights（T603）。
+  speedInsights: z.boolean().default(false),
+});
+
 export const aiProviders = [
   "openai",
   "anthropic",
@@ -520,6 +536,9 @@ export const siteConfigSchema = z
     rateLimit: rateLimitConfigSchema.default(rateLimitConfigSchema.parse({})),
     upload: uploadConfigSchema.default(uploadConfigSchema.parse({})),
     ai: aiConfigSchema.default(aiConfigSchema.parse({})),
+    observability: observabilityConfigSchema.default(
+      observabilityConfigSchema.parse({}),
+    ),
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -577,6 +596,7 @@ export type CreditsConfig = SiteConfig["credits"];
 export type RateLimitConfig = SiteConfig["rateLimit"];
 export type UploadConfig = SiteConfig["upload"];
 export type AiConfig = SiteConfig["ai"];
+export type ObservabilityConfig = SiteConfig["observability"];
 export type AiModel = AiConfig["models"][number];
 export type AiProvider = (typeof aiProviders)[number];
 export type AiImageModel = AiConfig["imageModels"][number];

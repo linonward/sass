@@ -1,4 +1,5 @@
 import type { DbTransaction } from "@/core/db";
+import { logger } from "@/core/observability/logger";
 
 import type { BillingEvent } from "./events";
 
@@ -68,7 +69,7 @@ export async function runAfterCommit(callbacks: AfterCommitCallback[]) {
     try {
       await callback();
     } catch (error) {
-      console.error("[billing] afterCommit callback failed", error);
+      logger.error("billing.after_commit_failed", error);
     }
   }
 }
@@ -82,7 +83,13 @@ export async function runOnBillingEvent(
     try {
       await handler(event, context);
     } catch (error) {
-      console.error(`[billing] onBillingEvent "${name}" failed`, error);
+      logger.error("billing.on_billing_event_failed", {
+        error,
+        handler: name,
+        provider: event.provider,
+        eventId: event.eventId,
+        eventType: event.type,
+      });
       throw new OnBillingEventError(name, error);
     }
   }

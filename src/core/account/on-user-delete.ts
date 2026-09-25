@@ -1,3 +1,5 @@
+import { logger } from "@/core/observability/logger";
+
 /** 删除账户时传给各个钩子的用户信息。 */
 export type DeletedUser = { userId: string; email: string };
 
@@ -49,7 +51,11 @@ export async function runOnUserDelete(user: DeletedUser) {
     try {
       await handler(user);
     } catch (error) {
-      console.error(`[account] onUserDelete "${name}" failed`, error);
+      logger.error("account.on_user_delete_failed", {
+        error,
+        handler: name,
+        userId: user.userId,
+      });
       throw new OnUserDeleteError(name, error);
     }
   }

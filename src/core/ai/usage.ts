@@ -12,6 +12,8 @@ import {
   type AiUsageStatus,
 } from "@/core/db/schema";
 import { runAfterResponse } from "@/core/lib/after-response";
+import { logger, type LogFn } from "@/core/observability/logger";
+import { setSpanAttributes } from "@/core/observability/trace";
 
 /** 积分流水的 source；sourceId 是 ai_usage.id。 */
 export const AI_CREDIT_SOURCE = "ai";
@@ -19,7 +21,7 @@ export const AI_CREDIT_SOURCE = "ai";
 export type UsageDeps = {
   db: () => Database;
   credits: Pick<Credits, "deductCredits" | "refundCredits">;
-  logError: (message: string, error: unknown) => void;
+  logError: LogFn;
 };
 
 type UsageModel = {
@@ -32,6 +34,49 @@ type UsageModel = {
 function errorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return message.slice(0, 1000);
+}
+
+/**
+ * 一次调用结束时的日志和 span 属性：模型、积分、耗时、结果。
+ * 失败原因已经由调用方的 logError 记过，这里不重复。
+ */
+export function logUsage({
+  usageId,
+  userId,
+  model,
+  status,
+  durationMs,
+  inputTokens,
+  outputTokens,
+}: {
+  usageId: string;
+  userId: string;
+  model: UsageModel;
+  status: AiUsageStatus;
+  durationMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}) {
+  const fields = {
+    usageId,
+    userId,
+    modelId: model.id,
+    provider: model.provider,
+    credits: model.creditCost,
+    status,
+    durationMs: Math.max(0, Math.round(durationMs)),
+    inputTokens,
+    outputTokens,
+  };
+  logger.info("ai.usage", fields);
+  setSpanAttributes({
+    "ai.usage_id": usageId,
+    "ai.model_id": model.id,
+    "ai.provider": model.provider,
+    "ai.credits": model.creditCost,
+    "ai.status": status,
+    "ai.duration_ms": fields.durationMs,
+  });
 }
 
 /**
@@ -87,7 +132,7 @@ export async function reserveUsage(
       try {
         await fn();
       } catch (error) {
-        logError("[ai] afterCommit callback failed", error);
+        logError("ai.after_commit_failed", error);
       }
     }
   });
@@ -163,9 +208,18 @@ export async function settleUsage(
       await refund();
       await update();
     }
+    logUsage({
+      usageId,
+      userId,
+      model,
+      status,
+      durationMs,
+      inputTokens,
+      outputTokens,
+    });
     return true;
   } catch (settleError) {
-    logError(`[ai] failed to settle usage ${usageId}`, settleError);
+    logError("ai.settle_failed", { error: settleError, usageId });
     return false;
   }
 }

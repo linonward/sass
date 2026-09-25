@@ -4,6 +4,8 @@ import type { AiConfig, AiVideoModel } from "@/core/config/schema";
 import type { Credits } from "@/core/credits";
 import type { Database } from "@/core/db/client";
 import { aiUsage, files } from "@/core/db/schema";
+import { logger, type LogFn } from "@/core/observability/logger";
+import { withSpan } from "@/core/observability/trace";
 import type {
   RateLimitIdentifiers,
   RateLimitResult,
@@ -14,7 +16,7 @@ import { buildObjectKey } from "@/core/upload/validate";
 
 import type { VideoClient } from "./alibaba-video";
 import { MAX_IMAGE_PROMPT_LENGTH, type Generation } from "./image";
-import { reserveUsage, settleUsage, type UsageDeps } from "./usage";
+import { logUsage, reserveUsage, settleUsage, type UsageDeps } from "./usage";
 
 /** 文生视频可选的画幅；图生视频跟随首帧。 */
 export const videoAspectRatios = ["16:9", "9:16", "1:1", "4:3", "3:4"] as const;
@@ -61,7 +63,7 @@ export type VideoDeps = {
   // 下载服务商返回的视频。
   fetch?: typeof globalThis.fetch;
   now?: () => number;
-  logError?: (message: string, error: unknown) => void;
+  logError?: LogFn;
 };
 
 function fail(status: Fail["status"], error: string): Fail {
@@ -90,7 +92,7 @@ export function createVideoService({
   fileUrl,
   fetch = globalThis.fetch,
   now = Date.now,
-  logError = console.error,
+  logError = logger.error,
 }: VideoDeps) {
   const getDb = () => (typeof db === "function" ? db() : db);
   const usageDeps: UsageDeps = { db: getDb, credits, logError };
@@ -174,7 +176,7 @@ export function createVideoService({
         .where(eq(aiUsage.id, usageId));
       return { ok: true, job: { id: usageId, status: "pending" } };
     } catch (error) {
-      logError(`[ai] video model ${model.id} failed to start`, error);
+      logError("ai.model_failed", { error, kind: "video", modelId: model.id });
       await settleUsage(usageDeps, {
         userId,
         usageId,
@@ -280,7 +282,7 @@ export function createVideoService({
       status = await client.status(taskId);
     } catch (error) {
       // 查询失败按暂时性错误处理，下次再查。
-      logError(`[ai] video task ${taskId} status failed`, error);
+      logError("ai.video_status_failed", { error, taskId });
       return elapsed > VIDEO_TIMEOUT_MS ? settleFailed("timeout") : pending;
     }
     if (status.status === "failed") return settleFailed(status.error);
@@ -332,15 +334,32 @@ export function createVideoService({
           .where(and(eq(aiUsage.id, id), eq(aiUsage.status, "pending")));
         return saved!;
       });
+      logUsage({
+        usageId: id,
+        userId,
+        model: {
+          id: usage.modelId,
+          provider: usage.provider,
+          model: usage.model,
+          creditCost: usage.credits,
+        },
+        status: "succeeded",
+        durationMs: elapsed,
+      });
       return { ok: true, job: await succeededJob(usage, file) };
     } catch (error) {
       // 服务商的视频地址 24 小时后失效；超时之前都当作暂时性错误重试。
-      logError(`[ai] failed to store video ${id}`, error);
+      logError("ai.video_store_failed", { error, usageId: id });
       return elapsed > VIDEO_TIMEOUT_MS ? settleFailed(error) : pending;
     }
   }
 
-  return { startVideo, pollVideo };
+  return {
+    startVideo: (input: StartVideoInput) =>
+      withSpan("ai.video.start", {}, () => startVideo(input)),
+    pollVideo: (input: Parameters<typeof pollVideo>[0]) =>
+      withSpan("ai.video.poll", {}, () => pollVideo(input)),
+  };
 }
 
 export type VideoService = ReturnType<typeof createVideoService>;

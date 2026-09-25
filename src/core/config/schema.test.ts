@@ -48,6 +48,7 @@ describe("defineConfig", () => {
       upload: false,
       admin: false,
       rateLimit: false,
+      observability: false,
     });
   });
 
@@ -300,6 +301,33 @@ describe("upload", () => {
     expect(() => defineConfig({ ...valid, upload } as SiteConfigInput)).toThrow(
       `- ${path}: `,
     );
+  });
+});
+
+describe("observability", () => {
+  test("省略时全部关闭，日志级别默认 info", () => {
+    expect(defineConfig(valid).observability).toEqual({
+      logLevel: "info",
+      otel: false,
+      sentry: false,
+      analytics: false,
+      speedInsights: false,
+    });
+  });
+
+  test("非法日志级别和拼错的字段会被指出", () => {
+    expect(() =>
+      defineConfig({
+        ...valid,
+        observability: { logLevel: "verbose" },
+      } as unknown as SiteConfigInput),
+    ).toThrow("- observability.logLevel: ");
+    expect(() =>
+      defineConfig({
+        ...valid,
+        observability: { otlp: true },
+      } as unknown as SiteConfigInput),
+    ).toThrow("observability");
   });
 });
 

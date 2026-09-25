@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import type { Plan } from "@/core/config/schema";
+import { logger } from "@/core/observability/logger";
 
 import type { BillingEvent } from "../events";
 import { getPlan } from "../plans";
@@ -189,9 +190,10 @@ export async function deliverFakeWebhooks(
       body: await request.text(),
     });
     if (!response.ok) {
-      console.error(
-        `[billing:fake] webhook ${event.type} failed: ${response.status}`,
-      );
+      logger.error("billing.fake_webhook_failed", {
+        eventType: event.type,
+        status: response.status,
+      });
     }
   }
 }
