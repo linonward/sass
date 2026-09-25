@@ -120,7 +120,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 1. 在 Resend → Domains 添加发信域名，与 `site.config.ts` 的 `email.fromAddress` 的域名一致（比如 `sass.linonward.com`）。建议用子域名发信，不影响根域名的邮件信誉。
 2. 在 DNS 服务商处添加 Resend 给出的记录：
-   - SPF：`send` 子域名下的 `MX` 和 `TXT`（`v=spf1 include:amazonses.com ~all`）
+   - SPF：`send` 子域名下的 `MX` 和 `TXT`（具体取值以 Resend 面板给出的为准）
    - DKIM：`resend._domainkey` 的 `TXT`
    - DMARC（建议）：`_dmarc` 的 `TXT`，例如 `v=DMARC1; p=none; rua=mailto:<你的邮箱>`
    - 使用 Cloudflare 时，这些记录都设为 **DNS only**。
