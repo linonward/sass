@@ -5,6 +5,7 @@ import { getSession } from "@/core/auth/session";
 import { Link } from "@/core/i18n/navigation";
 import { buildMetadata } from "@/core/seo/metadata";
 import { buttonVariants } from "@/core/ui/button";
+import { UploadExample } from "@/core/upload/upload-example";
 
 import siteConfig from "../../../../../site.config";
 
@@ -59,6 +60,9 @@ export default async function DashboardPage({
           {t("emptyCta")}
         </Link>
       </section>
+      {siteConfig.features.upload && (
+        <UploadExample accept={siteConfig.upload.allowedMimeTypes} />
+      )}
     </div>
   );
 }

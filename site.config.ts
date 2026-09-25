@@ -137,4 +137,17 @@ export default defineConfig({
       upload: { limit: 10, window: "1 m" },
     },
   },
+  // 文件上传（Cloudflare R2）。只在 features.upload 开启时生效；SVG、HTML 不在可选类型里。
+  upload: {
+    allowedMimeTypes: [
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "application/pdf",
+    ],
+    // 单个文件的大小上限（字节）。
+    maxFileSize: 10 * 1024 * 1024,
+    // false：私有文件，只能通过有时效的签名地址访问；true：通过 R2_PUBLIC_URL 公开访问。
+    public: false,
+  },
 });
