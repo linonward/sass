@@ -130,7 +130,8 @@
 **做**
 
 - 在配置中加入 `ai.videoModels`：`[{ id, provider, model, creditCost, duration, resolution }]`，按次固定扣费，时长和分辨率由配置固定
-- 异步任务：`POST /api/ai/video` 预扣积分、用 `experimental_startVideo` 提交任务，把任务信息记在 `ai_usage`；`GET /api/ai/video/:id` 查询状态，完成后把视频转存 R2，失败或超时退款
+- 异步任务：`POST /api/ai/video` 预扣积分、提交任务，把 taskId 记在 `ai_usage.operation`；`GET /api/ai/video/:id` 查询状态，完成后把视频转存 R2，失败或超时退款
+- 百炼视频直接调原生异步接口（`media` 协议，wan2.7 及以后）：`@ai-sdk/alibaba` 的视频模型给 wan2.7-i2v 发的是 `img_url`，接口不接受
 - 文生视频和图生视频：首帧可以是上传的图片或 T404 生成的图片（`files` 里的记录）
 - Playground 加「视频」标签页：提交后轮询状态，最近生成里显示视频
 
@@ -142,4 +143,4 @@
 - [ ] 任务失败或超时时积分退回，只退一次
 - [ ] 用生成的图片做首帧能生成视频
 
-**测试**：Vitest 用 `MockVideoModelV4` 覆盖提交、进行中、完成转存、失败退款、超时退款、重复查询不重复结算；真实模型做人工验证
+**测试**：Vitest 用 mock 视频客户端覆盖提交、进行中、完成转存、失败退款、超时退款、重复查询不重复结算；真实模型做人工验证

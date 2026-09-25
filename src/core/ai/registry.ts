@@ -10,9 +10,11 @@ import type {
   AiImageProvider,
   AiModel,
   AiProvider,
+  AiVideoModel,
 } from "@/core/config/schema";
 
 import { createAlibabaImageModel } from "./alibaba-image";
+import { createAlibabaVideoClient, type VideoClient } from "./alibaba-video";
 
 import { aiProviderKeys } from "./env";
 
@@ -80,5 +82,17 @@ export function createImageModelResolver(keys: ProviderKeys) {
           keys[aiProviderKeys[model.provider]]!,
           keys,
         )
+      : null;
+}
+
+/** 视频客户端：服务商没有 key 时返回 null，由视频接口转成 503。 */
+export function createVideoClientResolver(keys: ProviderKeys) {
+  const providers = enabledProviders(keys);
+  return (model: AiVideoModel): VideoClient | null =>
+    providers.includes(model.provider)
+      ? createAlibabaVideoClient({
+          apiKey: keys[aiProviderKeys[model.provider]]!,
+          baseURL: keys.ALIBABA_BASE_URL,
+        })
       : null;
 }

@@ -9,7 +9,7 @@ import { cn } from "@/core/lib/utils";
 export function PlaygroundTabs({
   tabs,
 }: {
-  tabs: { id: "chat" | "image"; content: ReactNode }[];
+  tabs: { id: "chat" | "image" | "video"; content: ReactNode }[];
 }) {
   const t = useTranslations("Playground.tabs");
   const [active, setActive] = useState(tabs[0]!.id);

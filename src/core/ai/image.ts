@@ -42,6 +42,8 @@ export type RunImageInput = {
 export type Generation = {
   id: string;
   kind: "image" | "video";
+  // files.id，可以作为图生视频的首帧。
+  fileId: string;
   modelId: string;
   prompt: string;
   url: string;
@@ -184,6 +186,7 @@ export function createRunImage({
         generation: {
           id: usageId,
           kind: "image",
+          fileId: file!.id,
           modelId: model.id,
           prompt,
           url: await fileUrl(key),

@@ -215,5 +215,27 @@ export default defineConfig({
       },
     ],
     defaultImageModel: "qwen-image",
+    // 视频模型（同样需要 features.upload）。异步生成，时长和分辨率固定，按次扣费。
+    videoModels: [
+      {
+        id: "wan-t2v",
+        provider: "alibaba",
+        model: "wan2.7-t2v",
+        input: "text",
+        creditCost: 30,
+        duration: 5,
+        resolution: "720P",
+      },
+      {
+        id: "wan-i2v",
+        provider: "alibaba",
+        model: "wan2.7-i2v",
+        input: "image",
+        creditCost: 30,
+        duration: 5,
+        resolution: "720P",
+      },
+    ],
+    defaultVideoModel: "wan-t2v",
   },
 });

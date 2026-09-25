@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import {
   InsufficientCreditsError,
@@ -93,6 +93,9 @@ export async function reserveUsage(
 /**
  * 结束一次调用：失败时按 ai_usage.id 退回积分（同一 sourceId 只退一次），
  * 然后写入状态、用量和耗时。从不抛错，出错只记日志。
+ *
+ * `onlyIfPending`：异步任务可能被多个请求同时推进。只有把 pending 改成终态的那一次
+ * 才退款，返回 true；记录已经结束时什么都不做，返回 false。
  */
 export async function settleUsage(
   { db, credits, logError }: UsageDeps,
@@ -106,6 +109,7 @@ export async function settleUsage(
     outputTokens,
     error,
     fileId,
+    onlyIfPending = false,
   }: {
     userId: string;
     usageId: string;
@@ -116,18 +120,20 @@ export async function settleUsage(
     outputTokens?: number;
     error?: unknown;
     fileId?: string;
+    onlyIfPending?: boolean;
   },
-) {
-  try {
-    if (status === "failed" && model.creditCost > 0) {
-      await credits.refundCredits({
-        userId,
-        source: AI_CREDIT_SOURCE,
-        sourceId: usageId,
-        reason: `ai_failed:${model.id}`,
-      });
-    }
-    await db()
+): Promise<boolean> {
+  const refund = () =>
+    status === "failed" && model.creditCost > 0
+      ? credits.refundCredits({
+          userId,
+          source: AI_CREDIT_SOURCE,
+          sourceId: usageId,
+          reason: `ai_failed:${model.id}`,
+        })
+      : undefined;
+  const update = () =>
+    db()
       .update(aiUsage)
       .set({
         status,
@@ -138,8 +144,24 @@ export async function settleUsage(
         finishedAt: new Date(),
         ...(fileId ? { fileId } : {}),
       })
-      .where(eq(aiUsage.id, usageId));
+      .where(
+        onlyIfPending
+          ? and(eq(aiUsage.id, usageId), eq(aiUsage.status, "pending"))
+          : eq(aiUsage.id, usageId),
+      )
+      .returning({ id: aiUsage.id });
+  try {
+    if (onlyIfPending) {
+      // 先抢到状态再退款，并发时只有一个请求会退。
+      if ((await update()).length === 0) return false;
+      await refund();
+    } else {
+      await refund();
+      await update();
+    }
+    return true;
   } catch (settleError) {
     logError(`[ai] failed to settle usage ${usageId}`, settleError);
+    return false;
   }
 }

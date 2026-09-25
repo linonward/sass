@@ -206,6 +206,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 3. 按模型的实际成本调整 `creditCost` 和 `maxOutputTokens`：按次固定扣费，`maxOutputTokens` 决定单次调用成本的上限。默认开思考的模型（如百炼上的 `deepseek-v4-*`）可以设 `reasoning: "none"` 关掉思考，省下思考的 token。
 4. 上线后在 `/playground` 调用一次，检查 `ai_usage` 有记录、积分流水里有对应的扣减。
 5. 图片生成（`ai.imageModels`）：还需要开启 `features.upload` 并配好 R2，生成的图片存进 bucket，`files` 和 `ai_usage`（`kind = image`）各有一条记录。百炼的 `qwen-image-*` 每张约 7 秒，`wan*-image*` 约 30 秒，接口同步返回，`/api/ai/image` 的 `maxDuration` 是 120 秒。在 `/playground` 的「Image」标签页生成一张，确认图片能打开、最近生成里能看到。
+6. 视频生成（`ai.videoModels`）：同样需要 `features.upload` 和 R2。`input: "text"` 是文生视频，`"image"` 是图生视频（首帧用用户自己的图片，百炼通过公开地址或签名地址读取）。时长和分辨率写在配置里，按次扣费。任务是异步的：前端每 5 秒查询一次 `GET /api/ai/video/:id`，查询时完成的视频转存 R2，失败的退款；提交后 30 分钟仍未完成按失败退款。没有后台任务扫描，用户离开后再回到 Playground 时才会结算。
 
 #### 限流（Upstash）
 

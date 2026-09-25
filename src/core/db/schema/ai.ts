@@ -3,6 +3,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -54,6 +55,8 @@ export const aiUsage = pgTable(
     fileId: text("file_id").references(() => files.id, {
       onDelete: "set null",
     }),
+    // 异步任务（视频）在服务商那边的标识，例如 { taskId }。查询状态时用。
+    operation: jsonb("operation").$type<{ taskId: string }>(),
     error: text("error"),
     durationMs: integer("duration_ms"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

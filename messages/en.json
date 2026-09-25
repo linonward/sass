@@ -396,7 +396,7 @@
   "Playground": {
     "metaTitle": "Playground",
     "title": "Playground",
-    "description": "Try the AI models configured for this site. Chats aren't saved; generated images are kept in your recent list.",
+    "description": "Try the AI models configured for this site. Chats aren't saved; generated images and videos are kept in your recent list.",
     "model": "Model",
     "cost": "{cost, plural, one {# credit} other {# credits}} per message",
     "free": "Free",
@@ -419,11 +419,14 @@
       "model_error": "The model ran into an error. Your credits have been refunded.",
       "generic": "Something went wrong. Please try again.",
       "storage_unavailable": "File storage isn't configured, so images can't be saved.",
-      "invalid_prompt": "Enter a prompt of up to 2,000 characters."
+      "invalid_prompt": "Enter a prompt of up to 2,000 characters.",
+      "invalid_aspect_ratio": "This aspect ratio isn't supported.",
+      "invalid_image": "Choose or upload an image for the first frame."
     },
     "tabs": {
       "chat": "Chat",
-      "image": "Image"
+      "image": "Image",
+      "video": "Video"
     },
     "image": {
       "model": "Model",
@@ -438,6 +441,29 @@
       "empty": "Images you generate will show up here.",
       "loading": "Loading…",
       "buyCredits": "Get more credits"
+    },
+    "video": {
+      "model": "Model",
+      "fromText": "from text",
+      "fromImage": "from image",
+      "aspectRatio": "Aspect ratio",
+      "summary": "{duration}s · {cost, plural, =0 {Free} one {# credit} other {# credits}} per video",
+      "firstFrame": "First frame",
+      "useImage": "Use image: {prompt}",
+      "uploaded": "Uploaded image",
+      "upload": "Upload",
+      "placeholder": "Describe the motion and scene…",
+      "generate": "Generate video",
+      "generating": "Generating…",
+      "wait": "Usually 1–5 minutes. You can leave this page.",
+      "recent": "Recent videos",
+      "empty": "Videos you generate will show up here.",
+      "loading": "Loading…",
+      "buyCredits": "Get more credits",
+      "errors": {
+        "video_failed": "A video couldn't be generated. Your credits have been refunded.",
+        "upload_failed": "The image couldn't be uploaded. Try a PNG, JPEG or WebP file."
+      }
     }
   },
   "Blog": {

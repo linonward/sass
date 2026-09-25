@@ -351,6 +351,9 @@ export const aiReasoningLevels = [
   "xhigh",
 ] as const;
 
+// 有视频生成模型的服务商。v1 只接了阿里云百炼（通义万相）。
+export const aiVideoProviders = ["alibaba"] as const;
+
 // 有图片生成模型的服务商（Anthropic 没有）。
 export const aiImageProviders = ["openai", "google", "alibaba"] as const;
 
@@ -403,6 +406,28 @@ export const aiConfigSchema = z
       })
       .default([]),
     defaultImageModel: z.string().optional(),
+    // 视频生成模型。异步任务：提交时按 creditCost 预扣，失败或超时退回；结果存进 R2。
+    // 时长和分辨率固定在配置里，保证按次扣费和实际成本对得上。
+    videoModels: z
+      .array(
+        z.strictObject({
+          id: aiModelIdSchema,
+          provider: z.enum(aiVideoProviders),
+          // 服务商那边的模型名，例如 "wan2.7-t2v"、"wan2.7-i2v"。
+          model: z.string().trim().min(1),
+          // text：只用提示词；image：需要一张首帧图片。
+          input: z.enum(["text", "image"]),
+          creditCost: z.number().int().nonnegative(),
+          // 视频时长（秒）。
+          duration: z.number().int().min(2).max(15).default(5),
+          resolution: z.enum(["720P", "1080P"]).default("720P"),
+        }),
+      )
+      .refine((models) => unique(models.map((m) => m.id)), {
+        message: "ids must not contain duplicates",
+      })
+      .default([]),
+    defaultVideoModel: z.string().optional(),
   })
   .superRefine((ai, ctx) => {
     if (ai.models.length > 0 && !ai.defaultModel) {
@@ -417,6 +442,23 @@ export const aiConfigSchema = z
         code: "custom",
         path: ["defaultModel"],
         message: "must be one of models[].id",
+      });
+    }
+    if (ai.videoModels.length > 0 && !ai.defaultVideoModel) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultVideoModel"],
+        message: "is required when videoModels is not empty",
+      });
+    }
+    if (
+      ai.defaultVideoModel &&
+      !ai.videoModels.some((m) => m.id === ai.defaultVideoModel)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultVideoModel"],
+        message: "must be one of videoModels[].id",
       });
     }
     if (ai.imageModels.length > 0 && !ai.defaultImageModel) {
@@ -506,6 +548,16 @@ export const siteConfigSchema = z
       message: "creditCost > 0 requires features.credits",
       path: ["ai", "imageModels"],
     },
+  )
+  .refine(
+    (config) =>
+      !config.features.ai ||
+      config.features.credits ||
+      config.ai.videoModels.every((m) => m.creditCost === 0),
+    {
+      message: "creditCost > 0 requires features.credits",
+      path: ["ai", "videoModels"],
+    },
   );
 
 export type SiteConfigInput = z.input<typeof siteConfigSchema>;
@@ -529,6 +581,7 @@ export type AiModel = AiConfig["models"][number];
 export type AiProvider = (typeof aiProviders)[number];
 export type AiImageModel = AiConfig["imageModels"][number];
 export type AiImageProvider = (typeof aiImageProviders)[number];
+export type AiVideoModel = AiConfig["videoModels"][number];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {
