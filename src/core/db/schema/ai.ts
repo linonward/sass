@@ -64,6 +64,8 @@ export const aiUsage = pgTable(
   },
   (table) => [
     index("ai_usage_user_created_idx").on(table.userId, table.createdAt),
+    // 后台指标按时间区间统计调用。
+    index("ai_usage_created_idx").on(table.createdAt),
     check(
       "ai_usage_status_valid",
       sql`${table.status} in ('pending', 'succeeded', 'failed', 'aborted')`,

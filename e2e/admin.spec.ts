@@ -30,7 +30,12 @@ async function newSignedInPage(browser: Browser, email: string) {
 }
 
 test("未登录访问 /admin 返回 404，不跳转登录页", async ({ page }) => {
-  for (const path of ["/admin", "/admin/users", "/admin/orders"]) {
+  for (const path of [
+    "/admin",
+    "/admin/users",
+    "/admin/orders",
+    "/admin/metrics",
+  ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
     await expect(page).toHaveURL(path);
@@ -52,6 +57,7 @@ test("普通用户访问后台返回 404，侧边栏没有后台入口", async (
     `/admin/users/${userId}`,
     "/admin/orders",
     "/admin/subscriptions",
+    "/admin/metrics",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
@@ -172,6 +178,38 @@ test.describe("管理员", () => {
       .click();
     await expect(admin.getByText(ad.user.banDescription)).toBeVisible();
     await target.context().close();
+  });
+
+  test("指标页显示注册和收入，可以切换时间范围", async ({ isMobile }) => {
+    await admin.goto("/admin/users");
+    if (isMobile) {
+      await admin.getByRole("button", { name: d.toggleSidebar }).click();
+    }
+    await admin
+      .getByRole("list", { name: d.adminNav })
+      .getByRole("link", { name: d.nav.adminMetrics })
+      .click();
+    await expect(admin).toHaveURL("/admin/metrics");
+    await expect(
+      admin.getByRole("heading", { level: 1, name: ad.metrics.title }),
+    ).toBeVisible();
+    // 本用例的管理员今天刚注册，新注册数至少为 1。
+    await expect(admin.getByTestId("metric-new-users")).not.toContainText(
+      /^\D*0$/,
+    );
+    await expect(
+      admin.getByRole("region", { name: ad.metrics.revenue.title }),
+    ).toBeVisible();
+
+    const range = admin.getByRole("navigation", {
+      name: ad.metrics.range.label,
+    });
+    await range.getByRole("link", { name: "7 days" }).click();
+    await expect(admin).toHaveURL("/admin/metrics?range=7");
+    await expect(range.getByRole("link", { name: "7 days" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   test("订单和订阅列表可以按状态筛选", async () => {
