@@ -20,17 +20,17 @@ export default defineConfig({
   },
   nav: {
     header: [
-      { label: "Features", href: "/#features" },
-      { label: "Pricing", href: "/#pricing" },
-      { label: "FAQ", href: "/#faq" },
+      { key: "features", href: "/#features" },
+      { key: "pricing", href: "/#pricing" },
+      { key: "faq", href: "/#faq" },
     ],
     footer: [
       {
-        title: "Product",
+        key: "product",
         links: [
-          { label: "Features", href: "/#features" },
-          { label: "Pricing", href: "/#pricing" },
-          { label: "FAQ", href: "/#faq" },
+          { key: "features", href: "/#features" },
+          { key: "pricing", href: "/#pricing" },
+          { key: "faq", href: "/#faq" },
         ],
       },
     ],

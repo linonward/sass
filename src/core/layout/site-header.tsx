@@ -1,5 +1,8 @@
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 
+import { LocaleSwitcher } from "@/core/i18n/locale-switcher";
+import { Link } from "@/core/i18n/navigation";
+import { routing } from "@/core/i18n/routing";
 import { ThemeToggle } from "@/core/theme/theme-toggle";
 
 import siteConfig from "../../../site.config";
@@ -7,7 +10,11 @@ import { MobileNav } from "./mobile-nav";
 import { SiteLogo } from "./site-logo";
 
 export function SiteHeader() {
-  const links = siteConfig.nav.header;
+  const t = useTranslations();
+  const links = siteConfig.nav.header.map((link) => ({
+    href: link.href,
+    label: t(`Nav.${link.key}` as "Nav.features"),
+  }));
 
   return (
     <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
@@ -15,7 +22,7 @@ export function SiteHeader() {
         <SiteLogo />
         <nav
           className="hidden items-center gap-6 text-sm md:flex"
-          aria-label="Main"
+          aria-label={t("Header.main")}
         >
           {links.map((link) => (
             <Link
@@ -28,6 +35,9 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-1">
+          {routing.locales.length > 1 && (
+            <LocaleSwitcher locales={routing.locales} />
+          )}
           <ThemeToggle />
           {links.length > 0 && (
             <MobileNav title={siteConfig.name} links={links} />

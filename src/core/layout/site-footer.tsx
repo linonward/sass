@@ -1,10 +1,14 @@
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+
+import { Link } from "@/core/i18n/navigation";
 
 import siteConfig from "../../../site.config";
 import { SiteLogo } from "./site-logo";
 
 export function SiteFooter() {
-  const groups = siteConfig.nav.footer;
+  const t = useTranslations();
+  // 导航 key 来自配置，运行时由 messages 测试保证存在。
+  const nav = (key: string) => t(`Nav.${key}` as "Nav.features");
 
   return (
     <footer className="border-t">
@@ -12,12 +16,12 @@ export function SiteFooter() {
         <div className="space-y-3">
           <SiteLogo />
           <p className="text-muted-foreground max-w-xs text-sm">
-            {siteConfig.description}
+            {t("Footer.tagline")}
           </p>
         </div>
-        {groups.map((group) => (
-          <nav key={group.title} aria-label={group.title}>
-            <h2 className="text-sm font-medium">{group.title}</h2>
+        {siteConfig.nav.footer.map((group) => (
+          <nav key={group.key} aria-label={nav(group.key)}>
+            <h2 className="text-sm font-medium">{nav(group.key)}</h2>
             <ul className="mt-3 space-y-2 text-sm">
               {group.links.map((link) => (
                 <li key={link.href}>
@@ -25,7 +29,7 @@ export function SiteFooter() {
                     href={link.href}
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    {link.label}
+                    {nav(link.key)}
                   </Link>
                 </li>
               ))}
@@ -34,7 +38,10 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="text-muted-foreground mx-auto max-w-6xl px-4 pb-8 text-xs">
-        © {new Date().getFullYear()} {siteConfig.name}
+        {t("Footer.copyright", {
+          year: new Date().getFullYear(),
+          name: siteConfig.name,
+        })}
       </div>
     </footer>
   );

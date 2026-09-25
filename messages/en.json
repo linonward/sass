@@ -1,0 +1,40 @@
+{
+  "Nav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "product": "Product"
+  },
+  "Header": {
+    "main": "Main",
+    "mobile": "Mobile",
+    "openMenu": "Open menu"
+  },
+  "Footer": {
+    "tagline": "Ship your SaaS in a day.",
+    "copyright": "© {year} {name}"
+  },
+  "Theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "Locale": {
+    "switch": "Change language"
+  },
+  "Home": {
+    "cta": "Get started"
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for doesn't exist or has been moved.",
+    "back": "Back to home"
+  },
+  "Error": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Please try again.",
+    "id": "Error ID: {digest}",
+    "retry": "Try again"
+  }
+}

@@ -18,8 +18,13 @@ export const featuresSchema = z.strictObject({
   rateLimit: z.boolean().default(false),
 });
 
+// 文案 key，对应 messages/<locale>.json 里 Nav 下的字段。
+const navKeySchema = z
+  .string()
+  .regex(/^[A-Za-z][A-Za-z0-9]*$/, 'must be a message key such as "pricing"');
+
 const linkSchema = z.strictObject({
-  label: z.string().trim().min(1),
+  key: navKeySchema,
   href: z
     .string()
     .regex(/^(\/|#|https:\/\/)/, 'must start with "/", "#" or "https://"'),
@@ -30,7 +35,7 @@ export const navSchema = z.strictObject({
   footer: z
     .array(
       z.strictObject({
-        title: z.string().trim().min(1),
+        key: navKeySchema,
         links: z.array(linkSchema).min(1),
       }),
     )
