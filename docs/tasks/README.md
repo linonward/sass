@@ -33,6 +33,8 @@
 | T401                   | ratelimit      | `feat/ratelimit`      | T102             | done |
 | T402                   | ai             | `feat/ai`             | T302, T401, T203 | done |
 | T403                   | upload         | `feat/upload`         | T401, T203       | done |
+| T404                   | ai-image       | `feat/ai-image`       | T402, T403       | done |
+| T405                   | ai-video       | `feat/ai-video`       | T404             | todo |
 | **阶段 5：内容与运营** |                |                       |                  |      |
 | T501                   | blog           | `feat/blog`           | T104, T106       | done |
 | T502                   | admin          | `feat/admin`          | T203, T302, T303 | done |
@@ -57,6 +59,7 @@
 
 阶段 4   T102 → T401 ─┬→ T402 ← T302, T203
                       └→ T403 ← T203
+         T402, T403 → T404 → T405
 
 阶段 5   T104, T106 → T501
          T203, T302, T303 → T502
@@ -67,7 +70,7 @@
 
 单人串行推进：
 
-T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 → T202 → T203 → T204 → T301 → T302 → T303 → T304 → T305 → T401 → T402 → T403 → T501 → T502 → T503
+T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 → T202 → T203 → T204 → T301 → T302 → T303 → T304 → T305 → T401 → T402 → T403 → T404 → T405 → T501 → T502 → T503
 
 可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做。
 

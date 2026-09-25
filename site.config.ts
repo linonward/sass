@@ -199,5 +199,21 @@ export default defineConfig({
       },
     ],
     defaultModel: "fast",
+    // 图片模型（还需要 features.upload：结果存进 R2）。creditCost 按服务商的单张价格定。
+    imageModels: [
+      {
+        id: "qwen-image",
+        provider: "alibaba",
+        model: "qwen-image-3.0",
+        creditCost: 5,
+      },
+      {
+        id: "wan-image",
+        provider: "alibaba",
+        model: "wan2.7-image-pro",
+        creditCost: 10,
+      },
+    ],
+    defaultImageModel: "qwen-image",
   },
 });

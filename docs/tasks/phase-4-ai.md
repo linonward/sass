@@ -91,3 +91,55 @@
 - [ ] 超过大小或类型不允许的文件，在预签名阶段被拒绝
 
 **测试**：Vitest 覆盖类型校验、大小校验、key 的格式；真实上传做人工验证
+
+---
+
+## T404 ai-image
+
+- 分支 / worktree：`feat/ai-image` → `../sass-ai-image`
+- 依赖：T402、T403
+- 外部依赖：支持图片生成的服务商 key（阿里云百炼、OpenAI 或 Google），Cloudflare R2
+
+**做**
+
+- 在配置中加入 `ai.imageModels`：`[{ id, provider, model, creditCost }]`，以及 `ai.defaultImageModel`
+- 百炼的图片模型（`qwen-image-*`、`wan*-image*`）没有 AI SDK 实现，按 `ImageModelV4` 接口写一个适配器，调百炼原生接口
+- 服务端封装 `runImage({ userId, modelId, prompt, aspectRatio })`：登录 → 限流（`ai` 策略）→ 预扣积分并写 `ai_usage` → `generateImage` → 存 R2 并写 `files` → 失败退款。与 `runAI` 共用预扣和结算
+- `ai_usage` 加 `kind`（`text` / `image` / `video`）、`prompt`、`file_id`，用来列出用户的生成记录
+- 接口：`POST /api/ai/image`（同步返回图片地址）、`GET /api/ai/generations`（当前用户最近的生成记录）
+- Playground 加「图片」标签页：选模型和画幅、输入提示词、显示结果和最近生成
+
+**不做**：图片编辑 / 局部重绘、一次生成多张、按尺寸计费
+
+**验收**
+
+- [ ] 生成一张图扣除配置中的积分，图片存进 R2，`ai_usage` 和 `files` 有记录
+- [ ] 模型报错或存储失败时积分退回
+- [ ] 刷新页面后最近生成仍然能看到
+
+**测试**：Vitest 用 `MockImageModelV4` 和内存存储覆盖成功、余额不足 402、模型失败退款、存储失败退款、超限 429；适配器用 stub fetch 覆盖请求格式和地域；真实模型做人工验证
+
+---
+
+## T405 ai-video
+
+- 分支 / worktree：`feat/ai-video` → `../sass-ai-video`
+- 依赖：T404
+- 外部依赖：阿里云百炼（通义万相视频模型），Cloudflare R2
+
+**做**
+
+- 在配置中加入 `ai.videoModels`：`[{ id, provider, model, creditCost, duration, resolution }]`，按次固定扣费，时长和分辨率由配置固定
+- 异步任务：`POST /api/ai/video` 预扣积分、用 `experimental_startVideo` 提交任务，把任务信息记在 `ai_usage`；`GET /api/ai/video/:id` 查询状态，完成后把视频转存 R2，失败或超时退款
+- 文生视频和图生视频：首帧可以是上传的图片或 T404 生成的图片（`files` 里的记录）
+- Playground 加「视频」标签页：提交后轮询状态，最近生成里显示视频
+
+**不做**：尾帧 / 参考视频、webhook 回调、后台定时扫描未完成的任务（只在查询时推进）
+
+**验收**
+
+- [ ] 提交任务扣积分，完成后视频存进 R2，`ai_usage` 状态为 `succeeded`
+- [ ] 任务失败或超时时积分退回，只退一次
+- [ ] 用生成的图片做首帧能生成视频
+
+**测试**：Vitest 用 `MockVideoModelV4` 覆盖提交、进行中、完成转存、失败退款、超时退款、重复查询不重复结算；真实模型做人工验证

@@ -1,6 +1,6 @@
 {
-  "id": "d7700af2-26c1-4195-bbab-bcd01a2073cf",
-  "prevId": "e746e418-3dd2-4d51-b633-f5c397a1b2fd",
+  "id": "ceb078c4-d93c-497f-be2a-7fe4d47e0043",
+  "prevId": "d7700af2-26c1-4195-bbab-bcd01a2073cf",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -380,6 +380,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "impersonated_by": {
+          "name": "impersonated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -470,6 +476,31 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "banned": {
+          "name": "banned",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "ban_reason": {
+          "name": "ban_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ban_expires": {
+          "name": "ban_expires",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         },
         "locale": {
           "name": "locale",
@@ -1094,6 +1125,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1133,6 +1170,15 @@
           "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "credit_transactions_actor_id_user_id_fk": {
+          "name": "credit_transactions_actor_id_user_id_fk",
+          "tableFrom": "credit_transactions",
+          "tableTo": "user",
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

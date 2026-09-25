@@ -25,7 +25,10 @@ export const env = createAppEnv({
     }),
     ...aiServerEnv(process.env, {
       enabled: siteConfig.features.ai,
-      providers: siteConfig.ai.models.map((model) => model.provider),
+      providers: [
+        ...siteConfig.ai.models.map((model) => model.provider),
+        ...siteConfig.ai.imageModels.map((model) => model.provider),
+      ],
     }),
     ...rateLimitServerEnv(process.env, {
       enabled:

@@ -205,6 +205,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
    - 百炼的 key 分地域，默认地址是国际站（新加坡）。北京地域的 key 要把 `ALIBABA_BASE_URL` 设为 `https://dashscope.aliyuncs.com/compatible-mode/v1`，否则返回 401。
 3. 按模型的实际成本调整 `creditCost` 和 `maxOutputTokens`：按次固定扣费，`maxOutputTokens` 决定单次调用成本的上限。默认开思考的模型（如百炼上的 `deepseek-v4-*`）可以设 `reasoning: "none"` 关掉思考，省下思考的 token。
 4. 上线后在 `/playground` 调用一次，检查 `ai_usage` 有记录、积分流水里有对应的扣减。
+5. 图片生成（`ai.imageModels`）：还需要开启 `features.upload` 并配好 R2，生成的图片存进 bucket，`files` 和 `ai_usage`（`kind = image`）各有一条记录。百炼的 `qwen-image-*` 每张约 7 秒，`wan*-image*` 约 30 秒，接口同步返回，`/api/ai/image` 的 `maxDuration` 是 120 秒。在 `/playground` 的「Image」标签页生成一张，确认图片能打开、最近生成里能看到。
 
 #### 限流（Upstash）
 

@@ -17,6 +17,12 @@ export type ObjectStorage = {
     size: number;
     expiresIn: number;
   }): Promise<string>;
+  /** 服务端直接写入对象（比如 AI 生成的图片、视频）。 */
+  putObject(input: {
+    key: string;
+    mime: string;
+    body: Uint8Array;
+  }): Promise<void>;
   /** 预签名 GET 地址，用于访问私有文件。 */
   presignGet(input: { key: string; expiresIn: number }): Promise<string>;
   /** 对象的大小和类型；不存在时返回 null。 */
@@ -71,6 +77,16 @@ export function createR2Storage(options: R2Options): ObjectStorage {
           signableHeaders: new Set(["content-type", "content-length"]),
         },
       ),
+    putObject: async ({ key, mime, body }) => {
+      await client.send(
+        new PutObjectCommand({
+          Bucket,
+          Key: key,
+          ContentType: mime,
+          Body: body,
+        }),
+      );
+    },
     presignGet: ({ key, expiresIn }) =>
       getSignedUrl(client, new GetObjectCommand({ Bucket, Key: key }), {
         expiresIn,

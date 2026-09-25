@@ -61,8 +61,15 @@
     {
       "idx": 8,
       "version": "7",
-      "when": 1790350668701,
-      "tag": "0008_admin",
+      "when": 1790349890859,
+      "tag": "0008_ai_generations",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790351667185,
+      "tag": "0009_admin",
       "breakpoints": true
     }
   ]
