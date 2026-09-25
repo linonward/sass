@@ -1,9 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = 3000;
+const port = Number(process.env.E2E_PORT ?? 3000);
 const baseURL = `http://localhost:${port}`;
 // 多语言副本（见 e2e/i18n/serve.ts）单独监听一个端口。
-const i18nPort = 3001;
+const i18nPort = port + 1;
 const i18nBaseURL = `http://localhost:${i18nPort}`;
 
 export default defineConfig({
@@ -36,7 +36,7 @@ export default defineConfig({
   webServer: [
     {
       // CI 先执行 `pnpm build`，这里直接启动生产构建；本地用开发服务器。
-      command: process.env.CI ? "pnpm start" : "pnpm dev",
+      command: process.env.CI ? `pnpm start -p ${port}` : `pnpm dev -p ${port}`,
       url: baseURL,
       reuseExistingServer: !process.env.CI,
     },

@@ -25,10 +25,14 @@ function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** 品牌色上是否应该用深色文字。0.179 是黑字与白字对比度相等的亮度分界点。 */
+export function needsDarkText(hex: string): boolean {
+  return luminance(hex) > 0.179;
+}
+
 /** 在品牌色上对比度更高的文字颜色。 */
 export function foregroundFor(hex: string): string {
-  // 0.179 是黑字与白字对比度相等的亮度分界点。
-  return luminance(hex) > 0.179 ? DARK_TEXT : LIGHT_TEXT;
+  return needsDarkText(hex) ? DARK_TEXT : LIGHT_TEXT;
 }
 
 /**

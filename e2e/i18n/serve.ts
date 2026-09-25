@@ -17,7 +17,7 @@ import { TEST_LOCALE } from "./test-locale.ts";
 const PORT = process.env.I18N_PORT ?? "3001";
 
 const root = path.resolve(import.meta.dirname, "../..");
-const dest = path.join(os.tmpdir(), "sass-e2e-i18n");
+const dest = path.join(os.tmpdir(), `sass-e2e-i18n-${PORT}`);
 
 function pseudoTranslate(value: unknown): unknown {
   if (typeof value === "string") return `[${TEST_LOCALE}] ${value}`;
