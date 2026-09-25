@@ -49,3 +49,6 @@ next-env.d.ts
 
 # local temp (test email outbox etc.)
 /.tmp/
+
+# content-collections (generated)
+/.content-collections/

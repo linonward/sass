@@ -12,10 +12,16 @@ export type BuildMetadataOptions = {
   title?: string;
   /** 省略时使用站点描述。 */
   description?: string;
-  /** 分享图的站内路径或绝对 URL，默认使用 `src/app/opengraph-image.tsx` 生成的品牌图。 */
-  image?: string;
+  /** 分享图的站内路径或绝对 URL（可带尺寸），默认使用 `src/app/opengraph-image.tsx` 生成的品牌图。 */
+  image?: string | { url: string; width: number; height: number; alt?: string };
   /** 不希望被搜索引擎收录的页面设为 true。 */
   noIndex?: boolean;
+  /** 页面只有部分语言的版本时，列出有版本的语言，hreflang 只输出这些。默认是全部语言。 */
+  locales?: readonly string[];
+  /** 文章页传入，Open Graph 类型改为 article 并带上发布时间和标签。 */
+  article?: { publishedTime: string; tags: string[] };
+  /** 额外的 `<link rel="alternate">`，按 MIME 类型分组，例如 RSS。 */
+  feeds?: Record<string, { url: string; title: string }[]>;
 };
 
 const defaultImage = {
@@ -36,10 +42,15 @@ export function buildMetadata({
   description = siteConfig.description,
   image,
   noIndex = false,
+  locales,
+  article,
+  feeds,
 }: BuildMetadataOptions): Metadata {
   const fullTitle = title ? `${title} | ${siteConfig.name}` : siteConfig.name;
   const url = absoluteUrl(locale, path);
-  const images = [image ? { url: image } : defaultImage];
+  const images = [
+    typeof image === "string" ? { url: image } : (image ?? defaultImage),
+  ];
 
   return {
     metadataBase: new URL(siteUrl),
@@ -49,10 +60,13 @@ export function buildMetadata({
     description,
     alternates: {
       canonical: url,
-      languages: languageAlternates(path),
+      languages: languageAlternates(path, locales),
+      ...(feeds && { types: feeds }),
     },
     openGraph: {
-      type: "website",
+      ...(article
+        ? { type: "article", ...article }
+        : { type: "website" as const }),
       siteName: siteConfig.name,
       locale,
       url,

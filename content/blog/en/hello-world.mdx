@@ -1,0 +1,33 @@
+---
+title: Hello, world
+description: "How the blog works: write an MDX file, commit it, and it shows up on the blog, in the sitemap and in the RSS feed."
+date: 2026-09-25
+tags: [announcements, guides]
+---
+
+This is the first post on the blog. Every post is an MDX file in `content/blog/<locale>/`, and the file name becomes the URL: this one lives at `content/blog/en/hello-world.mdx` and is served at `/blog/hello-world`.
+
+## Writing a post
+
+Start the file with frontmatter:
+
+```yaml
+---
+title: My first post
+description: One or two sentences for the list page, search results and RSS.
+date: 2026-01-31
+tags: [product]
+cover: /blog/my-first-post.png # optional, a file under public/
+draft: true # optional, hidden in production
+---
+```
+
+Then write Markdown below it. MDX also lets you use JSX where Markdown isn't enough.
+
+## What you get for free
+
+- A paginated list at `/blog` and a page per tag at `/blog/tags/<tag>`
+- An entry in `sitemap.xml` and in the RSS feed at `/blog/rss.xml`
+- A generated share image and `BlogPosting` structured data for every post
+
+> Drafts show up while you run `pnpm dev`, so you can preview them. Production builds leave them out.
