@@ -3,7 +3,7 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 
-import { createAppEnv, requiredWhen } from "./env";
+import { createAppEnv, requiredWhen } from "./create-env";
 
 function aiEnv(ai: boolean, runtimeEnv: Record<string, string | undefined>) {
   return createAppEnv({

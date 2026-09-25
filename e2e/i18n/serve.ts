@@ -34,6 +34,8 @@ const files = execFileSync(
 )
   .split("\0")
   .filter(Boolean);
+// .env.local 被 gitignore，不在上面的列表里，但本地运行需要其中的变量（如 DATABASE_URL）。
+files.push(".env.local");
 for (const file of files) {
   const from = path.join(root, file);
   if (!fs.existsSync(from)) continue; // 已删除但未提交的文件

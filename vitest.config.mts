@@ -1,6 +1,13 @@
+import { existsSync } from "node:fs";
+
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
+
+// 读取 .env.local / .env（不覆盖已有变量），数据库测试从中取 DATABASE_URL_TEST。
+for (const file of [".env.local", ".env"]) {
+  if (existsSync(file)) process.loadEnvFile(file);
+}
 
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
