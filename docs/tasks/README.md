@@ -17,7 +17,7 @@
 | T105                   | landing        | `feat/landing`        | T104             | done      |
 | T106                   | seo            | `feat/seo`            | T104             | done      |
 | T107                   | legal          | `feat/legal`          | T104             | done      |
-| T108                   | deploy         | `chore/deploy`        | T105, T106, T107 | in-review |
+| T108                   | deploy         | `chore/deploy`        | T105, T106, T107 | done |
 | **阶段 2：登录**       |                |                       |                  |           |
 | T201                   | db             | `feat/db`             | T102             | todo      |
 | T202                   | email          | `feat/email`          | T102, T104       | todo      |
