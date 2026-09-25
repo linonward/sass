@@ -60,6 +60,7 @@ pnpm dev              # http://localhost:3000
 - 收款核心（`src/core/billing/`）：`PaymentProvider` 接口屏蔽具体服务商；webhook 路由调用 `processWebhook(provider, request)`，由 `handleBillingEvent` 在一个事务里完成幂等检查、更新 `subscriptions` / `orders`、触发 `onBillingEvent` 钩子。`billing.plans` 的交易字段：`providerProductId`（付费套餐必填、免费套餐不填）、`credits`（每次购买或每个计费周期发放的积分），`type` 按 `interval` 推导。钩子在 `src/core/billing/hooks.ts` 汇总注册。
 - 购买流程：落地页的定价区块和 `/pricing` 共用购买按钮，未登录时先登录，登录后回到 `/pricing?plan=<id>` 自动继续结账；已订阅显示"管理订阅"（客户门户）。结账回跳 `/billing/success`，按回跳附带的订阅或订单 ID 轮询 `/api/billing/status`，webhook 未到时显示"处理中"，超过 `BILLING_SUCCESS_TIMEOUT_MS`（默认 60 秒）提示联系支持。账单页 `/billing` 显示当前套餐、续费日期、积分余额和最近 20 条流水。
 - e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。Vercel 上（任何环境）或 `CREEM_MODE=live` 时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404。
+- 接口限流（`src/core/ratelimit/`）：`checkRateLimit(policy, { userId, ip })` 按 `site.config.ts` 的 `rateLimit.policies` 做滑动窗口计数，用户和 IP 各计一次，任一超限即拒绝；被拒绝时 `return rateLimitResponse(result)`（超限 429、Redis 不可用 503，都带 `Retry-After`）。IP 用 `getClientIp(request.headers)` 取。本地没配 Upstash 时跳过限流并警告一次；Redis 出错或超时（1 秒）时按 `rateLimit.failMode` 处理：`open`（默认）放行并记录错误，`closed` 返回 503。登录限流由 Better Auth 负责，不走这里。
 - 法律页：`/privacy`、`/terms`、`/refund`，正文模板在 `content/legal/`（归业务方所有），主体信息取自 `site.config.ts` 的 `legal`。**模板仅供参考，不构成法律意见**，上线前请结合业务和适用法律自行审阅，必要时咨询律师。
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
@@ -106,18 +107,19 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
 
-| 变量                                        | 说明                                                                                        |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。      |
-| `RESEND_API_KEY`                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。     |
-| `EMAIL_TRANSPORT`                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。   |
-| `BETTER_AUTH_SECRET`                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。       |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。   |
-| `BETTER_AUTH_URL`                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。               |
-| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`    | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。 |
-| `CREEM_MODE`                                | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                |
-| `BILLING_PROVIDER`                          | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e，Vercel 上设置会启动失败。              |
-| `BILLING_SUCCESS_TIMEOUT_MS`                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                             |
+| 变量                                                  | 说明                                                                                                                |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                        | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                              |
+| `RESEND_API_KEY`                                      | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                             |
+| `EMAIL_TRANSPORT`                                     | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。                           |
+| `BETTER_AUTH_SECRET`                                  | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                               |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`           | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                           |
+| `BETTER_AUTH_URL`                                     | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                       |
+| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`              | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。                         |
+| `CREEM_MODE`                                          | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                        |
+| `BILLING_PROVIDER`                                    | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e，Vercel 上设置会启动失败。                                      |
+| `BILLING_SUCCESS_TIMEOUT_MS`                          | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                     |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。 |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -175,6 +177,12 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
    - 换成生产模式的 `CREEM_API_KEY` 和 `CREEM_WEBHOOK_SECRET`，并把 `CREEM_MODE` 设为 `live`。
    - 在生产模式的 Developers → Webhooks 重新添加同一个 webhook 地址。
 6. 删除账户时会先在 Creem 取消该用户仍在计费的订阅；取消失败时删除中止。退款只更新订单状态，v1 不扣回已发的积分。
+
+#### 限流（Upstash）
+
+1. 在 [Upstash](https://console.upstash.com) 创建一个 Redis 数据库，区域选离 Vercel 函数最近的（默认 `iad1` 对应 US East）。
+2. 把 REST API 的 URL 和 token 填到 Vercel Production 的 `UPSTASH_REDIS_REST_URL`、`UPSTASH_REDIS_REST_TOKEN`；也可以从 Vercel Marketplace 安装 Upstash 集成自动注入（变量名相同）。
+3. 阈值在 `site.config.ts` 的 `rateLimit.policies` 调整，默认 `ai` 每分钟 20 次、`upload` 每分钟 10 次。
 
 ### 5. GitHub
 

@@ -128,4 +128,13 @@ export default defineConfig({
     // 余额跌破这个值时提醒用户充值（credits-low 邮件）。
     lowBalanceThreshold: 100,
   },
+  // 接口限流（AI、上传），计数存 Upstash Redis。每条策略同时按用户和按 IP 计数。
+  rateLimit: {
+    // Redis 出错时：open 放行（积分扣减兜底），closed 返回 503。
+    failMode: "open",
+    policies: {
+      ai: { limit: 20, window: "1 m" },
+      upload: { limit: 10, window: "1 m" },
+    },
+  },
 });

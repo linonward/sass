@@ -219,3 +219,49 @@ describe("credits", () => {
     ).toThrow("- credits.lowBalanceThreshold: ");
   });
 });
+
+describe("rateLimit", () => {
+  test("默认 failMode 为 open，ai 每分钟 20 次、upload 每分钟 10 次", () => {
+    expect(defineConfig(valid).rateLimit).toEqual({
+      failMode: "open",
+      policies: {
+        ai: { limit: 20, window: "1 m" },
+        upload: { limit: 10, window: "1 m" },
+      },
+    });
+  });
+
+  test("可以自定义策略和 failMode", () => {
+    const config = defineConfig({
+      ...valid,
+      rateLimit: {
+        failMode: "closed",
+        policies: { export: { limit: 3, window: "10s" } },
+      },
+    });
+    expect(config.rateLimit.failMode).toBe("closed");
+    expect(config.rateLimit.policies).toEqual({
+      export: { limit: 3, window: "10s" },
+    });
+  });
+
+  test.each([
+    ["rateLimit.failMode", { failMode: "reject" }],
+    [
+      "rateLimit.policies.ai.limit",
+      { policies: { ai: { limit: 0, window: "1 m" } } },
+    ],
+    [
+      "rateLimit.policies.ai.window",
+      { policies: { ai: { limit: 1, window: "1 minute" } } },
+    ],
+    [
+      "rateLimit.policies.ai.window",
+      { policies: { ai: { limit: 1, window: "0 s" } } },
+    ],
+  ])("非法字段 %s 出现在报错中", (path, rateLimit) => {
+    expect(() =>
+      defineConfig({ ...valid, rateLimit } as SiteConfigInput),
+    ).toThrow(`- ${path}: `);
+  });
+});
