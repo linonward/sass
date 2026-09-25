@@ -36,5 +36,8 @@
     "description": "An unexpected error occurred. Please try again.",
     "id": "Error ID: {digest}",
     "retry": "Try again"
+  },
+  "Metadata": {
+    "description": "Ship your SaaS in a day."
   }
 }
