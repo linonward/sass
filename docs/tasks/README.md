@@ -8,7 +8,7 @@
 
 | ID | topic | 分支 | 依赖 | 状态 |
 |---|---|---|---|---|
-| T001 | plan | `docs/plan` | — | in-review |
+| T001 | plan | `docs/plan` | — | done |
 | **阶段 1：落地站** | | | | |
 | T101 | scaffold | `chore/scaffold` | T001 | todo |
 | T102 | config | `feat/config` | T101 | todo |
