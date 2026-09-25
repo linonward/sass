@@ -86,6 +86,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 - 在 Vercel 导入 GitHub 仓库。仓库根目录的 `vercel.json` 已把 Framework 设为 Next.js，其他保持默认；Node 版本取自 `package.json` 的 `engines`（24.x），pnpm 版本取自 `packageManager`。
 - 导入后，`main` 自动部署到生产环境，每个 PR 自动生成预览部署。
+- `vercel.json` 的 `ignoreCommand`：自上次部署以来只改了 `docs/` 或 `*.md` 时跳过构建，节省部署次数（Hobby 套餐每天 100 次，账号内所有项目共用）。
 - 如果导入时找不到仓库：到 GitHub → Settings → Applications → Vercel → Configure，在 Repository access 里加上这个仓库。
 
 ### 2. 域名与 DNS
