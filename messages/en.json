@@ -194,12 +194,70 @@
       "sendFailedGoogle": "We couldn't send the email. Please try again later, or continue with Google.",
       "rateLimited": "Too many requests. Please wait a moment and try again.",
       "generic": "Something went wrong. Please try again."
+    }
+  },
+  "Dashboard": {
+    "sidebar": "Sidebar",
+    "suiteNav": "Main",
+    "businessNav": "Product",
+    "toggleSidebar": "Toggle sidebar",
+    "nav": {
+      "home": "Dashboard",
+      "settings": "Settings"
     },
-    "dashboard": {
+    "userMenu": {
+      "open": "Account menu",
+      "settings": "Settings",
+      "language": "Language",
+      "signOut": "Sign out"
+    },
+    "home": {
       "metaTitle": "Dashboard",
       "title": "Dashboard",
-      "signedInAs": "Signed in as {email}"
+      "welcome": "Signed in as {email}",
+      "welcomeName": "Welcome back, {name}",
+      "emptyTitle": "Welcome to {name}",
+      "emptyDescription": "There's nothing here yet. Your product's overview will live on this page.",
+      "emptyCta": "Go to settings"
+    }
+  },
+  "Account": {
+    "metaTitle": "Settings",
+    "title": "Settings",
+    "description": "Manage your profile and account.",
+    "profile": {
+      "title": "Profile",
+      "email": "Signed in as {email}"
     },
-    "signOut": "Sign out"
+    "name": {
+      "label": "Name",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "locale": {
+      "label": "Preferred language",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "status": {
+      "saved": "Saved.",
+      "invalid": "Please check the value and try again.",
+      "mismatch": "The email you typed doesn't match your account.",
+      "hookFailed": "We couldn't finish cleaning up your data, so your account was not deleted. Please try again or contact support.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "danger": {
+      "title": "Delete account",
+      "description": "Permanently delete your account and all of its data. This can't be undone."
+    },
+    "delete": {
+      "open": "Delete account",
+      "title": "Delete your account?",
+      "description": "This permanently deletes your account, sessions and data. You can sign up again with the same email, but it will be a new, empty account.",
+      "confirmLabel": "Type <email></email> to confirm",
+      "cancel": "Cancel",
+      "confirm": "Delete account",
+      "deleting": "Deleting…"
+    }
   }
 }

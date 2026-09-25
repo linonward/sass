@@ -17,7 +17,8 @@ export function uniqueEmail(tag: string) {
  */
 export async function useRandomIp(page: Page) {
   const ip = `10.${randomInt(256)}.${randomInt(256)}.${randomInt(1, 255)}`;
-  await page.setExtraHTTPHeaders({ "x-forwarded-for": ip });
+  // 设在 context 上，页面请求和 page.request 直接调接口都会带上。
+  await page.context().setExtraHTTPHeaders({ "x-forwarded-for": ip });
 }
 
 type Copy = typeof messages;
@@ -62,4 +63,43 @@ export async function withDatabase<T>(run: (client: pg.Client) => Promise<T>) {
   } finally {
     await client.end();
   }
+}
+
+/** 完成一次验证码登录，停在登录后的页面。 */
+export async function signIn(
+  page: Page,
+  email: string,
+  options: Parameters<typeof requestCode>[2] = {},
+) {
+  const { code } = await requestCode(page, email, options);
+  await enterCode(page, code, options.copy);
+  // 等跳转完成（session cookie 已写入）再继续。
+  await page.waitForURL((url) => !url.pathname.endsWith("/sign-in"));
+}
+
+/** 按邮箱查用户 id；不存在时为 undefined。 */
+export async function findUserId(email: string) {
+  return withDatabase(async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      'select id from "user" where email = $1',
+      [email],
+    );
+    return rows[0]?.id;
+  });
+}
+
+/** 打开侧边栏里的用户菜单（移动端先展开抽屉）。 */
+export async function openUserMenu(page: Page, isMobile: boolean) {
+  const d = messages.Dashboard;
+  // hydration 完成前点击没有反应，所以点到菜单真正出现为止。
+  await expect(async () => {
+    if (isMobile) {
+      const trigger = page.getByRole("button", { name: d.userMenu.open });
+      if (!(await trigger.isVisible())) {
+        await page.getByRole("button", { name: d.toggleSidebar }).click();
+      }
+    }
+    await page.getByRole("button", { name: d.userMenu.open }).click();
+    await expect(page.getByRole("menu")).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
 }

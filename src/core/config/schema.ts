@@ -177,6 +177,37 @@ export const authSchema = z.strictObject({
   }),
 });
 
+// 登录后侧边栏的图标，限定在一小组 lucide 图标内。
+export const dashboardIcons = [
+  "home",
+  "settings",
+  "layers",
+  "sparkles",
+  "fileText",
+  "chart",
+  "users",
+  "creditCard",
+] as const;
+
+// 业务的侧边栏菜单项；套件自带的（Dashboard、Settings）写在 src/core/dashboard 里。
+export const dashboardSchema = z.strictObject({
+  nav: z
+    .array(
+      z.strictObject({
+        // 文案在 messages 的 Dashboard.nav.<key>。
+        key: messageKeySchema,
+        href: z
+          .string()
+          .regex(/^\/(?!\/)/, 'must be an in-app path such as "/projects"'),
+        icon: z.enum(dashboardIcons),
+      }),
+    )
+    .refine((items) => unique(items.map((i) => i.href)), {
+      message: "hrefs must not contain duplicates",
+    })
+    .default([]),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -212,6 +243,7 @@ export const siteConfigSchema = z
     billing: billingSchema.default(billingSchema.parse({})),
     email: emailSchema,
     auth: authSchema,
+    dashboard: dashboardSchema.default(dashboardSchema.parse({})),
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -229,6 +261,8 @@ export type LandingConfig = SiteConfig["landing"];
 export type Plan = SiteConfig["billing"]["plans"][number];
 export type EmailConfig = SiteConfig["email"];
 export type AuthConfig = SiteConfig["auth"];
+export type DashboardIcon = (typeof dashboardIcons)[number];
+export type DashboardNavItem = SiteConfig["dashboard"]["nav"][number];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

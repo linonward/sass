@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { describe, expect, test } from "vitest";
 
+import { suiteNav } from "@/core/dashboard/nav";
+
 import siteConfig from "../../../site.config";
 import en from "../../../messages/en.json";
 
@@ -23,6 +25,14 @@ describe("messages", () => {
       ...footer.flatMap((g) => [g.key, ...g.links.map((l) => l.key)]),
     ];
     expect(Object.keys(en.Nav)).toEqual(expect.arrayContaining(used));
+  });
+
+  test("dashboard 菜单项的 key 都在 en.json 的 Dashboard.nav 中", () => {
+    const used = [
+      ...suiteNav.map((item) => item.key),
+      ...siteConfig.dashboard.nav.map((item) => item.key),
+    ];
+    expect(Object.keys(en.Dashboard.nav)).toEqual(expect.arrayContaining(used));
   });
 
   test("每个启用的语言都有对应的 messages 文件", () => {

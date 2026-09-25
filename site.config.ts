@@ -109,4 +109,9 @@ export default defineConfig({
       resendCooldown: 60,
     },
   },
+  // 登录后侧边栏里业务自己的菜单项，文案在 messages 的 Dashboard.nav.<key>。
+  // 例如 { key: "projects", href: "/projects", icon: "layers" }；新增的一级路由还要登记到 src/core/auth/routes.ts。
+  dashboard: {
+    nav: [],
+  },
 });

@@ -66,6 +66,10 @@ pnpm dev              # http://localhost:3000
   - 需要登录的页面放在 `src/app/[locale]/(app)/` 下，并在 `src/core/auth/routes.ts` 的 `protectedPrefixes` 登记：proxy 按 cookie 快速拦截，(app) 的 layout 再校验 session。
   - 服务端取当前用户：`getSession()`（`src/core/auth/session.ts`）；客户端：`authClient`（`src/core/auth/client.ts`）。
   - auth 相关的表由 `pnpm auth:generate` 生成到 `src/core/db/schema/auth.ts`，再 `pnpm db:generate` 生成迁移。
+- 登录后的外框：`src/core/dashboard/`，侧边栏 + 用户菜单（头像、邮箱、切换语言、退出登录）。
+  - 业务的菜单项写在 `site.config.ts` 的 `dashboard.nav`（`key`、`href`、`icon`），文案在 `messages/*.json` 的 `Dashboard.nav.<key>`；套件自带 Dashboard 和 Settings 两项。
+  - 设置页 `/settings`：修改名称、偏好语言（`user.locale`，给用户发事务邮件时用 `preferredLocale()` 取）、删除账户。
+  - 删除账户会先依次执行 `onUserDelete` 钩子（`src/core/account/on-user-delete.ts`），任何一个失败就中止删除；然后删除用户，session、account 由外键级联删除。业务表引用 `user.id` 时设 `onDelete: "cascade"`，或者注册钩子自行清理（在 `src/core/account/hooks.ts` 里 import 注册文件）。
 - UI 组件：shadcn/ui（Base UI），生成到 `src/core/ui/`。新增组件用 `pnpm dlx shadcn@latest add <name>`。
 - 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验。
 

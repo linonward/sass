@@ -1,0 +1,24 @@
+import type { DashboardNavItem, SiteConfig } from "@/core/config/schema";
+
+/** 套件自带的菜单项。业务项写在 site.config.ts 的 dashboard.nav，排在这些之后。 */
+export const suiteNav: readonly DashboardNavItem[] = [
+  { key: "home", href: "/dashboard", icon: "home" },
+  { key: "settings", href: "/settings", icon: "settings" },
+];
+
+export type DashboardNav = {
+  suite: readonly DashboardNavItem[];
+  business: readonly DashboardNavItem[];
+};
+
+/** 侧边栏的两组菜单：套件项和业务项。 */
+export function dashboardNav(
+  config: Pick<SiteConfig, "dashboard">,
+): DashboardNav {
+  return { suite: suiteNav, business: config.dashboard.nav };
+}
+
+/** 当前路径是否属于该菜单项：本身或其子页面。 */
+export function isActiveNav(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}

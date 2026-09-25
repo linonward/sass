@@ -22,7 +22,7 @@
 | T201                   | db             | `feat/db`             | T102             | done      |
 | T202                   | email          | `feat/email`          | T102, T104       | done      |
 | T203                   | auth           | `feat/auth`           | T201, T202, T103 | in-review |
-| T204                   | dashboard      | `feat/dashboard`      | T203             | todo      |
+| T204                   | dashboard      | `feat/dashboard`      | T203             | in-review |
 | **阶段 3：收款**       |                |                       |                  |           |
 | T301                   | billing-core   | `feat/billing-core`   | T201             | todo      |
 | T302                   | credits        | `feat/credits`        | T201             | todo      |
