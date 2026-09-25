@@ -3,7 +3,11 @@
     "features": "Features",
     "pricing": "Pricing",
     "faq": "FAQ",
-    "product": "Product"
+    "product": "Product",
+    "legal": "Legal",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "refund": "Refund Policy"
   },
   "Header": {
     "main": "Main",

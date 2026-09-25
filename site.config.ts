@@ -33,6 +33,21 @@ export default defineConfig({
           { key: "faq", href: "/#faq" },
         ],
       },
+      {
+        key: "legal",
+        links: [
+          { key: "privacy", href: "/privacy" },
+          { key: "terms", href: "/terms" },
+          { key: "refund", href: "/refund" },
+        ],
+      },
     ],
+  },
+  // 法律页（content/legal/）里引用的主体信息，上线前改成你自己的。
+  legal: {
+    companyName: "Acme Inc.",
+    contactEmail: "support@example.com",
+    jurisdiction: "the State of Delaware, United States",
+    effectiveDate: "2026-01-01",
   },
 });

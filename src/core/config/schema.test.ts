@@ -10,6 +10,12 @@ const valid: SiteConfigInput = {
   locales: ["en", "zh-CN"],
   defaultLocale: "en",
   features: { ai: true },
+  legal: {
+    companyName: "Acme Inc.",
+    contactEmail: "support@example.com",
+    jurisdiction: "the State of Delaware, United States",
+    effectiveDate: "2026-01-31",
+  },
 };
 
 describe("defineConfig", () => {
@@ -69,5 +75,32 @@ describe("nav", () => {
     expect(() => defineConfig({ ...valid, nav } as SiteConfigInput)).toThrow(
       `- ${path}: `,
     );
+  });
+});
+
+describe("legal", () => {
+  test("合法的 legal 原样保留", () => {
+    expect(defineConfig(valid).legal.companyName).toBe("Acme Inc.");
+  });
+
+  test("缺少 legal 时报错", () => {
+    expect(() =>
+      defineConfig({
+        ...valid,
+        legal: undefined,
+      } as unknown as SiteConfigInput),
+    ).toThrow("- legal: ");
+  });
+
+  test.each([
+    ["legal.companyName", { companyName: " " }],
+    ["legal.contactEmail", { contactEmail: "support" }],
+    ["legal.jurisdiction", { jurisdiction: "" }],
+    ["legal.effectiveDate", { effectiveDate: "31/01/2026" }],
+    ["legal.effectiveDate", { effectiveDate: "2026-02-30" }],
+  ])("非法字段 %s 出现在报错中", (path, patch) => {
+    expect(() =>
+      defineConfig({ ...valid, legal: { ...valid.legal!, ...patch } }),
+    ).toThrow(`- ${path}: `);
   });
 });
