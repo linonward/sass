@@ -1,10 +1,15 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
-import { emailOTP } from "better-auth/plugins";
+import { admin, emailOTP } from "better-auth/plugins";
 import { z } from "zod";
 
+import {
+  adminAccess,
+  shouldPromoteToAdmin,
+  withAdminRole,
+} from "@/core/admin/roles";
 import { db } from "@/core/db";
 import * as schema from "@/core/db/schema";
 import { sendEmail } from "@/core/email";
@@ -19,6 +24,8 @@ import { resolveRequestLocale } from "./locale";
 
 const otp = siteConfig.auth.emailOtp;
 const google = googleCredentials(process.env);
+// 首个管理员：用这些邮箱登录时自动获得 admin 角色（见 src/core/admin/roles.ts）。
+const adminEmails = siteConfig.features.admin ? (env.ADMIN_EMAILS ?? []) : [];
 
 export const auth = betterAuth({
   appName: siteConfig.name,
@@ -51,6 +58,23 @@ export const auth = betterAuth({
     },
   },
   databaseHooks: {
+    session: {
+      create: {
+        // 每次登录时检查是否要提升为 admin。session 已经建好，同一请求之后读到的就是新角色。
+        after: async (session, ctx) => {
+          if (adminEmails.length === 0 || !ctx) return;
+          const adapter = ctx.context.internalAdapter;
+          // internalAdapter 的类型不含插件字段；role 由 admin 插件添加。
+          const user = (await adapter.findUserById(session.userId)) as
+            (User & { role?: string | null }) | null;
+          if (user && shouldPromoteToAdmin(user, adminEmails)) {
+            await adapter.updateUser(user.id, {
+              role: withAdminRole(user.role),
+            });
+          }
+        },
+      },
+    },
     user: {
       create: {
         // 首次注册发欢迎邮件；发信失败不影响注册。
@@ -101,6 +125,12 @@ export const auth = betterAuth({
           });
         }
       },
+    }),
+    // 用户角色和封禁（后台 /admin 用）。插件一直启用，表结构不随 features.admin 变化；
+    // 被封禁的用户无法登录，封禁时已有的 session 全部失效。
+    admin({
+      ...adminAccess,
+      bannedUserMessage: "This account has been suspended.",
     }),
     // 必须放在最后：让 Server Action 里调用的 auth 接口也能写 cookie。
     nextCookies(),

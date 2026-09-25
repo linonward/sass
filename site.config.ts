@@ -11,13 +11,14 @@ export default defineConfig({
   locales: ["en"],
   defaultLocale: "en",
   features: {
-    // 演示站点开启积分、AI、博客和文件上传；积分按 billing.plans 的 credits 发放。
+    // 演示站点开启积分、AI、博客、文件上传和后台；积分按 billing.plans 的 credits 发放。
+    // 后台 /admin：用 ADMIN_EMAILS 里的邮箱登录即成为管理员。
     // 博客文章放在 content/blog/<locale>/<slug>.mdx，字段见 content-collections.ts。
     credits: true,
     ai: true,
     blog: true,
     upload: true,
-    admin: false,
+    admin: true,
     rateLimit: false,
   },
   nav: {
