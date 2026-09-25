@@ -34,7 +34,7 @@
 | T402                   | ai             | `feat/ai`             | T302, T401, T203 | done |
 | T403                   | upload         | `feat/upload`         | T401, T203       | done |
 | T404                   | ai-image       | `feat/ai-image`       | T402, T403       | done |
-| T405                   | ai-video       | `feat/ai-video`       | T404             | todo |
+| T405                   | ai-video       | `feat/ai-video`       | T404             | done |
 | **阶段 5：内容与运营** |                |                       |                  |      |
 | T501                   | blog           | `feat/blog`           | T104, T106       | done |
 | T502                   | admin          | `feat/admin`          | T203, T302, T303 | todo |

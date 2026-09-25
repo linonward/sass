@@ -19,6 +19,7 @@ export async function listGenerations(
       modelId: aiUsage.modelId,
       prompt: aiUsage.prompt,
       createdAt: aiUsage.createdAt,
+      fileId: files.id,
       key: files.key,
       mime: files.mime,
     })
@@ -38,6 +39,7 @@ export async function listGenerations(
     rows.map(async (row) => ({
       id: row.id,
       kind: row.kind as Generation["kind"],
+      fileId: row.fileId,
       modelId: row.modelId,
       prompt: row.prompt ?? "",
       url: await fileUrl(row.key),
@@ -45,4 +47,35 @@ export async function listGenerations(
       createdAt: row.createdAt.toISOString(),
     })),
   );
+}
+
+/** 用户还在生成中的视频（新的在前），前端据此继续轮询。 */
+export async function listPendingVideos(
+  db: Database,
+  userId: string,
+): Promise<
+  { id: string; modelId: string; prompt: string; createdAt: string }[]
+> {
+  const rows = await db
+    .select({
+      id: aiUsage.id,
+      modelId: aiUsage.modelId,
+      prompt: aiUsage.prompt,
+      createdAt: aiUsage.createdAt,
+    })
+    .from(aiUsage)
+    .where(
+      and(
+        eq(aiUsage.userId, userId),
+        eq(aiUsage.status, "pending"),
+        eq(aiUsage.kind, "video"),
+      ),
+    )
+    .orderBy(desc(aiUsage.createdAt))
+    .limit(GENERATIONS_LIMIT);
+  return rows.map((row) => ({
+    ...row,
+    prompt: row.prompt ?? "",
+    createdAt: row.createdAt.toISOString(),
+  }));
 }

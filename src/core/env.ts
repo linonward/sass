@@ -27,6 +27,7 @@ export const env = createAppEnv({
       providers: [
         ...siteConfig.ai.models.map((model) => model.provider),
         ...siteConfig.ai.imageModels.map((model) => model.provider),
+        ...siteConfig.ai.videoModels.map((model) => model.provider),
       ],
     }),
     ...rateLimitServerEnv(process.env, {

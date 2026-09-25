@@ -6,12 +6,16 @@ import {
   aiImageEnabled,
   aiImageModels,
   aiModels,
+  aiVideoEnabled,
+  aiVideoModels,
   defaultAiImageModel,
   defaultAiModel,
+  defaultAiVideoModel,
 } from "@/core/ai";
 import { ImageStudio } from "@/core/ai/image-studio";
 import { Playground } from "@/core/ai/playground";
 import { PlaygroundTabs } from "@/core/ai/playground-tabs";
+import { VideoStudio } from "@/core/ai/video-studio";
 import { buildMetadata } from "@/core/seo/metadata";
 
 export async function generateMetadata({
@@ -64,6 +68,19 @@ export default async function PlaygroundPage({
                     <ImageStudio
                       models={aiImageModels}
                       defaultModel={defaultAiImageModel!}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          ...(aiVideoEnabled
+            ? [
+                {
+                  id: "video" as const,
+                  content: (
+                    <VideoStudio
+                      models={aiVideoModels}
+                      defaultModel={defaultAiVideoModel!}
                     />
                   ),
                 },

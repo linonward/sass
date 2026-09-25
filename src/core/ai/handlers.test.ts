@@ -4,6 +4,8 @@ import { describe, expect, test, vi } from "vitest";
 import {
   handleGenerations,
   handleImage,
+  handleVideoStart,
+  handleVideoStatus,
   MAX_IMAGE_BODY_BYTES,
 } from "./handlers";
 import type { Generation, RunImageResult } from "./image";
@@ -11,6 +13,7 @@ import type { Generation, RunImageResult } from "./image";
 const generation: Generation = {
   id: "g1",
   kind: "image",
+  fileId: "f1",
   modelId: "img",
   prompt: "a boy",
   url: "https://files.test/k.png",
@@ -109,7 +112,10 @@ describe("handleGenerations", () => {
       getUserId: async () => "u1",
       listGenerations,
     });
-    expect(await response.json()).toEqual({ generations: [generation] });
+    expect(await response.json()).toEqual({
+      generations: [generation],
+      pendingVideos: [],
+    });
     expect(listGenerations).toHaveBeenCalledWith("u1");
   });
 
@@ -134,5 +140,82 @@ describe("handleGenerations", () => {
       ).status,
     ).toBe(401);
     expect(listGenerations).not.toHaveBeenCalled();
+  });
+});
+
+describe("video", () => {
+  const job = { id: "v1", status: "pending" as const };
+
+  test("提交：参数交给 startVideo，返回 202 和 job", async () => {
+    const startVideo = vi.fn(async () => ({ ok: true as const, job }));
+    const response = await handleVideoStart(
+      post(
+        JSON.stringify({
+          prompt: "p",
+          modelId: "i2v",
+          imageFileId: "f1",
+          aspectRatio: "16:9",
+        }),
+      ),
+      { enabled: true, getUserId: async () => "u1", startVideo },
+    );
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ job });
+    expect(startVideo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "u1",
+        ip: "1.2.3.4",
+        prompt: "p",
+        modelId: "i2v",
+        imageFileId: "f1",
+        aspectRatio: "16:9",
+      }),
+    );
+  });
+
+  test("查询：按 id 调 pollVideo", async () => {
+    const pollVideo = vi.fn(async () => ({ ok: true as const, job }));
+    const response = await handleVideoStatus(
+      new Request("http://localhost/api/ai/video/v1"),
+      "v1",
+      { enabled: true, getUserId: async () => "u1", pollVideo },
+    );
+    expect(await response.json()).toEqual({ job });
+    expect(pollVideo).toHaveBeenCalledWith({ userId: "u1", id: "v1" });
+  });
+
+  test("关闭时 404，未登录 401", async () => {
+    const startVideo = vi.fn();
+    const pollVideo = vi.fn();
+    const req = () => post(JSON.stringify({ prompt: "p" }));
+    expect(
+      (
+        await handleVideoStart(req(), {
+          enabled: false,
+          getUserId: async () => "u1",
+          startVideo,
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await handleVideoStart(req(), {
+          enabled: true,
+          getUserId: async () => null,
+          startVideo,
+        })
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await handleVideoStatus(req(), "v1", {
+          enabled: true,
+          getUserId: async () => null,
+          pollVideo,
+        })
+      ).status,
+    ).toBe(401);
+    expect(startVideo).not.toHaveBeenCalled();
+    expect(pollVideo).not.toHaveBeenCalled();
   });
 });

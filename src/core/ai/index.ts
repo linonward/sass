@@ -5,13 +5,22 @@ import { checkRateLimit } from "@/core/ratelimit";
 import { fileUrl, getUploadStorage, uploadEnabled } from "@/core/upload";
 
 import siteConfig from "../../../site.config";
-import { listGenerations as listGenerationsFor } from "./generations";
+import {
+  listGenerations as listGenerationsFor,
+  listPendingVideos as listPendingVideosFor,
+} from "./generations";
 import { createRunImage } from "./image";
-import { createImageModelResolver, createModelResolver } from "./registry";
+import {
+  createImageModelResolver,
+  createModelResolver,
+  createVideoClientResolver,
+} from "./registry";
+import { createVideoService } from "./video";
 import { createRunAI } from "./run";
 
 export { AI_CREDIT_SOURCE, type RunAIInput, type RunAIResult } from "./run";
 export { imageAspectRatios, type Generation } from "./image";
+export { videoAspectRatios, type VideoJob } from "./video";
 
 /** `features.ai` 是否开启。关闭时 AI 路由返回 404，侧边栏不显示 Playground。 */
 export const aiEnabled = siteConfig.features.ai;
@@ -70,4 +79,35 @@ export function listGenerations(userId: string) {
     { db: getDb(), fileUrl: storedFileUrl },
     { userId },
   );
+}
+
+/** 视频生成是否可用：开启 AI 和上传（结果存 R2），且配置了视频模型。 */
+export const aiVideoEnabled =
+  aiEnabled && uploadEnabled && siteConfig.ai.videoModels.length > 0;
+
+export const aiVideoModels = siteConfig.ai.videoModels.map(
+  ({ id, creditCost, input, duration }) => ({
+    id,
+    creditCost,
+    input,
+    duration,
+  }),
+);
+
+export const defaultAiVideoModel = siteConfig.ai.defaultVideoModel;
+
+/** 绑定全局数据库、积分、限流、R2 和 env 里的服务商 key 的视频服务。 */
+export const videoService = createVideoService({
+  db: getDb,
+  config: siteConfig.ai,
+  credits: { deductCredits, refundCredits },
+  checkRateLimit,
+  getClient: createVideoClientResolver(env),
+  getStorage: getUploadStorage,
+  fileUrl: storedFileUrl,
+});
+
+/** 当前用户还在生成中的视频。 */
+export function listPendingVideos(userId: string) {
+  return listPendingVideosFor(getDb(), userId);
 }
