@@ -42,6 +42,14 @@ export const navSchema = z.strictObject({
     .default([]),
 });
 
+// 法律页（content/legal/）中引用的主体信息。
+export const legalSchema = z.strictObject({
+  companyName: z.string().trim().min(1),
+  contactEmail: z.email(),
+  jurisdiction: z.string().trim().min(1),
+  effectiveDate: z.iso.date('must be a date such as "2026-01-31"'),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -72,6 +80,7 @@ export const siteConfigSchema = z
     defaultLocale: localeSchema,
     features: featuresSchema.default(featuresSchema.parse({})),
     nav: navSchema.default(navSchema.parse({})),
+    legal: legalSchema,
   })
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
@@ -83,6 +92,7 @@ export type SiteConfig = z.output<typeof siteConfigSchema>;
 export type Features = SiteConfig["features"];
 export type Feature = keyof Features;
 export type NavLink = z.output<typeof linkSchema>;
+export type LegalInfo = SiteConfig["legal"];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {

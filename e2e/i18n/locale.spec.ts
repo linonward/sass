@@ -58,3 +58,15 @@ test("非默认语言下的 404 页使用该语言文案", async ({ page }) => {
     page.getByRole("heading", { name: tr(messages.NotFound.title) }),
   ).toBeVisible();
 });
+
+test("非默认语言下法律页正文保持英文，外框本地化", async ({ page }) => {
+  const response = await page.goto(`/${TEST_LOCALE}/privacy`);
+  expect(response?.status()).toBe(200);
+  await expect(page.locator("article")).toHaveAttribute("lang", "en");
+  await expect(
+    page.getByRole("heading", { level: 1, name: messages.Nav.privacy }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: tr(messages.Nav.legal) }),
+  ).toBeVisible();
+});

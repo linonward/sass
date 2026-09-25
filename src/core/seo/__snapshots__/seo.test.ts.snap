@@ -40,5 +40,65 @@ exports[`sitemap > 营销路由 × 语言，带 hreflang 1`] = `
     },
     "url": "https://example.com/de",
   },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://example.com/de/privacy",
+        "en": "https://example.com/privacy",
+        "x-default": "https://example.com/privacy",
+      },
+    },
+    "url": "https://example.com/privacy",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://example.com/de/privacy",
+        "en": "https://example.com/privacy",
+        "x-default": "https://example.com/privacy",
+      },
+    },
+    "url": "https://example.com/de/privacy",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://example.com/de/terms",
+        "en": "https://example.com/terms",
+        "x-default": "https://example.com/terms",
+      },
+    },
+    "url": "https://example.com/terms",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://example.com/de/terms",
+        "en": "https://example.com/terms",
+        "x-default": "https://example.com/terms",
+      },
+    },
+    "url": "https://example.com/de/terms",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://example.com/de/refund",
+        "en": "https://example.com/refund",
+        "x-default": "https://example.com/refund",
+      },
+    },
+    "url": "https://example.com/refund",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://example.com/de/refund",
+        "en": "https://example.com/refund",
+        "x-default": "https://example.com/refund",
+      },
+    },
+    "url": "https://example.com/de/refund",
+  },
 ]
 `;
