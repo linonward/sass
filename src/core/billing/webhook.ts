@@ -1,4 +1,6 @@
 import type { Database } from "@/core/db";
+import { logger } from "@/core/observability/logger";
+import { recordSpanError, withSpan } from "@/core/observability/trace";
 
 import { handleBillingEvent } from "./handle-event";
 import { WebhookVerificationError, type PaymentProvider } from "./provider";
@@ -20,6 +22,9 @@ export async function processWebhook(
     payload = await provider.verifyWebhook(request);
   } catch (error) {
     if (error instanceof WebhookVerificationError) {
+      logger.warn("billing.webhook_invalid_signature", {
+        provider: provider.id,
+      });
       return Response.json({ error: "invalid_signature" }, { status: 401 });
     }
     throw error;
@@ -28,14 +33,30 @@ export async function processWebhook(
   const event = provider.parseEvent(payload);
   if (!event) return Response.json({ status: "ignored" });
 
-  try {
-    const result = await handleBillingEvent(event, options);
-    return Response.json(result);
-  } catch (error) {
-    console.error(
-      `[billing] failed to handle ${event.provider}/${event.eventId}`,
-      error,
-    );
-    return Response.json({ error: "processing_failed" }, { status: 500 });
-  }
+  const fields = {
+    provider: event.provider,
+    eventId: event.eventId,
+    eventType: event.type,
+  };
+  return withSpan(
+    "billing.webhook",
+    {
+      "billing.provider": event.provider,
+      "billing.event_id": event.eventId,
+      "billing.event_type": event.type,
+    },
+    async (span) => {
+      try {
+        const result = await handleBillingEvent(event, options);
+        // duplicate：同一事件重复推送，没有重复处理。
+        span.setAttribute("billing.result", result.status);
+        logger.info("billing.webhook", { ...fields, result: result.status });
+        return Response.json(result);
+      } catch (error) {
+        recordSpanError(span, error);
+        logger.error("billing.webhook_failed", { ...fields, error });
+        return Response.json({ error: "processing_failed" }, { status: 500 });
+      }
+    },
+  );
 }

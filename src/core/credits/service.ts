@@ -8,6 +8,8 @@ import {
   type CreditTransactionType,
 } from "@/core/db/schema";
 import { runAfterResponse } from "@/core/lib/after-response";
+import { logger } from "@/core/observability/logger";
+import { withSpan } from "@/core/observability/trace";
 
 import {
   CreditsDisabledError,
@@ -200,17 +202,45 @@ export function createCredits(options: {
     apply: (executor: Executor) => Promise<number>,
   ): Promise<WriteResult> {
     assertEnabled();
-    return (tx ?? getDb()).transaction(async (executor) => {
-      const result = await insertEntry(executor, entry);
-      if (result.existing) {
-        return {
-          status: "duplicate",
-          transaction: result.existing,
-          balance: await balanceOf(executor, result.existing.userId),
-        };
-      }
-      const balance = await apply(executor);
-      return { status: "applied", transaction: result.inserted, balance };
+    // 发放、扣减、退款、调整都经过这里：一个 span 加一条日志，记录金额、来源和结果。
+    const fields = {
+      userId: entry.userId,
+      type: entry.type,
+      amount: entry.amount,
+      source: entry.source,
+      sourceId: entry.sourceId,
+    };
+    const attributes = {
+      "credits.user_id": entry.userId,
+      "credits.amount": entry.amount,
+      "credits.source": entry.source,
+      "credits.source_id": entry.sourceId,
+    };
+    return withSpan(`credits.${entry.type}`, attributes, async (span) => {
+      const written: WriteResult = await (tx ?? getDb()).transaction(
+        async (executor) => {
+          const result = await insertEntry(executor, entry);
+          if (result.existing) {
+            return {
+              status: "duplicate",
+              transaction: result.existing,
+              balance: await balanceOf(executor, result.existing.userId),
+            };
+          }
+          const balance = await apply(executor);
+          return { status: "applied", transaction: result.inserted, balance };
+        },
+      );
+      span.setAttributes({
+        "credits.status": written.status,
+        "credits.balance": written.balance,
+      });
+      logger.info("credits.write", {
+        ...fields,
+        status: written.status,
+        balance: written.balance,
+      });
+      return written;
     });
   }
 
@@ -269,7 +299,7 @@ export function createCredits(options: {
           try {
             await fn();
           } catch (error) {
-            console.error("[credits] afterCommit callback failed", error);
+            logger.error("credits.after_commit_failed", error);
           }
         }
       });

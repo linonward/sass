@@ -11,6 +11,7 @@ import {
   type SubscriptionStatus,
 } from "@/core/db/schema";
 import { runAfterResponse } from "@/core/lib/after-response";
+import { logger } from "@/core/observability/logger";
 
 import type { BillingEvent } from "./events";
 import "./hooks";
@@ -83,9 +84,11 @@ function processInTransaction(
 
     const userId = await resolveUserId(tx, event);
     if (userId === null) {
-      console.warn(
-        `[billing] ignoring ${event.provider}/${event.eventId}: user no longer exists`,
-      );
+      logger.warn("billing.event_unknown_user", {
+        provider: event.provider,
+        eventId: event.eventId,
+        eventType: event.type,
+      });
       return { status: "ignored" as const, reason: "unknown_user" as const };
     }
 

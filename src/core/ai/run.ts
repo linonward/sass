@@ -10,6 +10,8 @@ import type { AiConfig, AiModel } from "@/core/config/schema";
 import type { Credits } from "@/core/credits";
 import type { Database } from "@/core/db/client";
 import type { AiUsageStatus } from "@/core/db/schema";
+import { logger, type LogFn } from "@/core/observability/logger";
+import { recordSpanError, startSpan } from "@/core/observability/trace";
 import type {
   RateLimitIdentifiers,
   RateLimitResult,
@@ -65,7 +67,7 @@ export type RunAIDeps = {
   // 按配置取模型；该服务商没有配置 key 时返回 null。
   getModel: (model: AiModel) => LanguageModel | null;
   now?: () => number;
-  logError?: (message: string, error: unknown) => void;
+  logError?: LogFn;
 };
 
 function fail(status: 400 | 401 | 402 | 503, error: string) {
@@ -89,7 +91,7 @@ export function createRunAI({
   checkRateLimit,
   getModel,
   now = Date.now,
-  logError = console.error,
+  logError = logger.error,
 }: RunAIDeps) {
   const usageDeps: UsageDeps = {
     db: () => (typeof db === "function" ? db() : db),
@@ -126,6 +128,13 @@ export function createRunAI({
     if (!usageId) return fail(402, "insufficient_credits");
 
     const startedAt = now();
+    // 流式调用在路由返回后才结束，span 手动开、在 finish 里结束。
+    const span = startSpan("ai.text", {
+      "ai.usage_id": usageId,
+      "ai.model_id": model.id,
+      "ai.provider": model.provider,
+      "ai.credits": model.creditCost,
+    });
     let settle!: (status: AiUsageStatus) => void;
     const settled = new Promise<AiUsageStatus>((resolve) => {
       settle = resolve;
@@ -139,6 +148,8 @@ export function createRunAI({
     ) {
       if (finished) return;
       finished = true;
+      span.setAttribute("ai.status", status);
+      if (status === "failed") recordSpanError(span, details.error);
       await settleUsage(usageDeps, {
         userId: userId!,
         usageId: usageId!,
@@ -149,6 +160,7 @@ export function createRunAI({
         outputTokens: details.usage?.outputTokens,
         error: details.error,
       });
+      span.end();
       settle(status);
     }
 
@@ -161,7 +173,11 @@ export function createRunAI({
         reasoning: options.reasoning ?? model.reasoning,
         abortSignal,
         onError: ({ error }) => {
-          logError(`[ai] model ${model.id} failed`, error);
+          logError("ai.model_failed", {
+            error,
+            kind: "text",
+            modelId: model.id,
+          });
           return finish("failed", { error });
         },
         onEnd: ({ totalUsage, finishReason }) =>

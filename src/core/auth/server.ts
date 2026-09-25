@@ -16,6 +16,7 @@ import { sendEmail } from "@/core/email";
 import { env } from "@/core/env";
 import { routing } from "@/core/i18n/routing";
 import { runAfterResponse } from "@/core/lib/after-response";
+import { logger } from "@/core/observability/logger";
 
 import siteConfig from "../../../site.config";
 import { cooldownIdentifier, otpResendCooldown } from "./cooldown";
@@ -92,7 +93,10 @@ export const auth = betterAuth({
                 locale,
               });
             } catch (error) {
-              console.error("[auth] failed to send welcome email", error);
+              logger.error("auth.welcome_email_failed", {
+                error,
+                userId: user.id,
+              });
             }
           });
         },
@@ -118,7 +122,7 @@ export const auth = betterAuth({
             locale: resolveRequestLocale(ctx?.headers ?? ctx?.request?.headers),
           });
         } catch (error) {
-          console.error("[auth] failed to send sign-in code", error);
+          logger.error("auth.sign_in_code_failed", error);
           // 没发出去就不计入冷却，让用户可以立即重试。
           await ctx?.context.internalAdapter
             .deleteVerificationByIdentifier(cooldownIdentifier(email))

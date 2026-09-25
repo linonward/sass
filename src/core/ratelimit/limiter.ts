@@ -1,4 +1,5 @@
 import type { RateLimitConfig } from "@/core/config/schema";
+import { logger, type LogFn } from "@/core/observability/logger";
 
 /** 调用方身份。每条策略分别按用户和按 IP 计数；缺少的一项不计数。 */
 export type RateLimitIdentifiers = {
@@ -32,8 +33,8 @@ export type RateLimiterDeps = {
     options: RateLimitConfig["policies"][string],
   ) => WindowLimiter | null;
   now?: () => number;
-  warn?: (message: string) => void;
-  logError?: (message: string, error: unknown) => void;
+  warn?: LogFn;
+  logError?: LogFn;
 };
 
 // closed 模式下 Redis 不可用时，建议客户端多久后重试。
@@ -49,8 +50,8 @@ export function createRateLimiter({
   config,
   createLimiter,
   now = Date.now,
-  warn = console.warn,
-  logError = console.error,
+  warn = logger.warn,
+  logError = logger.error,
 }: RateLimiterDeps) {
   const limiters = new Map<string, WindowLimiter | null>();
   let warned = false;
@@ -76,9 +77,9 @@ export function createRateLimiter({
     if (!limiter) {
       if (!warned) {
         warned = true;
-        warn(
-          "[ratelimit] UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set, rate limiting is disabled",
-        );
+        warn("ratelimit.disabled", {
+          reason: "UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set",
+        });
       }
       return { ok: true, retryAfter: 0 };
     }
@@ -105,7 +106,7 @@ export function createRateLimiter({
         retryAfter: Math.max(1, Math.ceil((reset - now()) / 1000)),
       };
     } catch (error) {
-      logError(`[ratelimit] check failed for policy "${policy}"`, error);
+      logError("ratelimit.check_failed", { error, policy });
       return config.failMode === "closed"
         ? {
             ok: false,

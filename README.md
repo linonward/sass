@@ -130,6 +130,12 @@ pnpm dev              # http://localhost:3000
   - 订单、订阅：可按状态筛选。
   - 指标（`/admin/metrics`，查询在 `src/core/admin/metrics.ts`）：最近 7 / 30 / 90 天（按 UTC 日期）的新注册、累计和被封禁用户；净收入（订单金额减去已退款，按币种）、付费用户、活跃订阅和 MRR（`active` 订阅按 `site.config.ts` 里的套餐原价折算，年付 ÷ 12）；积分发放、消耗、退款；AI 按类型和模型的调用次数与失败率（失败 ÷ 已结束的调用，进行中的不计）。没有付费套餐时不显示收入，关闭 `features.credits` / `features.ai` 时不显示对应区块。
   - 新增后台页面放在 `src/app/[locale]/(admin)/admin/` 下，页面开头调用 `await requireAdmin()`（`src/core/admin/session.ts`）；Server Action 里用 `getAdminSession()` 再校验一次。layout 和 page 并行渲染，只在 layout 里检查挡不住 page。
+- 可观测性（`src/core/observability/`，`features.observability`）：细项在 `site.config.ts` 的 `observability`（`logLevel`、`otel`；`sentry`、`analytics`、`speedInsights` 由后续任务实现）。
+  - 日志：`src/core` 里统一用 `logger.info/warn/error(event, fields)`，不直接 `console.error` / `console.warn`（ESLint 会报错）。事件名用 `模块.动作`，例如 `ai.usage`、`billing.webhook`。`logger.error("x.failed", error)` 或 `logger.error("x.failed", { error, userId })` 都可以。
+  - 开启后生产环境每条日志是一行 JSON（`level`、`event`、`time`、`traceId`、字段），可以在 Vercel Logs 里按 `event` 或 `traceId` 搜索；开发环境是易读格式。字段名是 `email`、`token`、`password`、`secret`、`apiKey`、`authorization`、`cookie`（或以它们结尾）时替换为 `[redacted]`，用户只记 ID。关闭时和以前一样，只输出 warn 和 error。
+  - 追踪：`observability.otel` 开启时 `src/instrumentation.ts` 用 `@vercel/otel` 注册 OpenTelemetry，服务名是 `site.config.ts` 的 `name`。AI 调用（`ai.text` / `ai.image` / `ai.video.*`）、billing webhook（`billing.webhook`）和积分写操作（`credits.<type>`）各有一个 span。业务代码用 `withSpan(name, attributes, fn)`（`src/core/observability/trace.ts`）加自己的 span。
+  - 未捕获的请求错误由 `onRequestError` 记一条 `request.error`（带路由和方法，不带 query）。
+  - `logger.setErrorReporter(fn)` 是错误上报的挂载点：`logger.error` 会同时调用它（Sentry 接入见 T602）。
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
 - 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。
@@ -193,6 +199,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `ALIBABA_API_KEY` | 开启 `features.ai` 时，Production 必须填上 `ai.models` 用到的每家服务商的 key（见下文"AI 服务商"）。Preview 不填时对应模型返回 503。 |
 | `ADMIN_EMAILS`                                                                              | 开启 `features.admin` 时 Production 必填：逗号分隔的邮箱，用这些邮箱登录即成为管理员（见"配置"里的后台）。Preview 可以不填。         |
 | `ALIBABA_BASE_URL`                                                                          | 可选。百炼 key 所在地域的地址，不填是国际站；北京地域填 `https://dashscope.aliyuncs.com/compatible-mode/v1`。                        |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                               | 可选。开启 `observability.otel` 且不用 Vercel 的 trace 集成时，trace 导出到这个 OTLP 地址（见下文"日志与追踪"）。                    |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -288,6 +295,13 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 4. 公开访问（`upload.public: true`）：bucket → Settings → Custom Domains 绑定一个子域名（例如 `files.<domain>`），填到 `R2_PUBLIC_URL`。不要用 `r2.dev` 地址上线，它有限速。私有文件（默认）不需要这一步。
 5. 开启 `features.upload` 后登录 Dashboard，用首页的上传示例传一个文件，检查 `files` 表里的状态变成 `uploaded`，并能打开文件链接。
+
+#### 日志与追踪（可选）
+
+1. `site.config.ts` 里开启 `features.observability`，按需把 `observability.logLevel` 调成 `debug`。部署后在 Vercel → Logs 里搜 `"event":"ai.usage"`、`"event":"billing.webhook"`，或者按某条日志的 `traceId` 找到同一个请求的所有日志。
+2. 需要 trace 时再开启 `observability.otel`：
+   - 在 Vercel 上：项目 → Observability 里开启 Tracing，或者在 Integrations 里接入 Datadog、Honeycomb 等 OTel 集成，不需要额外的变量。
+   - 其他后端：填 `OTEL_EXPORTER_OTLP_ENDPOINT`（需要鉴权时加 `OTEL_EXPORTER_OTLP_HEADERS`，例如 `x-honeycomb-team=<key>`）。两者都没有时不导出 trace，日志照常输出。
 
 ### 5. GitHub
 

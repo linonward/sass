@@ -99,7 +99,9 @@ describe("checkRateLimit", () => {
       expect((await checkRateLimit("ai", caller)).ok).toBe(true);
     }
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0][0]).toContain("UPSTASH_REDIS_REST_URL");
+    expect(JSON.stringify(warn.mock.calls[0])).toContain(
+      "UPSTASH_REDIS_REST_URL",
+    );
   });
 
   const failing: Record<string, WindowLimiter> = {

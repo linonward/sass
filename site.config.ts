@@ -20,6 +20,8 @@ export default defineConfig({
     upload: true,
     admin: true,
     rateLimit: false,
+    // 结构化日志和追踪，细项见下面的 observability。
+    observability: false,
   },
   nav: {
     header: [
@@ -157,6 +159,12 @@ export default defineConfig({
     // false：私有文件，只能通过有时效的签名地址访问；true：通过 R2_PUBLIC_URL 公开访问。
     // 演示站点用 R2 自定义域名公开访问（R2_PUBLIC_URL=https://s3.sass.linonward.com）。
     public: true,
+  },
+  // 可观测性（features.observability 开启时生效）。开启后生产环境日志是单行 JSON，带 traceId。
+  observability: {
+    logLevel: "info",
+    // OpenTelemetry 追踪：Vercel 上开启 Tracing 或 OTel 集成，其他环境填 OTEL_EXPORTER_OTLP_ENDPOINT。
+    otel: false,
   },
   // AI 模型（features.ai 开启时生效）。每次调用按 creditCost 预扣积分，失败退回。
   // env 里只配了某几家的 key 时，其他服务商的模型调用返回 503；生产环境会要求这里用到的每家 key。

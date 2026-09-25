@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { SIGN_IN_PATH } from "@/core/auth/routes";
 import { auth } from "@/core/auth/server";
 import { routing } from "@/core/i18n/routing";
+import { logger } from "@/core/observability/logger";
 import { localizedPath } from "@/core/seo/urls";
 
 import { deleteUserAccount } from "./delete-user";
@@ -89,7 +90,10 @@ export async function deleteAccount(
     if (error instanceof OnUserDeleteError) {
       return { status: "error", error: "hookFailed" };
     }
-    console.error("[account] failed to delete user", error);
+    logger.error("account.delete_failed", {
+      error,
+      userId: session.user.id,
+    });
     return { status: "error", error: "generic" };
   }
 
