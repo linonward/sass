@@ -7,6 +7,7 @@ import {
   enterCode,
   openUserMenu,
   requestCode,
+  stubGoogleOneTap,
   uniqueEmail,
   useRandomIp,
   withDatabase,
@@ -18,6 +19,8 @@ const { allowedAttempts, resendCooldown } = siteConfig.auth.emailOtp;
 
 test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
+  // 本地配了 Google 凭据时登录页会加载 GIS 脚本；本文件只关心验证码流程。
+  await stubGoogleOneTap(page);
 });
 
 test("验证码登录后进入 dashboard，首次注册收到欢迎邮件", async ({ page }) => {
@@ -37,16 +40,29 @@ test("验证码登录后进入 dashboard，首次注册收到欢迎邮件", asyn
   await expect(page).toHaveURL("/dashboard");
 });
 
-test("没有配置 Google 凭据时不显示 Google 按钮", async ({ page }) => {
+test("没有配置 Google 凭据时不显示 Google 按钮，也不加载 GIS 脚本", async ({
+  page,
+}) => {
   test.skip(
     Boolean(process.env.GOOGLE_CLIENT_ID),
     "本地配置了 Google 凭据时跳过",
   );
+
+  // One Tap 与按钮同源（都由 Google client ID 驱动）：没凭据时连脚本都不该加载，
+  // CSP 白名单也跟着不放宽（见 src/core/security/headers.test.ts）。
+  const googleRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("accounts.google.com")) {
+      googleRequests.push(request.url());
+    }
+  });
+
   await page.goto("/sign-in");
   await expect(page.getByLabel(t.signIn.emailLabel)).toBeVisible();
   await expect(page.getByRole("button", { name: t.signIn.google })).toHaveCount(
     0,
   );
+  expect(googleRequests).toEqual([]);
 });
 
 test(`验证码输错 ${allowedAttempts} 次后，正确的验证码也失效`, async ({

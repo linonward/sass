@@ -277,6 +277,7 @@
       "cooldown": "Please wait {seconds}s before requesting another code.",
       "sendFailed": "We couldn't send the email. Please try again later.",
       "sendFailedGoogle": "We couldn't send the email. Please try again later, or continue with Google.",
+      "googleFailed": "Google sign-in didn't finish. Try again, or use an email code instead.",
       "rateLimited": "Too many requests. Please wait a moment and try again.",
       "generic": "Something went wrong. Please try again.",
       "banned": "This account has been suspended. Contact support if you think this is a mistake."

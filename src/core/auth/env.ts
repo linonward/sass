@@ -75,3 +75,14 @@ export function googleCredentials(runtimeEnv: RuntimeEnv) {
     runtimeEnv;
   return clientId && clientSecret ? { clientId, clientSecret } : undefined;
 }
+
+/**
+ * Google 登录是否可用的**唯一**判断依据：登录页按钮、One Tap 提示和 CSP 白名单
+ * 三处都用它。分散判断会让预览部署出现「客户端弹了提示、服务端却禁用」的错配。
+ *
+ * 只返回 client ID：它本来就会随 GIS 脚本发到浏览器，而 CSP 是公开响应头，
+ * 不该让安全模块碰到 client secret。
+ */
+export function googleClientId(runtimeEnv: RuntimeEnv) {
+  return googleCredentials(runtimeEnv)?.clientId;
+}

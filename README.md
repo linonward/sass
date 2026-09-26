@@ -370,6 +370,8 @@ grep -rn "Suspense" src/ | wc -l       # 0
 | `NEXT_PUBLIC_SENTRY_DSN`                                                                    | 开启 `observability.sentry` 时必填（Production 和 Preview 都要）：Sentry 项目的 DSN（见下文"错误追踪（Sentry）"）。                  |
 | `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT`                                       | 可选。三项都填时构建会上传 source map，Sentry 里的堆栈显示源码位置；上传后从产物里删掉。                                             |
 
+> 少数变量在**构建期**读取：`next.config.ts` 的 `headers()` 用 `GOOGLE_CLIENT_ID` 和 `R2_PUBLIC_URL` 生成 CSP 白名单。Vercel 上构建和运行用同一套变量，不用管；自托管或 Docker 若只在运行时注入这两项，会出现「页面有按钮、脚本却被 CSP 静默拦掉」。
+
 ### 4. 按已开启的模块准备外部账号
 
 | 模块                                   | 外部服务                    | 什么时候需要             |
@@ -410,9 +412,11 @@ grep -rn "Suspense" src/ | wc -l       # 0
    - OAuth consent screen：填写应用名称、支持邮箱、`site.config.ts` 的域名和隐私政策 / 服务条款地址（`https://<domain>/privacy`、`/terms`），发布状态设为 In production。
    - Credentials → Create credentials → OAuth client ID，类型选 **Web application**。
      - Authorized JavaScript origins：`https://<domain>`、`http://localhost:3000`
+       - 这一项**必须登记**：登录页的 Google One Tap 提示会校验当前 origin，端口也要对得上（换了端口跑 e2e 就再加一条）。没登记的表现是**完全静默** —— 提示不弹、页面不报错，只有浏览器 console 里一条 `The given origin is not allowed for the given client ID`，开发环境下模板会额外打印 One Tap 放弃显示的原因。
+       - 它与下面的 redirect URIs 是**两个独立的清单**，各管一段流程，不要只填一个。
      - Authorized redirect URIs：`https://<domain>/api/auth/callback/google`、`http://localhost:3000/api/auth/callback/google`
 2. 把 Client ID 和 Client secret 填到 Vercel Production 的 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`；本地需要测试 Google 登录时填到 `.env.local`。
-3. 预览部署的地址每次都不同，无法登记为回调地址，所以预览只提供邮箱验证码登录。以后需要时可以接入 Better Auth 的 `oauth-proxy` 插件。
+3. 预览部署的地址每次都不同，既无法登记为回调地址，也无法登记为 JavaScript origin，所以预览只提供邮箱验证码登录。以后需要时可以接入 Better Auth 的 `oauth-proxy` 插件。
 4. 账户关联：同一邮箱先用验证码注册、再用 Google 登录，会进入同一个账户（`google` 是可信 provider）。
 
 #### 支付（Creem）

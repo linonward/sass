@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { safeCallbackURL } from "@/core/auth/callback-url";
-import { googleCredentials } from "@/core/auth/env";
+import { googleClientId } from "@/core/auth/env";
 import { AFTER_SIGN_IN_PATH } from "@/core/auth/routes";
 import { getSession } from "@/core/auth/session";
 import { SignInForm } from "@/core/auth/sign-in-form";
@@ -49,7 +49,8 @@ export default async function SignInPage({
       <p className="text-muted-foreground mt-2 mb-6 text-sm">{t("subtitle")}</p>
       <SignInForm
         callbackURL={target}
-        googleEnabled={Boolean(googleCredentials(process.env))}
+        // client ID 是公开值；没启用 Google 登录时为 null（本地没配凭据、Vercel 预览）。
+        googleClientId={googleClientId(process.env) ?? null}
         otp={{
           length: emailOtp.length,
           expiresIn: emailOtp.expiresIn,

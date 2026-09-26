@@ -32,6 +32,14 @@ function expectSecurityHeaders(response: APIResponse, path: string) {
   }
   // 响应头里不能有换行，否则整条 CSP 会失效。
   expect(csp, `${path} 的 CSP`).not.toMatch(/[\r\n]/);
+
+  // One Tap 的 iframe 白名单：这条只在 Google 登录启用（配了 client ID）时才下发，所以写成
+  // 「出现就必须带 'self'」。frame-src 一旦出现就取代 default-src 对 frame 的回落，漏掉
+  // 'self' 连本站同源 iframe 都会被拦 —— 下面「/admin 不能被 iframe 嵌套」那条用例正是靠
+  // 同源 iframe 真的被加载、再被 X-Frame-Options 拒绝，才等得到那条控制台消息。
+  const frameSrc = /(?:^|; )frame-src ([^;]+)/.exec(csp)?.[1];
+  if (frameSrc) expect(frameSrc, `${path} 的 frame-src`).toContain("'self'");
+
   return csp;
 }
 

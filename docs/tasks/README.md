@@ -78,6 +78,8 @@
 | T1002                      | playground-stream     | `fix/playground-stream`       | T901             | done |
 | T1003                      | playground-tabs       | `fix/playground-tabs`         | T901, T1002      | done |
 | T1004                      | serial-queries        | `fix/serial-queries`          | T901             | done |
+| **阶段 11：登录体验**      |                       |                               |                  |      |
+| T1101                      | one-tap               | `feat/one-tap`                | T203             | done |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
@@ -86,6 +88,8 @@
 阶段 10 分三批（见 [phase-10-render.md](phase-10-render.md)）：批次 A（T1001）单条收益最大且完全独立，批次 B（T1002–T1003）都落在 playground 区域建议顺序做，批次 C（T1004）随时可做。
 
 阶段 9 与阶段 10 由 T901 一并落卡 —— 两轮审查（Vercel 70 条规则、错误路径）是同一次做的，所以共用一个规划任务，阶段 10 不再单设。
+
+阶段 11 只有一个任务（见 [phase-11-one-tap.md](phase-11-one-tap.md)）：登录页加 Google One Tap。它不改登录能力本身，只把「跳去 Google 再跳回来」压缩成「点一下头像」；没配 Google 凭据时行为与现在完全一致。
 
 阶段 7 分两个语域做：T605 是**营销面 + 设计基础**，T606 是**登录后产品面 + 后台**，T607 收尾剩下的营销侧细节页（blog 列表卡片与文章页、legal、404）和那几处还没换成 `--primary-text` 的链接。（2026-09-26 错误路径审计给 T607 补了两条：错误页 CTA 用错语域、h1 未用 display 字体。）
 
@@ -129,6 +133,8 @@
 阶段 10  T901 → T1001（批次 A：包体积）
          T901 → T1002 → T1003（批次 B：playground，同一个文件建议顺序做）
          T901 → T1004（批次 C：串行查询）
+
+阶段 11  T203 → T1101
 ```
 
 ## 推荐顺序
@@ -151,3 +157,4 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 - [阶段 8：商品化](phase-8-sell.md)
 - [阶段 9：错误路径与边界](phase-9-boundaries.md)
 - [阶段 10：渲染与包体积](phase-10-render.md)
+- [阶段 11：登录体验](phase-11-one-tap.md)

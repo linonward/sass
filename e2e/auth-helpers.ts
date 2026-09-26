@@ -22,6 +22,29 @@ export async function useRandomIp(page: Page) {
   await page.context().setExtraHTTPHeaders({ "x-forwarded-for": ip });
 }
 
+/**
+ * 把 GIS 脚本换成「浏览器上没有 Google 会话」的假实现。
+ *
+ * 本地 `.env.local` 配了 Google 凭据时，登录页会真的去加载 `accounts.google.com` 的脚本
+ * 并尝试弹 One Tap 提示。验证码相关的用例不关心它，stub 掉才能确定、且不依赖 Google 的
+ * 可用性。真实的接线由 `e2e/sign-in-one-tap.spec.ts` 覆盖。
+ */
+export async function stubGoogleOneTap(page: Page) {
+  await page.route("https://accounts.google.com/gsi/client*", (route) =>
+    route.fulfill({
+      // 必须是 JS 的 MIME：Playwright 默认 text/plain，会被 nosniff 挡下。
+      contentType: "application/javascript",
+      body: `window.google = { accounts: { id: {
+        initialize() {},
+        prompt(notify) {
+          // 告诉插件提示没显示出来，让它收尾 —— 插件内部的并发标志只在收到通知时才复位。
+          notify?.({ isNotDisplayed: () => true, getNotDisplayedReason: () => "opt_out_or_no_session" });
+        },
+      } } };`,
+    }),
+  );
+}
+
 type Copy = typeof messages;
 
 /** 在登录页提交邮箱，并从 `.tmp/emails/` 取回验证码。 */
