@@ -8,7 +8,7 @@
 
 - **批次 A（上架阻塞）**：T802–T808。不完成不能上架。
 - **批次 B（上架前建议）**：T809–T813、T817。买家体验 / 评审会点名。T817 是 2026-09-26 验证依赖升级时顺手实测到的（买家第一次 `pnpm typecheck` 会撞），不在原始审查清单里。
-- **批次 C（可后做）**：T814–T816。其中 T816 是唯一的「卖点」项，不是审查发现的。
+- **批次 C（可后做）**：T814–T816、T818。其中 T816 是「卖点」项、T818 是 T808 那张 dependabot 配置的补丁，都不是审查发现的。
 
 批次内任务无相互依赖，可并行开 worktree。
 
@@ -410,3 +410,25 @@ Error: Invalid environment variables:
 - [ ] 需要登录的路径以纯文字列出，不是链接
 
 **测试**：`src/core/seo/llms.test.ts`（排版）+ `e2e/seo.spec.ts` 加一条
+
+---
+
+## T818 dep-ignore-types-node
+
+- 分支 / worktree：`chore/dep-ignore-types-node` → `../sass-dep-ignore-types-node`
+- 依赖：T801（改的是 T808 建的 `.github/dependabot.yml`）
+- 来源：dependabot 开了 #66（`@types/node` 24 → 26），评估后关掉 —— 不能让类型跑到运行时前面
+
+**做**
+
+- `dependabot.yml` 的 npm 条目加一条 `ignore`：`@types/node` 的大版本不再自动开 PR，并写明原因（运行时 Node 钉在 `engines` / `.nvmrc`，dependabot 看不见这层耦合，会照 DefinitelyTyped 的节奏提议升到 26；升了以后 TS 放行 Node 26 才有的 API，线上跑 24 只在运行时炸）
+- 运行时升级（`engines` + `.nvmrc` + CI + Vercel 一起改）时手动抬这个类型版本
+
+**不做**：其他 `@types/*` 不动 —— pg / ws / react 的运行时本身就是依赖，两边会一起被提议，不需要额外规则
+
+**验收**
+
+- [ ] `dependabot.yml` 能解析，`ignore` 落在 npm 条目下（不是掉进 github-actions 那条）
+- [ ] 下个周期不再出现 `@types/node` 的大版本 PR
+
+**测试**：配置文件没有自动化测试，用 YAML 解析器核对结构
