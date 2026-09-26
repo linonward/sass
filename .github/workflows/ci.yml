@@ -35,6 +35,12 @@ jobs:
       ALLOW_NON_RESEND_EMAIL: "1"
       # 仅供 CI 使用的固定值；生产环境在 Vercel 上单独设置。
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production
+      # 站点身份：出厂是占位值，生产构建会被占位哨兵拦下（src/core/config/sentinels.ts），
+      # CI 用一组明显的假值放行；生产环境在 Vercel 上设置真实值。
+      SITE_NAME: CI Site
+      SITE_DOMAIN: ci.example.test
+      SITE_LEGAL_NAME: CI Legal Entity
+      SITE_EMAIL_FROM: noreply@ci.example.test
       # e2e 用站内的 fake 支付服务商模拟结账和 webhook（Vercel 上会被 env 校验拒绝）。
       BILLING_PROVIDER: fake
       # site.config.ts 的付费套餐出厂是占位产品 ID，结账会被 plan_not_configured 挡下；
