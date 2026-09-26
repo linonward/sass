@@ -192,6 +192,11 @@ pnpm dev              # http://localhost:3000
   - 错误追踪：`observability.sentry` 开启时接入 Sentry（`@sentry/nextjs`）。服务端抛错（`onRequestError`）、浏览器抛错（`error.tsx` / `global-error.tsx` 和全局未捕获错误）、`logger.error` 都会上报，事件名在 tag `event` 里，其余字段（已脱敏）在 extra 里。登录用户只带 ID；cookie、IP、query、请求体、AI 输入输出、数据库参数和堆栈局部变量都不收集（`src/core/observability/sentry.ts`）。关闭时 Sentry SDK 不会打进构建产物。
   - 流量与性能：`observability.analytics` 开启时根布局挂 Vercel Analytics（页面浏览，不用 cookie），`observability.speedInsights` 开启时挂 Speed Insights（Web Vitals）。关闭时页面不加载任何分析脚本。
   - 转化事件（`src/core/observability/events.ts`）：`sign_up`（服务端，新用户创建后）、`checkout_started`（客户端，跳转到支付页之前，带 `plan`）、`purchase`（服务端，billing 的 `checkout.completed` 提交后，带 `plan`；续费不算）。只带套餐 ID，不带邮箱或支付信息。业务在浏览器里用 `track(name, props)`（`src/core/observability/track.ts`），在服务端用 `trackServer(name, props)`（`track-server.ts`）；开关关闭时都是空操作，服务端发送失败只记 warn。
+- 安全响应头（`src/core/security/headers.ts`，由 `next.config.ts` 的 `headers()` 覆盖所有路径，含 `/api`、`/_next` 和带扩展名的静态文件）：`X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`、`X-Frame-Options: DENY`、`Permissions-Policy` 和 CSP。CSP 用**静态策略**（不带 nonce）：nonce 每个请求都不同，而 Next 只在动态渲染时才把它写进行内脚本，所以开 nonce 等于全站放弃静态预渲染和 CDN 缓存；代价是 `script-src` 必须留 `'unsafe-inline'`。取舍和理由写在文件头部注释里。
+  - 加第三方脚本、图片域或接口域时，把域名加进同一个文件的对应指令，**漏一项就是对应资源被浏览器直接拦掉**（被拦的资源常常只是静默失败）。当前白名单：Vercel Analytics / Speed Insights 的脚本域、R2 的接口域和 `R2_PUBLIC_URL`；Sentry 的 `/monitoring` 转发是本站在 `connect-src` 里的 `'self'`，改掉 `tunnelRoute` 就要补 Sentry 的 ingest 域。内嵌第三方 iframe（视频、验证码、支付组件）要加 `frame-src`（现在没有这一项，回落到 `default-src 'self'`，即只能嵌自己的页面）。
+  - HSTS 不在模板里下发（域名定下来之前开会被浏览器记住），开启方法在上线清单第 2 步。
+  - `frame-ancestors 'none'` 是整站的：页面不能被任何站点嵌套，**包括本站自己**。要嵌自己的页面就得放宽这一条。
+  - 生产还下发 `upgrade-insecure-requests`：所有 http 子资源会被浏览器顶成 https。Vercel 和本地开发都不受影响（开发环境不下发，`http://localhost` 属于可信来源），但如果要部署在只有 http 的环境，这条会把资源顶掉 —— 那种环境本来也不该跑生产。
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
 - `/llms.txt`：给 AI agent 和答案引擎的站点索引（约定见 [llmstxt.org](https://llmstxt.org)）。内容全部从 `site.config.ts`、`messages/*.json` 和博客文章生成，改配置就会跟着变；公开页面、套餐价格、博客、法律页、sitemap/robots/RSS，以及需要登录的路径各一节。排版在 `src/core/seo/llms.ts`（可单测），内容组装在 `src/app/llms.txt/route.ts`。多语言站点只出一份，固定用默认语言的 URL。
@@ -309,6 +314,7 @@ grep -rn "Suspense" src/ | wc -l       # 0
   - 如果域名已被其他 Vercel 账号使用过，还要按提示添加 `_vercel` 的 `TXT` 验证记录
 - 使用 Cloudflare 时，这些记录要设为 **DNS only**（灰色云朵）。开启代理会干扰 Vercel 签发证书。
 - 验证通过后，Vercel 会自动签发 HTTPS 证书。用浏览器访问 `https://<domain>`，确认证书有效、`/sitemap.xml` 和 `/robots.txt` 能打开。
+- 域名确定之后开启 HSTS：在 `src/core/security/headers.ts` 的 `staticSecurityHeaders()` 里加一条 `{ key: "Strict-Transport-Security", value: "max-age=63072000" }`（所有子域名都走 HTTPS 的话可以再加 `; includeSubDomains`）。模板默认不下发这个头：HSTS 会被浏览器按域名记住，域名没定就下发等于把自己锁住。要提交 `preload` 列表的话先确认满足它的条件 —— 进了浏览器内置列表之后撤销很慢。
 
 ### 3. 环境变量
 
