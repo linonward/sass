@@ -26,6 +26,28 @@ const notFound = () => Response.json({ error: "not_found" }, { status: 404 });
 const unauthorized = () =>
   Response.json({ error: "unauthorized" }, { status: 401 });
 
+/**
+ * 三个上传接口共用的前置检查：开关 → 登录 → `upload` 限流。
+ * 三个都要限：预签名能换上传地址，确认和跳转各自也会打到 R2（HeadObject / 签名 GET），
+ * 只限其中一个等于把另外两个留成免费代理。
+ */
+async function authorize(
+  request: Request,
+  context: UploadRouteContext,
+): Promise<{ userId: string } | { response: Response }> {
+  if (!context.enabled) return { response: notFound() };
+  const userId = await context.getUserId(request);
+  if (!userId) return { response: unauthorized() };
+
+  const limited = await context.checkRateLimit("upload", {
+    userId,
+    ip: getClientIp(request.headers),
+  });
+  if (!limited.ok) return { response: rateLimitResponse(limited) };
+
+  return { userId };
+}
+
 async function readJson(request: Request) {
   const body: unknown = await request.json().catch(() => null);
   return body && typeof body === "object"
@@ -41,19 +63,12 @@ export async function handlePresign(
   request: Request,
   context: UploadRouteContext,
 ) {
-  if (!context.enabled) return notFound();
-  const userId = await context.getUserId(request);
-  if (!userId) return unauthorized();
-
-  const limited = await context.checkRateLimit("upload", {
-    userId,
-    ip: getClientIp(request.headers),
-  });
-  if (!limited.ok) return rateLimitResponse(limited);
+  const auth = await authorize(request, context);
+  if ("response" in auth) return auth.response;
 
   const body = await readJson(request);
   const result = await presignUpload(context.deps(), {
-    userId,
+    userId: auth.userId,
     mime: body.mime,
     size: body.size,
   });
@@ -69,13 +84,12 @@ export async function handleComplete(
   request: Request,
   context: UploadRouteContext,
 ) {
-  if (!context.enabled) return notFound();
-  const userId = await context.getUserId(request);
-  if (!userId) return unauthorized();
+  const auth = await authorize(request, context);
+  if ("response" in auth) return auth.response;
 
   const body = await readJson(request);
   const result = await completeUpload(context.deps(), {
-    userId,
+    userId: auth.userId,
     fileId: body.fileId,
   });
   return result.ok
@@ -89,11 +103,13 @@ export async function handleFileRedirect(
   fileId: string,
   context: UploadRouteContext,
 ) {
-  if (!context.enabled) return notFound();
-  const userId = await context.getUserId(request);
-  if (!userId) return unauthorized();
+  const auth = await authorize(request, context);
+  if ("response" in auth) return auth.response;
 
-  const url = await getFileUrl(context.deps(), { userId, fileId });
+  const url = await getFileUrl(context.deps(), {
+    userId: auth.userId,
+    fileId,
+  });
   if (!url) return notFound();
   return new Response(null, {
     status: 302,

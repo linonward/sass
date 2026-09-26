@@ -10,7 +10,7 @@ export type SentryApi = Pick<
 >;
 
 // 存在 globalThis：instrumentation 和各路由的 bundle 不一定共享模块实例（同 Sentry 自己的做法）。
-const KEY = Symbol.for("sass.observability.sentry");
+const KEY = Symbol.for("app.observability.sentry");
 type Holder = {
   [KEY]?: { api?: SentryApi; pendingUserId?: string | null };
 };
