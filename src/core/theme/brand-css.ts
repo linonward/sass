@@ -323,7 +323,8 @@ export function brandCss(brand: SiteConfig["brand"]): string {
   };
 
   return [
-    `html:root,html.dark{--primary:${primary};--primary-foreground:${d.foreground};--ring:${primary};--sidebar-primary:${primary};--sidebar-primary-foreground:${d.foreground};}`,
+    // --chart-1 跟着品牌走：图表第一档就是品牌色本身，后四档是固定的语义色。
+    `html:root,html.dark{--primary:${primary};--primary-foreground:${d.foreground};--ring:${primary};--chart-1:${primary};--sidebar-primary:${primary};--sidebar-primary-foreground:${d.foreground};}`,
     `html:root{${declare(light)}}`,
     `html:root.dark{${declare(dark)}}`,
   ].join("");

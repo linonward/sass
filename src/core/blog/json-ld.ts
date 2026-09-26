@@ -1,3 +1,4 @@
+import { DEFAULT_LOGO_PATH } from "@/core/config/logo";
 import { absoluteUrl, siteUrl } from "@/core/seo/urls";
 
 import siteConfig from "../../../site.config";
@@ -10,7 +11,10 @@ export function postJsonLd(post: Post, locale: string) {
     "@type": "Organization",
     name: siteConfig.name,
     url: siteUrl,
-    logo: new URL(siteConfig.brand.logo, siteUrl).toString(),
+    logo: new URL(
+      siteConfig.brand.logo ?? DEFAULT_LOGO_PATH,
+      siteUrl,
+    ).toString(),
   };
 
   return {

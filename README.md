@@ -86,13 +86,14 @@ pnpm dev                 # http://localhost:3000
 ### 3. 改成自己的站点
 
 - `site.config.ts`（写错时 `dev` / `build` 直接报出字段名）。出厂值都是占位的（`domain` 是 `example.com`，付费套餐的产品 ID 是 `prod_placeholder_*`），换成自己的值就行，测试不用跟着改：
-  - `name`、`domain`（不带协议，比如 `acme.com`）、`description`、`brand`（主色、logo）
+  - `name`、`domain`（不带协议，比如 `acme.com`）、`description`
+  - `brand.primaryColor`：**一个 hex 推导整站配色** —— 按钮、色带、链接文字、顶栏的内置 logo 标记、图表第一档都跟着它变，不用改任何 SVG 文件。想用自己的 logo：把文件放进 `public/`，再在 `brand` 里加 `logo: "/your-logo.svg"`（顶栏、侧边栏和结构化数据都会用它）；不配就一直是内置标记。
   - `features`：用不到的模块关掉，对应的环境变量就不再要求
   - `legal`：公司或个人名称、联系邮箱、适用法域、生效日期
   - `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分。`providerProductId` 还是占位值时该套餐不能结账（接口返回 `plan_not_configured`），在 Creem 建好产品后替换成真实 ID
   - `email`：发件人名称和地址（域名要在 Resend 验证）
   - `ai.models`：开启 AI 时的模型和每次调用的积分成本
-- `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`public/`：logo、Hero 图。
+- `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`public/`：你自己的 logo 图与 Hero 图（Hero 图要配 `landing.hero.image` 才用得上）。
 - 示例业务模块 `src/features/example/`（一个扣积分的宣传语生成器）演示了业务代码怎么调用 `runAI`、`deductCredits`，以及怎么在 `dashboard.nav` 里加菜单。看完后删掉：`src/features/example/`、`src/app/[locale]/(app)/example/`、`e2e/example.spec.ts`，以及 `site.config.ts` 里 `dashboard.nav` 的那一项。
 - 改完运行 `pnpm test` 和 `pnpm build` 确认没漏改。测试直接读 `site.config.ts` 和 `messages/*.json`，改域名、主色和文案都不用 `-u` 更新快照。
 

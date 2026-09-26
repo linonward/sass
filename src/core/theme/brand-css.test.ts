@@ -145,6 +145,8 @@ describe("brandCss", () => {
     expect(css).toContain("--primary:#4f46e5;");
     expect(css).toContain(`--primary-foreground:${PAPER};`);
     expect(css).toContain("--ring:#4f46e5;");
+    // 图表第一档跟着品牌色，不是写死的靛蓝。
+    expect(css).toContain("--chart-1:#4f46e5;");
   });
 
   test("亮暗两套用不同特异性，不靠源码顺序决胜", () => {

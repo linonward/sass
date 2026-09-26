@@ -1,3 +1,5 @@
+import { DEFAULT_LOGO_PATH } from "@/core/config/logo";
+
 import siteConfig from "../../../site.config";
 import { absoluteUrl, siteUrl } from "./urls";
 
@@ -16,7 +18,10 @@ export function siteJsonLd(locale: string) {
       "@type": "Organization",
       name: siteConfig.name,
       url: siteUrl,
-      logo: new URL(siteConfig.brand.logo, siteUrl).toString(),
+      logo: new URL(
+        siteConfig.brand.logo ?? DEFAULT_LOGO_PATH,
+        siteUrl,
+      ).toString(),
     },
     {
       "@context": "https://schema.org",
