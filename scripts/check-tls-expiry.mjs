@@ -61,20 +61,22 @@ async function hostsFromConfig() {
   if (overridden.length > 0) return overridden;
   const configUrl = new URL("../site.config.ts", import.meta.url);
   const source = await readFile(configUrl, "utf8");
-  const match = source.match(
-    /^\s*domain:\s*(?:process\.env\.SITE_DOMAIN\s*\?\?\s*)?["']([^"']+)["']/m,
-  );
-  if (!match) {
+  // 出厂写法是「envOverride("SITE_DOMAIN") ?? 占位字面量」，也要认买家手写的 domain: "自己的域名"。
+  const domain =
+    source.match(
+      /^\s*domain:\s*(?:envOverride\(\s*["']SITE_DOMAIN["']\s*\)|process\.env\.SITE_DOMAIN)\s*\?\?\s*["']([^"']+)["']/m,
+    )?.[1] ?? source.match(/^\s*domain:\s*["']([^"']+)["']/m)?.[1];
+  if (!domain) {
     throw new Error(
       "在 site.config.ts 里找不到 domain，请用 --hosts、SSL_CHECK_HOSTS 或 SITE_DOMAIN 指定要检查的主机",
     );
   }
-  if (PLACEHOLDER_DOMAIN.test(match[1])) {
+  if (PLACEHOLDER_DOMAIN.test(domain)) {
     throw new Error(
-      `site.config.ts 里的 domain 还是占位值（${match[1]}）。改成自己的域名，或用 SITE_DOMAIN / --hosts / SSL_CHECK_HOSTS 指定要检查的主机`,
+      `site.config.ts 里的 domain 还是占位值（${domain}）。改成自己的域名，或用 SITE_DOMAIN / --hosts / SSL_CHECK_HOSTS 指定要检查的主机`,
     );
   }
-  return [match[1]];
+  return [domain];
 }
 
 /** 连上去读证书，拿到的是 notAfter（形如 "Dec 24 07:59:16 2026 GMT"）。 */
