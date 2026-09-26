@@ -146,6 +146,10 @@ export function UserMenu({
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              // render 出来的是原生 <button>：不声明 nativeButton 的话 Base UI 会按
+              // 非原生元素给它挂 role 之类的属性，dev 控制台每次开菜单都报一条错。
+              // role="menuitem" 来自另一处，不受这个开关影响。
+              nativeButton
               render={<button type="submit" form={formId} className="w-full" />}
             >
               <LogOutIcon />
