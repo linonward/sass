@@ -2,6 +2,7 @@ import { isSpanContextValid, trace } from "@opentelemetry/api";
 
 // 会被 instrumentation.ts 加载（Node 和 Edge 两种 runtime），这里只用两边都有的 API。
 import siteConfig from "../../../site.config";
+import { reportToSentry } from "./sentry";
 
 export const logLevels = ["debug", "info", "warn", "error"] as const;
 export type LogLevel = (typeof logLevels)[number];
@@ -196,3 +197,6 @@ export function loggerOptionsFromConfig(
 
 /** src/core 统一使用的日志实例。 */
 export const logger = createLogger(loggerOptionsFromConfig(siteConfig));
+
+// logger.error 同时上报 Sentry。没开 Sentry 时没有注册 SDK，这里什么也不做。
+logger.setErrorReporter(reportToSentry);

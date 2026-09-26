@@ -340,8 +340,10 @@ export const observabilityConfigSchema = z.strictObject({
   logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
   // OpenTelemetry 追踪（@vercel/otel）。
   otel: z.boolean().default(false),
-  // Sentry 错误上报（T602）。
+  // Sentry 错误上报，需要 NEXT_PUBLIC_SENTRY_DSN。
   sentry: z.boolean().default(false),
+  // Sentry 性能追踪的采样率（0–1）。同时开了 otel 时追踪交给 OTel，这一项不生效。
+  sentryTracesSampleRate: z.number().min(0).max(1).default(0.1),
   // Vercel Analytics（T603）。
   analytics: z.boolean().default(false),
   // Vercel Speed Insights（T603）。

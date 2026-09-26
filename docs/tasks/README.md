@@ -41,7 +41,7 @@
 | T503                   | starter-guide  | `docs/starter-guide`  | 阶段 1–5 全部    | in-review |
 | **阶段 6：可观测性**   |                |                       |                  |           |
 | T601                   | logger         | `feat/logger`         | 阶段 1–5         | done      |
-| T602                   | sentry         | `feat/sentry`         | T601             | todo      |
+| T602                   | sentry         | `feat/sentry`         | T601             | done      |
 | T603                   | web-analytics  | `feat/web-analytics`  | T601             | done      |
 | T604                   | admin-metrics  | `feat/admin-metrics`  | T502             | done      |
 

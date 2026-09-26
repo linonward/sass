@@ -27,6 +27,7 @@ function config(
       logLevel: "info" as const,
       otel: false,
       sentry: false,
+      sentryTracesSampleRate: 0.1,
       analytics: flags.analytics ?? false,
       speedInsights: flags.speedInsights ?? false,
     },

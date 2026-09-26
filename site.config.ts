@@ -165,6 +165,9 @@ export default defineConfig({
     logLevel: "info",
     // OpenTelemetry 追踪：Vercel 上开启 Tracing 或 OTel 集成，其他环境填 OTEL_EXPORTER_OTLP_ENDPOINT。
     otel: false,
+    // Sentry 错误上报：开启后填 NEXT_PUBLIC_SENTRY_DSN；再填 SENTRY_AUTH_TOKEN / SENTRY_ORG /
+    // SENTRY_PROJECT 会在构建时上传 source map。只发用户 ID，不发邮箱和 IP。
+    sentry: false,
     // Vercel Analytics（页面浏览和转化事件）与 Speed Insights，都要先在 Vercel 项目里开启。
     // 自定义事件（sign_up、checkout_started、purchase）需要 Pro 计划，Hobby 只有页面浏览。
     analytics: false,

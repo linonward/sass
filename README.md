@@ -130,12 +130,13 @@ pnpm dev              # http://localhost:3000
   - 订单、订阅：可按状态筛选。
   - 指标（`/admin/metrics`，查询在 `src/core/admin/metrics.ts`）：最近 7 / 30 / 90 天（按 UTC 日期）的新注册、累计和被封禁用户；净收入（订单金额减去已退款，按币种）、付费用户、活跃订阅和 MRR（`active` 订阅按 `site.config.ts` 里的套餐原价折算，年付 ÷ 12）；积分发放、消耗、退款；AI 按类型和模型的调用次数与失败率（失败 ÷ 已结束的调用，进行中的不计）。没有付费套餐时不显示收入，关闭 `features.credits` / `features.ai` 时不显示对应区块。
   - 新增后台页面放在 `src/app/[locale]/(admin)/admin/` 下，页面开头调用 `await requireAdmin()`（`src/core/admin/session.ts`）；Server Action 里用 `getAdminSession()` 再校验一次。layout 和 page 并行渲染，只在 layout 里检查挡不住 page。
-- 可观测性（`src/core/observability/`，`features.observability`）：细项在 `site.config.ts` 的 `observability`（`logLevel`、`otel`、`analytics`、`speedInsights`；`sentry` 由后续任务实现）。
+- 可观测性（`src/core/observability/`，`features.observability`）：细项在 `site.config.ts` 的 `observability`（`logLevel`、`otel`、`sentry`、`sentryTracesSampleRate`、`analytics`、`speedInsights`）。
   - 日志：`src/core` 里统一用 `logger.info/warn/error(event, fields)`，不直接 `console.error` / `console.warn`（ESLint 会报错）。事件名用 `模块.动作`，例如 `ai.usage`、`billing.webhook`。`logger.error("x.failed", error)` 或 `logger.error("x.failed", { error, userId })` 都可以。
   - 开启后生产环境每条日志是一行 JSON（`level`、`event`、`time`、`traceId`、字段），可以在 Vercel Logs 里按 `event` 或 `traceId` 搜索；开发环境是易读格式。字段名是 `email`、`token`、`password`、`secret`、`apiKey`、`authorization`、`cookie`（或以它们结尾）时替换为 `[redacted]`，用户只记 ID。关闭时和以前一样，只输出 warn 和 error。
   - 追踪：`observability.otel` 开启时 `src/instrumentation.ts` 用 `@vercel/otel` 注册 OpenTelemetry，服务名是 `site.config.ts` 的 `name`。AI 调用（`ai.text` / `ai.image` / `ai.video.*`）、billing webhook（`billing.webhook`）和积分写操作（`credits.<type>`）各有一个 span。业务代码用 `withSpan(name, attributes, fn)`（`src/core/observability/trace.ts`）加自己的 span。
   - 未捕获的请求错误由 `onRequestError` 记一条 `request.error`（带路由和方法，不带 query）。
-  - `logger.setErrorReporter(fn)` 是错误上报的挂载点：`logger.error` 会同时调用它（Sentry 接入见 T602）。
+  - `logger.setErrorReporter(fn)` 是错误上报的挂载点：`logger.error` 会同时调用它。
+  - 错误追踪：`observability.sentry` 开启时接入 Sentry（`@sentry/nextjs`）。服务端抛错（`onRequestError`）、浏览器抛错（`error.tsx` / `global-error.tsx` 和全局未捕获错误）、`logger.error` 都会上报，事件名在 tag `event` 里，其余字段（已脱敏）在 extra 里。登录用户只带 ID；cookie、IP、query、请求体、AI 输入输出、数据库参数和堆栈局部变量都不收集（`src/core/observability/sentry.ts`）。关闭时 Sentry SDK 不会打进构建产物。
   - 流量与性能：`observability.analytics` 开启时根布局挂 Vercel Analytics（页面浏览，不用 cookie），`observability.speedInsights` 开启时挂 Speed Insights（Web Vitals）。关闭时页面不加载任何分析脚本。
   - 转化事件（`src/core/observability/events.ts`）：`sign_up`（服务端，新用户创建后）、`checkout_started`（客户端，跳转到支付页之前，带 `plan`）、`purchase`（服务端，billing 的 `checkout.completed` 提交后，带 `plan`；续费不算）。只带套餐 ID，不带邮箱或支付信息。业务在浏览器里用 `track(name, props)`（`src/core/observability/track.ts`），在服务端用 `trackServer(name, props)`（`track-server.ts`）；开关关闭时都是空操作，服务端发送失败只记 warn。
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
@@ -202,6 +203,8 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 | `ADMIN_EMAILS`                                                                              | 开启 `features.admin` 时 Production 必填：逗号分隔的邮箱，用这些邮箱登录即成为管理员（见"配置"里的后台）。Preview 可以不填。         |
 | `ALIBABA_BASE_URL`                                                                          | 可选。百炼 key 所在地域的地址，不填是国际站；北京地域填 `https://dashscope.aliyuncs.com/compatible-mode/v1`。                        |
 | `OTEL_EXPORTER_OTLP_ENDPOINT`                                                               | 可选。开启 `observability.otel` 且不用 Vercel 的 trace 集成时，trace 导出到这个 OTLP 地址（见下文"日志与追踪"）。                    |
+| `NEXT_PUBLIC_SENTRY_DSN`                                                                    | 开启 `observability.sentry` 时必填（Production 和 Preview 都要）：Sentry 项目的 DSN（见下文"错误追踪（Sentry）"）。                  |
+| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT`                                       | 可选。三项都填时构建会上传 source map，Sentry 里的堆栈显示源码位置；上传后从产物里删掉。                                             |
 
 ### 4. 按已开启的模块准备外部账号
 
@@ -215,6 +218,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 | `features.ai`                          | AI 模型服务商               | 开启 AI 时               |
 | `features.upload`                      | Cloudflare R2               | 开启上传时               |
 | `features.admin`                       | 无（只需 `ADMIN_EMAILS`）   | 开启后台时               |
+| `observability.sentry`                 | Sentry                      | 开启错误追踪时           |
 
 具体变量名由对应模块的任务补充到本节。
 
@@ -304,6 +308,15 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 2. 需要 trace 时再开启 `observability.otel`：
    - 在 Vercel 上：项目 → Observability 里开启 Tracing，或者在 Integrations 里接入 Datadog、Honeycomb 等 OTel 集成，不需要额外的变量。
    - 其他后端：填 `OTEL_EXPORTER_OTLP_ENDPOINT`（需要鉴权时加 `OTEL_EXPORTER_OTLP_HEADERS`，例如 `x-honeycomb-team=<key>`）。两者都没有时不导出 trace，日志照常输出。
+
+#### 错误追踪（Sentry，可选）
+
+1. 在 Sentry 新建一个 Next.js 项目，复制 DSN，在 Vercel 的 Production 和 Preview 都填上 `NEXT_PUBLIC_SENTRY_DSN`。
+2. `site.config.ts` 里开启 `features.observability` 和 `observability.sentry`。性能追踪按 `observability.sentryTracesSampleRate` 采样（默认 `0.1`）；同时开了 `otel` 时追踪交给 OpenTelemetry，Sentry 只收错误，并关联到同一个 trace。
+3. 可选：在 Sentry → Settings → Auth Tokens 创建 Organization Token，连同组织和项目的 slug 填进 `SENTRY_AUTH_TOKEN`、`SENTRY_ORG`、`SENTRY_PROJECT`，构建时会上传 source map。
+4. 建议在 Sentry 项目 → Settings → Security & Privacy 里开启 **Prevent Storing of IP Addresses**：SDK 不发 IP，但 Sentry 默认会记录上报请求的来源 IP。
+5. 浏览器事件经本站的 `/monitoring` 转发给 Sentry，减少被广告拦截插件拦掉。这个路径不要再用作页面（`src/proxy.ts` 的 matcher 跳过了它）。
+6. 部署后在浏览器控制台执行 `setTimeout(() => { throw new Error("sentry test") })`，几秒后 Sentry 的 Issues 里应能看到这条错误，带 release 和登录用户的 ID。
 
 #### 流量与性能（可选）
 

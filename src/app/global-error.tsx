@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { captureError } from "@/core/observability/sentry";
+
 // 根布局出错时替换整个文档，拿不到 globals.css 和主题，只用内联样式。
 export default function GlobalError({
   error,
@@ -12,6 +14,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error(error);
+    captureError(error);
   }, [error]);
 
   return (
