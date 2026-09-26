@@ -61,6 +61,14 @@ updates:
           - "@next/*"
           - "@opentelemetry/*"
           - "@vercel/otel"
+    ignore:
+      # @types/node 的大版本必须跟着**运行时**的 Node 走，而运行时不在 package.json 里
+      #（engines / .nvmrc 钉在 24），dependabot 看不见这层耦合，所以它会照着 DefinitelyTyped
+      # 的节奏提议升到 26。升了以后 TS 会放行 Node 26 才有的 API，线上跑 24 只在运行时炸。
+      # 运行时升级时（engines + .nvmrc + CI + Vercel 一起改）再手动抬这里。
+      # 其他 @types/* 不用忽略：pg、ws、react 的运行时本身就是依赖，两边会一起被提议。
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
