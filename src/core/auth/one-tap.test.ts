@@ -83,7 +83,9 @@ describe("signInWithOneTap", () => {
     });
 
     expect(initialize).toHaveBeenCalledTimes(1);
-    expect(initialize.mock.calls[0][0]).toMatchObject({
+    // 用 ?? [] 取值：CI 的类型检查比本地严（索引访问会带 undefined），两种设置下都成立。
+    const [config] = initialize.mock.calls[0] ?? [];
+    expect(config).toMatchObject({
       client_id: "client-init",
       // 登出后不能被 Google 会话静默送回登录态（本站登出走 Server Action，
       // 插件里那条 FedCM preventSilentAccess 钩子不会触发）。
@@ -105,7 +107,7 @@ describe("signInWithOneTap", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(String(url)).toContain("/api/auth/one-tap/callback");
     expect(JSON.parse(String(init?.body))).toMatchObject({
       idToken: "token-abc",
