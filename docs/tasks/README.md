@@ -64,8 +64,9 @@
 | T813                   | prod-sentinels    | `fix/prod-sentinels`    | T801             | todo |
 | T814                   | harden-misc       | `fix/harden-misc`       | T801             | todo |
 | T815                   | seed-data         | `feat/seed-data`        | T801             | todo |
+| T816                   | llms-txt          | `feat/llms-txt`         | T801             | done |
 
-阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813）上架前建议，批次 C（T814–T815）可后做。
+阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813）上架前建议，批次 C（T814–T816）可后做。T816 是唯一的「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。
 
 阶段 7 分两个语域做：T605 是**营销面 + 设计基础**，T606 是**登录后产品面 + 后台**，T607 收尾剩下的营销侧细节页（blog 列表卡片与文章页、legal、404）和那几处还没换成 `--primary-text` 的链接。
 
@@ -100,7 +101,7 @@
 
 阶段 8   T801 → T802 T803 T804 T805 T806 T807 T808（批次 A：上架阻塞）
          T801 → T809 T810 T811 T812 T813（批次 B：上架前建议）
-         T801 → T814 T815（批次 C：可后做）
+         T801 → T814 T815 T816（批次 C：可后做）
 ```
 
 ## 推荐顺序

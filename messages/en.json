@@ -43,6 +43,24 @@
   "Metadata": {
     "description": "Ship your SaaS in a day."
   },
+  "Llms": {
+    "intro": "Machine-readable index of {name} for AI agents and answer engines. Public pages come first with a one-line description, then the URLs that only exist for machines, then the areas that need an account.",
+    "howToUse": "How to use this file",
+    "howToUseSitemap": "sitemap.xml (listed below) is the complete set of public URLs, with hreflang alternates.",
+    "howToUseAuth": "Only the public pages above are indexable; the last section lists the paths that return the sign-in screen instead of content.",
+    "homeTitle": "Home",
+    "homeNote": "What the product does, the feature list, pricing and frequently asked questions",
+    "pricingNote": "Plans, prices and what each one includes",
+    "blogNote": "Articles and product notes",
+    "machineReadable": "Machine-readable",
+    "sitemapNote": "Every public URL",
+    "robotsNote": "Crawl rules; the account and admin areas are excluded",
+    "feedNote": "RSS feed of the blog",
+    "auth": "Requires an account",
+    "authNote": "Sign-in is by email one-time code. Crawlers get the sign-in screen, so there is nothing to index under these paths.",
+    "optional": "Optional",
+    "tagsNote": "Blog posts grouped by tag"
+  },
   "Landing": {
     "hero": {
       "badge": "Next.js SaaS starter",
