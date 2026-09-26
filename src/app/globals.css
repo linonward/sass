@@ -196,6 +196,25 @@
 }
 
 @layer components {
+  /* 产品面/后台的平面：只有 1px 描边，**没有唇边**。
+     和 .sticker 是两个语域，不是一个的变体：营销面靠「一个色用两次」的贴纸做厚度，
+     数据密集界面靠留白、1px 线和背景明度台阶做层级，多一层唇边只会让表格发脏。
+     所以 --edge 在这里不参与 —— 面板没有唇边，也就没有「同色用两次」的需求。
+     要换语义色描边时用 utility 直接给 border-[var(--x-edge)]：utilities 层排在
+     components 层之后，能覆盖这里的 border-color，不需要再走一个变量。
+
+     亮色下 --card(0.983) 和画布(0.969) 几乎同色，面板看起来就是画布上的一圈线；
+     暗色下 --card(0.24) 比画布(0.2) 高一档，层级靠这个台阶而不是投影。
+
+     必须声明在 .sticker 之前：同层同特异性时源码顺序决定胜负，两条都写
+     `border: 1px solid var(...)`，排后面的话会把贴纸的描边颜色盖成中性色，
+     只剩唇边是语义色 —— 而且完全静默。 */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+  }
+
   /* 贴纸表面：1px 描边 + 零模糊硬唇边，两者同色。
      唇边写进 --tw-shadow 而不是裸 box-shadow，因为 focus-visible:ring-3 会用
      box-shadow 整属性覆盖，只有走 --tw-shadow 才能在聚焦时存活下来。

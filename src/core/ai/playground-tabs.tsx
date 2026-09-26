@@ -39,8 +39,9 @@ export function PlaygroundTabs({
             }}
             className={cn(
               "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+              // 激活态靠描边分，不加投影（产品语域没有模糊投影）。
               active === tab.id
-                ? "bg-background shadow-sm"
+                ? "bg-background border-border border"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

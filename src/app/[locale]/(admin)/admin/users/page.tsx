@@ -5,7 +5,6 @@ import { listUsers, parsePage } from "@/core/admin/queries";
 import { requireAdmin } from "@/core/admin/session";
 import {
   EmptyRow,
-  PageHeader,
   Pagination,
   RoleBadge,
   UserStatusBadge,
@@ -16,6 +15,7 @@ import { Link } from "@/core/i18n/navigation";
 import { localizedPath } from "@/core/seo/urls";
 import { Button } from "@/core/ui/button";
 import { Input } from "@/core/ui/input";
+import { PageHeader } from "@/core/ui/page-header";
 import {
   Table,
   TableBody,
@@ -59,9 +59,8 @@ export default async function AdminUsersPage({ params, searchParams }: Props) {
           aria-label={t("search")}
           placeholder={t("search")}
         />
-        <Button type="submit" variant="outline">
-          {t("searchButton")}
-        </Button>
+        {/* 这一屏唯一的实心主操作。 */}
+        <Button type="submit">{t("searchButton")}</Button>
       </form>
       <Table>
         <TableHeader>
@@ -86,7 +85,7 @@ export default async function AdminUsersPage({ params, searchParams }: Props) {
               <TableCell className="max-w-72">
                 <Link
                   href={`/admin/users/${user.id}`}
-                  className="hover:text-primary block truncate font-medium"
+                  className="hover:text-primary-text block truncate font-medium"
                 >
                   {user.email}
                 </Link>

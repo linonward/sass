@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/core/ui/card";
+import { PageHeader } from "@/core/ui/page-header";
 
 export async function generateMetadata({
   params,
@@ -39,10 +40,7 @@ export default async function SettingsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground">{t("description")}</p>
-      </div>
+      <PageHeader title={t("title")} description={t("description")} />
 
       <Card>
         <CardHeader>
@@ -62,7 +60,8 @@ export default async function SettingsPage({
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/40">
+      {/* 危险区：面板默认是中性描边，这里换成语义描边（平描边，没有唇边）。 */}
+      <Card className="border-[var(--destructive-edge)]">
         <CardHeader>
           <CardTitle>{t("danger.title")}</CardTitle>
           <CardDescription>{t("danger.description")}</CardDescription>

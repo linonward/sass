@@ -2,13 +2,14 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { Loader2Icon, SendIcon, SquareIcon } from "lucide-react";
+import { Loader2Icon, SendIcon, SparklesIcon, SquareIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { Button, buttonVariants } from "@/core/ui/button";
+import { EmptyState } from "@/core/ui/empty-state";
 import { Input } from "@/core/ui/input";
 
 const knownErrors = [
@@ -78,7 +79,7 @@ export function Playground({
           value={modelId}
           onChange={(event) => setModelId(event.target.value)}
           disabled={busy}
-          className="border-input dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
+          className="border-border dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
         >
           {models.map((model) => (
             <option key={model.id} value={model.id}>
@@ -92,12 +93,16 @@ export function Playground({
       </div>
 
       <div
-        className="bg-muted/30 min-h-64 space-y-4 rounded-xl border p-4"
+        // 空的时候把这个盒子本身变成居中容器，空状态才不会贴在 256px 高的框顶上。
+        className={cn(
+          "panel min-h-64 space-y-4 p-4",
+          messages.length === 0 && "flex items-center justify-center",
+        )}
         aria-live="polite"
         data-testid="playground-messages"
       >
         {messages.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{t("empty")}</p>
+          <EmptyState size="sm" icon={<SparklesIcon />} title={t("empty")} />
         ) : (
           messages.map((message) => (
             <div

@@ -46,6 +46,10 @@
 | T604                   | admin-metrics  | `feat/admin-metrics`  | T502             | done |
 | **阶段 7：视觉重设计** |                |                       |                  |      |
 | T605                   | redesign       | `feat/redesign`       | T108, T604       | done |
+| T606                   | redesign-app   | `feat/redesign-app`   | T605             | done |
+| T607                   | redesign-rest  | `feat/redesign-rest`  | T606             | todo |
+
+阶段 7 分两个语域做：T605 是**营销面 + 设计基础**，T606 是**登录后产品面 + 后台**，T607 收尾剩下的营销侧细节页（blog 列表卡片与文章页、legal、404）和那几处还没换成 `--primary-text` 的链接。
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
 
@@ -93,3 +97,4 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 - [阶段 4：AI 工具](phase-4-ai.md)
 - [阶段 5：内容与运营](phase-5-content-ops.md)
 - [阶段 6：可观测性](phase-6-observability.md)
+- [阶段 7：视觉重设计](phase-7-redesign.md)

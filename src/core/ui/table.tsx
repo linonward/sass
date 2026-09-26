@@ -69,7 +69,9 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        // 表头走「大写小标题」那一套，和侧边栏的分组标题同一种语言。
+        // 大写只是 CSS 的 text-transform，可访问名不受影响。
+        "text-muted-foreground h-9 px-3 text-left align-middle text-xs font-medium tracking-wide whitespace-nowrap uppercase [&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}
@@ -82,7 +84,9 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        // py-2 配 px-3：行高约 34px，比 shadcn 默认的 p-2 略高，
+        // 但表头矮了 4px，整体反而更紧、更像数据表。
+        "px-3 py-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}

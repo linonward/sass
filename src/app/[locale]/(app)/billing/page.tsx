@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/core/ui/card";
+import { PageHeader } from "@/core/ui/page-header";
 
 export async function generateMetadata({
   params,
@@ -55,10 +56,7 @@ export default async function BillingPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground">{t("description")}</p>
-      </div>
+      <PageHeader title={t("title")} description={t("description")} />
 
       <Card>
         <CardHeader>
@@ -132,7 +130,7 @@ export default async function BillingPage({
               </p>
             ) : (
               <ul
-                className="divide-y text-sm"
+                className="divide-y text-sm [&>li:first-child]:pt-0 [&>li:last-child]:pb-0"
                 data-testid="credit-transactions"
               >
                 {transactions.map((tx) => (
@@ -154,8 +152,9 @@ export default async function BillingPage({
                     <span
                       className={cn(
                         "shrink-0 tabular-nums",
+                        // 进账用语义色，扣减保持中性：花积分是常态，标红太吵。
                         tx.amount > 0
-                          ? "text-primary"
+                          ? "text-success"
                           : "text-muted-foreground",
                       )}
                     >

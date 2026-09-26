@@ -16,6 +16,24 @@ test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
 });
 
+// 产品面以前没有横向溢出覆盖（ui-shell 的 375px 只测营销首页）。
+// 侧边栏在窄屏是抽屉、卡片和上传控件都得收住。
+test.describe("375px 宽度", () => {
+  test.use({ viewport: { width: 375, height: 740 } });
+
+  for (const theme of ["light", "dark"] as const) {
+    test(`${theme} 模式下 dashboard 不横向溢出`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await signIn(page, uniqueEmail("overflow"));
+      await page.goto("/dashboard");
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
+});
+
 test("侧边栏在 Dashboard 和设置页之间导航，当前项高亮", async ({
   page,
   isMobile,

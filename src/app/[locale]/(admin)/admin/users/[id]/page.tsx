@@ -9,7 +9,7 @@ import { planLabel } from "@/core/admin/plan-name";
 import { getUserDetail } from "@/core/admin/queries";
 import { requireAdmin } from "@/core/admin/session";
 import { AdjustCreditsForm, BanForm } from "@/core/admin/ui/forms";
-import { PageHeader, RoleBadge, UserStatusBadge } from "@/core/admin/ui/list";
+import { RoleBadge, UserStatusBadge } from "@/core/admin/ui/list";
 import { creditsEnabled } from "@/core/credits";
 import { getDb } from "@/core/db";
 import { Link } from "@/core/i18n/navigation";
@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/core/ui/card";
+import { PageHeader } from "@/core/ui/page-header";
 
 type Props = PageProps<"/[locale]/admin/users/[id]">;
 
@@ -51,7 +52,7 @@ export default async function AdminUserPage({ params }: Props) {
     <div className="flex flex-col gap-6">
       <Link
         href="/admin/users"
-        className="text-muted-foreground hover:text-primary inline-flex items-center gap-1.5 text-sm"
+        className="text-muted-foreground hover:text-primary-text inline-flex items-center gap-1.5 text-sm"
       >
         <ArrowLeft className="size-4" />
         {t("user.back")}
@@ -136,7 +137,7 @@ export default async function AdminUserPage({ params }: Props) {
                 </p>
               ) : (
                 <ul
-                  className="divide-y text-sm"
+                  className="divide-y text-sm [&>li:first-child]:pt-0 [&>li:last-child]:pb-0"
                   data-testid="admin-credit-transactions"
                 >
                   {user.transactions.map((tx) => (
@@ -170,8 +171,9 @@ export default async function AdminUserPage({ params }: Props) {
                       <span
                         className={cn(
                           "shrink-0 tabular-nums",
+                          // 进账用语义色，扣减保持中性：花积分是常态，标红太吵。
                           tx.amount > 0
-                            ? "text-primary"
+                            ? "text-success"
                             : "text-muted-foreground",
                         )}
                       >
@@ -196,7 +198,7 @@ export default async function AdminUserPage({ params }: Props) {
               {t("user.noSubscriptions")}
             </p>
           ) : (
-            <ul className="divide-y text-sm">
+            <ul className="divide-y text-sm [&>li:first-child]:pt-0 [&>li:last-child]:pb-0">
               {user.subscriptions.map((sub) => (
                 <li
                   key={sub.id}
@@ -225,7 +227,7 @@ export default async function AdminUserPage({ params }: Props) {
               {t("user.noOrders")}
             </p>
           ) : (
-            <ul className="divide-y text-sm">
+            <ul className="divide-y text-sm [&>li:first-child]:pt-0 [&>li:last-child]:pb-0">
               {user.orders.map((order) => (
                 <li
                   key={order.id}

@@ -2,8 +2,12 @@ import * as React from "react";
 import { cn } from "cn";
 
 /**
- * 贴纸表面。类名必须保持字面量：Tailwind 扫源码文本，拼接出来的 class 会被丢掉。
- * 选了 tone 就用描边 + 硬唇边，不选则退回原来那圈 ring，两边互斥。
+ * tone 决定表面属于哪个语域：传了就是营销面的贴纸（描边 + 硬唇边），
+ * 不传就是产品面/后台的平面（`panel`，只有 1px 描边）。
+ *
+ * 类名必须保持字面量：Tailwind 扫源码文本，拼接出来的 class 会被丢掉。
+ * `panel` 自带的背景和圆角与 base 里的 `bg-card rounded-xl` 同值，
+ * 重复是无害的 —— 它的作用是让「这是产品语域的面板」在源码里可 grep。
  */
 const cardTones = {
   primary: "sticker-lg border-[var(--edge)] [--edge:var(--primary-edge)]",
@@ -32,7 +36,7 @@ function Card({
       data-tone={tone}
       className={cn(
         "group/card bg-card text-card-foreground flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
-        tone ? cardTones[tone] : "ring-foreground/10 ring-1",
+        tone ? cardTones[tone] : "panel",
         className,
       )}
       {...props}

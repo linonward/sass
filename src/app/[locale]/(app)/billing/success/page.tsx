@@ -1,6 +1,8 @@
+import { CircleAlertIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { CheckoutStatus } from "@/core/billing/ui/checkout-status";
+import { EmptyState } from "@/core/ui/empty-state";
 import { env } from "@/core/env";
 import { buildMetadata } from "@/core/seo/metadata";
 
@@ -38,24 +40,22 @@ export default async function CheckoutSuccessPage({
 
   if (!subscriptionId && !orderId) {
     return (
-      <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("missingTitle")}
-        </h1>
-        <p className="text-muted-foreground">
-          {t.rich("missingDescription", {
-            email: siteConfig.legal.contactEmail,
-            link: (chunks) => (
-              <a
-                href={`mailto:${siteConfig.legal.contactEmail}`}
-                className="text-primary underline underline-offset-4"
-              >
-                {chunks}
-              </a>
-            ),
-          })}
-        </p>
-      </div>
+      <EmptyState
+        titleAs="h1"
+        icon={<CircleAlertIcon />}
+        title={t("missingTitle")}
+        description={t.rich("missingDescription", {
+          email: siteConfig.legal.contactEmail,
+          link: (chunks) => (
+            <a
+              href={`mailto:${siteConfig.legal.contactEmail}`}
+              className="text-primary-text underline underline-offset-4"
+            >
+              {chunks}
+            </a>
+          ),
+        })}
+      />
     );
   }
 

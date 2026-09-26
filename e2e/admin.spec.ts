@@ -212,6 +212,24 @@ test.describe("管理员", () => {
     );
   });
 
+  // 产品面的横向溢出以前只测过营销首页（ui-shell）。后台是最容易溢出的地方：
+  // 六列表格、30 根柱子的图表、一排筛选器。用同一 context 开新页面，登录态照旧。
+  test("窄屏下指标页不横向溢出", async () => {
+    const page = await admin.context().newPage();
+    await page.setViewportSize({ width: 375, height: 740 });
+    for (const theme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto("/admin/metrics");
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow, `${theme} 模式下溢出 ${overflow}px`).toBeLessThanOrEqual(
+        0,
+      );
+    }
+    await page.close();
+  });
+
   test("订单和订阅列表可以按状态筛选", async () => {
     for (const [path, label] of [
       ["/admin/orders", ad.orderStatus.paid],
