@@ -16,7 +16,9 @@ import { sendEmail } from "@/core/email";
 import { env } from "@/core/env";
 import { routing } from "@/core/i18n/routing";
 import { runAfterResponse } from "@/core/lib/after-response";
+import { trackEvents } from "@/core/observability/events";
 import { logger } from "@/core/observability/logger";
+import { trackServer } from "@/core/observability/track-server";
 
 import siteConfig from "../../../site.config";
 import { cooldownIdentifier, otpResendCooldown } from "./cooldown";
@@ -82,9 +84,8 @@ export const auth = betterAuth({
       create: {
         // 首次注册发欢迎邮件，放到响应之后发，不拖慢首次登录；发信失败不影响注册。
         after: async (user, ctx) => {
-          const locale = resolveRequestLocale(
-            ctx?.headers ?? ctx?.request?.headers,
-          );
+          const headers = ctx?.headers ?? ctx?.request?.headers;
+          const locale = resolveRequestLocale(headers);
           await runAfterResponse(async () => {
             try {
               await sendEmail({
@@ -100,6 +101,10 @@ export const auth = betterAuth({
               });
             }
           });
+          // 注册转化事件（observability.analytics 开启时），带访客请求的 headers 用于来源统计。
+          await runAfterResponse(() =>
+            trackServer(trackEvents.signUp, undefined, { headers }),
+          );
         },
       },
     },

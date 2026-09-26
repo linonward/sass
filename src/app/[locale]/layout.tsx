@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { pickClientMessages } from "@/core/i18n/client-messages";
 import { routing } from "@/core/i18n/routing";
 import { cn } from "@/core/lib/utils";
+import { WebAnalyticsScripts } from "@/core/observability/web-analytics-scripts";
 import { JsonLd, siteJsonLd } from "@/core/seo/json-ld";
 import { buildMetadata } from "@/core/seo/metadata";
 import { brandCss } from "@/core/theme/brand-css";
@@ -53,6 +54,7 @@ export default async function RootLayout({
             <Toaster />
           </ThemeProvider>
         </NextIntlClientProvider>
+        <WebAnalyticsScripts />
       </body>
     </html>
   );
