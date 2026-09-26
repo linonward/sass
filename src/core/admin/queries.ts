@@ -99,53 +99,58 @@ const actor = alias(user, "actor");
 
 /** 用户详情：资料、余额、最近 20 条积分流水（含操作者邮箱）、订阅和订单。不存在时为 null。 */
 export async function getUserDetail(db: Database, userId: string) {
-  const [profile] = await db
-    .select({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      banned: user.banned,
-      banReason: user.banReason,
-      banExpires: user.banExpires,
-      emailVerified: user.emailVerified,
-      createdAt: user.createdAt,
-      balance: userCredits.balance,
-    })
-    .from(user)
-    .leftJoin(userCredits, eq(userCredits.userId, user.id))
-    .where(eq(user.id, userId));
+  // 四个查询都只依赖 userId，一次并发发出；profile 为空时仍然返回 null，
+  // 调用方（/admin/users/[id]）据此在流式开始前 notFound()。
+  const [[profile], transactions, userSubscriptions, userOrders] =
+    await Promise.all([
+      db
+        .select({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          banned: user.banned,
+          banReason: user.banReason,
+          banExpires: user.banExpires,
+          emailVerified: user.emailVerified,
+          createdAt: user.createdAt,
+          balance: userCredits.balance,
+        })
+        .from(user)
+        .leftJoin(userCredits, eq(userCredits.userId, user.id))
+        .where(eq(user.id, userId)),
+      db
+        .select({
+          id: creditTransactions.id,
+          type: creditTransactions.type,
+          amount: creditTransactions.amount,
+          reason: creditTransactions.reason,
+          source: creditTransactions.source,
+          createdAt: creditTransactions.createdAt,
+          actorId: creditTransactions.actorId,
+          actorEmail: actor.email,
+        })
+        .from(creditTransactions)
+        .leftJoin(actor, eq(actor.id, creditTransactions.actorId))
+        .where(eq(creditTransactions.userId, userId))
+        .orderBy(
+          desc(creditTransactions.createdAt),
+          desc(creditTransactions.id),
+        )
+        .limit(20),
+      db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.userId, userId))
+        .orderBy(desc(subscriptions.createdAt)),
+      db
+        .select()
+        .from(orders)
+        .where(eq(orders.userId, userId))
+        .orderBy(desc(orders.createdAt))
+        .limit(20),
+    ]);
   if (!profile) return null;
-
-  const [transactions, userSubscriptions, userOrders] = await Promise.all([
-    db
-      .select({
-        id: creditTransactions.id,
-        type: creditTransactions.type,
-        amount: creditTransactions.amount,
-        reason: creditTransactions.reason,
-        source: creditTransactions.source,
-        createdAt: creditTransactions.createdAt,
-        actorId: creditTransactions.actorId,
-        actorEmail: actor.email,
-      })
-      .from(creditTransactions)
-      .leftJoin(actor, eq(actor.id, creditTransactions.actorId))
-      .where(eq(creditTransactions.userId, userId))
-      .orderBy(desc(creditTransactions.createdAt), desc(creditTransactions.id))
-      .limit(20),
-    db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.userId, userId))
-      .orderBy(desc(subscriptions.createdAt)),
-    db
-      .select()
-      .from(orders)
-      .where(eq(orders.userId, userId))
-      .orderBy(desc(orders.createdAt))
-      .limit(20),
-  ]);
 
   return {
     ...profile,

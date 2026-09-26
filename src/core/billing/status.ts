@@ -29,29 +29,34 @@ export async function getCheckoutStatus({
   orderId?: string | null;
 }): Promise<CheckoutStatus> {
   if (subscriptionId) {
-    const [paid] = await db
-      .select({ planId: orders.planId })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.userId, userId),
-          eq(orders.providerSubscriptionId, subscriptionId),
-          inArray(orders.status, PAID),
-        ),
-      )
-      .limit(1);
+    // 两个查询都以 (userId, providerSubscriptionId) 为键、互不依赖，并行发出：
+    // 成功页轮询会反复调用这里，串行会让每次轮询多等一跳。
+    // 优先级仍是「已付款订单 > 订阅欠费」。
+    const [[paid], [subscription]] = await Promise.all([
+      db
+        .select({ planId: orders.planId })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.userId, userId),
+            eq(orders.providerSubscriptionId, subscriptionId),
+            inArray(orders.status, PAID),
+          ),
+        )
+        .limit(1),
+      db
+        .select({ planId: subscriptions.planId, status: subscriptions.status })
+        .from(subscriptions)
+        .where(
+          and(
+            eq(subscriptions.userId, userId),
+            eq(subscriptions.providerSubscriptionId, subscriptionId),
+          ),
+        )
+        .limit(1),
+    ]);
     if (paid) return { status: "complete", planId: paid.planId };
 
-    const [subscription] = await db
-      .select({ planId: subscriptions.planId, status: subscriptions.status })
-      .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.userId, userId),
-          eq(subscriptions.providerSubscriptionId, subscriptionId),
-        ),
-      )
-      .limit(1);
     if (subscription?.status === "past_due") {
       return { status: "failed", planId: subscription.planId };
     }
