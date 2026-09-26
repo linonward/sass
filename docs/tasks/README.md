@@ -67,7 +67,7 @@
 | T816                       | llms-txt          | `feat/llms-txt`         | T801             | done |
 | **阶段 9：错误路径与边界** |                   |                         |                  |      |
 | T901                       | review-cards      | `docs/review-cards`     | —                | done |
-| T902                       | not-found         | `fix/not-found`         | T901             | todo |
+| T902                       | not-found         | `fix/not-found`         | T901             | done |
 | T903                       | error-metadata    | `fix/error-metadata`    | T901             | done |
 | T904                       | error-e2e         | `chore/error-e2e`       | T902, T903       | todo |
 | T905                       | boundary-notes    | `docs/boundary-notes`   | T901             | todo |

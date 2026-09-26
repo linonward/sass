@@ -93,5 +93,20 @@ test.describe("只有一门语言时", () => {
   test("被 proxy 跳过的带扩展名路径也返回 404", async ({ page }) => {
     const response = await page.goto("/missing.png");
     expect(response?.status()).toBe(404);
+    // 这条路径不经过 [locale]，由根级 app/not-found.tsx 接住 —— 只断状态码会漏掉
+    // 「退化成框架默认页」这种回归（文案是客户端渲染的，curl 也看不到）。
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Page not found" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Back to home" }),
+    ).toHaveAttribute("href", "/");
+  });
+
+  test("未匹配的 API 路径返回 JSON 404", async ({ request }) => {
+    const response = await request.get("/api/nope");
+    expect(response.status()).toBe(404);
+    expect(response.headers()["content-type"]).toContain("application/json");
+    expect(await response.json()).toEqual({ error: "not_found" });
   });
 });
