@@ -62,7 +62,14 @@ function stubChatFetch() {
                   cacheRead: undefined,
                   cacheWrite: undefined,
                 },
-                outputTokens: { total: DELTA_COUNT, text: DELTA_COUNT },
+                // LanguageModelV4Usage 的 outputTokens 三个字段都是必填的
+                // （node_modules/@ai-sdk/provider/dist/index.d.ts:648）。这个 mock 只推文本，
+                // 所以 reasoning 是 0，不是 undefined。
+                outputTokens: {
+                  total: DELTA_COUNT,
+                  text: DELTA_COUNT,
+                  reasoning: 0,
+                },
               },
             },
           ],
