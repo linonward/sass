@@ -51,7 +51,7 @@
 | **阶段 8：商品化**         |                   |                         |                  |      |
 | T801                       | sell-plan         | `docs/sell-plan`        | 阶段 1–7         | done |
 | T802                       | license           | `docs/license`          | T801             | todo |
-| T803                       | fake-billing-gate | `fix/fake-billing-gate` | T801             | todo |
+| T803                       | fake-billing-gate | `fix/fake-billing-gate` | T801             | done |
 | T804                       | neutral-config    | `fix/neutral-config`    | T801             | todo |
 | T805                       | prod-env-guards   | `fix/prod-env-guards`   | T801             | todo |
 | T806                       | security-headers  | `feat/security-headers` | T801             | todo |
