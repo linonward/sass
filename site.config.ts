@@ -1,4 +1,5 @@
 import { defineConfig } from "./src/core/config/schema";
+import { defaultLocale, locales } from "./src/core/i18n/locales";
 
 export default defineConfig({
   name: "Acme",
@@ -8,8 +9,10 @@ export default defineConfig({
     primaryColor: "#4f46e5",
     logo: "/logo.svg",
   },
-  locales: ["en"],
-  defaultLocale: "en",
+  // 语言清单的**值**在 src/core/i18n/locales.ts（那边不经过 zod，见该文件注释）；
+  // 这里引进来交给 schema 校验，所以它仍然是唯一来源。改语言改那个文件。
+  locales,
+  defaultLocale,
   features: {
     // 演示站点开启积分、AI、博客、文件上传和后台；积分按 billing.plans 的 credits 发放。
     // 后台 /admin：用 ADMIN_EMAILS 里的邮箱登录即成为管理员。
