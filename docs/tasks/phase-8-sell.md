@@ -7,7 +7,7 @@
 ## 批次
 
 - **批次 A（上架阻塞）**：T802–T808。不完成不能上架。
-- **批次 B（上架前建议）**：T809–T813。买家体验 / 评审会点名。
+- **批次 B（上架前建议）**：T809–T813、T817。买家体验 / 评审会点名。T817 是 2026-09-26 验证依赖升级时顺手实测到的（买家第一次 `pnpm typecheck` 会撞），不在原始审查清单里。
 - **批次 C（可后做）**：T814–T816。其中 T816 是唯一的「卖点」项，不是审查发现的。
 
 批次内任务无相互依赖，可并行开 worktree。
@@ -301,6 +301,43 @@
 - [ ] 降级脚本执行后该用户失去 admin
 
 **测试**：Vitest 覆盖哨兵校验；降级脚本对测试库验证
+
+---
+
+## T817 typecheck-env
+
+- 分支 / worktree：`fix/typecheck-env` → `../sass-typecheck-env`
+- 依赖：T801
+- 来源：2026-09-26 验证 dependabot PR 时实测到的预存在缺陷，不是那批升级引起的
+
+**问题**
+
+`src/core/create-env.ts` 的设计是「生产运行时忽略 `SKIP_ENV_VALIDATION`」，注释里写「本地拿它跳过校验的命令（`pnpm typecheck`、`pnpm auth:generate`）NODE_ENV 不是 production，不受影响」。实测不成立：`pnpm typecheck` = `SKIP_ENV_VALIDATION=1 next typegen && tsc --noEmit`，而 `next typegen` 会强制 `NODE_ENV=production`，校验照跑 —— 没有 `.env.local` 的全新检出直接死在第一步：
+
+```
+Error: Invalid environment variables:
+  - DATABASE_URL: Invalid input: expected string, received undefined
+  - RESEND_API_KEY: ...
+  - BETTER_AUTH_SECRET: ...
+```
+
+加 `NODE_ENV=development` 才跳过（`NODE_ENV=development SKIP_ENV_VALIDATION=1 next typegen` 通过）。买家拿到模板、还没配 env 就跑 `pnpm typecheck`（README:108 的命令表与 `UPGRADING.md:42` 的自检步骤都会跑到）会先撞上这个。
+
+**做**
+
+- 二选一（先实测再定）：`typecheck` 脚本里显式给本地命令 `NODE_ENV=development`；或把 `create-env.ts` 里 `SKIP_ENV_VALIDATION` 的判据从 `NODE_ENV` 换成更准的生产信号（`VERCEL_ENV` / Next 的 phase）
+- 注释与实现对齐；README 的命令表写明「第一次 `pnpm typecheck` 需要 `.env.local`，或按提示跳过校验」
+- 加测试锁住「生产构建下 `SKIP_ENV_VALIDATION` 无效、本地命令下有效」
+
+**不做**：放宽生产环境的必填校验（T805 刚立起来的行为不能回退）
+
+**验收**
+
+- [ ] 干净检出（无 `.env.local`）跑 `pnpm typecheck` 通过
+- [ ] 生产构建时 `SKIP_ENV_VALIDATION=1` 仍然不跳过校验
+- [ ] `pnpm auth:generate` 同样不受影响
+
+**测试**：`create-env.test.ts` 覆盖两种 NODE_ENV 组合；本地删掉 `.env.local` 冒烟一次
 
 ---
 
