@@ -131,7 +131,8 @@
   --destructive-text: #984742;
   --destructive-foreground: #191614;
 
-  --chart-1: #4f46e5;
+  /* 图表第一档跟随品牌色；brandCss 注入时以那份为准，这里是没注入时的兜底。 */
+  --chart-1: var(--primary);
   --chart-2: #2b7440;
   --chart-3: #0e6a9b;
   --chart-4: #825b00;
@@ -164,7 +165,6 @@
   --destructive-text: #ffb9b3;
   --destructive-foreground: #ffdfdc;
 
-  --chart-1: #9cd6ff;
   --chart-2: #98e2a8;
   --chart-3: #f4c677;
   --chart-4: #ffb9b3;

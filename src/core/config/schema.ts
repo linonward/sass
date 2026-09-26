@@ -515,9 +515,12 @@ export const siteConfigSchema = z
           /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/,
           'must be a hex color such as "#4f46e5"',
         ),
+      // 不配就用内置的内联标记（跟随 primaryColor，见 core/layout/brand-mark.tsx）；
+      // 配了就用 `public/` 下的那张图，顶栏、侧边栏和结构化数据都会用它。
       logo: z
         .string()
-        .startsWith("/", 'must be a path under public/ such as "/logo.svg"'),
+        .startsWith("/", 'must be a path under public/ such as "/logo.svg"')
+        .optional(),
     }),
     locales: z
       .array(localeSchema)

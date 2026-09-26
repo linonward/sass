@@ -83,6 +83,16 @@ describe("defineConfig", () => {
   });
 });
 
+describe("brand", () => {
+  test("省略 logo 时合法：用内置标记，它跟着 primaryColor 走", () => {
+    const config = defineConfig({
+      ...valid,
+      brand: { primaryColor: "#4f46e5" },
+    });
+    expect(config.brand.logo).toBeUndefined();
+  });
+});
+
 describe("nav", () => {
   test("省略 nav 时 header 与 footer 为空", () => {
     expect(defineConfig(valid).nav).toEqual({ header: [], footer: [] });
