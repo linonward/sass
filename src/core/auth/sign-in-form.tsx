@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { legalPages } from "@/core/legal/pages";
@@ -11,6 +11,7 @@ import { Label } from "@/core/ui/label";
 
 import { authClient } from "./client";
 import { EMAIL_SEND_FAILED, RESEND_COOLDOWN } from "./errors";
+import { signInWithOneTap } from "./one-tap";
 
 type OtpSettings = {
   length: number;
@@ -27,7 +28,8 @@ type AuthError = {
 type Props = {
   /** 登录成功后跳转的站内地址（已清洗，含语言前缀）。 */
   callbackURL: string;
-  googleEnabled: boolean;
+  /** Google client ID（公开值）；为 null 表示没启用 Google 登录（本地没配凭据、Vercel 预览）。 */
+  googleClientId: string | null;
   otp: OtpSettings;
 };
 
@@ -56,9 +58,11 @@ function GoogleIcon() {
   );
 }
 
-export function SignInForm({ callbackURL, googleEnabled, otp }: Props) {
+export function SignInForm({ callbackURL, googleClientId, otp }: Props) {
   const t = useTranslations("Auth.signIn");
   const te = useTranslations("Auth.errors");
+  // 有 client ID 就等于启用了 Google 登录：按钮和 One Tap 提示同源，不会各判一次。
+  const googleEnabled = googleClientId !== null;
 
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
@@ -80,6 +84,20 @@ export function SignInForm({ callbackURL, googleEnabled, otp }: Props) {
     }, 1000);
     return () => clearInterval(timer);
   }, [cooldownUntil]);
+
+  // Google One Tap：进页面即弹出账号提示，点一下头像就完成登录。
+  // 用 ref 守卫是因为 StrictMode 会把 effect 跑两次，而插件自己的并发守卫只是 console.warn。
+  const prompted = useRef(false);
+  useEffect(() => {
+    if (!googleClientId || prompted.current) return;
+    prompted.current = true;
+    void signInWithOneTap({
+      clientId: googleClientId,
+      callbackURL,
+      // 只有「点了提示、但回调失败」会走到这里；脚本本身没加载出来不打扰用户（见 one-tap.ts）。
+      onError: () => setError(te("googleFailed")),
+    });
+  }, [googleClientId, callbackURL, te]);
 
   function startCooldown(seconds: number) {
     const start = Date.now();

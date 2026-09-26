@@ -78,6 +78,50 @@ describe("contentSecurityPolicy", () => {
   });
 });
 
+describe("Google One Tap 的白名单", () => {
+  const credentials = {
+    GOOGLE_CLIENT_ID: "123.apps.googleusercontent.com",
+    GOOGLE_CLIENT_SECRET: "secret",
+  };
+
+  test("启用时放行 GIS 的脚本、样式、服务端点和提示 iframe", () => {
+    const parsed = directives(
+      contentSecurityPolicy({ runtimeEnv: credentials, isDev: false }),
+    );
+    expect(parsed["script-src"]).toContain(
+      "https://accounts.google.com/gsi/client",
+    );
+    expect(parsed["style-src"]).toContain(
+      "https://accounts.google.com/gsi/style",
+    );
+    expect(parsed["connect-src"]).toContain("https://accounts.google.com/gsi/");
+    // frame-src 一旦出现就取代 default-src 对 frame 的回落，所以必须带 'self'：
+    // e2e/security-headers.spec.ts 靠同源 iframe 真的被加载才能等到 X-Frame-Options 的拒绝。
+    expect(parsed["frame-src"]).toEqual([
+      "'self'",
+      "https://accounts.google.com/gsi/",
+    ]);
+  });
+
+  test("没配凭据时一条都不出现，frame-src 整条不下发", () => {
+    const csp = contentSecurityPolicy({ runtimeEnv: {}, isDev: false });
+    expect(csp).not.toContain("accounts.google.com");
+    // 不下发才能在未启用时保持原有策略（frame 继续回落 default-src 'self'）。
+    expect(directives(csp)["frame-src"]).toBeUndefined();
+  });
+
+  test("预览部署，以及只填了 client ID 都算未启用", () => {
+    for (const runtimeEnv of [
+      { ...credentials, VERCEL_ENV: "preview" },
+      { GOOGLE_CLIENT_ID: credentials.GOOGLE_CLIENT_ID },
+    ]) {
+      const csp = contentSecurityPolicy({ runtimeEnv, isDev: false });
+      expect(csp).not.toContain("accounts.google.com");
+      expect(directives(csp)["frame-src"]).toBeUndefined();
+    }
+  });
+});
+
 describe("staticSecurityHeaders", () => {
   test("四个固定头", () => {
     expect(staticSecurityHeaders()).toEqual([

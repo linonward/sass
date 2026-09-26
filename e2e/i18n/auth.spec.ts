@@ -7,6 +7,7 @@ import { waitForEmail } from "../../src/core/email/testing";
 import {
   enterCode,
   requestCode,
+  stubGoogleOneTap,
   uniqueEmail,
   useRandomIp,
 } from "../auth-helpers";
@@ -19,6 +20,8 @@ test("非默认语言下验证码登录：保留语言前缀，邮件使用该�
   baseURL,
 }) => {
   await useRandomIp(page);
+  // 这份副本同样读 .env.local，登录页会去加载 GIS 脚本；本文件只关心验证码流程。
+  await stubGoogleOneTap(page);
   const outboxDir = path.join(
     i18nCopyDir(new URL(baseURL!).port),
     ".tmp",
@@ -54,6 +57,8 @@ test("设置偏好语言后界面切换到该语言，并保存到用户资料",
   baseURL,
 }) => {
   await useRandomIp(page);
+  // 这份副本同样读 .env.local，登录页会去加载 GIS 脚本；本文件只关心验证码流程。
+  await stubGoogleOneTap(page);
   const outboxDir = path.join(
     i18nCopyDir(new URL(baseURL!).port),
     ".tmp",

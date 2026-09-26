@@ -3,7 +3,12 @@
 import { describe, expect, test } from "vitest";
 
 import { createAppEnv } from "../create-env";
-import { authServerEnv, googleCredentials, resolveAuthBaseURL } from "./env";
+import {
+  authServerEnv,
+  googleClientId,
+  googleCredentials,
+  resolveAuthBaseURL,
+} from "./env";
 
 const secret = "x".repeat(32);
 
@@ -52,6 +57,26 @@ describe("googleCredentials", () => {
     expect(
       googleCredentials({ GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "s" }),
     ).toEqual({ clientId: "id", clientSecret: "s" });
+  });
+});
+
+describe("googleClientId", () => {
+  test("与 googleCredentials 同一判断，只取 client ID", () => {
+    expect(googleClientId({})).toBeUndefined();
+    expect(googleClientId({ GOOGLE_CLIENT_ID: "id" })).toBeUndefined();
+    expect(
+      googleClientId({ GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "s" }),
+    ).toBe("id");
+  });
+
+  test("预览部署同样是 undefined（页面按钮、One Tap 与 CSP 都靠它判断）", () => {
+    expect(
+      googleClientId({
+        VERCEL_ENV: "preview",
+        GOOGLE_CLIENT_ID: "id",
+        GOOGLE_CLIENT_SECRET: "s",
+      }),
+    ).toBeUndefined();
   });
 });
 

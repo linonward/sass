@@ -2,7 +2,7 @@ import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
-import { admin, emailOTP } from "better-auth/plugins";
+import { admin, emailOTP, oneTap } from "better-auth/plugins";
 import { z } from "zod";
 
 import {
@@ -60,6 +60,9 @@ export const auth = betterAuth({
     storage: "database",
     customRules: {
       "/sign-in/social": { window: 60, max: 10 },
+      // One Tap 的回调端点不用先登录就能打，且每次调用都要实时拉取 Google 的 JWKS 验签
+      // （better-auth 没有缓存也没有覆盖入口），按 IP 限流兜住被当成免费验签服务刷。
+      "/one-tap/callback": { window: 60, max: 10 },
     },
   },
   databaseHooks: {
@@ -147,6 +150,11 @@ export const auth = betterAuth({
       ...adminAccess,
       bannedUserMessage: "This account has been suspended.",
     }),
+    // Google One Tap：登录页弹出的账号提示（`src/core/auth/one-tap.ts` 触发）。凭据不全
+    // （本地、CI、Vercel 预览）时不注册，那时登录页也不会加载 GIS 脚本，两边判断同源。
+    // clientId 与 socialProviders.google 是同一个值；显式传一遍，让 ID token 验签的
+    // audience 只有一个来源。
+    ...(google ? [oneTap({ clientId: google.clientId })] : []),
     // 必须放在最后：让 Server Action 里调用的 auth 接口也能写 cookie。
     nextCookies(),
   ],
