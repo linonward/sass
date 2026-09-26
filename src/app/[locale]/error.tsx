@@ -22,6 +22,10 @@ export default function Error({
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
+      {/* 错误边界必须是 client 组件，用不了 metadata 导出，按文档用 React <title>。
+          React 会把它插到 <head> 里已有 <title> 的前面，浏览器取第一个，所以能盖住
+          被替换掉的那页的标题。 */}
+      <title>{t("title")}</title>
       <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
       <p className="text-muted-foreground">{t("description")}</p>
       {error.digest && (

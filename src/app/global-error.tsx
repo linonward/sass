@@ -18,6 +18,9 @@ export default function GlobalError({
   }, [error]);
 
   return (
+    // lang 和文案都写死英文：这个文件替换整个 root layout，拿不到 NextIntlClientProvider，
+    // 是框架约束不是懒。今天与 site.config.ts 的 locales: ["en"] 一致；买家新增语言后
+    // 这一页要自己处理（例如按 Accept-Language 选 lang 和文案），否则全局错误页不跟着变。
     <html lang="en">
       <body
         style={{
