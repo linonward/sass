@@ -164,7 +164,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 ## 错误与权限的边界
 
-四条容易被当成 bug 的边界：前两条是刻意的设计，后两个是改一行就会静默影响全站状态码的陷阱。依据都写在里面，可以自己验证。
+四条容易被当成 bug 的边界：前两条是刻意的设计，后两个是改一行就可能静默改变状态码的陷阱。依据都写在里面，可以自己验证。
 
 ### `forbidden()` / `unauthorized()` 在本模板不可用
 
@@ -222,9 +222,13 @@ grep -rn "Suspense" src/ | wc -l       # 0
 
 在 `notFound()` 调用点的**上方**加 `loading.tsx` 或 `<Suspense>`，那条路径的 404 就变成 **200 软 404**：响应头已经发出去了，状态码改不了。文档（`.../file-conventions/loading.md`）：「The response body starts streaming when a Suspense fallback renders (for example, a `loading.tsx`) or when a Server Component suspends under a `Suspense` boundary. Place `notFound()` before those boundaries and before any `await` that may suspend.」之后只剩 Next 注入的 `<meta name="robots" content="noindex">` 兜底，爬虫会把它记成 soft 404。
 
-具体到这个仓库：买家访问 `/does-not-exist` 时渲染的是 `src/app/[locale]/not-found.tsx`，而按文档，同段的 `loading.tsx` **会**把 `not-found.tsx` 包进 `<Suspense>`（「`loading.js` wraps `not-found.js`, `page.js`, and nested `layout.js` files in a `<Suspense>` boundary」）—— 光是加一个 `src/app/[locale]/loading.tsx`，就够让这条路径从 404 变成 200。
+具体到这个仓库：买家访问 `/does-not-exist` 时渲染的是 `src/app/[locale]/not-found.tsx`。按文档，同段的 `loading.tsx` **会**把 `not-found.tsx` 和 `page.js` 一起包进 `<Suspense>`（「`loading.js` wraps `not-found.js`, `page.js`, and nested `layout.js` files in a `<Suspense>` boundary」）—— 也就是说这个边界一旦建立，那条 404 就在它的下方。
 
-「体验更好」和「真 404」在这里是互斥的。想两者都要，就得让 `notFound()` 在流式开始前跑完（文档给的办法是把存在性检查挪进 `proxy`）。真要加 instant loading，先掂量代价。
+**哪条路径真的会变成 200，取决于那个页面的实现**：先刷出 fallback、或页面先 `await` 到挂起，状态码就锁定在 200；同步渲染、还没等就抛 `notFound()` 的，可能仍是 404。所以别把它当成「加个骨架屏没副作用」—— 文档给的判据就一句：「Place `notFound()` before those boundaries and before any `await` that may suspend.」改完要**逐条实测状态码**，别只看界面渲染对不对。
+
+（本节写的是机制，没有逐条实测本仓库加 `loading.tsx` 之后的状态码 —— 那要起服务跑一遍。）
+
+「体验更好」和「真 404」在这里是有代价的：流式一旦开始，状态码就锁死。想两者都要，就得让 `notFound()` 在流式开始前跑完（文档给的办法是把存在性检查挪进 `proxy`）。真要加 instant loading，先掂量代价。
 
 ### `loading.tsx` 在 `(app)` / `(admin)` 里不会生效
 
