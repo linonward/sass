@@ -4,6 +4,7 @@ import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 
 import siteConfig from "../../../site.config";
+import { withoutSiteDomain } from "../config/testing";
 import { serializeJsonLd } from "./json-ld";
 import { buildMetadata } from "./metadata";
 import { languageAlternates, localizedPath } from "./urls";
@@ -49,8 +50,8 @@ describe("buildMetadata", () => {
   test("首页使用站点名和标题模板", () => {
     const metadata = buildMetadata({ locale: "de", path: "/" });
     expect(metadata.title).toEqual({
-      default: "Acme",
-      template: "%s | Acme",
+      default: siteConfig.name,
+      template: `%s | ${siteConfig.name}`,
     });
     expect(metadata.alternates?.canonical).toBe(`${origin}/de`);
     expect(metadata.openGraph).toMatchObject({
@@ -68,11 +69,13 @@ describe("buildMetadata", () => {
       description: "How we handle data.",
       image: "/privacy-og.png",
     });
-    expect(metadata.title).toEqual({ absolute: "Privacy Policy | Acme" });
+    expect(metadata.title).toEqual({
+      absolute: `Privacy Policy | ${siteConfig.name}`,
+    });
     expect(metadata.description).toBe("How we handle data.");
     expect(metadata.alternates?.canonical).toBe(`${origin}/privacy`);
     expect(metadata.openGraph).toMatchObject({
-      title: "Privacy Policy | Acme",
+      title: `Privacy Policy | ${siteConfig.name}`,
       images: [{ url: "/privacy-og.png" }],
     });
     expect(metadata.robots).toBeUndefined();
@@ -86,13 +89,13 @@ describe("buildMetadata", () => {
 
 describe("sitemap", () => {
   test("营销路由 × 语言，带 hreflang", () => {
-    expect(sitemap()).toMatchSnapshot();
+    expect(withoutSiteDomain(sitemap())).toMatchSnapshot();
   });
 });
 
 describe("robots", () => {
   test("禁止抓取 API、dashboard、admin（含语言前缀）并指向 sitemap", () => {
-    expect(robots()).toMatchSnapshot();
+    expect(withoutSiteDomain(robots())).toMatchSnapshot();
   });
 });
 

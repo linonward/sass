@@ -17,6 +17,7 @@ import { claimNotification } from "@/core/email/notification-log";
 import { sendEmail, type SendEmailOptions } from "@/core/email/send";
 import { readLatestEmail } from "@/core/email/testing";
 
+import siteConfig from "../../../site.config";
 import { CreditsDisabledError } from "./errors";
 import { createLowBalanceHook } from "./low-balance";
 import { createCredits, type AfterCommitCallback } from "./service";
@@ -105,7 +106,7 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
       props: {
         balance: 90,
         threshold: THRESHOLD,
-        topUpUrl: "https://sass.linonward.com/pricing",
+        topUpUrl: `https://${siteConfig.domain}/pricing`,
       },
     });
     await deduct(10); // 90 → 80

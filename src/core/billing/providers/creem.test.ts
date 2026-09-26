@@ -236,8 +236,8 @@ describe("createCheckout", () => {
     const checkout = await provider(client).createCheckout({
       userId: "user_1",
       planId: "pro",
-      successUrl: "https://sass.linonward.com/dashboard?checkout=success",
-      cancelUrl: "https://sass.linonward.com/#pricing",
+      successUrl: "https://example.com/dashboard?checkout=success",
+      cancelUrl: "https://example.com/#pricing",
       customerEmail: "a@example.com",
     });
     expect(checkout).toEqual({
@@ -248,7 +248,7 @@ describe("createCheckout", () => {
     expect(client.checkouts.create).toHaveBeenCalledWith({
       productId: pro?.providerProductId,
       requestId: "user_1:pro",
-      successUrl: "https://sass.linonward.com/dashboard?checkout=success",
+      successUrl: "https://example.com/dashboard?checkout=success",
       customer: { email: "a@example.com" },
       metadata: { userId: "user_1", planId: "pro" },
     });

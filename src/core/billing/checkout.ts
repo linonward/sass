@@ -56,7 +56,7 @@ export async function startCheckout({
   user: { id: string; email: string };
   planId: unknown;
   locale: unknown;
-  /** 站点根地址，例如 https://sass.linonward.com。 */
+  /** 站点根地址，例如 https://example.com。 */
   origin: string;
   now?: Date;
 }): Promise<BillingResult> {
