@@ -50,7 +50,7 @@
 | T607                       | redesign-rest     | `feat/redesign-rest`    | T606             | todo |
 | **阶段 8：商品化**         |                   |                         |                  |      |
 | T801                       | sell-plan         | `docs/sell-plan`        | 阶段 1–7         | done |
-| T802                       | license           | `docs/license`          | T801             | todo |
+| T802                       | license           | `docs/license`          | T801             | done |
 | T803                       | fake-billing-gate | `fix/fake-billing-gate` | T801             | todo |
 | T804                       | neutral-config    | `fix/neutral-config`    | T801             | done |
 | T805                       | prod-env-guards   | `fix/prod-env-guards`   | T801             | todo |

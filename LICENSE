@@ -1,0 +1,174 @@
+PROPRIETARY LICENSE AGREEMENT (END USER LICENSE AGREEMENT)
+
+Copyright (c) 2026 [LICENSOR NAME]. All rights reserved.
+
+This software is licensed, not sold. Read this agreement before using it. By
+purchasing, downloading, installing, or using the software you agree to be
+bound by it. If you do not agree, do not use the software and delete any copies
+you have.
+
+1. PARTIES AND DEFINITIONS
+
+1.1 "Licensor" means [LICENSOR NAME], the copyright holder of the Template.
+
+1.2 "You" and "Licensee" mean the single individual or single legal entity that
+purchased the license, and that is identified by the payment to the Licensor or
+to its authorized reseller.
+
+1.3 "Template" means the source code, configuration, documentation, content and
+assets contained in the repository in which this file is included, together
+with any version or update of it that the Licensor makes available to you.
+
+1.4 "Derivative Work" means any work based on the Template, including the
+Template with modifications, additions, deletions, or code from other sources
+merged into it.
+
+1.5 "Your Product" means a product, application, website or service that you
+build using the Template, including the parts of the Template it contains.
+
+2. WHAT YOU MAY DO (LICENSE GRANT)
+
+Subject to this agreement and to payment of the applicable fee, the Licensor
+grants you a non-exclusive, non-transferable, non-sublicensable, worldwide and
+perpetual right to:
+
+  (a) use, reproduce, modify, and run the Template to build and operate an
+      unlimited number of Your Products;
+
+  (b) use Your Products commercially, whether or not you charge for them,
+      without any additional fee, royalty, or revenue share to the Licensor;
+
+  (c) keep Your Products closed source;
+
+  (d) modify the Template's code, in whole or in part, and combine it with your
+      own code;
+
+  (e) deploy and host Your Products on infrastructure you control or on your own
+      accounts with hosting providers, and let your own customers and end users
+      use Your Products. Serving Your Products over a network to end users does
+      not require any further license from the Licensor.
+
+3. WHAT YOU MAY NOT DO (RESTRICTIONS)
+
+You may not, and may not allow anyone else to:
+
+  (a) distribute, publish, share, disclose, sublicense, sell, resell, rent,
+      lease, lend, or otherwise make the Template or any Derivative Work
+      available to a third party, whether in source or in compiled form, and
+      whether for free or for a fee;
+
+  (b) publish the Template or any Derivative Work, in whole or in substantial
+      part, under an open source license, or in any public repository, package
+      registry, marketplace, template gallery, course, or tutorial;
+
+  (c) offer, market, or provide the Template or any Derivative Work to others as
+      a template, starter, boilerplate, theme, code generator, or similar
+      developer product;
+
+  (d) share your license, your copy of the Template, or your access to it with
+      anyone other than as permitted in section 4;
+
+  (e) remove, obscure, or alter any copyright, license, or attribution notice in
+      the Template. Every copy of the Template you are permitted to make must
+      keep this file.
+
+Restrictions (a) to (c) do not limit your right to give end users access to
+Your Products as described in section 2(e).
+
+4. ONE LICENSEE, NO TRANSFER
+
+4.1 This license is granted to one licensee only, as defined in section 1.2. If
+you are a company or other organization, a single license covers that entity;
+it does not cover your customers, your affiliates, or any other organization.
+Each of those needs its own license from the Licensor.
+
+4.2 Your employees and independent contractors may use the Template on your
+behalf and for your benefit, under your license and subject to this agreement.
+They may not use it for their own projects or for other clients.
+
+4.3 You may not assign or transfer this license, or any of the rights granted
+by it, to anyone else, and you may not sublicense it. Any purported transfer is
+void.
+
+5. EFFECTIVE DATE, TERM AND TERMINATION
+
+5.1 This license takes effect when the Licensor, or its authorized reseller,
+receives payment in full of the applicable fee, and it continues for as long as
+you comply with this agreement.
+
+5.2 If the payment is refunded, charged back, reversed, or otherwise not
+received, this license ends when that happens. Refunds themselves are governed
+by the reseller's refund policy, not by this agreement.
+
+5.3 The Licensor may terminate this license if you materially breach it and do
+not cure the breach within 30 days after written notice. On termination you
+must stop using the Template and delete all copies of the Template and of any
+Derivative Work that you hold or control.
+
+5.4 Sections 3, 6, 7, 8, 9 and 10 survive termination.
+
+6. OWNERSHIP
+
+6.1 The Licensor retains all rights, title, and interest in the Template and in
+any Derivative Work. This agreement grants you a right to use the Template as
+set out in section 2. It does not sell, assign, or transfer ownership of the
+Template or of any copyright in it.
+
+6.2 You own the code you write yourself that is not a Derivative Work (your
+business logic, your content, your branding) and you own Your Products. Nothing
+in this agreement claims any rights in that material.
+
+6.3 This agreement grants no right to the Licensor's name or logos, and no
+right to use them in a way that suggests the Licensor endorses, sponsors, or is
+otherwise connected with Your Product.
+
+7. THIRD-PARTY COMPONENTS
+
+The Template uses third-party open source packages. Those packages are licensed
+to you directly by their authors under their own terms, which are listed in
+THIRD-PARTY-NOTICES.md and which ship with the packages themselves. Their
+licenses govern those components instead of this agreement, and nothing in this
+agreement limits any right you have under them.
+
+8. NO WARRANTY
+
+THE TEMPLATE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING THE IMPLIED WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT, AND ANY WARRANTY
+OF ACCURACY OR QUIET ENJOYMENT. THE LICENSOR DOES NOT WARRANT THAT THE TEMPLATE
+WILL BE ERROR-FREE, SECURE, UNINTERRUPTED, OR FREE OF HARMFUL COMPONENTS, OR
+THAT IT WILL MEET YOUR REQUIREMENTS OR THE REQUIREMENTS OF ANY LAW OR
+REGULATION THAT APPLIES TO YOUR BUSINESS. YOU ARE RESPONSIBLE FOR YOUR PRODUCTS
+AND FOR THEIR LEGAL AND REGULATORY COMPLIANCE, INCLUDING CONSUMER, TAX,
+PAYMENT, PRIVACY, DATA PROTECTION, ACCESSIBILITY, AND ARTIFICIAL INTELLIGENCE
+REQUIREMENTS. NO ADVICE OR INFORMATION GIVEN BY THE LICENSOR CREATES A WARRANTY.
+
+9. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR IS NOT LIABLE FOR ANY
+INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES,
+OR FOR ANY LOSS OF PROFITS, REVENUE, DATA, OR GOODWILL, ARISING OUT OF OR
+RELATED TO THE TEMPLATE OR THIS AGREEMENT, HOWEVER CAUSED AND REGARDLESS OF THE
+THEORY OF LIABILITY, EVEN IF THE LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY.
+THE LICENSOR'S TOTAL AGGREGATE LIABILITY FOR ALL CLAIMS UNDER THIS AGREEMENT
+WILL NOT EXCEED THE TOTAL AMOUNT YOU ACTUALLY PAID FOR THE TEMPLATE. SOME
+JURISDICTIONS DO NOT ALLOW SOME OF THESE EXCLUSIONS OR LIMITS, SO PARTS OF THIS
+SECTION MAY NOT APPLY TO YOU; IN THAT CASE THE LICENSOR'S LIABILITY IS LIMITED
+TO THE SMALLEST AMOUNT THAT THE APPLICABLE LAW PERMITS.
+
+10. GENERAL
+
+10.1 This agreement is the entire agreement between you and the Licensor about
+the Template, and it replaces any earlier statement about it. It does not
+obligate the Licensor to provide support, maintenance, updates, or new versions;
+any update the Licensor does provide is covered by this agreement.
+
+10.2 This agreement is governed by the laws of [GOVERNING LAW], without regard
+to its conflict of laws rules, and the courts of [VENUE] have exclusive
+jurisdiction over any dispute arising out of or related to it.
+
+10.3 If a provision of this agreement is held unenforceable, the rest of it
+remains in effect. A failure to enforce a provision is not a waiver of it. If
+this agreement is translated, the English text prevails.
+
+10.4 Questions about this license: [CONTACT EMAIL].
