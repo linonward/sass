@@ -18,6 +18,7 @@ import { notificationLog, user } from "@/core/db/schema";
 import { sendEmail, type SendEmailOptions } from "@/core/email/send";
 import { readLatestEmail } from "@/core/email/testing";
 
+import siteConfig from "../../../site.config";
 import { createBillingEmailHandler, billingEmailFor } from "./emails";
 import { handleBillingEvent } from "./handle-event";
 import {
@@ -224,7 +225,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
         amount: 19900,
         currency: "USD",
         credits: 2000,
-        manageUrl: "https://sass.linonward.com/de/billing",
+        manageUrl: `https://${siteConfig.domain}/de/billing`,
       },
     });
   });
@@ -429,7 +430,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
       });
       expect(stored?.locale).toBe("de");
       expect(stored?.subject).toContain("[de]");
-      expect(stored?.html).toContain("https://sass.linonward.com/de/billing");
+      expect(stored?.html).toContain(`https://${siteConfig.domain}/de/billing`);
     } finally {
       process.env.EMAIL_TRANSPORT = previous;
     }

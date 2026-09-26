@@ -34,6 +34,10 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production
       # e2e 用站内的 fake 支付服务商模拟结账和 webhook（Vercel 上会被 env 校验拒绝）。
       BILLING_PROVIDER: fake
+      # site.config.ts 的付费套餐出厂是占位产品 ID，结账会被 plan_not_configured 挡下；
+      # CI 用一组非占位的假 ID 让结账流程能跑通。生产环境在 Vercel 上设置真实 ID。
+      CREEM_PRODUCT_ID_PRO: prod_ci_fake_pro
+      CREEM_PRODUCT_ID_LIFETIME: prod_ci_fake_lifetime
       # 成功页等待 webhook 的时长，调短以便测试超时提示。
       BILLING_SUCCESS_TIMEOUT_MS: 8000
       # e2e/admin.spec.ts 的管理员账号（每个 Playwright project 一个）。

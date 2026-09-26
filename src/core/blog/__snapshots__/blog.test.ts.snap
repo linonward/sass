@@ -5,15 +5,15 @@ exports[`RSS > RSS 2.0 输出，转义标题和描述 1`] = `
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Acme Blog</title>
-    <link>https://sass.linonward.com/de/blog</link>
+    <link>https://<domain>/de/blog</link>
     <description>News &amp; updates</description>
     <language>de</language>
-    <atom:link href="https://sass.linonward.com/de/blog/rss.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://<domain>/de/blog/rss.xml" rel="self" type="application/rss+xml" />
     <lastBuildDate>Mon, 02 Feb 2026 00:00:00 GMT</lastBuildDate>
     <item>
       <title>Hallo</title>
-      <link>https://sass.linonward.com/de/blog/hello</link>
-      <guid isPermaLink="true">https://sass.linonward.com/de/blog/hello</guid>
+      <link>https://<domain>/de/blog/hello</link>
+      <guid isPermaLink="true">https://<domain>/de/blog/hello</guid>
       <pubDate>Mon, 02 Feb 2026 00:00:00 GMT</pubDate>
       <description>About hello &amp; more</description>
       <category>news</category>
@@ -28,174 +28,174 @@ exports[`sitemap > 博客列表和已发布文章，hreflang 只列出有翻译�
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/blog",
-        "en": "https://sass.linonward.com/blog",
-        "x-default": "https://sass.linonward.com/blog",
+        "de": "https://<domain>/de/blog",
+        "en": "https://<domain>/blog",
+        "x-default": "https://<domain>/blog",
       },
     },
-    "url": "https://sass.linonward.com/blog",
+    "url": "https://<domain>/blog",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/blog",
-        "en": "https://sass.linonward.com/blog",
-        "x-default": "https://sass.linonward.com/blog",
+        "de": "https://<domain>/de/blog",
+        "en": "https://<domain>/blog",
+        "x-default": "https://<domain>/blog",
       },
     },
-    "url": "https://sass.linonward.com/de/blog",
+    "url": "https://<domain>/de/blog",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/blog/hello",
-        "en": "https://sass.linonward.com/blog/hello",
-        "x-default": "https://sass.linonward.com/blog/hello",
+        "de": "https://<domain>/de/blog/hello",
+        "en": "https://<domain>/blog/hello",
+        "x-default": "https://<domain>/blog/hello",
       },
     },
     "lastModified": "2026-02-01",
-    "url": "https://sass.linonward.com/blog/hello",
+    "url": "https://<domain>/blog/hello",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-13",
-        "x-default": "https://sass.linonward.com/blog/post-13",
+        "en": "https://<domain>/blog/post-13",
+        "x-default": "https://<domain>/blog/post-13",
       },
     },
     "lastModified": "2026-01-13",
-    "url": "https://sass.linonward.com/blog/post-13",
+    "url": "https://<domain>/blog/post-13",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-12",
-        "x-default": "https://sass.linonward.com/blog/post-12",
+        "en": "https://<domain>/blog/post-12",
+        "x-default": "https://<domain>/blog/post-12",
       },
     },
     "lastModified": "2026-01-12",
-    "url": "https://sass.linonward.com/blog/post-12",
+    "url": "https://<domain>/blog/post-12",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-11",
-        "x-default": "https://sass.linonward.com/blog/post-11",
+        "en": "https://<domain>/blog/post-11",
+        "x-default": "https://<domain>/blog/post-11",
       },
     },
     "lastModified": "2026-01-11",
-    "url": "https://sass.linonward.com/blog/post-11",
+    "url": "https://<domain>/blog/post-11",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-10",
-        "x-default": "https://sass.linonward.com/blog/post-10",
+        "en": "https://<domain>/blog/post-10",
+        "x-default": "https://<domain>/blog/post-10",
       },
     },
     "lastModified": "2026-01-10",
-    "url": "https://sass.linonward.com/blog/post-10",
+    "url": "https://<domain>/blog/post-10",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-9",
-        "x-default": "https://sass.linonward.com/blog/post-9",
+        "en": "https://<domain>/blog/post-9",
+        "x-default": "https://<domain>/blog/post-9",
       },
     },
     "lastModified": "2026-01-09",
-    "url": "https://sass.linonward.com/blog/post-9",
+    "url": "https://<domain>/blog/post-9",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-8",
-        "x-default": "https://sass.linonward.com/blog/post-8",
+        "en": "https://<domain>/blog/post-8",
+        "x-default": "https://<domain>/blog/post-8",
       },
     },
     "lastModified": "2026-01-08",
-    "url": "https://sass.linonward.com/blog/post-8",
+    "url": "https://<domain>/blog/post-8",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-7",
-        "x-default": "https://sass.linonward.com/blog/post-7",
+        "en": "https://<domain>/blog/post-7",
+        "x-default": "https://<domain>/blog/post-7",
       },
     },
     "lastModified": "2026-01-07",
-    "url": "https://sass.linonward.com/blog/post-7",
+    "url": "https://<domain>/blog/post-7",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-6",
-        "x-default": "https://sass.linonward.com/blog/post-6",
+        "en": "https://<domain>/blog/post-6",
+        "x-default": "https://<domain>/blog/post-6",
       },
     },
     "lastModified": "2026-01-06",
-    "url": "https://sass.linonward.com/blog/post-6",
+    "url": "https://<domain>/blog/post-6",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-5",
-        "x-default": "https://sass.linonward.com/blog/post-5",
+        "en": "https://<domain>/blog/post-5",
+        "x-default": "https://<domain>/blog/post-5",
       },
     },
     "lastModified": "2026-01-05",
-    "url": "https://sass.linonward.com/blog/post-5",
+    "url": "https://<domain>/blog/post-5",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-4",
-        "x-default": "https://sass.linonward.com/blog/post-4",
+        "en": "https://<domain>/blog/post-4",
+        "x-default": "https://<domain>/blog/post-4",
       },
     },
     "lastModified": "2026-01-04",
-    "url": "https://sass.linonward.com/blog/post-4",
+    "url": "https://<domain>/blog/post-4",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-3",
-        "x-default": "https://sass.linonward.com/blog/post-3",
+        "en": "https://<domain>/blog/post-3",
+        "x-default": "https://<domain>/blog/post-3",
       },
     },
     "lastModified": "2026-01-03",
-    "url": "https://sass.linonward.com/blog/post-3",
+    "url": "https://<domain>/blog/post-3",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-2",
-        "x-default": "https://sass.linonward.com/blog/post-2",
+        "en": "https://<domain>/blog/post-2",
+        "x-default": "https://<domain>/blog/post-2",
       },
     },
     "lastModified": "2026-01-02",
-    "url": "https://sass.linonward.com/blog/post-2",
+    "url": "https://<domain>/blog/post-2",
   },
   {
     "alternates": {
       "languages": {
-        "en": "https://sass.linonward.com/blog/post-1",
-        "x-default": "https://sass.linonward.com/blog/post-1",
+        "en": "https://<domain>/blog/post-1",
+        "x-default": "https://<domain>/blog/post-1",
       },
     },
     "lastModified": "2026-01-01",
-    "url": "https://sass.linonward.com/blog/post-1",
+    "url": "https://<domain>/blog/post-1",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/blog/hello",
-        "en": "https://sass.linonward.com/blog/hello",
-        "x-default": "https://sass.linonward.com/blog/hello",
+        "de": "https://<domain>/de/blog/hello",
+        "en": "https://<domain>/blog/hello",
+        "x-default": "https://<domain>/blog/hello",
       },
     },
     "lastModified": "2026-02-02",
-    "url": "https://sass.linonward.com/de/blog/hello",
+    "url": "https://<domain>/de/blog/hello",
   },
 ]
 `;

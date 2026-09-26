@@ -5,8 +5,8 @@
  * 用法：node scripts/check-tls-expiry.mjs [--hosts a.example.com,b.example.com] [--days 30]
  *      SSL_CHECK_HOSTS=a.example.com SSL_CHECK_DAYS=30 node scripts/check-tls-expiry.mjs
  *
- * 默认检查 site.config.ts 里的 domain，阈值 30 天。
- * .github/workflows/tls-expiry.yml 每天调用一次：剩余不足时开 issue，并让这次运行失败。
+ * 默认检查 site.config.ts 里的 domain（可被 SITE_DOMAIN 环境变量覆盖，和站点运行时一致），
+ * 阈值 30 天。.github/workflows/tls-expiry.yml 每天调用一次：剩余不足时开 issue，并让这次运行失败。
  */
 import { readFile } from "node:fs/promises";
 import { connect } from "node:tls";
@@ -15,6 +15,8 @@ import process from "node:process";
 const DEFAULT_DAYS = 30;
 const TIMEOUT_MS = 15_000;
 const MS_PER_DAY = 86_400_000;
+// site.config.ts 出厂的占位域名，检查它等于什么都没检查。
+const PLACEHOLDER_DOMAIN = /(^|\.)example\.(com|org|net)$/;
 
 const usage = `用法：node scripts/check-tls-expiry.mjs [选项]
 
@@ -23,7 +25,7 @@ const usage = `用法：node scripts/check-tls-expiry.mjs [选项]
   --days <n>      剩余不足多少天算告警，默认 ${DEFAULT_DAYS}
   -h, --help      显示这段说明
 
-也可以直接用环境变量：SSL_CHECK_HOSTS、SSL_CHECK_DAYS。`;
+也可以直接用环境变量：SSL_CHECK_HOSTS、SSL_CHECK_DAYS（配置里的域名被 SITE_DOMAIN 覆盖时，这里也要设成同一个值）。`;
 
 function parseArgs(argv) {
   const options = {};
@@ -50,17 +52,31 @@ function splitHosts(value) {
     .filter(Boolean);
 }
 
-/** 站点域名以 site.config.ts 为准，找不到就报错而不是静默跳过检查。 */
+/**
+ * 站点域名以 site.config.ts 为准（SITE_DOMAIN 覆盖时以它为准），
+ * 找不到就报错而不是静默跳过检查。
+ */
 async function hostsFromConfig() {
+  const overridden = splitHosts(process.env.SITE_DOMAIN);
+  if (overridden.length > 0) return overridden;
   const configUrl = new URL("../site.config.ts", import.meta.url);
   const source = await readFile(configUrl, "utf8");
-  const match = source.match(/^\s*domain:\s*["']([^"']+)["']/m);
-  if (!match) {
+  // 出厂写法是「envOverride("SITE_DOMAIN") ?? 占位字面量」，也要认买家手写的 domain: "自己的域名"。
+  const domain =
+    source.match(
+      /^\s*domain:\s*(?:envOverride\(\s*["']SITE_DOMAIN["']\s*\)|process\.env\.SITE_DOMAIN)\s*\?\?\s*["']([^"']+)["']/m,
+    )?.[1] ?? source.match(/^\s*domain:\s*["']([^"']+)["']/m)?.[1];
+  if (!domain) {
     throw new Error(
-      "在 site.config.ts 里找不到 domain，请用 --hosts 或 SSL_CHECK_HOSTS 指定要检查的主机",
+      "在 site.config.ts 里找不到 domain，请用 --hosts、SSL_CHECK_HOSTS 或 SITE_DOMAIN 指定要检查的主机",
     );
   }
-  return [match[1]];
+  if (PLACEHOLDER_DOMAIN.test(domain)) {
+    throw new Error(
+      `site.config.ts 里的 domain 还是占位值（${domain}）。改成自己的域名，或用 SITE_DOMAIN / --hosts / SSL_CHECK_HOSTS 指定要检查的主机`,
+    );
+  }
+  return [domain];
 }
 
 /** 连上去读证书，拿到的是 notAfter（形如 "Dec 24 07:59:16 2026 GMT"）。 */

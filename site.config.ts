@@ -1,9 +1,26 @@
 import { defineConfig } from "./src/core/config/schema";
 import { defaultLocale, locales } from "./src/core/i18n/locales";
 
+/**
+ * 站点配置。买家直接改这个文件里的字面量。
+ *
+ * 有四个字段可以额外用环境变量覆盖，写法都是「envOverride(变量名) ?? 占位字面量」：
+ * `domain`（`SITE_DOMAIN`）、`email.fromAddress`（`SITE_EMAIL_FROM`）、
+ * 两个套餐的 `providerProductId`（`CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`）。
+ * 模板里只留占位值，真实域名和产品 ID 放在部署环境里；不设这些变量时就是占位配置。
+ * 没有对应变量的字段（名称、颜色、文案）只能改这个文件。
+ */
+const envOverride = (name: string): string | undefined => {
+  // 空值按「没设置」处理，和 src/core/create-env.ts 的 emptyStringAsUndefined 一致：
+  // .env.example 里这几个变量出厂是留空的，复制成 .env.local 后不该把配置顶成空串。
+  const value = process.env[name]?.trim();
+  return value === "" ? undefined : value;
+};
+
 export default defineConfig({
   name: "Acme",
-  domain: "sass.linonward.com",
+  // 占位域名，改成自己的（不带协议）。演示站用 SITE_DOMAIN 覆盖。
+  domain: envOverride("SITE_DOMAIN") ?? "example.com",
   description: "Ship your SaaS in a day.",
   brand: {
     primaryColor: "#4f46e5",
@@ -95,10 +112,11 @@ export default defineConfig({
         interval: "month",
         features: ["credits2000", "coreFeatures", "prioritySupport"],
         highlighted: true,
-        // Creem 的产品 ID。占位值（prod_placeholder_*）不允许结账。
+        // Creem 的产品 ID。占位值（prod_placeholder_*）不允许结账（见 src/core/billing/checkout.ts）；
+        // 换成自己的产品 ID，或用 CREEM_PRODUCT_ID_PRO 覆盖。
         // 测试模式和生产模式的产品 ID 不同，切换 CREEM_MODE 时一起换（见 README 上线清单）。
-        // 当前是 Creem 测试模式的产品。
-        providerProductId: "prod_31E1j5WjJjaC4L3nSGOPSm",
+        providerProductId:
+          envOverride("CREEM_PRODUCT_ID_PRO") ?? "prod_placeholder_pro",
         credits: 2000,
       },
       {
@@ -106,8 +124,10 @@ export default defineConfig({
         price: 199,
         interval: "once",
         features: ["credits2000", "coreFeatures", "lifetimeUpdates"],
-        // 同上：Creem 测试模式的一次性付款产品。
-        providerProductId: "prod_5uhJLXA1d1LwEmPjIUXyU9",
+        // 同上：一次性的产品，用 CREEM_PRODUCT_ID_LIFETIME 覆盖。
+        providerProductId:
+          envOverride("CREEM_PRODUCT_ID_LIFETIME") ??
+          "prod_placeholder_lifetime",
         credits: 2000,
       },
     ],
@@ -115,7 +135,8 @@ export default defineConfig({
   // 事务邮件（登录验证码、欢迎邮件等）的发件信息。发件域名需在 Resend 验证。
   email: {
     fromName: "Acme",
-    fromAddress: "noreply@sass.linonward.com",
+    // 改成自己在 Resend 验证过的发件地址；演示站用 SITE_EMAIL_FROM 覆盖。
+    fromAddress: envOverride("SITE_EMAIL_FROM") ?? "noreply@example.com",
     replyTo: "support@example.com",
   },
   // 邮箱验证码登录的参数（见 docs/plan.md 关键决策 7）。
@@ -158,7 +179,7 @@ export default defineConfig({
     // 单个文件的大小上限（字节）。
     maxFileSize: 10 * 1024 * 1024,
     // false：私有文件，只能通过有时效的签名地址访问；true：通过 R2_PUBLIC_URL 公开访问。
-    // 演示站点用 R2 自定义域名公开访问（R2_PUBLIC_URL=https://s3.sass.linonward.com）。
+    // 设为 true 时 R2_PUBLIC_URL 要填 bucket 的公开域名（例如 https://files.example.com）。
     public: true,
   },
   // 可观测性（features.observability 开启时生效）。开启后生产环境日志是单行 JSON，带 traceId。
