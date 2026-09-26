@@ -69,7 +69,7 @@
 | T901                       | review-cards      | `docs/review-cards`     | —                | done |
 | T902                       | not-found         | `fix/not-found`         | T901             | done |
 | T903                       | error-metadata    | `fix/error-metadata`    | T901             | done |
-| T904                       | error-e2e         | `chore/error-e2e`       | T902, T903       | todo |
+| T904                       | error-e2e         | `chore/error-e2e`       | T902, T903       | done |
 | T905                       | boundary-notes    | `docs/boundary-notes`   | T901             | todo |
 | **阶段 10：渲染与包体积**  |                   |                         |                  |      |
 | T1001                      | config-leaf       | `fix/config-leaf`       | T901             | done |
