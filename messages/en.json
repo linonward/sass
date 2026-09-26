@@ -13,7 +13,8 @@
   "Header": {
     "main": "Main",
     "mobile": "Mobile",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "cta": "Start free"
   },
   "Footer": {
     "tagline": "Ship your SaaS in a day.",
@@ -49,7 +50,21 @@
       "subtitle": "Auth, payments, credits, AI and SEO are already wired up. Change the config, write your product, ship.",
       "primaryCta": "Get started",
       "secondaryCta": "See features",
-      "imageAlt": "Product dashboard preview"
+      "imageAlt": "Product dashboard preview",
+      "mock": {
+        "terminalTitle": "terminal",
+        "terminalCommand": "npx saas init --plan pro",
+        "terminalReady": "Checkout ready",
+        "terminalCredits": "credits issued on payment",
+        "checkoutTitle": "Checkout",
+        "checkoutCustomer": "Customer",
+        "checkoutCustomerValue": "Priya Mehta",
+        "checkoutCountry": "Billing country",
+        "checkoutCountryValue": "Germany",
+        "checkoutTotal": "Total due today",
+        "toastTitle": "Payment received",
+        "toastBody": "Subscription active"
+      }
     },
     "features": {
       "title": "Everything you need to ship",
@@ -57,27 +72,33 @@
       "items": {
         "auth": {
           "title": "Authentication",
-          "description": "Google sign-in and email one-time codes, with sessions and roles built in."
+          "description": "Google sign-in and email one-time codes, with sessions and roles built in.",
+          "detail": "role: user | admin"
         },
         "billing": {
           "title": "Payments",
-          "description": "Subscriptions and one-time purchases through a provider-agnostic billing layer."
+          "description": "Subscriptions and one-time purchases through a provider-agnostic billing layer.",
+          "detail": "subscription.created → 2,000 credits"
         },
         "i18n": {
           "title": "Internationalization",
-          "description": "Localized routes and messages. Adding a language is just a config change."
+          "description": "Localized routes and messages. Adding a language is just a config change.",
+          "detail": "en · zh · ja"
         },
         "ai": {
           "title": "AI ready",
-          "description": "Call any model with the Vercel AI SDK and charge per request in credits."
+          "description": "Call any model with the Vercel AI SDK and charge per request in credits.",
+          "detail": "streamText() → credits debited"
         },
         "seo": {
           "title": "SEO built in",
-          "description": "Metadata, sitemap, hreflang and Open Graph images out of the box."
+          "description": "Metadata, sitemap, hreflang and Open Graph images out of the box.",
+          "detail": "sitemap.xml · rss.xml · json-ld"
         },
         "fast": {
           "title": "Fast by default",
-          "description": "Static rendering, optimized fonts and images, and a tiny client bundle."
+          "description": "Static rendering, optimized fonts and images, and a tiny client bundle.",
+          "detail": "static · no client JS by default"
         }
       }
     },

@@ -7,9 +7,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* --edge 是贴纸表面的唯一开关：一个变量同时驱动 1px 描边和零模糊硬唇边。
+   必须注册：不注册的话 --edge 未定义会让 `border: 1px solid var(--edge)` 整条简写
+   失效，退化成 border-style:none，一条边都不画。注册后规约成 transparent，
+   至少保住发丝线的宽度。inherits 让它能沿嵌套面传下去。 */
+@property --edge {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 @theme inline {
-  --font-heading: var(--font-sans);
+  /* 字体：标题走 display 面，正文走 sans，mock UI 走 mono。
+     next/font 把变量挂在 <html> 上，这里 inline 到使用处。 */
   --font-sans: var(--font-sans);
+  --font-heading: var(--font-display);
+  --font-mono: var(--font-mono);
+
+  /* 圆角刻度：先承诺再动手。控件 8 / 按钮 12 / 卡片 16。 */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 1.625rem;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -27,6 +50,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-edge: var(--destructive-edge);
+  --color-destructive-text: var(--destructive-text);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -35,88 +61,117 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-band: var(--primary-band);
+  --color-band-tint: var(--band-tint);
+  --color-primary-text: var(--primary-text);
+  --color-primary-edge: var(--primary-edge);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* 语义三档。每个语义色四个 token，角色分清楚：
+     --S          中调：当文字、描边、图标用，在画布上可读（text-destructive 这类已有用法靠它）
+     --S-band     粉彩填充：大面积色块、徽章底
+     --S-edge     中调偏深：给 band 表面做描边和硬唇边
+     --S-foreground  写在 band 上的文字色（永远是暖墨，粉彩上不用白字） */
+  --color-success: var(--success);
+  --color-success-band: var(--success-band);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-edge: var(--success-edge);
+  --color-success-text: var(--success-text);
+  --color-warning: var(--warning);
+  --color-warning-band: var(--warning-band);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-edge: var(--warning-edge);
+  --color-warning-text: var(--warning-text);
+  --color-info: var(--info);
+  --color-info-band: var(--info-band);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-edge: var(--info-edge);
+  --color-info-text: var(--info-text);
+  /* 页脚是页面底部的深色锚点，两套主题下都保持深色（不能用 bg-foreground 反相，
+     暗色主题下 foreground 是浅色，会把页脚翻成一片白）。 */
+  --color-footer: var(--footer);
+  --color-footer-foreground: var(--footer-foreground);
 }
 
+/* 品牌相关变量（--primary*、--background、--card、--muted、--border 这些）
+   由 src/core/theme/brand-css.ts 在运行时按 site.config.ts 的 primaryColor 推导后
+   注入 <head>。<这里不重复声明，避免两处值漂移。
+   下面只管不随品牌变化的那部分。 */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
+  /* 顶栏高度。区块的 scroll-mt 也从这里取，锚点跳转才不会被顶栏盖住。 */
+  --header-height: 4.375rem;
+
+  --success: #2b7440;
+  --success-band: #d4f1d8;
+  --success-edge: #519962;
+  --success-text: #2b7440;
+  --success-foreground: #191614;
+  --warning: #825b00;
+  --warning-band: #f8e5c7;
+  --warning-edge: #a97e2c;
+  --warning-text: #825b00;
+  --warning-foreground: #191614;
+  --info: #0e6a9b;
+  --info-band: #d2ecff;
+  --info-edge: #3e8ec1;
+  --info-text: #0e6a9b;
+  --info-foreground: #191614;
+  /* destructive 保持「能当文字用」的中调：全仓有十几处 text-destructive 的错误提示，
+     换成粉彩会让它们直接糊掉。粉彩那档单独叫 -band。 */
+  --destructive: #984742;
+  --destructive-band: #ffdfdc;
+  --destructive-edge: #c06a64;
+  --destructive-text: #984742;
+  --destructive-foreground: #191614;
+
+  --chart-1: #4f46e5;
+  --chart-2: #2b7440;
+  --chart-3: #0e6a9b;
+  --chart-4: #825b00;
+  --chart-5: #984742;
+
+  --footer: #1a1715;
+  --footer-foreground: #f6f2ef;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* 暗底上中调要提亮，粉彩要压暗，否则在暗色里刺眼。 */
+  --success: #98e2a8;
+  --success-band: #152d1a;
+  --success-edge: #2f6b3d;
+  --success-text: #98e2a8;
+  --success-foreground: #d4f1d8;
+  --warning: #f4c677;
+  --warning-band: #32240a;
+  --warning-edge: #7a5a1c;
+  --warning-text: #f4c677;
+  --warning-foreground: #f8e5c7;
+  --info: #9cd6ff;
+  --info-band: #0f293a;
+  --info-edge: #2a6485;
+  --info-text: #9cd6ff;
+  --info-foreground: #d2ecff;
+  --destructive: #ffb9b3;
+  --destructive-band: #3a1d1b;
+  --destructive-edge: #8d4a45;
+  --destructive-text: #ffb9b3;
+  --destructive-foreground: #ffdfdc;
+
+  --chart-1: #9cd6ff;
+  --chart-2: #98e2a8;
+  --chart-3: #f4c677;
+  --chart-4: #ffb9b3;
+  --chart-5: #7b7471;
+
+  --footer: #121110;
+  --footer-foreground: #f6f2ef;
 }
 
 @layer base {
@@ -128,5 +183,74 @@
   }
   html {
     @apply font-sans;
+    /* 仅 macOS 生效的字体平滑，根布局上应用一次。 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* 消除双击缩放的点击延迟。 */
+    touch-action: manipulation;
+  }
+  /* 数字列、价格、计数器用等宽数字，避免动态更新时跳动。 */
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* 贴纸表面：1px 描边 + 零模糊硬唇边，两者同色。
+     唇边写进 --tw-shadow 而不是裸 box-shadow，因为 focus-visible:ring-3 会用
+     box-shadow 整属性覆盖，只有走 --tw-shadow 才能在聚焦时存活下来。
+     var() 都带兜底：Tailwind 的 @property 在旧浏览器上不生效时，裸 var 会让
+     整条 box-shadow 失效，连聚焦环一起丢。
+
+     --edge 在这里给一个默认值（中性边框色）。不给的话它会落到 @property 的
+     initial-value（透明），唇边画不出来也看不出来，只会静默少一层深度。
+     带 tone 的元素用 utility 层的 [--edge:var(--x-edge)] 覆盖它。 */
+  .sticker {
+    --edge: var(--border);
+    border: 1px solid var(--edge);
+    --tw-shadow: 0 2px 0 0 var(--edge);
+    box-shadow:
+      var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+      var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+      var(--tw-shadow);
+  }
+
+  /* 大表面的唇边厚一档。 */
+  .sticker-lg {
+    --edge: var(--border);
+    border: 1px solid var(--edge);
+    --tw-shadow: 0 4px 0 0 var(--edge);
+    box-shadow:
+      var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+      var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+      var(--tw-shadow);
+  }
+
+  /* 营销页容器：和 creem 一样的 80rem 上限，三段式内边距。 */
+  .container-marketing {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 40rem) {
+    .container-marketing {
+      padding-inline: 2rem;
+    }
+  }
+  @media (min-width: 64rem) {
+    .container-marketing {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  /* display 面标题。字重靠字体本身的体量，不靠加粗；
+     短文本块用 balance 避免行寡。 */
+  .heading-display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
   }
 }

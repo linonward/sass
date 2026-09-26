@@ -44,6 +44,8 @@
 | T602                   | sentry         | `feat/sentry`         | T601             | done      |
 | T603                   | web-analytics  | `feat/web-analytics`  | T601             | done      |
 | T604                   | admin-metrics  | `feat/admin-metrics`  | T502             | done      |
+| **阶段 7：视觉重设计** |                |                       |                  |           |
+| T605                   | redesign       | `feat/redesign`       | T108, T604       | in-review |
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
 

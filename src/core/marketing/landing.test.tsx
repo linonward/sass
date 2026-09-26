@@ -13,11 +13,14 @@ function renderSections(sections: string[]) {
     ...siteConfig,
     landing: { ...siteConfig.landing, sections },
   } as SiteConfigInput);
-  const { container } = render(
+  return render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <Landing config={config} />
     </NextIntlClientProvider>,
-  );
+  ).container;
+}
+
+function sectionIds(container: HTMLElement) {
   return [...container.querySelectorAll("[data-section]")].map((el) =>
     el.getAttribute("data-section"),
   );
@@ -26,12 +29,12 @@ function renderSections(sections: string[]) {
 describe("Landing", () => {
   test("按配置顺序渲染全部区块", () => {
     expect(
-      renderSections(["hero", "features", "pricing", "faq", "cta"]),
+      sectionIds(renderSections(["hero", "features", "pricing", "faq", "cta"])),
     ).toEqual(["hero", "features", "pricing", "faq", "cta"]);
   });
 
   test("调整顺序后渲染顺序随之变化", () => {
-    expect(renderSections(["faq", "hero", "cta"])).toEqual([
+    expect(sectionIds(renderSections(["faq", "hero", "cta"]))).toEqual([
       "faq",
       "hero",
       "cta",
@@ -39,12 +42,28 @@ describe("Landing", () => {
   });
 
   test("删除的区块不再渲染", () => {
-    const rendered = renderSections(["hero", "features", "faq", "cta"]);
+    const rendered = sectionIds(
+      renderSections(["hero", "features", "faq", "cta"]),
+    );
     expect(rendered).not.toContain("pricing");
   });
 
   test("空数组时不渲染任何区块", () => {
-    expect(renderSections([])).toEqual([]);
+    expect(sectionIds(renderSections([]))).toEqual([]);
+  });
+
+  // next-intl 遇到缺失的 key 或解析不了的 ICU 消息时，会把 key 原样渲染到页面上。
+  // 这种错误只有跑一遍真实渲染才看得见：`{ model, credits }` 这种带花括号的文案
+  // 会被当成 ICU 占位符解析失败，就是这条兜住的。
+  test("文案全部解析成功，没有原样漏出来的 key", () => {
+    const { textContent } = renderSections([
+      "hero",
+      "features",
+      "pricing",
+      "faq",
+      "cta",
+    ]);
+    expect(textContent).not.toMatch(/Landing\.[A-Za-z]/);
   });
 });
 
