@@ -133,6 +133,30 @@ pnpm dev              # http://localhost:3000
 - `uuid` 14 已是纯 ESM 包，而 mdx-bundler 是 CJS、用 `require("uuid")` 取 `v4`：能跑通是因为 Node 24 支持 `require(esm)`，换更低的 Node 会在这里失败（`engines.node` 已经要求 24.x）。
 - `pnpm audit` 目前只剩一条 moderate：`esbuild` 的 GHSA-67mh-4wv8-2f99（<= 0.24.2 的 dev server 允许任意网站发请求并读到响应）。它经 `drizzle-kit > @esbuild-kit/esm-loader > @esbuild-kit/core-utils > esbuild@0.18.20` 进来，`@esbuild-kit/*` 已归档、上游不再修；这条路径只调用 `esbuild.transform()`（加载 `drizzle.config.ts` 用），从不调用 `esbuild.serve()`，起不了那个 dev server，所以在本项目不可利用。drizzle-kit 是 devDependency（也是 better-auth 的可选 peer），不进运行时产物。不要用 overrides 强升这个 esbuild：`@esbuild-kit/core-utils` 按 `~0.18.20` 写死 API，且已归档。
 
+#### 绑定在一起的版本
+
+下面这些包不能单独升，改之前先看这一节（`.github/dependabot.yml` 里已经按这些约束分好组）：
+
+| 包                                 | 版本               | 为什么要一起动                                                                                                                                                                                            |
+| ---------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `react` / `react-dom`              | `19.2.8`（精确）   | `@types/react` / `@types/react-dom` 钉在同一 minor（`~19.2.18` / `~19.2.7`）。类型比运行时新，代码会用上运行时不存在的 API；升 react 时四个包一起升。                                                     |
+| `better-auth` / `auth`             | `1.7.6`（都精确）  | `auth` 是 better-auth 的 CLI，它自己依赖的 better-auth 是**精确**版本（`node_modules/auth/package.json`）。项目里的 better-auth 飘到别的版本时，`pnpm auth:generate` 生成的 schema 可能和运行时库对不上。 |
+| `next` / `eslint-config-next`      | `16.3.6`（都精确） | ESLint 配置随 Next 版本走，两者不同版本时 lint 规则和框架不匹配。                                                                                                                                         |
+| `@opentelemetry/*`、`@vercel/otel` | 一组精确版本       | `@vercel/otel` 对 `@opentelemetry/*` 的版本有要求，混版本会在运行时初始化失败。                                                                                                                           |
+
+`shadcn` 是脚手架 CLI，只在 `devDependencies`：全仓没有运行时 import（`components.json` 只是它读的配置），放进 `dependencies` 会让买家 `pnpm install --prod` 多装一整棵 MCP SDK 树。
+
+#### 已验证的版本；暂缓的大版本
+
+- `@sentry/nextjs` 本仓库验证的是 **11.0.0**（`^11.0.0`）：服务端 / 浏览器 / edge 三条初始化路径、`onRequestError`、source map 上传都在 `src/core/observability/` 与 `next.config.ts`，换 major 前先读 Sentry 的迁移说明、再重跑 `pnpm test` 和 e2e。关闭功能时 SDK 不进构建产物这一点也依赖它的 `config` 子路径导出。
+- `resend` 验证的是 **6.30.0**（`^6.30.0`）：单测用 mock 覆盖 `resend` transport 的调用形状（`src/core/email/email.test.ts`），真实发送只在生产环境发生，升级后建议手动发一封确认。
+- `typescript` 停在 `^5`（当前 5.9.3），**暂不升 7**：`eslint-config-next@16.3.6` 依赖 `typescript-eslint@8.x`，它的 peer 是 `typescript >=4.8.4 <6.1.0`。等 eslint-config-next 换成支持 TS 7 的 typescript-eslint 大版本再升。
+- `eslint` 停在 `^9`（当前 9.39.5），**暂不升 10**：同样来自 eslint-config-next 的依赖 —— `eslint-plugin-react@7.x`（peer `eslint ^3…^9.7`）、`eslint-plugin-import@2.x`（`^2…^9`）、`eslint-plugin-jsx-a11y@6.x`（`^3…^9`）都还没放开 10。
+
+#### 依赖更新
+
+`.github/dependabot.yml` 每周检查 npm（含 pnpm 锁文件）和 `github-actions` 的更新并开 PR：上面「绑定在一起的版本」各成一组、整组一起动，其余 minor / patch 合成一个 PR，major 不进组、单独开 PR 逐个评估。
+
 ## 配置
 
 - `site.config.ts`：站点名称、域名、品牌色、语言、功能开关（`features`）。由 `defineConfig()` 校验，写错时 `dev` / `build` 直接失败，并指出出错字段。

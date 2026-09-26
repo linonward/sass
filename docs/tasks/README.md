@@ -56,7 +56,7 @@
 | T805                       | prod-env-guards   | `fix/prod-env-guards`   | T801             | done |
 | T806                       | security-headers  | `feat/security-headers` | T801             | todo |
 | T807                       | dep-overrides     | `fix/dep-overrides`     | T801             | done |
-| T808                       | deps-hygiene      | `chore/deps-hygiene`    | T801             | todo |
+| T808                       | deps-hygiene      | `chore/deps-hygiene`    | T801             | done |
 | T809                       | refund-credits    | `feat/refund-credits`   | T801             | todo |
 | T810                       | ts-strictness     | `chore/ts-strictness`   | T801             | todo |
 | T811                       | distribution      | `chore/distribution`    | T801             | todo |

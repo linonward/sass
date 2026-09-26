@@ -1,0 +1,71 @@
+# 每周检查依赖更新并开 PR。模板是买家项目的上游，依赖升级走 PR 才能被审阅（见 docs/workflow.md）。
+# 配置项说明：https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+version: 2
+
+updates:
+  # 仓库用 pnpm（package.json 的 packageManager + pnpm-lock.yaml），但 dependabot 没有
+  # pnpm 这个 ecosystem 值，pnpm 项目仍然写 npm。
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      # 生成 `chore(deps): bump ...` / `chore(deps-dev): bump ...`，符合 Conventional Commits。
+      prefix: "chore"
+      include: scope
+    groups:
+      # 下面几组必须整组一起动：只升其中一个会让版本对不上。
+      better-auth:
+        # auth（better-auth 的 CLI）内置的 better-auth 是精确版本（见 node_modules/auth/package.json），
+        # 项目里的 better-auth 必须与它同版本，否则 pnpm auth:generate 生成的 schema 会和运行时库对不上。
+        patterns:
+          - "better-auth"
+          - "@better-auth/*"
+          - "auth"
+      react:
+        # react / react-dom 钉精确版本，@types/react / @types/react-dom 按 react 的 minor 对齐。
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      next:
+        # eslint-config-next 必须与 next 同版本（package.json 里两者都钉精确版本）。
+        patterns:
+          - "next"
+          - "eslint-config-next"
+          - "@next/*"
+      opentelemetry:
+        # @opentelemetry/* 与 @vercel/otel 在 package.json 里是一组精确版本，混版本容易出运行时问题。
+        patterns:
+          - "@opentelemetry/*"
+          - "@vercel/otel"
+      # 其余 minor / patch 合成一个 PR，减少噪音。上面几组用 exclude-patterns 排掉，
+      # 不依赖 dependabot 的组匹配顺序。major 不进这组，会单独开 PR 逐个评估。
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "better-auth"
+          - "@better-auth/*"
+          - "auth"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+          - "next"
+          - "eslint-config-next"
+          - "@next/*"
+          - "@opentelemetry/*"
+          - "@vercel/otel"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore"
+      include: scope

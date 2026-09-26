@@ -9,3 +9,9 @@ allowBuilds:
 overrides:
   toml: ">=4.2.0"
   uuid: ">=11.1.1"
+
+# pnpm 的供应链策略（minimumReleaseAge）默认拒绝太新的版本；resend 6.30.0 发布不足
+# 该时长，pnpm 在安装时自动加进这里。显式留下：删掉它，下次 install 会重新写回来，
+# 也可能让 CI 的 --frozen-lockfile 通不过该策略检查。
+minimumReleaseAgeExclude:
+  - resend@6.30.0
