@@ -20,8 +20,8 @@ export default defineConfig({
     upload: true,
     admin: true,
     rateLimit: false,
-    // 结构化日志和追踪，细项见下面的 observability。
-    observability: false,
+    // 结构化日志、追踪和分析，细项见下面的 observability。
+    observability: true,
   },
   nav: {
     header: [
@@ -170,8 +170,8 @@ export default defineConfig({
     sentry: false,
     // Vercel Analytics（页面浏览和转化事件）与 Speed Insights，都要先在 Vercel 项目里开启。
     // 自定义事件（sign_up、checkout_started、purchase）需要 Pro 计划，Hobby 只有页面浏览。
-    analytics: false,
-    speedInsights: false,
+    analytics: true,
+    speedInsights: true,
   },
   // AI 模型（features.ai 开启时生效）。每次调用按 creditCost 预扣积分，失败退回。
   // env 里只配了某几家的 key 时，其他服务商的模型调用返回 503；生产环境会要求这里用到的每家 key。
