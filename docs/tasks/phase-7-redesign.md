@@ -60,6 +60,14 @@
 
 - 营销侧剩下的细节页布局：blog 列表卡片与文章页、legal、404
 - 那几处还没换的 `text-primary` 当文字用：`src/core/blog/post-list.tsx`、`post-article.tsx`、`src/core/legal/legal-page.tsx`、`src/app/[locale]/not-found.tsx`
+  （2026-09-26 错误路径审计补的量化：`not-found.tsx:12` 那个 `text-primary` 亮色 5.74:1 过 AA，**暗色只有 2.88:1 不过**——根因是 `--primary` 保留配置原 hex，暗底上不够看，`design.md` §配色 说明该用 `--primary-text`）
 - 打开移动端抽屉看一次营销面的导航（T606 给菜单加了唇边、去掉了投影）
+- **404 页补站内导航**（审计发现）：`not-found.tsx` 与 `[...rest]/page.tsx` 都挂在 `[locale]/` 层、不在 `(marketing)` 组内，所以 404 只穿一层 layout，拿不到 `SiteHeader` / `SiteFooter`，唯一动作是「Back to home」。两条做法二选一：在 `not-found.tsx` 里自己渲染 header/footer，或把它**连同 `[...rest]/page.tsx` 一起**挪进 `(marketing)`——不一起挪的话 catch-all 的 `notFound()` 会找不到文件。
+- **两个错误页的 CTA 用错了语域**（审计新发现）：`not-found.tsx:15` 的 `buttonVariants()` 与 `error.tsx` 的 `<Button>` 都吃默认值 —— `variant: "default"` / `size: "default"`，而 `size.default` 是 **32px** 且不传 `tone` 就没有贴纸描边和唇边。按 `design.md`，营销面 CTA 是 44px 的 `buttonVariants({ size: "marketing", tone: "primary" })`；32px 也低于 `design.md` 的「触控目标 ≥40px」。
+- **两个错误页的 h1 是全仓唯一不用 `.heading-display` 的 h1**（审计新发现）：`not-found.tsx:13` 与 `error.tsx` 都用 `text-3xl font-semibold tracking-tight`，而其余 h1（`page-header.tsx`、`sign-in/page.tsx`、`marketing/sections/hero.tsx`）都走 display 字体，`.heading-display` 全仓 20 处。`globals.css` 只定义了 `--font-heading`、没有 base 规则把它挂到 `h1` 上，所以这两个 h1 实际渲染成 Geist Sans 而不是 Bricolage，与 `design.md` 的字体分工不符。
 
 **不做**：产品面（T606 已完成）
+
+**边界**：`error.tsx` / `global-error.tsx` 的**文案与元数据**归阶段 9 的 T903，不在本任务里；本任务只管这两页的视觉语域（字体、按钮、导航）。
+
+**测试**：`npx playwright test e2e/ui-shell.spec.ts e2e/landing.spec.ts`（`AGENTS.md` 要求，锁着品牌色、可访问名和 375px 不横向溢出）
