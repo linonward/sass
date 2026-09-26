@@ -1,5 +1,7 @@
 // @vitest-environment node
 // t3-env 只在服务端校验 server 变量，jsdom 下会被当成客户端。
+import { readFile } from "node:fs/promises";
+
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 
@@ -59,6 +61,20 @@ describe("createAppEnv", () => {
     expect(() =>
       aiEnv(true, { NODE_ENV: "production", SKIP_ENV_VALIDATION: "1" }),
     ).toThrow("- AI_API_KEY: ");
+  });
+
+  // T817：Next 的 CLI 会把没设过的 NODE_ENV 补成该命令的默认值（`next typegen` 是
+  // production，见 node_modules/next/dist/bin/next 的
+  // `process.env.NODE_ENV = process.env.NODE_ENV || defaultEnv`），于是「只带
+  // SKIP_ENV_VALIDATION 的本地命令」会被当成生产运行时 —— 干净检出（没有 .env.local）
+  // 跑 pnpm typecheck 会直接死在必填项上。脚本里显式带 NODE_ENV=development 才是对的，
+  // 这条测试锁住这两个变量，谁删掉都会红。
+  test("typecheck 脚本显式声明 NODE_ENV=development 并跳过校验", async () => {
+    const pkg = JSON.parse(
+      await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+    ) as { scripts: Record<string, string> };
+    expect(pkg.scripts.typecheck).toContain("SKIP_ENV_VALIDATION=1");
+    expect(pkg.scripts.typecheck).toContain("NODE_ENV=development");
   });
 
   test("生产运行时变量齐全时照常通过校验", () => {

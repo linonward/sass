@@ -130,7 +130,7 @@ pnpm dev              # http://localhost:3000
 | ----------------------------------- | ------------------------------------------------------------------------ |
 | `pnpm lint`                         | ESLint                                                                   |
 | `pnpm format` / `pnpm format:check` | Prettier 格式化 / 检查                                                   |
-| `pnpm typecheck`                    | 生成路由类型并执行 `tsc`                                                 |
+| `pnpm typecheck`                    | 生成路由类型并执行 `tsc`（不需要 `.env.local`）                          |
 | `pnpm test`                         | Vitest 单测（`src/**/*.test.{ts,tsx}`）                                  |
 | `pnpm test:e2e`                     | Playwright e2e（`e2e/`，首次需 `pnpm exec playwright install chromium`） |
 | `pnpm build`                        | 生产构建                                                                 |
@@ -243,6 +243,7 @@ pnpm dev              # http://localhost:3000
   - 写操作都接受 `{ tx }`：传入外部事务时作为它的一部分提交或回滚；余额不足等错误只回滚这一步。
 - UI 组件：shadcn/ui（Base UI），生成到 `src/core/ui/`。新增组件用 `pnpm dlx shadcn@latest add <name>`。
 - 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验，但只在非生产运行时生效：`next build` / `next start` / Docker 里 `NODE_ENV` 是 production，一律强制校验（否则一个环境变量就能跳过必填项和各模块的生产闸门）。
+  - `pnpm typecheck` 与 `pnpm auth:generate` 是例外：它们在脚本里显式用 `NODE_ENV=development` 跑，所以没有 `.env.local` 也能过。原因是 Next 的 CLI 会把没设过的 `NODE_ENV` 补成该命令的默认值（`next typegen` 是 production），只带 `SKIP_ENV_VALIDATION=1` 会被生产闸门拦下 —— 见 `src/core/create-env.ts` 的注释。
 
 CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test → build → e2e 顺序执行。
 
