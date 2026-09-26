@@ -54,7 +54,7 @@
 | T803                       | fake-billing-gate | `fix/fake-billing-gate` | T801             | todo |
 | T804                       | neutral-config    | `fix/neutral-config`    | T801             | done |
 | T805                       | prod-env-guards   | `fix/prod-env-guards`   | T801             | todo |
-| T806                       | security-headers  | `feat/security-headers` | T801             | todo |
+| T806                       | security-headers  | `feat/security-headers` | T801             | done |
 | T807                       | dep-overrides     | `fix/dep-overrides`     | T801             | todo |
 | T808                       | deps-hygiene      | `chore/deps-hygiene`    | T801             | todo |
 | T809                       | refund-credits    | `feat/refund-credits`   | T801             | todo |
