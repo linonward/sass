@@ -139,7 +139,7 @@ pnpm dev              # http://localhost:3000
 
 | 包                                 | 版本               | 为什么要一起动                                                                                                                                                                                            |
 | ---------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `react` / `react-dom`              | `19.2.8`（精确）   | `@types/react` / `@types/react-dom` 钉在同一 minor（`~19.2.18` / `~19.2.7`）。类型比运行时新，代码会用上运行时不存在的 API；升 react 时四个包一起升。                                                     |
+| `react` / `react-dom`              | `19.3.0`（精确）   | `@types/react` / `@types/react-dom` 钉在同一 minor（`~19.3.0` / `~19.3.0`）。类型比运行时新，代码会用上运行时不存在的 API；升 react 时四个包一起升。                                                      |
 | `better-auth` / `auth`             | `1.7.6`（都精确）  | `auth` 是 better-auth 的 CLI，它自己依赖的 better-auth 是**精确**版本（`node_modules/auth/package.json`）。项目里的 better-auth 飘到别的版本时，`pnpm auth:generate` 生成的 schema 可能和运行时库对不上。 |
 | `next` / `eslint-config-next`      | `16.3.6`（都精确） | ESLint 配置随 Next 版本走，两者不同版本时 lint 规则和框架不匹配。                                                                                                                                         |
 | `@opentelemetry/*`、`@vercel/otel` | 一组精确版本       | `@vercel/otel` 对 `@opentelemetry/*` 的版本有要求，混版本会在运行时初始化失败。                                                                                                                           |
@@ -150,7 +150,7 @@ pnpm dev              # http://localhost:3000
 
 - `@sentry/nextjs` 本仓库验证的是 **11.0.0**（`^11.0.0`）：服务端 / 浏览器 / edge 三条初始化路径、`onRequestError`、source map 上传都在 `src/core/observability/` 与 `next.config.ts`，换 major 前先读 Sentry 的迁移说明、再重跑 `pnpm test` 和 e2e。关闭功能时 SDK 不进构建产物这一点也依赖它的 `config` 子路径导出。
 - `resend` 验证的是 **6.30.0**（`^6.30.0`）：单测用 mock 覆盖 `resend` transport 的调用形状（`src/core/email/email.test.ts`），真实发送只在生产环境发生，升级后建议手动发一封确认。
-- `typescript` 停在 `^5`（当前 5.9.3），**暂不升 7**：`eslint-config-next@16.3.6` 依赖 `typescript-eslint@8.x`，它的 peer 是 `typescript >=4.8.4 <6.1.0`。等 eslint-config-next 换成支持 TS 7 的 typescript-eslint 大版本再升。
+- `typescript` 停在 `^6`（当前 6.0.3），**暂不升 7**：`eslint-config-next@16.3.6` 依赖 `typescript-eslint@8.x`，它的 peer 是 `typescript >=4.8.4 <6.1.0` —— 6.0.x 在区间内（2026-09-26 从 5.9.3 升到 6.0.3，`pnpm typecheck` / `pnpm build` / 全部单测通过），**6.1+ 会被这个 peer 卡住**。等 eslint-config-next 换成支持更高版本的 typescript-eslint 大版本再升。
 - `eslint` 停在 `^9`（当前 9.39.5），**暂不升 10**：同样来自 eslint-config-next 的依赖 —— `eslint-plugin-react@7.x`（peer `eslint ^3…^9.7`）、`eslint-plugin-import@2.x`（`^2…^9`）、`eslint-plugin-jsx-a11y@6.x`（`^3…^9`）都还没放开 10。
 
 #### 依赖更新

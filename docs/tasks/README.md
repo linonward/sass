@@ -62,6 +62,7 @@
 | T811                       | distribution      | `chore/distribution`    | T801             | todo |
 | T812                       | brand-assets      | `fix/brand-assets`      | T801             | todo |
 | T813                       | prod-sentinels    | `fix/prod-sentinels`    | T801             | todo |
+| T817                       | typecheck-env     | `fix/typecheck-env`     | T801             | todo |
 | T814                       | harden-misc       | `fix/harden-misc`       | T801             | todo |
 | T815                       | seed-data         | `feat/seed-data`        | T801             | todo |
 | T816                       | llms-txt          | `feat/llms-txt`         | T801             | done |
@@ -77,7 +78,7 @@
 | T1003                      | playground-tabs   | `fix/playground-tabs`   | T901, T1002      | done |
 | T1004                      | serial-queries    | `fix/serial-queries`    | T901             | done |
 
-阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813）上架前建议，批次 C（T814–T816）可后做。T816 是唯一的「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。
+阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816）可后做。T816 是唯一的「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的。
 
 阶段 9 分两批（见 [phase-9-boundaries.md](phase-9-boundaries.md)）：批次 A（T902–T903）修用户可见缺陷，批次 B（T904–T905）防退化。T902 与 T903 互不依赖可并行；T904 要锁的是它们修好后的行为，所以依赖两者。
 
@@ -117,7 +118,7 @@
          T502 → T604
 
 阶段 8   T801 → T802 T803 T804 T805 T806 T807 T808（批次 A：上架阻塞）
-         T801 → T809 T810 T811 T812 T813（批次 B：上架前建议）
+         T801 → T809 T810 T811 T812 T813 T817（批次 B：上架前建议）
          T801 → T814 T815 T816（批次 C：可后做）
 
 阶段 9   T901 → T902 T903（批次 A：用户可见缺陷，两条可并行）
