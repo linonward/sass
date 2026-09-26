@@ -2,7 +2,7 @@
 
 本文件列出模板用到的第三方组件及其许可。模板**自身的代码**不在这里，按根目录 [LICENSE](LICENSE) 的专有 EULA 授权。
 
-- 统计时间：2026-09-26，基线 `358d00d`（本文件所在分支未改动依赖）。
+- 统计时间：2026-09-26。上一版数字对应基线 `358d00d`；本版是 T808（依赖卫生：`shadcn` 移入 `devDependencies`、`resend` / `better-auth` 升级、移除 `vite-tsconfig-paths`）之后的数字 —— 生产依赖树减少的主要是 `shadcn` 那条链（见下表）。
 - 统计方式：`pnpm licenses list`（全量）与 `pnpm licenses list --prod`（仅生产依赖），读的是仓库已安装的依赖和 `pnpm-lock.yaml` 锁定的版本。
 - 依赖升级后数字会变，本文件不会自动跟着变 —— 改依赖时重跑上面的命令并按需更新。
 - 本文件是情况说明，**不是法律意见**；正式售卖前建议由律师过目（见 README 的「授权」一节）。
@@ -13,7 +13,7 @@
 
 | 许可（SPDX）              | 包数 |
 | ------------------------- | ---- |
-| MIT                       | 838  |
+| MIT                       | 835  |
 | Apache-2.0                | 89   |
 | ISC                       | 35   |
 | BSD-2-Clause              | 16   |
@@ -31,24 +31,24 @@
 | FSL-1.1-Apache-2.0        | 1    |
 | 0BSD                      | 1    |
 | (MIT OR CC0-1.0)          | 1    |
-| **合计**                  | 1013 |
+| **合计**                  | 1010 |
 
-口径：1013 是「包名 × 许可」的条目数，落盘的是 1118 个「包名@版本」（同一个包有多个版本时会各占一行版本），去重到包名是 1009 个。
+口径：1010 是「包名 × 许可」的条目数，落盘的是 1115 个「包名@版本」（同一个包有多个版本时会各占一行版本），去重到包名是 1006 个。
 
 **没有 GPL、AGPL、SSPL 这类强 copyleft 许可。** 有 copyleft 性质的一共 4 个包：1 个 LGPL-3.0-or-later、3 个 MPL-2.0，逐个说明见下一节。其余全是宽松许可（MIT / Apache-2.0 / ISC / BSD / MIT-0 / 0BSD / BlueOak / Unlicense / CC0 / Python-2.0 / 二选一的双许可）。
 
 ## 生产依赖树
 
-`pnpm licenses list --prod`：658 条，655 个包名。
+`pnpm licenses list --prod`：540 条，538 个包名。
 
 | 许可（SPDX）              | 包数 |
 | ------------------------- | ---- |
-| MIT                       | 541  |
-| Apache-2.0                | 61   |
-| ISC                       | 23   |
-| BSD-3-Clause              | 10   |
-| BSD-2-Clause              | 8    |
-| BlueOak-1.0.0             | 6    |
+| MIT                       | 434  |
+| Apache-2.0                | 60   |
+| ISC                       | 18   |
+| BSD-3-Clause              | 7    |
+| BSD-2-Clause              | 7    |
+| BlueOak-1.0.0             | 5    |
 | Python-2.0                | 1    |
 | CC-BY-4.0                 | 1    |
 | Unlicense                 | 1    |
@@ -58,7 +58,7 @@
 | FSL-1.1-Apache-2.0        | 1    |
 | 0BSD                      | 1    |
 | (MIT OR CC0-1.0)          | 1    |
-| **合计**                  | 658  |
+| **合计**                  | 540  |
 
 两点要注意：
 
@@ -105,9 +105,9 @@
 
 ## 直接依赖明细
 
-`package.json` 里 45 个 `dependencies` + 31 个 `devDependencies`，共 76 个。版本是本次统计时锁定的版本。
+`package.json` 里 44 个 `dependencies` + 31 个 `devDependencies`，共 75 个。版本是本次统计时锁定的版本。
 
-### MIT（53）
+### MIT（52）
 
 | 包                                | 版本    | 依赖类型 |
 | --------------------------------- | ------- | -------- |
@@ -127,16 +127,16 @@
 | `@testing-library/react`          | 16.3.3  | dev      |
 | `@types/node`                     | 24.13.6 | dev      |
 | `@types/pg`                       | 8.23.1  | dev      |
-| `@types/react`                    | 19.3.0  | dev      |
-| `@types/react-dom`                | 19.3.0  | dev      |
+| `@types/react`                    | 19.2.18 | dev      |
+| `@types/react-dom`                | 19.2.7  | dev      |
 | `@types/ws`                       | 8.18.1  | dev      |
 | `@upstash/ratelimit`              | 2.2.0   | prod     |
 | `@upstash/redis`                  | 1.39.0  | prod     |
 | `@vercel/analytics`               | 2.0.1   | prod     |
 | `@vercel/otel`                    | 2.1.3   | prod     |
 | `@vitejs/plugin-react`            | 6.1.1   | dev      |
-| `auth`                            | 1.7.5   | dev      |
-| `better-auth`                     | 1.7.5   | prod     |
+| `auth`                            | 1.7.6   | dev      |
+| `better-auth`                     | 1.7.6   | prod     |
 | `cn`                              | 0.4.0   | prod     |
 | `creem`                           | 1.13.0  | prod     |
 | `drizzle-kit`                     | 0.31.11 | dev      |
@@ -155,12 +155,11 @@
 | `react`                           | 19.2.8  | prod     |
 | `react-dom`                       | 19.2.8  | prod     |
 | `react-email`                     | 6.11.0  | prod     |
-| `resend`                          | 6.28.1  | prod     |
-| `shadcn`                          | 4.21.0  | prod     |
+| `resend`                          | 6.30.0  | prod     |
+| `shadcn`                          | 4.21.0  | dev      |
 | `sonner`                          | 2.0.8   | prod     |
 | `tailwindcss`                     | 4.3.3   | dev      |
 | `tw-animate-css`                  | 1.4.0   | prod     |
-| `vite-tsconfig-paths`             | 6.1.1   | dev      |
 | `vitest`                          | 5.0.1   | dev      |
 | `ws`                              | 8.21.3  | prod     |
 | `zod`                             | 4.6.5   | prod     |

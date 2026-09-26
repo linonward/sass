@@ -29,7 +29,10 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/postgres
       # 生产构建默认用 Resend 发信并要求 RESEND_API_KEY；CI 改为写文件，e2e 从 .tmp/emails/ 读取。
+      # e2e 跑在生产构建上（next start，NODE_ENV=production），生产运行时默认只允许 resend，
+      # 这里显式放行 console / file。
       EMAIL_TRANSPORT: file
+      ALLOW_NON_RESEND_EMAIL: "1"
       # 仅供 CI 使用的固定值；生产环境在 Vercel 上单独设置。
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production
       # e2e 用站内的 fake 支付服务商模拟结账和 webhook（Vercel 上会被 env 校验拒绝）。

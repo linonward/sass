@@ -131,6 +131,80 @@ describe("脱敏", () => {
     expect(line).not.toContain("a@b.com");
     expect(line).not.toContain("secret-token");
   });
+
+  test("验证码类字段脱敏：code、otp、pin 和它们的各种写法", () => {
+    expect(
+      redact({
+        code: "123456",
+        otp: "123456",
+        userOtp: "123456",
+        hotp: "123456",
+        pin: "4821",
+        userPin: "4821",
+        pinCode: "4821",
+        verificationCode: "123456",
+        verification_code: "123456",
+        otpCode: "123456",
+        smsCode: "123456",
+        authCode: "123456",
+        securityCode: "123456",
+        magicCode: "123456",
+        // 嵌套和数组同样处理。
+        payload: { code: "123456" },
+        attempts: [{ code: "123456", ok: 1 }],
+      }),
+    ).toEqual({
+      code: "[redacted]",
+      otp: "[redacted]",
+      userOtp: "[redacted]",
+      hotp: "[redacted]",
+      pin: "[redacted]",
+      userPin: "[redacted]",
+      pinCode: "[redacted]",
+      verificationCode: "[redacted]",
+      verification_code: "[redacted]",
+      otpCode: "[redacted]",
+      smsCode: "[redacted]",
+      authCode: "[redacted]",
+      securityCode: "[redacted]",
+      magicCode: "[redacted]",
+      payload: { code: "[redacted]" },
+      attempts: [{ code: "[redacted]", ok: 1 }],
+    });
+  });
+
+  // 反方向：不能因为要脱敏 code 就把所有叫 code 的字段一起抹掉。
+  // statusCode / errorCode 这些是排障时要看的诊断值，脱敏掉属于静默降低可观测性。
+  test("诊断类的 code 不脱敏：statusCode、errorCode、countryCode、zipCode", () => {
+    expect(
+      redact({
+        statusCode: 404,
+        errorCode: "ECONNREFUSED",
+        countryCode: "CN",
+        zipCode: "100000",
+        httpStatusCode: 500,
+        exitCode: 1,
+        currencyCode: "USD",
+        discountCode: "SPRING",
+      }),
+    ).toEqual({
+      statusCode: 404,
+      errorCode: "ECONNREFUSED",
+      countryCode: "CN",
+      zipCode: "100000",
+      httpStatusCode: 500,
+      exitCode: 1,
+      currencyCode: "USD",
+      discountCode: "SPRING",
+    });
+  });
+
+  test('logger.info("otp", { code }) 的输出里没有验证码', () => {
+    const { logger, write, lines } = setup();
+    logger.info("otp", { code: "123456" });
+    expect(lines()[0]).toMatchObject({ event: "otp", code: "[redacted]" });
+    expect(write.mock.calls[0][1]).not.toContain("123456");
+  });
 });
 
 describe("pretty 格式", () => {

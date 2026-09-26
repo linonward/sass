@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
 // 读取 .env.local / .env（不覆盖已有变量），数据库测试从中取 DATABASE_URL_TEST。
@@ -17,7 +16,10 @@ const testEnvDefaults = {
 };
 
 export default defineConfig({
-  plugins: [tsconfigPaths(), react()],
+  // Vite 内置 tsconfig paths 解析（读根目录 tsconfig.json 的 paths，`@/*` 与 `content-collections`），
+  // 不再需要 vite-tsconfig-paths 插件。
+  resolve: { tsconfigPaths: true },
+  plugins: [react()],
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
