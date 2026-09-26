@@ -42,11 +42,11 @@ export default async function SignInPage({
   const { emailOtp } = siteConfig.auth;
 
   return (
-    <div className="w-full max-w-sm">
-      <h1 className="text-2xl font-semibold tracking-tight">
+    <div className="panel w-full max-w-sm p-6">
+      <h1 className="heading-display text-2xl">
         {t("title", { name: siteConfig.name })}
       </h1>
-      <p className="text-muted-foreground mt-2 mb-8 text-sm">{t("subtitle")}</p>
+      <p className="text-muted-foreground mt-2 mb-6 text-sm">{t("subtitle")}</p>
       <SignInForm
         callbackURL={target}
         googleEnabled={Boolean(googleCredentials(process.env))}

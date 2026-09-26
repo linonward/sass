@@ -4,16 +4,12 @@ import { adminMetadata } from "@/core/admin/metadata";
 import { planLabel } from "@/core/admin/plan-name";
 import { listOrders, parseOrderStatus, parsePage } from "@/core/admin/queries";
 import { requireAdmin } from "@/core/admin/session";
-import {
-  EmptyRow,
-  PageHeader,
-  Pagination,
-  StatusFilter,
-} from "@/core/admin/ui/list";
-import { orderStatuses } from "@/core/db/schema";
+import { EmptyRow, Pagination, StatusFilter } from "@/core/admin/ui/list";
+import { orderStatuses, type OrderStatus } from "@/core/db/schema";
 import { getDb } from "@/core/db";
 import { Link } from "@/core/i18n/navigation";
 import { Badge } from "@/core/ui/badge";
+import { PageHeader } from "@/core/ui/page-header";
 import {
   Table,
   TableBody,
@@ -24,6 +20,18 @@ import {
 } from "@/core/ui/table";
 
 type Props = PageProps<"/[locale]/admin/orders">;
+
+/**
+ * 状态色只标异常。paid 是绝大多数行，用中性填充；退款和失败才值得一眼看见。
+ * 之前只有 paid 特殊（secondary）、其余全落 outline，refunded 和 failed 分不出来。
+ * 全部 `flat`：产品语域没有唇边（见 docs/design.md 的两个语域）。
+ */
+const statusVariant = {
+  paid: "secondary",
+  partially_refunded: "warning",
+  refunded: "info",
+  failed: "destructive-band",
+} as const satisfies Record<OrderStatus, string>;
 
 export function generateMetadata({ params }: Props) {
   return adminMetadata(params, "/admin/orders", (t) => t("orders.title"));
@@ -85,7 +93,7 @@ export default async function AdminOrdersPage({ params, searchParams }: Props) {
               <TableCell className="max-w-56">
                 <Link
                   href={`/admin/users/${order.userId}`}
-                  className="hover:text-primary block truncate"
+                  className="hover:text-primary-text block truncate"
                 >
                   {order.email}
                 </Link>
@@ -104,9 +112,7 @@ export default async function AdminOrdersPage({ params, searchParams }: Props) {
                 )}
               </TableCell>
               <TableCell>
-                <Badge
-                  variant={order.status === "paid" ? "secondary" : "outline"}
-                >
+                <Badge variant={statusVariant[order.status]} flat>
                   {t(`orderStatus.${order.status}`)}
                 </Badge>
               </TableCell>

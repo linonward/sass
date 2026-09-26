@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { Button, buttonVariants } from "@/core/ui/button";
+import { Textarea } from "@/core/ui/textarea";
 
 import { imageErrorCode, type ImageErrorCode } from "./errors";
 import { useGenerations } from "./generations-context";
@@ -78,7 +79,7 @@ export function ImageStudio({
             value={modelId}
             onChange={(event) => setModelId(event.target.value)}
             disabled={busy}
-            className="border-input dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
+            className="border-border dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
           >
             {models.map((model) => (
               <option key={model.id} value={model.id}>
@@ -96,7 +97,7 @@ export function ImageStudio({
               setAspectRatio(event.target.value as typeof aspectRatio)
             }
             disabled={busy}
-            className="border-input dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
+            className="border-border dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
           >
             {aspectRatios.map((ratio) => (
               <option key={ratio} value={ratio}>
@@ -111,7 +112,7 @@ export function ImageStudio({
         <label htmlFor={promptId} className="sr-only">
           {t("placeholder")}
         </label>
-        <textarea
+        <Textarea
           id={promptId}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
@@ -119,7 +120,6 @@ export function ImageStudio({
           maxLength={2000}
           rows={3}
           disabled={busy}
-          className="border-input dark:bg-input/30 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-3"
         />
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={busy || !prompt.trim()}>

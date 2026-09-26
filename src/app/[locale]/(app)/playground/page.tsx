@@ -21,6 +21,7 @@ import { PlaygroundTabs } from "@/core/ai/playground-tabs";
 import { VideoStudio } from "@/core/ai/video-studio";
 import { requirePageSession } from "@/core/auth/session";
 import { buildMetadata } from "@/core/seo/metadata";
+import { PageHeader } from "@/core/ui/page-header";
 
 export async function generateMetadata({
   params,
@@ -51,10 +52,7 @@ export default async function PlaygroundPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground">{t("description")}</p>
-      </div>
+      <PageHeader title={t("title")} description={t("description")} />
       <GenerationsProvider
         initialGenerations={generations}
         initialPendingVideos={pendingVideos}

@@ -5,6 +5,8 @@ import { getSession } from "@/core/auth/session";
 import { Link } from "@/core/i18n/navigation";
 import { buildMetadata } from "@/core/seo/metadata";
 import { buttonVariants } from "@/core/ui/button";
+import { EmptyState } from "@/core/ui/empty-state";
+import { PageHeader } from "@/core/ui/page-header";
 import { UploadExample } from "@/core/upload/upload-example";
 
 import siteConfig from "../../../../../site.config";
@@ -33,32 +35,28 @@ export default async function DashboardPage({
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground" data-testid="signed-in-as">
-          {name
-            ? t("welcomeName", { name })
-            : t("welcome", { email: session?.user.email ?? "" })}
-        </p>
-      </div>
-      <section className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center">
-        <span className="bg-muted flex size-12 items-center justify-center rounded-full">
-          <LayoutDashboardIcon className="text-muted-foreground size-6" />
-        </span>
-        <div className="max-w-md space-y-2">
-          <h2 className="text-lg font-medium">
-            {t("emptyTitle", { name: siteConfig.name })}
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            {t("emptyDescription")}
-          </p>
-        </div>
-        <Link
-          href="/settings"
-          className={buttonVariants({ variant: "outline" })}
+      <PageHeader
+        title={t("title")}
+        description={
+          <span data-testid="signed-in-as">
+            {name
+              ? t("welcomeName", { name })
+              : t("welcome", { email: session?.user.email ?? "" })}
+          </span>
+        }
+      />
+      <section className="panel">
+        <EmptyState
+          titleAs="h2"
+          icon={<LayoutDashboardIcon />}
+          title={t("emptyTitle", { name: siteConfig.name })}
+          description={t("emptyDescription")}
         >
-          {t("emptyCta")}
-        </Link>
+          {/* 一屏一个实心主操作：空状态的下一步就这一个。 */}
+          <Link href="/settings" className={buttonVariants()}>
+            {t("emptyCta")}
+          </Link>
+        </EmptyState>
       </section>
       {siteConfig.features.upload && (
         <UploadExample accept={siteConfig.upload.allowedMimeTypes} />

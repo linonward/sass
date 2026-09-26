@@ -50,9 +50,9 @@ export function UploadExample({ accept }: { accept: string[] }) {
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border p-6">
+    <section className="panel flex flex-col gap-3 p-6">
       <div className="space-y-1">
-        <h2 className="text-lg font-medium">{t("title")}</h2>
+        <h2 className="heading-display text-lg">{t("title")}</h2>
         <p className="text-muted-foreground text-sm">{t("description")}</p>
       </div>
       <Label htmlFor="upload-example" className="sr-only">

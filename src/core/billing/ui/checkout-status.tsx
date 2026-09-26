@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { buttonVariants } from "@/core/ui/button";
+import { EmptyStateIcon } from "@/core/ui/empty-state";
 
 type Result =
   | { status: "pending" }
@@ -84,10 +85,8 @@ export function CheckoutStatus({
 
   if (result.status === "complete") {
     return (
-      <State icon={<CircleCheckIcon className="text-primary size-10" />}>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("completeTitle")}
-        </h1>
+      <State icon={<CircleCheckIcon />}>
+        <h1 className="heading-display text-2xl">{t("completeTitle")}</h1>
         <p className="text-muted-foreground">
           {t("completeDescription", { plan: plan(result.planId) })}
         </p>
@@ -101,10 +100,11 @@ export function CheckoutStatus({
 
   if (result.status === "failed") {
     return (
-      <State icon={<CircleAlertIcon className="text-destructive size-10" />}>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("failedTitle")}
-        </h1>
+      <State
+        tone="neutral"
+        icon={<CircleAlertIcon className="text-destructive" />}
+      >
+        <h1 className="heading-display text-2xl">{t("failedTitle")}</h1>
         <p className="text-muted-foreground">{t("failedDescription")}</p>
         <Actions />
       </State>
@@ -113,17 +113,15 @@ export function CheckoutStatus({
 
   if (timedOut) {
     return (
-      <State icon={<ClockIcon className="text-muted-foreground size-10" />}>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("timeoutTitle")}
-        </h1>
+      <State tone="neutral" icon={<ClockIcon />}>
+        <h1 className="heading-display text-2xl">{t("timeoutTitle")}</h1>
         <p className="text-muted-foreground">
           {t.rich("timeoutDescription", {
             email: supportEmail,
             link: (chunks) => (
               <a
                 href={`mailto:${supportEmail}`}
-                className="text-primary underline underline-offset-4"
+                className="text-primary-text underline underline-offset-4"
               >
                 {chunks}
               </a>
@@ -136,15 +134,8 @@ export function CheckoutStatus({
   }
 
   return (
-    <State
-      icon={
-        <Loader2Icon className="text-muted-foreground size-10 animate-spin" />
-      }
-      busy
-    >
-      <h1 className="text-2xl font-semibold tracking-tight">
-        {t("processingTitle")}
-      </h1>
+    <State tone="neutral" icon={<Loader2Icon className="animate-spin" />} busy>
+      <h1 className="heading-display text-2xl">{t("processingTitle")}</h1>
       <p className="text-muted-foreground">{t("processingDescription")}</p>
     </State>
   );
@@ -152,21 +143,26 @@ export function CheckoutStatus({
 
 function State({
   icon,
+  tone = "brand",
   busy = false,
   children,
 }: {
   icon: React.ReactNode;
+  /** 只有「完成了」用品牌片，等待和失败用中性片，语义交给图标自己。 */
+  tone?: "brand" | "neutral";
   busy?: boolean;
   children: React.ReactNode;
 }) {
+  // role=status 必须留在最外层：dashboard 的 e2e 用无作用域的 getByRole("status")
+  // 断言保存提示，这里再套一层会撞车。
   return (
     <div
       role="status"
       aria-live="polite"
       aria-busy={busy}
-      className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center"
+      className="mx-auto flex w-full max-w-md flex-col items-center gap-4 py-14 text-center"
     >
-      <span aria-hidden>{icon}</span>
+      <EmptyStateIcon tone={tone}>{icon}</EmptyStateIcon>
       {children}
     </div>
   );

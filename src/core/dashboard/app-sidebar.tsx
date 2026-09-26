@@ -10,6 +10,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -35,6 +36,20 @@ function NavGroup({
 
   return (
     <SidebarGroup>
+      {/* 可见的分组标题。aria-hidden 是有意的：分组的可访问名由下面 SidebarMenu 的
+          aria-label 提供（nav.test.tsx 和 e2e 都按它取 list），这里再暴露一次会让
+          读屏把同一个名字念两遍。也因此不要改成 aria-labelledby —— 可访问名会被
+          uppercase 的 text-transform 搅进来，浏览器算、jsdom 不算。
+
+          `group-data-[collapsible=icon]:hidden` 覆盖 primitive 自带的
+          `-mt-8 opacity-0`：那个写法保留了一个 32px 高的透明盒子，折叠态下会变成
+          压在前一组最后一项上的隐形点击层。display:none 移出流，纵向占位一样。 */}
+      <SidebarGroupLabel
+        aria-hidden
+        className="text-muted-foreground text-[0.7rem] tracking-wider uppercase group-data-[collapsible=icon]:hidden"
+      >
+        {label}
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu aria-label={label}>
           {items.map((item) => {

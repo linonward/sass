@@ -39,6 +39,20 @@ pnpm install   # T101 合入之后才有
 
 钩子只挡本地提交，CI 仍然完整跑一遍 lint、format、typecheck、test。临时跳过用 `git commit --no-verify`，但 CI 不会放过。
 
+### 本地跑 e2e
+
+```bash
+EMAIL_TRANSPORT=file E2E_PORT=3100 \
+  ADMIN_EMAILS=e2e-admin-desktop@example.com,e2e-admin-mobile@example.com \
+  npx playwright test
+```
+
+- `EMAIL_TRANSPORT=file` 是必须的：本地默认是 `console`，验证码只打到服务端终端，e2e 从 `.tmp/emails/` 读不到（CI 里由 workflow 设置）。
+- `ADMIN_EMAILS` 给 `admin.spec.ts` 用；不设的话管理员登录后侧边栏没有后台入口，用例会卡在点击上。
+- `E2E_PORT` 换一个端口，避免和你正在跑的 `pnpm dev`（默认 3000）撞车 —— `reuseExistingServer` 会直接复用那个服务器，测的就不是当前 worktree 的代码。
+
+如果所有页面突然一起报 `SyntaxError: Unexpected non-whitespace character after JSON`，那是 `.next/dev/` 里的缓存被中断的 dev server 写坏了（不是代码问题）：`rm -rf .next` 重来。
+
 ## 提交 PR
 
 ```bash

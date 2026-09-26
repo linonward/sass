@@ -82,3 +82,9 @@ git add drizzle
 **`site.config.ts`、`messages/en.json`**：通常是上游加了新字段或新文案，保留本项目的值，同时加上上游新增的 key。`pnpm test` 会检查 messages 的 key 是否齐全，`defineConfig()` 会指出配置里缺的字段。
 
 **快照测试**（`*.snap`）：改了域名、路由或文章后，运行 `pnpm test -u` 更新快照，检查一下 diff 再提交。
+
+**`<Card>` 的默认外观**（T606 起）：不传 `tone` 时不再是原来那圈 `ring`，而是 `.panel`——1px `--border` 描边、和画布几乎同色的平面。业务页面里的 `<Card>` 会因此多出一根描边（改动很小，但确实会冲突）。`tone` 的行为没变，仍然是营销面的贴纸。
+
+**`src/core/ui/page-header.tsx`、`empty-state.tsx`**（T606 新增）：产品面/后台的页头和空状态。业务页面如果自己写了 `text-2xl font-semibold tracking-tight` 的标题块，可以换成 `<PageHeader>` 跟上语域；不换也不会坏。
+
+**界面上没有模糊投影**（T605 起）：`shadow-sm/md/lg` 在 `src/` 里一处都不该有。加新的浮动层时用 `.sticker`（物件：1px 描边 + 零模糊唇边）或退一档背景，不要加投影。

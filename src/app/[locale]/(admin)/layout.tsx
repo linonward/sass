@@ -16,6 +16,7 @@ export default async function AdminLayout({
       locale={locale}
       session={session}
       nav={{ suite: [suiteNav[0]!], business: [], admin: adminNav }}
+      width="wide"
     >
       {children}
     </DashboardShell>

@@ -11,7 +11,7 @@ import { metricRanges } from "../metrics";
 export function RangeFilter({ current }: { current: MetricRange }) {
   const t = useTranslations("Admin.metrics.range");
   return (
-    <nav aria-label={t("label")} className="flex flex-wrap gap-2">
+    <nav aria-label={t("label")} className="flex flex-wrap gap-1.5">
       {metricRanges.map((range) => {
         const active = range === current;
         return (
@@ -22,10 +22,14 @@ export function RangeFilter({ current }: { current: MetricRange }) {
               query: range === 30 ? {} : { range: String(range) },
             }}
             aria-current={active ? "page" : undefined}
-            className={buttonVariants({
-              variant: active ? "default" : "outline",
-              size: "sm",
-            })}
+            className={cn(
+              // 和 StatusFilter 同一套：激活是中性填充，未激活是 ghost。
+              buttonVariants({
+                variant: active ? "secondary" : "ghost",
+                size: "sm",
+              }),
+              !active && "text-muted-foreground",
+            )}
           >
             {t("days", { days: range })}
           </Link>
@@ -47,7 +51,7 @@ export function MetricSection({
   return (
     <section aria-label={title} className="flex flex-col gap-4">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <h2 className="heading-display text-lg">{title}</h2>
         {description && (
           <p className="text-muted-foreground text-sm">{description}</p>
         )}
@@ -74,12 +78,12 @@ export function StatTile({
   testId?: string;
 }) {
   return (
-    <div
-      className="bg-card ring-foreground/10 flex flex-col gap-1 rounded-xl p-4 ring-1"
-      data-testid={testId}
-    >
+    <div className="panel flex flex-col gap-1 p-4" data-testid={testId}>
       <dt className="text-muted-foreground text-sm">{label}</dt>
-      <dd className="text-2xl font-semibold tracking-tight">{value}</dd>
+      {/* data-numeric：轮询刷新时数字不跳。 */}
+      <dd className="heading-display text-2xl" data-numeric>
+        {value}
+      </dd>
       {hint && <dd className="text-muted-foreground text-xs">{hint}</dd>}
     </div>
   );
@@ -112,8 +116,8 @@ export function DailyColumns({
   const max = niceCeil(Math.max(0, ...points.map((p) => p.value)));
 
   return (
-    <figure className="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-4 ring-1">
-      <figcaption className="text-sm font-medium">{title}</figcaption>
+    <figure className="panel flex flex-col gap-3 p-4">
+      <figcaption className="heading-display text-sm">{title}</figcaption>
       <div className="flex gap-2">
         {/* y 轴：只标 0 和最大刻度。 */}
         <div className="text-muted-foreground flex h-40 flex-col justify-between text-right text-xs tabular-nums">
@@ -149,7 +153,7 @@ export function DailyColumns({
                   )}
                   <div
                     role="tooltip"
-                    className="bg-popover text-popover-foreground ring-foreground/10 pointer-events-none absolute bottom-full z-10 mb-1 hidden rounded-md px-2 py-1 text-xs whitespace-nowrap shadow-md ring-1 group-hover:block group-focus-visible:block"
+                    className="bg-popover text-popover-foreground sticker pointer-events-none absolute bottom-full z-10 mb-1 hidden rounded-md px-2 py-1 text-xs whitespace-nowrap group-hover:block group-focus-visible:block"
                   >
                     <div className="text-muted-foreground">
                       {formatDay(point.day)}

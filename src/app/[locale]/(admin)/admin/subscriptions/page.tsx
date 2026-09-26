@@ -8,16 +8,15 @@ import {
   parseSubscriptionStatus,
 } from "@/core/admin/queries";
 import { requireAdmin } from "@/core/admin/session";
+import { EmptyRow, Pagination, StatusFilter } from "@/core/admin/ui/list";
 import {
-  EmptyRow,
-  PageHeader,
-  Pagination,
-  StatusFilter,
-} from "@/core/admin/ui/list";
-import { subscriptionStatuses } from "@/core/db/schema";
+  subscriptionStatuses,
+  type SubscriptionStatus,
+} from "@/core/db/schema";
 import { getDb } from "@/core/db";
 import { Link } from "@/core/i18n/navigation";
 import { Badge } from "@/core/ui/badge";
+import { PageHeader } from "@/core/ui/page-header";
 import {
   Table,
   TableBody,
@@ -28,6 +27,17 @@ import {
 } from "@/core/ui/table";
 
 type Props = PageProps<"/[locale]/admin/subscriptions">;
+
+/**
+ * 正常态（active）用中性填充，只有欠费值得标色。canceled / expired 是「结束了」，
+ * 不是错误，保持 outline 的弱化处理，不上红。
+ */
+const statusVariant = {
+  active: "secondary",
+  past_due: "warning",
+  canceled: "outline",
+  expired: "outline",
+} as const satisfies Record<SubscriptionStatus, string>;
 
 export function generateMetadata({ params }: Props) {
   return adminMetadata(params, "/admin/subscriptions", (t) =>
@@ -88,16 +98,14 @@ export default async function AdminSubscriptionsPage({
               <TableCell className="max-w-56">
                 <Link
                   href={`/admin/users/${sub.userId}`}
-                  className="hover:text-primary block truncate"
+                  className="hover:text-primary-text block truncate"
                 >
                   {sub.email}
                 </Link>
               </TableCell>
               <TableCell>{planLabel(tp, sub.planId)}</TableCell>
               <TableCell>
-                <Badge
-                  variant={sub.status === "active" ? "secondary" : "outline"}
-                >
+                <Badge variant={statusVariant[sub.status]} flat>
                   {tb(`status.${sub.status}`)}
                 </Badge>
               </TableCell>

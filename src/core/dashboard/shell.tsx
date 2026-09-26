@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { signOut } from "@/core/auth/actions";
 import type { Session } from "@/core/auth/server";
 import { routing } from "@/core/i18n/routing";
+import { cn } from "@/core/lib/utils";
 import { IdentifyUser } from "@/core/observability/identify-user";
 import { ThemeToggle } from "@/core/theme/theme-toggle";
 import {
@@ -23,11 +24,14 @@ export async function DashboardShell({
   locale,
   session,
   nav,
+  width = "default",
   children,
 }: {
   locale: string;
   session: Session;
   nav: DashboardNav;
+  /** 内容区宽度。后台的宽表格用 `wide`，产品页的表单保持窄栏更好读。 */
+  width?: "default" | "wide";
   children: React.ReactNode;
 }) {
   const t = await getTranslations({ locale, namespace: "Dashboard" });
@@ -58,7 +62,12 @@ export async function DashboardShell({
             </div>
           </header>
           {/* SidebarInset 本身就是 <main>，这里不能再嵌套一个 main。 */}
-          <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 md:px-8">
+          <div
+            className={cn(
+              "mx-auto w-full flex-1 px-4 py-6 md:px-8 md:py-8",
+              width === "wide" ? "max-w-6xl" : "max-w-5xl",
+            )}
+          >
             {children}
           </div>
         </SidebarInset>

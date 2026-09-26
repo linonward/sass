@@ -1,12 +1,17 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, InboxIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { Badge } from "@/core/ui/badge";
 import { buttonVariants } from "@/core/ui/button";
+import { EmptyState } from "@/core/ui/empty-state";
 
 import { isAdmin } from "../roles";
+
+// PageHeader 搬去了 core/ui/page-header —— 产品面（dashboard/settings/billing）也要用，
+// 而从 core/admin 里 import 一个页头是反向依赖。这里不再 re-export：
+// 两条 import 路径只会制造漂移。
 
 type Query = Record<string, string | undefined>;
 
@@ -17,26 +22,6 @@ function cleanQuery(query: Query) {
       ([key, value]) => value && !(key === "page" && value === "1"),
     ),
   ) as Record<string, string>;
-}
-
-export function PageHeader({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description && <p className="text-muted-foreground">{description}</p>}
-      </div>
-      {children}
-    </div>
-  );
 }
 
 /** 状态筛选：一排链接，服务端按 ?status= 过滤。 */
@@ -58,7 +43,7 @@ export function StatusFilter<T extends string>({
   ];
 
   return (
-    <nav aria-label={t("label")} className="flex flex-wrap gap-2">
+    <nav aria-label={t("label")} className="flex flex-wrap gap-1.5">
       {options.map((option) => {
         const active = option.value === current;
         return (
@@ -66,10 +51,17 @@ export function StatusFilter<T extends string>({
             key={option.value ?? "all"}
             href={{ pathname, query: cleanQuery({ status: option.value }) }}
             aria-current={active ? "page" : undefined}
-            className={buttonVariants({
-              variant: active ? "default" : "outline",
-              size: "sm",
-            })}
+            className={cn(
+              // 激活态是中性填充，不是实心品牌色：实心留给每一屏唯一的主操作。
+              // 未激活用 ghost（透明底 + 弱文字）而不是 outline —— 暗色下
+              // outline 的 `dark:bg-input/30`(≈0.22) 和 secondary(0.28) 差太近，
+              // 选中态会看不出来。
+              buttonVariants({
+                variant: active ? "secondary" : "ghost",
+                size: "sm",
+              }),
+              !active && "text-muted-foreground",
+            )}
           >
             {option.label}
           </Link>
@@ -139,30 +131,45 @@ export function Pagination({
 export function RoleBadge({ role }: { role: string | null }) {
   const t = useTranslations("Admin.roles");
   return isAdmin({ role }) ? (
-    <Badge>{t("admin")}</Badge>
+    // 平铺的品牌芯片，不是默认的实心品牌块：表格里每行一个饱和色块会跟页面
+    // 唯一那个实心主操作抢注意力。
+    <Badge variant="band" flat>
+      {t("admin")}
+    </Badge>
   ) : (
     <Badge variant="outline">{t("user")}</Badge>
   );
 }
 
+/**
+ * 状态色只标异常：正常态（active）用中性填充，需要看一眼的才上语义色。
+ * 每行都绿一遍等于没标。
+ */
 export function UserStatusBadge({ banned }: { banned: boolean | null }) {
   const t = useTranslations("Admin.status");
   return banned ? (
-    <Badge variant="destructive">{t("banned")}</Badge>
+    <Badge variant="destructive-band" flat>
+      {t("banned")}
+    </Badge>
   ) : (
     <Badge variant="secondary">{t("active")}</Badge>
   );
 }
 
-/** 空列表时占满一行的提示。 */
-export function EmptyRow({ colSpan, text }: { colSpan: number; text: string }) {
+/** 空列表时占满一行的提示。纵向留白交给 EmptyState，td 自己不补。 */
+export function EmptyRow({
+  colSpan,
+  text,
+  icon,
+}: {
+  colSpan: number;
+  text: string;
+  icon?: React.ReactNode;
+}) {
   return (
     <tr>
-      <td
-        colSpan={colSpan}
-        className="text-muted-foreground py-10 text-center text-sm"
-      >
-        {text}
+      <td colSpan={colSpan}>
+        <EmptyState size="sm" icon={icon ?? <InboxIcon />} title={text} />
       </td>
     </tr>
   );

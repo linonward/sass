@@ -18,17 +18,36 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary-text underline-offset-4 hover:underline",
-        // 粉彩底 + 描边 + 硬唇边，营销页的标签用这个。文字色是 band 对应该用的那一档。
-        band: "bg-primary-band text-primary-text border-[var(--edge)] [--edge:var(--primary-edge)] sticker",
+        // 语义粉彩档。底色和文字色都取自同一族的 token，唇边由下面的 compoundVariants 补。
+        // `band` 指品牌色那条带（token 叫 --primary-band），其余按语义命名。
+        // `destructive-band` 的横线是不得已：`destructive` 已经被上面的半透明档占了，
+        // 那个档有十几处错误提示在用，不能改名。
+        band: "bg-primary-band text-primary-text border-[var(--edge)] [--edge:var(--primary-edge)]",
         success:
-          "bg-success-band text-success border-[var(--edge)] [--edge:var(--success-edge)] sticker",
+          "bg-success-band text-success border-[var(--edge)] [--edge:var(--success-edge)]",
         warning:
-          "bg-warning-band text-warning border-[var(--edge)] [--edge:var(--warning-edge)] sticker",
-        info: "bg-info-band text-info border-[var(--edge)] [--edge:var(--info-edge)] sticker",
+          "bg-warning-band text-warning border-[var(--edge)] [--edge:var(--warning-edge)]",
+        info: "bg-info-band text-info border-[var(--edge)] [--edge:var(--info-edge)]",
+        "destructive-band":
+          "bg-destructive-band text-destructive border-[var(--edge)] [--edge:var(--destructive-edge)]",
+      },
+      // 语域，不是风格偏好：营销面的徽章是一张贴纸（描边 + 零模糊唇边），
+      // 产品面/后台是平面，只有描边。默认 false，所以营销页一个字节都不用改。
+      flat: {
+        true: "",
+        false: "",
       },
     },
+    compoundVariants: [
+      {
+        variant: ["band", "success", "warning", "info", "destructive-band"],
+        flat: false,
+        class: "sticker",
+      },
+    ],
     defaultVariants: {
       variant: "default",
+      flat: false,
     },
   },
 );
@@ -36,6 +55,7 @@ const badgeVariants = cva(
 function Badge({
   className,
   variant = "default",
+  flat = false,
   render,
   ...props
 }: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
@@ -43,7 +63,7 @@ function Badge({
     defaultTagName: "span",
     props: mergeProps<"span">(
       {
-        className: cn(badgeVariants({ variant }), className),
+        className: cn(badgeVariants({ variant, flat }), className),
       },
       props,
     ),
@@ -51,6 +71,7 @@ function Badge({
     state: {
       slot: "badge",
       variant,
+      flat,
     },
   });
 }

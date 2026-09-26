@@ -7,6 +7,7 @@ import { useId, useRef, useState } from "react";
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { Button, buttonVariants } from "@/core/ui/button";
+import { Textarea } from "@/core/ui/textarea";
 import { uploadFile } from "@/core/upload/client";
 
 import { useGenerations } from "./generations-context";
@@ -113,7 +114,7 @@ export function VideoStudio({
   }
 
   const selectClass =
-    "border-input dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2";
+    "border-border dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2";
 
   return (
     <div className="flex flex-col gap-4">
@@ -235,7 +236,7 @@ export function VideoStudio({
         <label htmlFor={promptId} className="sr-only">
           {t("placeholder")}
         </label>
-        <textarea
+        <Textarea
           id={promptId}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
@@ -243,7 +244,6 @@ export function VideoStudio({
           maxLength={2000}
           rows={3}
           disabled={submitting}
-          className="border-input dark:bg-input/30 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-3"
         />
         <div>
           <Button type="submit" disabled={submitting || !prompt.trim()}>

@@ -103,7 +103,7 @@ export function LocaleForm({
           id="account-locale"
           name="locale"
           defaultValue={current}
-          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3 sm:max-w-sm"
+          className="border-border focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3 sm:max-w-sm"
         >
           {locales.map((l) => (
             <option key={l} value={l} lang={l}>
