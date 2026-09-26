@@ -56,7 +56,7 @@ export function resetOnBillingEvent() {
 export class OnBillingEventError extends Error {
   constructor(
     readonly handler: string,
-    readonly cause: unknown,
+    override readonly cause: unknown,
   ) {
     super(`onBillingEvent handler "${handler}" failed`);
     this.name = "OnBillingEventError";

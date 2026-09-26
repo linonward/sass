@@ -52,9 +52,13 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
 export function Landing({ config }: { config: Config }) {
   // 波浪取决于相邻两段，只能在这里算：区块自己不知道邻居是谁，
   // 而 landing.sections 是可配置的，写死邻居会在调换顺序后画出对不上的波浪。
-  return config.landing.sections.map((id, index) => (
-    <Fragment key={id}>
-      {sections[id](config, bands[config.landing.sections[index - 1]])}
-    </Fragment>
-  ));
+  return config.landing.sections.map((id, index) => {
+    // 第一段没有上一段，不画波浪（waveFrom 为 undefined）。
+    const previous = config.landing.sections[index - 1];
+    return (
+      <Fragment key={id}>
+        {sections[id](config, previous ? bands[previous] : undefined)}
+      </Fragment>
+    );
+  });
 }

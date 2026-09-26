@@ -251,7 +251,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
       }),
     );
     expect(sent.map((m) => m.template)).toEqual(["payment-succeeded"]);
-    expect(sent[0].props).toMatchObject({
+    expect(sent[0]!.props).toMatchObject({
       kind: "subscription",
       planName: "[de] Pro",
       // 事件没带金额时用套餐标价。

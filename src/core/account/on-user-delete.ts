@@ -34,7 +34,7 @@ export function resetOnUserDelete() {
 export class OnUserDeleteError extends Error {
   constructor(
     readonly handler: string,
-    readonly cause: unknown,
+    override readonly cause: unknown,
   ) {
     super(`onUserDelete handler "${handler}" failed`);
     this.name = "OnUserDeleteError";

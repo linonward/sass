@@ -307,7 +307,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
       .select({ status: orders.status })
       .from(orders)
       .where(eq(orders.providerOrderId, ids.ord));
-    expect(order.status).toBe("paid");
+    expect(order!.status).toBe("paid");
     expect(await balance()).toBe(0);
   });
 
@@ -353,7 +353,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
       .select()
       .from(subscriptions)
       .where(eq(subscriptions.providerSubscriptionId, ids.sub));
-    expect(sub.status).toBe("canceled");
-    expect(sub.currentPeriodEnd).toBeInstanceOf(Date);
+    expect(sub!.status).toBe("canceled");
+    expect(sub!.currentPeriodEnd).toBeInstanceOf(Date);
   });
 });

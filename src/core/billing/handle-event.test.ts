@@ -125,7 +125,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         }),
       );
 
-      expect(await order("ord_1")).toMatchObject({
+      expect(await order("ord_1"))!.toMatchObject({
         userId,
         status: "paid",
         amount: 19900,
@@ -150,7 +150,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         }),
       );
 
-      expect(await subscription("sub_1")).toMatchObject({
+      expect(await subscription("sub_1"))!.toMatchObject({
         userId,
         status: "active",
         planId: "pro",
@@ -182,7 +182,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         }),
       );
 
-      expect(await subscription("sub_1")).toMatchObject({
+      expect(await subscription("sub_1"))!.toMatchObject({
         status: "active",
         planId: "pro",
         currentPeriodEnd: t(200),
@@ -211,7 +211,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         }),
       );
 
-      expect(await subscription("sub_1")).toMatchObject({
+      expect(await subscription("sub_1"))!.toMatchObject({
         status: "canceled",
         canceledAt: t(10),
         currentPeriodEnd: t(100),
@@ -234,7 +234,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         }),
       );
 
-      expect(await subscription("sub_1")).toMatchObject({
+      expect(await subscription("sub_1"))!.toMatchObject({
         status: "expired",
         endedAt: t(100),
       });
@@ -259,8 +259,8 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         }),
       );
 
-      expect((await subscription("sub_1")).status).toBe("past_due");
-      expect((await order("ord_fail")).status).toBe("failed");
+      expect((await subscription("sub_1"))!.status).toBe("past_due");
+      expect((await order("ord_fail"))!.status).toBe("failed");
     });
 
     test("refund.created：部分退款和全额退款", async () => {
@@ -283,7 +283,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
           currency: "USD",
         }),
       );
-      expect(await order("ord_1")).toMatchObject({
+      expect(await order("ord_1"))!.toMatchObject({
         status: "partially_refunded",
         refundedAmount: 5000,
       });
@@ -297,7 +297,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
           currency: "USD",
         }),
       );
-      expect(await order("ord_1")).toMatchObject({
+      expect(await order("ord_1"))!.toMatchObject({
         status: "refunded",
         refundedAmount: 19900,
       });
@@ -320,9 +320,9 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       const once = await order("ord_1");
       expect(await handle(event)).toEqual({ status: "duplicate" });
 
-      expect(await order("ord_1")).toMatchObject({
-        refundedAmount: once.refundedAmount,
-        status: once.status,
+      expect(await order("ord_1"))!.toMatchObject({
+        refundedAmount: once!.refundedAmount,
+        status: once!.status,
       });
       expect(hook).toHaveBeenCalledTimes(1);
       expect(await recorded(event.eventId)).toHaveLength(1);
@@ -344,7 +344,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       );
 
       expect(results.filter((r) => r.status === "processed")).toHaveLength(1);
-      expect((await order("ord_1")).refundedAmount).toBe(500);
+      expect((await order("ord_1"))!.refundedAmount).toBe(500);
       expect(hook).toHaveBeenCalledTimes(1);
     });
   });
@@ -370,14 +370,14 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       });
 
       expect(await handle(active)).toMatchObject({ stale: true });
-      expect(await subscription("sub_1")).toMatchObject({
+      expect(await subscription("sub_1"))!.toMatchObject({
         status: "active",
         currentPeriodEnd: t(200),
         // 旧事件仍然补上缺失的套餐。
         planId: "pro",
       });
       const [row] = await recorded(active.eventId);
-      expect(row.stale).toBe(true);
+      expect(row!.stale).toBe(true);
     });
 
     test("canceled 之后才到的旧 renewed 不会让订阅恢复", async () => {
@@ -408,7 +408,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       );
 
       expect(result).toMatchObject({ status: "processed", stale: true });
-      expect((await subscription("sub_1")).status).toBe("canceled");
+      expect((await subscription("sub_1"))!.status).toBe("canceled");
       // 迟到的续费是真实发生过的，钩子照常触发并知道它是旧事件。
       expect(hook).toHaveBeenCalledWith(
         expect.objectContaining({ type: "subscription.renewed" }),
@@ -432,7 +432,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         }),
       );
 
-      expect((await subscription("sub_1")).status).toBe("expired");
+      expect((await subscription("sub_1"))!.status).toBe("expired");
     });
 
     test("退款先于结账事件到达：订单金额补齐后得到正确的状态", async () => {
@@ -445,7 +445,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
           currency: "USD",
         }),
       );
-      expect((await order("ord_1")).status).toBe("refunded");
+      expect((await order("ord_1"))!.status).toBe("refunded");
 
       await handle(
         fake.event("checkout.completed", {
@@ -456,7 +456,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
           currency: "USD",
         }),
       );
-      expect(await order("ord_1")).toMatchObject({
+      expect(await order("ord_1"))!.toMatchObject({
         status: "partially_refunded",
         amount: 19900,
         refundedAmount: 5000,
@@ -473,7 +473,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       );
       await handle(fake.event("payment.failed", { userId, orderId: "ord_1" }));
 
-      expect((await order("ord_1")).status).toBe("paid");
+      expect((await order("ord_1"))!.status).toBe("paid");
     });
   });
 
@@ -557,7 +557,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       await expect(handle(event)).rejects.toBeInstanceOf(OnBillingEventError);
 
       expect(await recorded(event.eventId)).toHaveLength(0);
-      expect(await subscription("sub_1")).toBeUndefined();
+      expect(await subscription("sub_1"))!.toBeUndefined();
       const customers = await db
         .select()
         .from(billingCustomers)
@@ -567,7 +567,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       // 修好钩子后，服务商重试同一事件即可正常处理。
       resetOnBillingEvent();
       expect(await handle(event)).toMatchObject({ status: "processed" });
-      expect((await subscription("sub_1")).status).toBe("active");
+      expect((await subscription("sub_1"))!.status).toBe("active");
     });
 
     test("按注册顺序执行", async () => {
@@ -595,7 +595,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
 
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({ status: "processed" });
-      expect(await subscription("sub_1")).toMatchObject({
+      expect(await subscription("sub_1"))!.toMatchObject({
         status: "active",
         currentPeriodEnd: t(100),
       });
@@ -615,7 +615,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
 
       expect(response.status).toBe(401);
       expect(await recorded(event.eventId)).toHaveLength(0);
-      expect(await subscription("sub_1")).toBeUndefined();
+      expect(await subscription("sub_1"))!.toBeUndefined();
     });
 
     test("不关心的事件类型：返回 200 并忽略", async () => {

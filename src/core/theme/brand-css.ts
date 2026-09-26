@@ -55,9 +55,15 @@ const toGamma = (value: number) => {
 
 export type Oklch = { L: number; C: number; H: number };
 
+/** sRGB hex → 线性 RGB 三元组。不用 `.map`：那会把元组摊成 number[]，丢了长度信息。 */
+function linearRgb(hex: string): [number, number, number] {
+  const [r, g, b] = toRgb(hex);
+  return [toLinear(r), toLinear(g), toLinear(b)];
+}
+
 /** sRGB hex → OKLCH。 */
 export function hexToOklch(hex: string): Oklch {
-  const [r, g, b] = toRgb(hex).map(toLinear);
+  const [r, g, b] = linearRgb(hex);
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
@@ -119,7 +125,7 @@ function fitChroma(L: number, C: number, H: number): number {
 
 /** 相对亮度，0（黑）到 1（白）。 */
 function luminance(hex: string): number {
-  const [r, g, b] = toRgb(hex).map(toLinear);
+  const [r, g, b] = linearRgb(hex);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 

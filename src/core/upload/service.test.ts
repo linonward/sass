@@ -160,7 +160,7 @@ describe.skipIf(!url)("上传服务", () => {
       .select()
       .from(files)
       .where(eq(files.id, fileId));
-    expect(row.status).toBe("uploaded");
+    expect(row!.status).toBe("uploaded");
 
     await expect(completeUpload(deps, { userId, fileId })).resolves.toEqual(
       first,
@@ -191,7 +191,7 @@ describe.skipIf(!url)("上传服务", () => {
       .select()
       .from(files)
       .where(eq(files.id, fileId));
-    expect(row.status).toBe("pending");
+    expect(row!.status).toBe("pending");
   });
 
   test.each([

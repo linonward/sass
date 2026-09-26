@@ -86,7 +86,8 @@ export async function presignUpload(
 
   return {
     ok: true,
-    fileId: file.id,
+    // insert … returning 必然带回刚插进去的那一行，这里的非空断言是这个意思。
+    fileId: file!.id,
     key,
     uploadUrl,
     headers: { "Content-Type": checked.value.mime },
@@ -123,7 +124,8 @@ export async function completeUpload(
     .set({ status: "uploaded" })
     .where(eq(files.id, file.id))
     .returning();
-  return { ok: true, file: await toUploadedFile(deps, updated) };
+  // 上面刚查到这条记录、update … returning 也就必然带回它。
+  return { ok: true, file: await toUploadedFile(deps, updated!) };
 }
 
 /** 用户自己已上传的文件的访问地址；不存在、不属于该用户或还没确认时返回 null。 */
@@ -179,5 +181,6 @@ async function toUploadedFile(
 
 // "image/png; charset=binary" → "image/png"
 function baseMime(mime: string | null) {
-  return mime?.split(";")[0].trim().toLowerCase() ?? null;
+  const [type] = mime?.split(";") ?? [];
+  return type ? type.trim().toLowerCase() : null;
 }

@@ -146,7 +146,7 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     expect(results.every((r) => r.status === "fulfilled")).toBe(true);
     expect(await credits().getBalance(userId)).toBe(40);
     expect(sent).toHaveLength(1);
-    expect(sent[0].props.balance).toBeLessThan(THRESHOLD);
+    expect(sent[0]!.props.balance).toBeLessThan(THRESHOLD);
   });
 
   test("去重名额并发抢占时只有一个成功", async () => {

@@ -74,7 +74,7 @@ describe("fake checkout session", () => {
 
   test("篡改、缺签名、乱码都拒绝", () => {
     const token = signFakeSession(session);
-    const [body, signature] = token.split(".");
+    const [body = "", signature = ""] = token.split(".");
     const forged = Buffer.from(
       JSON.stringify({ ...session, userId: "someone_else" }),
     ).toString("base64url");
@@ -168,7 +168,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     });
 
     // 只到了 subscription.active：订阅已建，但首期扣款还没入账，仍然 pending。
-    await handleBillingEvent(payment.events[0], { db: client.db });
+    await handleBillingEvent(payment.events[0]!, { db: client.db });
     await expect(status({ subscriptionId })).resolves.toEqual({
       status: "pending",
     });
@@ -201,7 +201,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     const orderId = payment.returnParams.order_id;
     await expect(status({ orderId })).resolves.toEqual({ status: "pending" });
 
-    await handleBillingEvent(payment.events[0], { db: client.db });
+    await handleBillingEvent(payment.events[0]!, { db: client.db });
     await expect(status({ orderId })).resolves.toEqual({
       status: "complete",
       planId: "lifetime",
@@ -217,7 +217,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
   test("扣款失败：订阅进入 past_due 时返回 failed", async () => {
     const payment = fakePayment(provider, session("pro"))!;
     const subscriptionId = payment.returnParams.subscription_id;
-    await handleBillingEvent(payment.events[0], { db: client.db });
+    await handleBillingEvent(payment.events[0]!, { db: client.db });
     await handleBillingEvent(
       provider.event("payment.failed", {
         userId,

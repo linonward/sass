@@ -39,9 +39,10 @@ export type MenuUser = { name: string; email: string; image?: string | null };
 export function initials({ name, email }: Pick<MenuUser, "name" | "email">) {
   const source = name.trim() || email;
   const words = source.split(/[\s@._-]+/).filter(Boolean);
+  const [first = "", second = ""] = words;
   const letters =
-    words.length > 1 && name.trim()
-      ? `${words[0][0]}${words[1][0]}`
+    first && second && name.trim()
+      ? `${first.slice(0, 1)}${second.slice(0, 1)}`
       : source.slice(0, 1);
   return letters.toUpperCase();
 }

@@ -9,9 +9,10 @@ export function resolveRequestLocale(headers: Headers | undefined): string {
   const fromHeader = headers?.get(LOCALE_HEADER);
   if (fromHeader && locales.includes(fromHeader)) return fromHeader;
   const cookie = headers?.get("cookie") ?? "";
-  const match = /(?:^|;\s*)NEXT_LOCALE=([^;]+)/.exec(cookie);
-  if (match && locales.includes(decodeURIComponent(match[1]))) {
-    return decodeURIComponent(match[1]);
+  const encoded = /(?:^|;\s*)NEXT_LOCALE=([^;]+)/.exec(cookie)?.[1];
+  if (encoded) {
+    const fromCookie = decodeURIComponent(encoded);
+    if (locales.includes(fromCookie)) return fromCookie;
   }
   return routing.defaultLocale;
 }

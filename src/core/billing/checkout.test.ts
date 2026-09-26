@@ -132,7 +132,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
       "https://sass.test/de/billing/success",
       "https://sass.test/billing/success",
     ]);
-    expect(fake.checkouts[0].cancelUrl).toBe("https://sass.test/de#pricing");
+    expect(fake.checkouts[0]!.cancelUrl).toBe("https://sass.test/de#pricing");
   });
 
   test.each([
