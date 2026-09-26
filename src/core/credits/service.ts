@@ -96,11 +96,27 @@ const refundInput = z.object({
   amount: positiveInt.optional(),
   reason: z.string().optional(),
 });
+const reclaimInput = z.object({ ...sourceFields, amount: positiveInt });
 
 export type GrantInput = z.input<typeof grantInput>;
 export type DeductInput = z.input<typeof deductInput>;
 export type AdjustInput = z.input<typeof adjustInput>;
 export type RefundInput = z.input<typeof refundInput>;
+export type ReclaimInput = z.input<typeof reclaimInput>;
+
+/**
+ * 回收集分的结果。
+ * - `applied`：按余额截断后实际扣了 `reclaimed`，差额在 `shortfall` 里（余额不够）。
+ * - `duplicate`：同一 (source, sourceId) 已经扣过，本次什么都没做，`reclaimed` 是上次扣掉的额度。
+ * - `uncollectible`：余额为 0，一分都扣不动；积分流水的 `amount <> 0` 约束决定这种事件不写流水。
+ */
+export type ReclaimResult = {
+  status: "applied" | "duplicate" | "uncollectible";
+  reclaimed: number;
+  shortfall: number;
+  balance: number;
+  transaction?: CreditTransaction;
+};
 
 type Entry = {
   userId: string;
@@ -304,6 +320,81 @@ export function createCredits(options: {
         }
       });
       return result;
+    },
+
+    /**
+     * 回收集分（退款回收等）：最多扣到余额为 0，余额不够时把差额原样返回，不抛
+     * InsufficientCreditsError —— 自动回收算不对不该让调用方的事务整体失败。
+     * 一分都扣不动（余额为 0）时不写流水：流水的 amount 有非零约束，没有额度可记，
+     * 差额只能由调用方记在别处（退款回收记在服务端日志里，见 billing/reclaim-credits.ts）。
+     */
+    async reclaimCredits(
+      input: ReclaimInput,
+      { tx }: WriteOptions = {},
+    ): Promise<ReclaimResult> {
+      assertEnabled();
+      const { amount, ...rest } = reclaimInput.parse(input);
+      return (tx ?? getDb()).transaction(async (executor) => {
+        // 行锁：下面按读到的余额截断，锁住这一行才能保证截断后余额不会变成负数
+        // （并发扣减会等这把锁，看到的是扣完之后的值）。
+        const [row] = await executor
+          .select({ balance: userCredits.balance })
+          .from(userCredits)
+          .where(eq(userCredits.userId, rest.userId))
+          .for("update");
+        const balance = row?.balance ?? 0;
+        const reclaimed = Math.min(amount, balance);
+        const shortfall = amount - reclaimed;
+        if (reclaimed <= 0) {
+          // 扣不动有两种可能：真的没余额，或者这一笔本来就已经扣过了（重复提交）。
+          // 后者按 duplicate 返回，调用方不会把它当成"欠账"。
+          const [existing] = await executor
+            .select()
+            .from(creditTransactions)
+            .where(
+              and(
+                eq(creditTransactions.source, rest.source),
+                eq(creditTransactions.sourceId, rest.sourceId),
+              ),
+            );
+          if (existing) {
+            return {
+              status: "duplicate" as const,
+              reclaimed: -existing.amount,
+              shortfall: 0,
+              balance,
+              transaction: existing,
+            };
+          }
+          logger.info("credits.reclaim_uncollectible", {
+            userId: rest.userId,
+            source: rest.source,
+            sourceId: rest.sourceId,
+            amount,
+            balance,
+          });
+          return {
+            status: "uncollectible" as const,
+            reclaimed: 0,
+            shortfall,
+            balance,
+          };
+        }
+        const written = await write(
+          { ...rest, type: "deduct", amount: -reclaimed },
+          executor,
+          (inner) => decrease(inner, rest.userId, reclaimed),
+        );
+        const duplicate = written.status === "duplicate";
+        return {
+          status: written.status,
+          // 重复提交时不重复上报额度：以上次真正扣掉的为准，差额归零。
+          reclaimed: duplicate ? -written.transaction.amount : reclaimed,
+          shortfall: duplicate ? 0 : shortfall,
+          balance: written.balance,
+          transaction: written.transaction,
+        };
+      });
     },
 
     /**

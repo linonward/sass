@@ -440,6 +440,124 @@ describe.skipIf(!url)("积分账本", () => {
       client.db.insert(userCredits).values({ userId, balance: -1 }),
     ).rejects.toThrow();
   });
+
+  describe("回收（clamp）", () => {
+    const reclaim = (userId: string, amount: number, sourceId = source()) =>
+      credits.reclaimCredits({
+        userId,
+        amount,
+        source: "billing-refund",
+        sourceId,
+      });
+
+    test("余额够时足额扣减，差额为 0", async () => {
+      const userId = await newUser();
+      await credits.grantCredits({
+        userId,
+        amount: 100,
+        source: "test",
+        sourceId: source(),
+      });
+
+      const result = await reclaim(userId, 100);
+
+      expect(result).toMatchObject({
+        status: "applied",
+        reclaimed: 100,
+        shortfall: 0,
+        balance: 0,
+      });
+      expect(result.transaction).toMatchObject({
+        type: "deduct",
+        amount: -100,
+      });
+      expect(await ledgerSum(userId)).toBe(0);
+    });
+
+    test("余额不够时扣到 0，差额原样返回", async () => {
+      const userId = await newUser();
+      await credits.grantCredits({
+        userId,
+        amount: 40,
+        source: "test",
+        sourceId: source(),
+      });
+
+      const result = await reclaim(userId, 100);
+
+      expect(result).toMatchObject({
+        status: "applied",
+        reclaimed: 40,
+        shortfall: 60,
+        balance: 0,
+      });
+      expect(result.transaction).toMatchObject({ amount: -40 });
+      expect(await credits.getBalance(userId)).toBe(0);
+      expect(await ledgerSum(userId)).toBe(0);
+    });
+
+    test("余额为 0 时不写流水也不报错（amount 有非零约束，没有额度可记）", async () => {
+      const userId = await newUser();
+
+      const result = await reclaim(userId, 100);
+
+      expect(result).toMatchObject({
+        status: "uncollectible",
+        reclaimed: 0,
+        shortfall: 100,
+        balance: 0,
+      });
+      expect(await transactionCount(userId)).toBe(0);
+    });
+
+    test("同一 (source, sourceId) 重复回收只扣一次", async () => {
+      const userId = await newUser();
+      await credits.grantCredits({
+        userId,
+        amount: 100,
+        source: "test",
+        sourceId: source(),
+      });
+      const sourceId = source();
+
+      const first = await reclaim(userId, 100, sourceId);
+      const second = await reclaim(userId, 100, sourceId);
+
+      expect(first.status).toBe("applied");
+      expect(second).toMatchObject({
+        status: "duplicate",
+        reclaimed: 100,
+        shortfall: 0,
+        balance: 0,
+      });
+      expect(await credits.getBalance(userId)).toBe(0);
+      // 一条发放 + 一条回收。
+      expect(await transactionCount(userId)).toBe(2);
+    });
+
+    test("并发回收：只有一笔扣得动，余额与流水之和保持一致", async () => {
+      const userId = await newUser();
+      await credits.grantCredits({
+        userId,
+        amount: 100,
+        source: "test",
+        sourceId: source(),
+      });
+
+      const results = await Promise.all([
+        reclaim(userId, 100, source()),
+        reclaim(userId, 100, source()),
+      ]);
+
+      expect(results.filter((r) => r.status === "applied")).toHaveLength(1);
+      expect(results.filter((r) => r.status === "uncollectible")).toHaveLength(
+        1,
+      );
+      expect(results.reduce((sum, r) => sum + r.reclaimed, 0)).toBe(100);
+      expect(await credits.getBalance(userId)).toBe(0);
+      expect(await ledgerSum(userId)).toBe(0);
+    });
+  });
 });
 
 describe("参数校验与开关（不需要数据库）", () => {
@@ -462,6 +580,14 @@ describe("参数校验与开关（不需要数据库）", () => {
     );
     await expect(
       disabled.refundCredits({ userId: "u", source: "s", sourceId: "1" }),
+    ).rejects.toBeInstanceOf(CreditsDisabledError);
+    await expect(
+      disabled.reclaimCredits({
+        userId: "u",
+        amount: 1,
+        source: "s",
+        sourceId: "1",
+      }),
     ).rejects.toBeInstanceOf(CreditsDisabledError);
     await expect(disabled.adjustCredits(input)).rejects.toBeInstanceOf(
       CreditsDisabledError,

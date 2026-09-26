@@ -166,6 +166,7 @@ pnpm dev              # http://localhost:3000
   - `landing` 决定首页区块及顺序（`sections`）、Hero 图片、特性与 FAQ 条目；`billing.plans` 是定价区块展示的套餐。文案在 `messages/*.json` 的 `Landing` 下。
 - 收款核心（`src/core/billing/`）：`PaymentProvider` 接口屏蔽具体服务商；webhook 路由调用 `processWebhook(provider, request)`，由 `handleBillingEvent` 在一个事务里完成幂等检查、更新 `subscriptions` / `orders`、触发 `onBillingEvent` 钩子。`billing.plans` 的交易字段：`providerProductId`（付费套餐必填、免费套餐不填）、`credits`（每次购买或每个计费周期发放的积分），`type` 按 `interval` 推导。钩子在 `src/core/billing/hooks.ts` 汇总注册。
 - 购买流程：落地页的定价区块和 `/pricing` 共用购买按钮，未登录时先登录，登录后回到 `/pricing?plan=<id>` 自动继续结账；已订阅显示"管理订阅"（客户门户）。结账回跳 `/billing/success`，按回跳附带的订阅或订单 ID 轮询 `/api/billing/status`，webhook 未到时显示"处理中"，超过 `BILLING_SUCCESS_TIMEOUT_MS`（默认 60 秒）提示联系支持。账单页 `/billing` 显示当前套餐、续费日期、积分余额和最近 20 条流水。
+- 退款回收积分（`src/core/billing/reclaim-credits.ts`，`features.credits` 关闭时不生效）：`refund.created` 钩子按**已退金额占订单金额的比例**回收该订单发放过的积分，比例用累计口径（`floor(发放积分 × 累计已退 / 订单金额) − 已回收`），所以分几次部分退款加起来正好等于一次全额退款，不会因为逐次取整漏积分。回收走 `reclaimCredits`：余额不够时扣到 0，应扣未扣的差额记在服务端日志（流水 `amount` 有非零约束，且扣不动时根本没有流水可写）。流水是 `deduct` 类型、来源 `billing-refund`（`refund` 这个来源另有所指：退还一笔扣减），后台用户详情里能看到带原因的记录；重复推送由 `(source, sourceId)`（`provider:order:<订单>:refund:<退款>`）挡住。
 - e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。fake 是测试替身，生产运行时（`next build` / `next start` / Docker）、Vercel 上（任何环境）和 `CREEM_MODE=live` 时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404；CI 的 e2e 跑在生产构建上，靠 `ALLOW_FAKE_BILLING=1` 显式放行。
 - 接口限流（`src/core/ratelimit/`）：`checkRateLimit(policy, { userId, ip })` 按 `site.config.ts` 的 `rateLimit.policies` 做滑动窗口计数，用户和 IP 各计一次，任一超限即拒绝；被拒绝时 `return rateLimitResponse(result)`（超限 429、Redis 不可用 503，都带 `Retry-After`）。IP 用 `getClientIp(request.headers)` 取。本地没配 Upstash 时跳过限流并警告一次；Redis 出错或超时（1 秒）时按 `rateLimit.failMode` 处理：`open`（默认）放行并记录错误，`closed` 返回 503。登录限流由 Better Auth 负责，不走这里。
 - 文件上传（`src/core/upload/`，`features.upload`）：浏览器直传 Cloudflare R2。`POST /api/upload/presign`（body `{ mime, size }`，需要登录，走 `upload` 限流）按 `site.config.ts` 的 `upload.allowedMimeTypes` / `maxFileSize` 校验，登记一条 `pending` 的 `files` 记录，返回预签名 PUT 地址（10 分钟有效，签名覆盖 Content-Type 和 Content-Length，类型或大小不同时 R2 返回 403）；上传后 `POST /api/upload/complete`（body `{ fileId }`）用 HeadObject 确认对象存在、大小和类型一致，改为 `uploaded`。对象 key 为 `<userId>/<yyyy-mm>/<uuid>.<ext>`，扩展名由类型决定。`upload.public` 为 false（默认）时通过 1 小时有效的签名 GET 地址访问，`GET /api/upload/files/<id>` 会跳转过去，可以直接用作 `<img src>`；为 true 时用 `R2_PUBLIC_URL` 下的地址。前端用 `uploadFile(file)`（`src/core/upload/client.ts`）；开启后 Dashboard 首页有一个上传示例。删除账户时 `files` 记录随之删除，R2 上的对象和一直是 `pending` 的记录 v1 不清理。
@@ -212,7 +213,7 @@ pnpm dev              # http://localhost:3000
   - 设置页 `/settings`：修改名称、偏好语言（`user.locale`，给用户发事务邮件时用 `preferredLocale()` 取）、删除账户。
   - 删除账户会先依次执行 `onUserDelete` 钩子（`src/core/account/on-user-delete.ts`），任何一个失败就中止删除；然后删除用户，session、account 由外键级联删除。业务表引用 `user.id` 时设 `onDelete: "cascade"`，或者注册钩子自行清理（在 `src/core/account/hooks.ts` 里 import 注册文件）。
 - 积分：`src/core/credits/`，由 `features.credits` 开启（关闭时 API 抛 `CreditsDisabledError`，调用方先判断 `creditsEnabled`）。`user_credits` 存余额，`credit_transactions` 记流水（`amount` 带符号，余额恒等于流水之和）。
-  - API：`getBalance`、`grantCredits`、`deductCredits`（余额不足抛 `InsufficientCreditsError`）、`refundCredits`（按扣减的 `source` / `sourceId` 退还，每笔只能退一次）、`adjustCredits`、`listTransactions`。
+  - API：`getBalance`、`grantCredits`、`deductCredits`（余额不足抛 `InsufficientCreditsError`）、`reclaimCredits`（回收集分：最多扣到余额为 0，差额原样返回，不抛错；支付退款回收用它）、`refundCredits`（按扣减的 `source` / `sourceId` 退还，每笔只能退一次）、`adjustCredits`、`listTransactions`。
   - 幂等：同一 `(source, sourceId)` 只生效一次，重复调用返回 `{ status: "duplicate" }`，不抛错。`refund` 是保留的来源名。
   - 写操作都接受 `{ tx }`：传入外部事务时作为它的一部分提交或回滚；余额不足等错误只回滚这一步。
 - UI 组件：shadcn/ui（Base UI），生成到 `src/core/ui/`。新增组件用 `pnpm dlx shadcn@latest add <name>`。
@@ -401,7 +402,7 @@ grep -rn "Suspense" src/ | wc -l       # 0
    - Creem 后台关掉 Test Mode，重新创建同样的产品，把生产模式的产品 ID 换进 `site.config.ts`。
    - 换成生产模式的 `CREEM_API_KEY` 和 `CREEM_WEBHOOK_SECRET`，并把 `CREEM_MODE` 设为 `live`。
    - 在生产模式的 Developers → Webhooks 重新添加同一个 webhook 地址。
-6. 删除账户时会先在 Creem 取消该用户仍在计费的订阅；取消失败时删除中止。退款只更新订单状态，v1 不扣回已发的积分。
+6. 删除账户时会先在 Creem 取消该用户仍在计费的订阅；取消失败时删除中止。退款会按已退金额的比例回收集分（`refund.created` 钩子，见下），回收不走 Creem 的退款接口 —— 服务商的退款操作仍然只在 Creem 后台做。
 7. 自托管（Docker / `next start`，没有 `VERCEL_ENV`）时同样的闸门按 `NODE_ENV` 生效：生产运行时把 `BILLING_PROVIDER` 设成 `fake` 会启动失败，fake 的结账页、客户门户和 webhook 路由也一律 404。只有显式设 `ALLOW_FAKE_BILLING=1` 才放行，它只用于本地/CI 的 e2e 或明确的模拟支付环境 —— 开了之后任何人都能走假结账免费拿到套餐和积分，别在对外环境开。
 
 #### AI 服务商
