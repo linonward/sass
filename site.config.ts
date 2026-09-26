@@ -19,7 +19,8 @@ export default defineConfig({
     blog: true,
     upload: true,
     admin: true,
-    rateLimit: false,
+    // 策略见下面的 rateLimit；Redis 没配时放行（failMode open 兜底）。
+    rateLimit: true,
     // 结构化日志、追踪和分析，细项见下面的 observability。
     observability: true,
   },
