@@ -20,6 +20,9 @@
 # production
 /build
 
+# 买家分发包产物（scripts/release-package.sh）
+/dist/
+
 # misc
 .DS_Store
 *.pem
