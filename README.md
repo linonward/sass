@@ -171,9 +171,9 @@ pnpm dev              # http://localhost:3000
 - 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
 - `/llms.txt`：给 AI agent 和答案引擎的站点索引（约定见 [llmstxt.org](https://llmstxt.org)）。内容全部从 `site.config.ts`、`messages/*.json` 和博客文章生成，改配置就会跟着变；公开页面、套餐价格、博客、法律页、sitemap/robots/RSS，以及需要登录的路径各一节。排版在 `src/core/seo/llms.ts`（可单测），内容组装在 `src/app/llms.txt/route.ts`。多语言站点只出一份，固定用默认语言的 URL。
-- 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。
+- 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。生产运行时只允许 `resend`：`console` / `file` 会把登录验证码写进服务端日志或磁盘，设了会启动失败；CI 的 e2e 跑在生产构建上，靠 `ALLOW_NON_RESEND_EMAIL=1` 放行。
   - 账单邮件：付款成功、付款失败、订阅取消由 `onBillingEvent` 钩子触发（`src/core/billing/emails.ts`），余额跌破 `credits.lowBalanceThreshold` 时发 `credits-low`（同一用户 24 小时内最多一封）。邮件都在数据库事务提交之后才发送：钩子通过 `afterCommit(fn)` 登记，事务回滚时不会发出；同一笔付款、同一订阅的取消只通知一次（`notification_log` 表去重）。发信失败只记日志，不影响 webhook 和扣减。
-  - 生产构建默认使用 `resend`，本地没有 key 时用 `EMAIL_TRANSPORT=console pnpm build`。
+  - 生产构建（`next build` / `next start`）默认使用 `resend` 并要求 `RESEND_API_KEY`；本地没有 key 又想跑一次构建时用 `ALLOW_NON_RESEND_EMAIL=1 EMAIL_TRANSPORT=console pnpm build`。
 - 登录：Better Auth（`src/core/auth/`），Google 登录和邮箱验证码登录，路由 `/sign-in`、`/api/auth/*`。验证码参数在 `site.config.ts` 的 `auth.emailOtp`。
   - 需要登录的页面放在 `src/app/[locale]/(app)/` 下：(app) 的 layout 校验 session，未登录时跳转登录页（307，见[错误与权限的边界](#错误与权限的边界)）。写进 `site.config.ts` 的 `dashboard.nav` 的路径，proxy 还会按 cookie 提前拦截并带上回跳地址（`src/core/auth/routes.ts` 的 `protectedPrefixes`）。
   - 服务端取当前用户：`getSession()`（`src/core/auth/session.ts`）；客户端：`authClient`（`src/core/auth/client.ts`）。
@@ -187,7 +187,7 @@ pnpm dev              # http://localhost:3000
   - 幂等：同一 `(source, sourceId)` 只生效一次，重复调用返回 `{ status: "duplicate" }`，不抛错。`refund` 是保留的来源名。
   - 写操作都接受 `{ tx }`：传入外部事务时作为它的一部分提交或回滚；余额不足等错误只回滚这一步。
 - UI 组件：shadcn/ui（Base UI），生成到 `src/core/ui/`。新增组件用 `pnpm dlx shadcn@latest add <name>`。
-- 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验。
+- 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验，但只在非生产运行时生效：`next build` / `next start` / Docker 里 `NODE_ENV` 是 production，一律强制校验（否则一个环境变量就能跳过必填项和各模块的生产闸门）。
 
 CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test → build → e2e 顺序执行。
 
@@ -294,7 +294,8 @@ grep -rn "Suspense" src/ | wc -l       # 0
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `DATABASE_URL`                                                                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                                               |
 | `RESEND_API_KEY`                                                                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                                              |
-| `EMAIL_TRANSPORT`                                                                           | 通常不填，生产环境默认 `resend`。只有想让某个环境不真实发信时才设为 `console` 或 `file`。                                            |
+| `EMAIL_TRANSPORT`                                                                           | 通常不填，生产环境默认 `resend`。生产运行时（Vercel 或 `NODE_ENV=production`）设成 `console` / `file` 会启动失败。                   |
+| `ALLOW_NON_RESEND_EMAIL`                                                                    | 可选，默认关闭。设为 `1` / `true` 时放行生产运行时的 `console` / `file`（CI 的 e2e 需要）。                                          |
 | `BETTER_AUTH_SECRET`                                                                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                                                |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                                 | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                                            |
 | `BETTER_AUTH_URL`                                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                                        |
@@ -416,6 +417,7 @@ grep -rn "Suspense" src/ | wc -l       # 0
 2. 需要 trace 时再开启 `observability.otel`：
    - 在 Vercel 上：项目 → Observability 里开启 Tracing，或者在 Integrations 里接入 Datadog、Honeycomb 等 OTel 集成，不需要额外的变量。
    - 其他后端：填 `OTEL_EXPORTER_OTLP_ENDPOINT`（需要鉴权时加 `OTEL_EXPORTER_OTLP_HEADERS`，例如 `x-honeycomb-team=<key>`）。两者都没有时不导出 trace，日志照常输出。
+3. 日志字段写出前会脱敏（`src/core/observability/logger.ts`）：字段名以 `email` / `token` / `password` / `secret` / `apikey` / `otp` / `pin` 结尾，或者字段名本身是 `authorization` / `cookie` / `code`，值都替换成 `[redacted]`。验证码的常见写法（`verificationCode`、`verification_code`、`otpCode`、`smsCode`、`pinCode`……）按「前缀是凭据词」判定；`statusCode`、`errorCode`、`countryCode`、`zipCode` 这类诊断字段**不**脱敏 —— 故意不做「以 `code` 结尾就脱敏」的一刀切，否则排障时这些值会静默消失。要记新的凭据字段时，在 `SENSITIVE_SUFFIXES` / `VERIFICATION_CODE_PREFIXES` 里补词并加测试。
 
 #### 错误追踪（Sentry，可选）
 

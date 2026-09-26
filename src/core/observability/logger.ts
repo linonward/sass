@@ -30,16 +30,66 @@ export type LoggerOptions = {
 const REDACTED = "[redacted]";
 const MAX_DEPTH = 5;
 
-// 字段名（忽略大小写和 _ -）等于或以这些词结尾时脱敏：email、userEmail、accessToken、apiKey……
-// inputTokens 这类计数不受影响（以 tokens 结尾）。
-const SENSITIVE_SUFFIXES = ["email", "token", "password", "secret", "apikey"];
+// 字段名（忽略大小写和 _ -）命中下面任一条就脱敏：
+// 1. 等于 SENSITIVE_KEYS 里的词；
+// 2. 以 SENSITIVE_SUFFIXES 里的词结尾 —— userEmail、accessToken、userOtp……
+//    inputTokens 这类计数不受影响（以 tokens 结尾）；
+// 3. 以 code 结尾且前缀是凭据词（isVerificationCodeKey）—— verificationCode、otp_code、pinCode。
+//
+// `code` 故意不进后缀表：以 code 结尾的名字里，statusCode / errorCode / countryCode / zipCode
+// 这类诊断字段远多于验证码，按后缀一刀切会把它们一起抹成 [redacted]，属于静默降低可观测性
+// —— 出故障时没人会立刻发现日志里少了这些值。所以验证码按「前缀是不是凭据词」判定，
+// 而裸 `code` 单独算（见 VERIFICATION_CODE_PREFIXES 里的空串）。
+const SENSITIVE_SUFFIXES = [
+  "email",
+  "token",
+  "password",
+  "secret",
+  "apikey",
+  // 验证码类：otp（含 hotp / totp）和 pin 本身就是凭据，出现在字段名末尾都算敏感。
+  "otp",
+  "pin",
+];
 const SENSITIVE_KEYS = new Set(["authorization", "cookie", "setcookie"]);
+// `*code` 的前缀为这些词时按验证码脱敏。空串表示裸 `code`：日志字段里的 `code` 基本都出现在
+// 登录 / 验证码场景，而错误码、状态码通常带前缀（errorCode、statusCode），不受影响。
+const VERIFICATION_CODE_PREFIXES = new Set([
+  "",
+  "verification",
+  "verify",
+  "otp",
+  "auth",
+  "security",
+  "sms",
+  "mail",
+  "email",
+  "pin",
+  "totp",
+  "mfa",
+  "twofactor",
+  "2fa",
+  "confirm",
+  "confirmation",
+  "activation",
+  "activate",
+  "reset",
+  "magic",
+  "onetime",
+  "backup",
+  "recovery",
+]);
+
+function isVerificationCodeKey(normalized: string) {
+  if (!normalized.endsWith("code")) return false;
+  return VERIFICATION_CODE_PREFIXES.has(normalized.slice(0, -"code".length));
+}
 
 function isSensitiveKey(key: string) {
   const normalized = key.toLowerCase().replace(/[_-]/g, "");
   return (
     SENSITIVE_KEYS.has(normalized) ||
-    SENSITIVE_SUFFIXES.some((suffix) => normalized.endsWith(suffix))
+    SENSITIVE_SUFFIXES.some((suffix) => normalized.endsWith(suffix)) ||
+    isVerificationCodeKey(normalized)
   );
 }
 
