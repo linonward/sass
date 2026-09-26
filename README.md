@@ -328,3 +328,15 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 ### 5. GitHub
 
 - `main` 开启分支保护：必须通过 PR 合入，`ci` 为必需检查，禁止 force push。详见 [docs/workflow.md](docs/workflow.md#github-仓库设置)。
+
+### 6. 可用性监控
+
+- 站点可用性可以用外部服务盯着，比如 UptimeRobot 或 Better Stack 的免费版：监控 `https://<domain>`，间隔 5 分钟（Better Stack 免费版是 3 分钟），告警走邮件。注意免费版都不提供证书到期告警。
+- 证书到期由仓库自带的 `tls-expiry` 工作流兜底：每天 01:00 UTC 跑一次 `scripts/check-tls-expiry.mjs`，检查 `site.config.ts` 里 `domain` 的证书剩余有效期，不足 30 天就开一条 issue，并让这次运行失败（GitHub 会发失败通知）。本地也可以随时手动跑：
+
+  ```bash
+  node scripts/check-tls-expiry.mjs --days 14
+  node scripts/check-tls-expiry.mjs --hosts a.example.com,b.example.com
+  ```
+
+  Vercel 托管的证书是自动续期的，所以这条检查主要是发现"续期卡住了"这种静默失败。
