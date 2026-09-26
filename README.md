@@ -506,3 +506,26 @@ grep -rn "Suspense" src/ | wc -l       # 0
   ```
 
   Vercel 托管的证书是自动续期的，所以这条检查主要是发现"续期卡住了"这种静默失败。
+
+### 7. 自托管（自己的服务器 / Docker）
+
+不用 Vercel 时，生产闸门由 `NODE_ENV=production` 触发 —— 邮件只允许 Resend、`SKIP_ENV_VALIDATION` 失效、fake 支付与占位哨兵都在构建期拦人，判断逻辑和 Vercel 上完全一样。所以：
+
+- 用 `pnpm build` + `pnpm start` 跑（或打包成 Docker），别用 `pnpm dev`；启动前先 `pnpm db:migrate`。
+- 环境变量照上面「环境变量」一节配齐；没有 Vercel 的自动推断，`BETTER_AUTH_URL` 要自己填成对外地址。
+
+**反向代理必须自己写对 `X-Forwarded-For`。** 限流按 IP 计数（`getClientIp` 取 XFF 的第一跳），如果反代把客户端自带的 XFF 原样透传，任何人加一个请求头就能冒充别的 IP、把限流绕过去。要点是用**连接的对端地址覆盖**，而不是在后面追加：
+
+```nginx
+location / {
+  proxy_pass http://127.0.0.1:3000;
+  proxy_set_header Host $host;
+  # 覆盖客户端传进来的 X-Forwarded-For，只留真实对端地址
+  proxy_set_header X-Forwarded-For $remote_addr;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-Forwarded-*` 并按连接重写（[文档](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)）。前面还有一层 CDN 或负载均衡时，用 Caddy 的 `trusted_proxies` 信任那一层，否则真实 IP 会被丢掉。
+
+反代前面挂了 Cloudflare 之类的 CDN 时，Nginx 侧用 `real_ip` 模块恢复真实 IP（`set_real_ip_from <CDN 回源段>` + `real_ip_header CF-Connecting-IP`），再把恢复后的 `$remote_addr` 写进 XFF。

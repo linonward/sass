@@ -81,6 +81,38 @@ describe("上传路由", () => {
     });
   });
 
+  test("确认上传也走 upload 限流", async () => {
+    const ctx = context();
+    ctx.checkRateLimit.mockResolvedValueOnce({
+      ok: false,
+      reason: "limited",
+      retryAfter: 42,
+    });
+    const response = await handleComplete(request({ fileId: "f1" }), ctx);
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("42");
+    expect(ctx.checkRateLimit).toHaveBeenCalledWith("upload", {
+      userId: "u1",
+      ip: "1.2.3.4",
+    });
+  });
+
+  test("文件跳转也走 upload 限流", async () => {
+    const ctx = context();
+    ctx.checkRateLimit.mockResolvedValueOnce({
+      ok: false,
+      reason: "limited",
+      retryAfter: 42,
+    });
+    const response = await handleFileRedirect(request({}), "f1", ctx);
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("42");
+    expect(ctx.checkRateLimit).toHaveBeenCalledWith("upload", {
+      userId: "u1",
+      ip: "1.2.3.4",
+    });
+  });
+
   test("类型或大小不合法时返回错误码", async () => {
     const ctx = context();
     const svg = await handlePresign(

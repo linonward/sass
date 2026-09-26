@@ -1,3 +1,5 @@
+import siteConfig from "../../../site.config";
+
 import {
   SpanStatusCode,
   trace,
@@ -6,7 +8,8 @@ import {
 } from "@opentelemetry/api";
 
 // 没有注册 OTel（observability.otel 关闭、测试环境）时，这里拿到的是空实现，开销可以忽略。
-const tracer = () => trace.getTracer("sass");
+// 名字用站点名：上报到 OTel 后端时一眼能看出是哪个站，也免得模板名留在买家的链路里。
+const tracer = () => trace.getTracer(siteConfig.name);
 
 /** 把错误记到 span 上并标记失败。 */
 export function recordSpanError(span: Span, error: unknown) {
