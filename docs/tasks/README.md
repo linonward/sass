@@ -53,7 +53,7 @@
 | T802                       | license           | `docs/license`          | T801             | done |
 | T803                       | fake-billing-gate | `fix/fake-billing-gate` | T801             | done |
 | T804                       | neutral-config    | `fix/neutral-config`    | T801             | done |
-| T805                       | prod-env-guards   | `fix/prod-env-guards`   | T801             | todo |
+| T805                       | prod-env-guards   | `fix/prod-env-guards`   | T801             | done |
 | T806                       | security-headers  | `feat/security-headers` | T801             | todo |
 | T807                       | dep-overrides     | `fix/dep-overrides`     | T801             | todo |
 | T808                       | deps-hygiene      | `chore/deps-hygiene`    | T801             | todo |

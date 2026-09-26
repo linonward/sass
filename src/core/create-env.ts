@@ -32,6 +32,17 @@ export function requiredWhen<T extends z.ZodType>(enabled: boolean, schema: T) {
   return enabled ? schema : schema.optional();
 }
 
+/**
+ * 是否跳过校验。`SKIP_ENV_VALIDATION` 只在非生产运行时生效：
+ * `next build`、`next start` 和 Docker 里 `NODE_ENV` 都是 production，此时强制校验 ——
+ * 否则部署上一个环境变量就能跳过必填项检查，连带跳过各模块的闸门（比如「生产不允许 fake 支付」）。
+ * 本地拿它跳过校验的命令（`pnpm typecheck`、`pnpm auth:generate`）NODE_ENV 不是 production，不受影响。
+ */
+function skipValidation(runtimeEnv: RuntimeEnv) {
+  if (runtimeEnv.NODE_ENV === "production") return false;
+  return Boolean(runtimeEnv.SKIP_ENV_VALIDATION);
+}
+
 /** 按给定 schema 校验环境变量。任一字段非法时抛错，并逐条列出变量名。 */
 export function createAppEnv<
   TServer extends ServerShape,
@@ -51,7 +62,7 @@ export function createAppEnv<
     client: client ?? {},
     runtimeEnv,
     emptyStringAsUndefined: true,
-    skipValidation: Boolean(runtimeEnv.SKIP_ENV_VALIDATION),
+    skipValidation: skipValidation(runtimeEnv),
     onValidationError: (issues) => {
       throw new Error(
         `Invalid environment variables:\n${formatIssues(issues)}`,
