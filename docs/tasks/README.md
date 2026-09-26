@@ -51,11 +51,11 @@
 | **阶段 8：商品化**         |                   |                         |                  |      |
 | T801                       | sell-plan         | `docs/sell-plan`        | 阶段 1–7         | done |
 | T802                       | license           | `docs/license`          | T801             | done |
-| T803                       | fake-billing-gate | `fix/fake-billing-gate` | T801             | todo |
+| T803                       | fake-billing-gate | `fix/fake-billing-gate` | T801             | done |
 | T804                       | neutral-config    | `fix/neutral-config`    | T801             | done |
 | T805                       | prod-env-guards   | `fix/prod-env-guards`   | T801             | todo |
 | T806                       | security-headers  | `feat/security-headers` | T801             | done |
-| T807                       | dep-overrides     | `fix/dep-overrides`     | T801             | todo |
+| T807                       | dep-overrides     | `fix/dep-overrides`     | T801             | done |
 | T808                       | deps-hygiene      | `chore/deps-hygiene`    | T801             | todo |
 | T809                       | refund-credits    | `feat/refund-credits`   | T801             | todo |
 | T810                       | ts-strictness     | `chore/ts-strictness`   | T801             | todo |

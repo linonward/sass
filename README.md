@@ -118,6 +118,21 @@ pnpm dev              # http://localhost:3000
 
 数据库：`DATABASE_URL` 必填（见 `.env.example`）。本地可以用 Docker 起一个 Postgres，再执行 `pnpm db:migrate`。设置了 `DATABASE_URL_TEST` 时，`pnpm test` 会运行数据库测试；未设置时跳过（CI 中必须设置）。
 
+### 依赖与 audit
+
+依赖覆盖写在 `pnpm-workspace.yaml` 的 `overrides`，**不是** `package.json` 的 `pnpm` 字段：pnpm 12 起不再读取后者（会打印警告并忽略），`overrides` 属于依赖解析设置，只能放在工作区文件里。
+
+目前强制两条传递依赖，都来自 `@content-collections/mdx > mdx-bundler`，都只在编译 MDX 时用到：
+
+| override           | 实际解析 | 修的 advisory                                                                  |
+| ------------------ | -------- | ------------------------------------------------------------------------------ |
+| `toml: ">=4.2.0"`  | 5.0.0    | GHSA-82x6-q7mm-w9cf（不受控递归）、GHSA-v5mp-jgw5-2x6j（`__proto__` 原型污染） |
+| `uuid: ">=11.1.1"` | 14.0.2   | GHSA-w5hq-g745-h8pq（v3/v5/v6 传入 `buf` 时缺少边界检查）                      |
+
+- 博客 frontmatter 是 YAML（`---`），由 gray-matter 解析；`toml` 只在文章以 `+++` 写 TOML frontmatter 时才会被调用，`uuid` 只用来给 mdx-bundler 的临时入口文件起名。升级前后同一篇文章解析出的 frontmatter 字段完全一致。
+- `uuid` 14 已是纯 ESM 包，而 mdx-bundler 是 CJS、用 `require("uuid")` 取 `v4`：能跑通是因为 Node 24 支持 `require(esm)`，换更低的 Node 会在这里失败（`engines.node` 已经要求 24.x）。
+- `pnpm audit` 目前只剩一条 moderate：`esbuild` 的 GHSA-67mh-4wv8-2f99（<= 0.24.2 的 dev server 允许任意网站发请求并读到响应）。它经 `drizzle-kit > @esbuild-kit/esm-loader > @esbuild-kit/core-utils > esbuild@0.18.20` 进来，`@esbuild-kit/*` 已归档、上游不再修；这条路径只调用 `esbuild.transform()`（加载 `drizzle.config.ts` 用），从不调用 `esbuild.serve()`，起不了那个 dev server，所以在本项目不可利用。drizzle-kit 是 devDependency（也是 better-auth 的可选 peer），不进运行时产物。不要用 overrides 强升这个 esbuild：`@esbuild-kit/core-utils` 按 `~0.18.20` 写死 API，且已归档。
+
 ## 配置
 
 - `site.config.ts`：站点名称、域名、品牌色、语言、功能开关（`features`）。由 `defineConfig()` 校验，写错时 `dev` / `build` 直接失败，并指出出错字段。
@@ -127,7 +142,7 @@ pnpm dev              # http://localhost:3000
   - `landing` 决定首页区块及顺序（`sections`）、Hero 图片、特性与 FAQ 条目；`billing.plans` 是定价区块展示的套餐。文案在 `messages/*.json` 的 `Landing` 下。
 - 收款核心（`src/core/billing/`）：`PaymentProvider` 接口屏蔽具体服务商；webhook 路由调用 `processWebhook(provider, request)`，由 `handleBillingEvent` 在一个事务里完成幂等检查、更新 `subscriptions` / `orders`、触发 `onBillingEvent` 钩子。`billing.plans` 的交易字段：`providerProductId`（付费套餐必填、免费套餐不填）、`credits`（每次购买或每个计费周期发放的积分），`type` 按 `interval` 推导。钩子在 `src/core/billing/hooks.ts` 汇总注册。
 - 购买流程：落地页的定价区块和 `/pricing` 共用购买按钮，未登录时先登录，登录后回到 `/pricing?plan=<id>` 自动继续结账；已订阅显示"管理订阅"（客户门户）。结账回跳 `/billing/success`，按回跳附带的订阅或订单 ID 轮询 `/api/billing/status`，webhook 未到时显示"处理中"，超过 `BILLING_SUCCESS_TIMEOUT_MS`（默认 60 秒）提示联系支持。账单页 `/billing` 显示当前套餐、续费日期、积分余额和最近 20 条流水。
-- e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。Vercel 上（任何环境）或 `CREEM_MODE=live` 时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404。
+- e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。fake 是测试替身，生产运行时（`next build` / `next start` / Docker）、Vercel 上（任何环境）和 `CREEM_MODE=live` 时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404；CI 的 e2e 跑在生产构建上，靠 `ALLOW_FAKE_BILLING=1` 显式放行。
 - 接口限流（`src/core/ratelimit/`）：`checkRateLimit(policy, { userId, ip })` 按 `site.config.ts` 的 `rateLimit.policies` 做滑动窗口计数，用户和 IP 各计一次，任一超限即拒绝；被拒绝时 `return rateLimitResponse(result)`（超限 429、Redis 不可用 503，都带 `Retry-After`）。IP 用 `getClientIp(request.headers)` 取。本地没配 Upstash 时跳过限流并警告一次；Redis 出错或超时（1 秒）时按 `rateLimit.failMode` 处理：`open`（默认）放行并记录错误，`closed` 返回 503。登录限流由 Better Auth 负责，不走这里。
 - 文件上传（`src/core/upload/`，`features.upload`）：浏览器直传 Cloudflare R2。`POST /api/upload/presign`（body `{ mime, size }`，需要登录，走 `upload` 限流）按 `site.config.ts` 的 `upload.allowedMimeTypes` / `maxFileSize` 校验，登记一条 `pending` 的 `files` 记录，返回预签名 PUT 地址（10 分钟有效，签名覆盖 Content-Type 和 Content-Length，类型或大小不同时 R2 返回 403）；上传后 `POST /api/upload/complete`（body `{ fileId }`）用 HeadObject 确认对象存在、大小和类型一致，改为 `uploaded`。对象 key 为 `<userId>/<yyyy-mm>/<uuid>.<ext>`，扩展名由类型决定。`upload.public` 为 false（默认）时通过 1 小时有效的签名 GET 地址访问，`GET /api/upload/files/<id>` 会跳转过去，可以直接用作 `<img src>`；为 true 时用 `R2_PUBLIC_URL` 下的地址。前端用 `uploadFile(file)`（`src/core/upload/client.ts`）；开启后 Dashboard 首页有一个上传示例。删除账户时 `files` 记录随之删除，R2 上的对象和一直是 `pending` 的记录 v1 不清理。
 - AI（`src/core/ai/`，`features.ai` 控制）：`site.config.ts` 的 `ai.models` 列出可用模型（`id`、`provider`（`openai` / `anthropic` / `google`）、`model`、`creditCost`，可选 `maxOutputTokens`），`ai.defaultModel` 是默认模型。env 里配了哪家的 key 就启用哪家，没配 key 的模型调用返回 503。服务端调用 `runAI({ userId, ip, modelId, prompt | messages, ... })`：检查登录 → `ai` 策略限流（429）→ 在一个事务里预扣 `creditCost` 并写入 `ai_usage`（余额不足 402）→ 流式调用模型；模型报错时按 `ai_usage.id` 退回积分（流水里是一条 `refund`），成功时记录 token 用量和耗时。返回的 `result` 是 AI SDK 的 `streamText` 结果；路由里用 `after(() => run.settled)` 保证响应结束后记账跑完。示例接口 `POST /api/ai/chat`（useChat 的 UI message 流，请求体上限 64 KB），示例页 `/playground`。v1 按次固定扣费，不存对话历史。开启收费模型（`creditCost > 0`）需要同时开启 `features.credits`。
@@ -291,7 +306,8 @@ grep -rn "Suspense" src/ | wc -l       # 0
 | `BETTER_AUTH_URL`                                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                                        |
 | `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                                    | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。                                          |
 | `CREEM_MODE`                                                                                | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                                         |
-| `BILLING_PROVIDER`                                                                          | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e，Vercel 上设置会启动失败。                                                       |
+| `BILLING_PROVIDER`                                                                          | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e；生产运行时、Vercel 或 `CREEM_MODE=live` 下设置会启动失败。                      |
+| `ALLOW_FAKE_BILLING`                                                                        | 可选，默认关闭。设为 `1` / `true` 时放行 fake（CI 的 e2e 需要）；Vercel 和 `CREEM_MODE=live` 下无效。                                |
 | `BILLING_SUCCESS_TIMEOUT_MS`                                                                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                                      |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`                                       | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。                  |
 | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET`                 | 开启 `features.upload` 时 Production 必填（见下文"文件上传（Cloudflare R2）"）。Preview 不填时上传接口返回 503。                     |
@@ -361,6 +377,7 @@ grep -rn "Suspense" src/ | wc -l       # 0
    - 换成生产模式的 `CREEM_API_KEY` 和 `CREEM_WEBHOOK_SECRET`，并把 `CREEM_MODE` 设为 `live`。
    - 在生产模式的 Developers → Webhooks 重新添加同一个 webhook 地址。
 6. 删除账户时会先在 Creem 取消该用户仍在计费的订阅；取消失败时删除中止。退款只更新订单状态，v1 不扣回已发的积分。
+7. 自托管（Docker / `next start`，没有 `VERCEL_ENV`）时同样的闸门按 `NODE_ENV` 生效：生产运行时把 `BILLING_PROVIDER` 设成 `fake` 会启动失败，fake 的结账页、客户门户和 webhook 路由也一律 404。只有显式设 `ALLOW_FAKE_BILLING=1` 才放行，它只用于本地/CI 的 e2e 或明确的模拟支付环境 —— 开了之后任何人都能走假结账免费拿到套餐和积分，别在对外环境开。
 
 #### AI 服务商
 

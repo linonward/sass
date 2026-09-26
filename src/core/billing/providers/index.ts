@@ -8,7 +8,7 @@ import { createFakeBillingProvider } from "./fake";
 let cached: PaymentProvider | null | undefined;
 
 /**
- * 是否启用了测试用的 fake 服务商。env 校验已经拒绝在 Vercel 或 live 模式下设为 fake，
+ * 是否启用了测试用的 fake 服务商。env 校验已经拒绝在生产运行时、Vercel 或 live 模式下设为 fake，
  * 这里按运行时环境再判断一次，fake 相关路由据此决定是否返回 404。
  */
 export function fakeBillingActive() {
