@@ -1,4 +1,4 @@
-import { creditsEnabled, grantCredits } from "@/core/credits";
+import { creditsEnabled, grantCredits, reclaimCredits } from "@/core/credits";
 import { sendEmail } from "@/core/email/send";
 import { trackServer } from "@/core/observability/track-server";
 
@@ -6,11 +6,18 @@ import { createBillingEmailHandler } from "./emails";
 import { createGrantCreditsHandler } from "./grant-credits";
 import { registerOnBillingEvent } from "./on-billing-event";
 import { createPurchaseTrackingHandler } from "./track-purchase";
+import { createReclaimCreditsHandler } from "./reclaim-credits";
 
 // 套件自带的 onBillingEvent 钩子：套餐配置了 credits 且 features.credits 开启时发放积分。
 registerOnBillingEvent(
   "billing:grant-credits",
   createGrantCreditsHandler({ enabled: creditsEnabled, grantCredits }),
+);
+
+// 退款按未退比例回收集分（同样受 features.credits 控制）。
+registerOnBillingEvent(
+  "billing:reclaim-credits",
+  createReclaimCreditsHandler({ enabled: creditsEnabled, reclaimCredits }),
 );
 
 // 付款成功、付款失败、订阅取消的通知邮件；在事务提交后发送。
