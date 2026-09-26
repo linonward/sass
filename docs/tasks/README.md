@@ -72,7 +72,7 @@
 | T904                       | error-e2e         | `chore/error-e2e`       | T902, T903       | todo |
 | T905                       | boundary-notes    | `docs/boundary-notes`   | T901             | todo |
 | **阶段 10：渲染与包体积**  |                   |                         |                  |      |
-| T1001                      | config-leaf       | `fix/config-leaf`       | T901             | todo |
+| T1001                      | config-leaf       | `fix/config-leaf`       | T901             | done |
 | T1002                      | playground-stream | `fix/playground-stream` | T901             | todo |
 | T1003                      | playground-tabs   | `fix/playground-tabs`   | T901, T1002      | todo |
 | T1004                      | serial-queries    | `fix/serial-queries`    | T901             | todo |

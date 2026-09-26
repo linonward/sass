@@ -3,7 +3,7 @@
  *
  * 模拟"新增一门语言"的真实步骤，除此之外不改任何代码：
  *   1. 把仓库（含未提交改动）复制到临时目录
- *   2. 在 site.config.ts 的 locales 里加入测试语言
+ *   2. 在 src/core/i18n/locales.ts 的 locales 里加入测试语言
  *   3. 从 messages/en.json 生成伪翻译 messages/<locale>.json（每条加上 `[<locale>] ` 前缀）
  * 然后在副本里安装依赖并启动：CI 用生产构建，本地用 dev server。
  */
@@ -35,13 +35,14 @@ for (const file of files) {
   fs.copyFileSync(from, path.join(dest, file));
 }
 
-const configPath = path.join(dest, "site.config.ts");
+const configPath = path.join(dest, "src/core/i18n/locales.ts");
 const config = fs.readFileSync(configPath, "utf8");
 const patched = config.replace(
-  /locales: \[([^\]]*)\]/,
-  (_, list: string) => `locales: [${list}, "${TEST_LOCALE}"]`,
+  /export const locales = \[([^\]]*)\]/,
+  (_, list: string) => `export const locales = [${list}, "${TEST_LOCALE}"]`,
 );
-if (patched === config) throw new Error("site.config.ts 中找不到 locales");
+if (patched === config)
+  throw new Error("src/core/i18n/locales.ts 中找不到 locales");
 fs.writeFileSync(configPath, patched);
 
 const en = JSON.parse(
