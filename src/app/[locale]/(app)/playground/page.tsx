@@ -15,10 +15,7 @@ import {
   listPendingVideos,
 } from "@/core/ai";
 import { GenerationsProvider } from "@/core/ai/generations-context";
-import { ImageStudio } from "@/core/ai/image-studio";
-import { Playground } from "@/core/ai/playground";
 import { PlaygroundTabs } from "@/core/ai/playground-tabs";
-import { VideoStudio } from "@/core/ai/video-studio";
 import { requirePageSession } from "@/core/auth/session";
 import { buildMetadata } from "@/core/seo/metadata";
 import { PageHeader } from "@/core/ui/page-header";
@@ -57,18 +54,15 @@ export default async function PlaygroundPage({
         initialGenerations={generations}
         initialPendingVideos={pendingVideos}
       >
+        {/* 只传数据：内容组件在 PlaygroundTabs（客户端）里按需 import。 */}
         <PlaygroundTabs
           tabs={[
             ...(aiModels.length > 0
               ? [
                   {
                     id: "chat" as const,
-                    content: (
-                      <Playground
-                        models={aiModels}
-                        defaultModel={defaultAiModel!}
-                      />
-                    ),
+                    models: aiModels,
+                    defaultModel: defaultAiModel!,
                   },
                 ]
               : []),
@@ -76,12 +70,8 @@ export default async function PlaygroundPage({
               ? [
                   {
                     id: "image" as const,
-                    content: (
-                      <ImageStudio
-                        models={aiImageModels}
-                        defaultModel={defaultAiImageModel!}
-                      />
-                    ),
+                    models: aiImageModels,
+                    defaultModel: defaultAiImageModel!,
                   },
                 ]
               : []),
@@ -89,12 +79,8 @@ export default async function PlaygroundPage({
               ? [
                   {
                     id: "video" as const,
-                    content: (
-                      <VideoStudio
-                        models={aiVideoModels}
-                        defaultModel={defaultAiVideoModel!}
-                      />
-                    ),
+                    models: aiVideoModels,
+                    defaultModel: defaultAiVideoModel!,
                   },
                 ]
               : []),
