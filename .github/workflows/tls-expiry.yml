@@ -1,0 +1,86 @@
+name: tls-expiry
+
+# 每天检查一次站点证书的剩余有效期：不足 30 天就开 issue，并让这次运行失败。
+# 告警本身不依赖任何外部服务，续期后运行会自动转绿。
+on:
+  schedule:
+    # 01:00 UTC = 09:00 北京时间。
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+    inputs:
+      hosts:
+        description: 要检查的主机，逗号分隔；留空则用 site.config.ts 里的 domain
+        required: false
+      days:
+        description: 剩余不足多少天算告警
+        required: false
+        default: "30"
+  pull_request:
+    paths:
+      - .github/workflows/tls-expiry.yml
+      - scripts/check-tls-expiry.mjs
+
+concurrency:
+  group: tls-expiry
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # 脚本只用 Node 内置模块，不需要装依赖。
+      - name: 检查证书剩余有效期
+        id: check
+        env:
+          SSL_CHECK_HOSTS: ${{ inputs.hosts }}
+          SSL_CHECK_DAYS: ${{ inputs.days }}
+        run: |
+          set +e
+          node scripts/check-tls-expiry.mjs | tee /tmp/tls-report.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      # PR 里只跑检查，不动 issue。
+      - name: 开 issue 提醒
+        if: steps.check.outputs.status != '0' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="TLS 证书剩余有效期不足 30 天"
+          open=$(gh issue list --state open --limit 100 --search "$title in:title" --json number --jq 'length')
+          if [ "$open" != "0" ]; then
+            echo "已经有开着的提醒 issue，不再重复创建。"
+            exit 0
+          fi
+          {
+            echo "每天定时检查（\`.github/workflows/tls-expiry.yml\`）发现证书快到期了："
+            echo
+            echo '```'
+            cat /tmp/tls-report.txt
+            echo '```'
+            echo
+            echo "先在服务商侧确认证书是否已经续期（Vercel 托管的证书是自动续期的）。"
+            echo "续期后这个工作流会自动转绿，本 issue 就可以关掉；如果连续几天都是失败的，说明续期卡住了。"
+            echo
+            echo "本次运行：$RUN_URL"
+          } > /tmp/issue-body.md
+          gh issue create --title "$title" --body-file /tmp/issue-body.md
+
+      - name: 失败退出
+        if: steps.check.outputs.status != '0'
+        run: |
+          echo "证书剩余有效期不足，或至少有一个主机连不上。" >&2
+          exit 1
