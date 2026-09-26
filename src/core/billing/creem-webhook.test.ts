@@ -30,6 +30,7 @@ import {
 } from "./on-billing-event";
 import { creemSample } from "./providers/__fixtures__/creem-webhooks";
 import { createCreemProvider, type CreemClient } from "./providers/creem";
+import { createReclaimCreditsHandler } from "./reclaim-credits";
 import { processWebhook } from "./webhook";
 
 const url = process.env.DATABASE_URL_TEST;
@@ -82,11 +83,19 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
 
   const useCredits = (enabled: boolean) => {
     resetOnBillingEvent();
+    const credits = createCredits({ db, enabled: true });
     registerOnBillingEvent(
       "billing:grant-credits",
       createGrantCreditsHandler({
         enabled,
-        grantCredits: createCredits({ db, enabled: true }).grantCredits,
+        grantCredits: credits.grantCredits,
+      }),
+    );
+    registerOnBillingEvent(
+      "billing:reclaim-credits",
+      createReclaimCreditsHandler({
+        enabled,
+        reclaimCredits: credits.reclaimCredits,
       }),
     );
   };
@@ -302,12 +311,14 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     expect(await balance()).toBe(0);
   });
 
-  test("退款：订单变为 refunded，积分不扣回（v1）", async () => {
+  test("退款：订单变为 partially_refunded，积分按已退比例回收", async () => {
     await send(checkoutCompleted("one_time"));
     const refund = creemSample("refund.created");
     refund.id = eventId();
     const object = refund.object as Payload;
     object.id = `ref_${randomUUID()}`;
+    // 订单是 1000（EUR，一次性购买发放 2000 积分），退一半 → 回收一半。
+    object.refund_amount = 500;
     delete object.transaction.subscription;
     delete object.subscription;
     object.transaction.order = ids.ord;
@@ -320,8 +331,8 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
       .select({ status: orders.status, refunded: orders.refundedAmount })
       .from(orders)
       .where(eq(orders.providerOrderId, ids.ord));
-    expect(order).toEqual({ status: "refunded", refunded: 1210 });
-    expect(await balance()).toBe(2000);
+    expect(order).toEqual({ status: "partially_refunded", refunded: 500 });
+    expect(await balance()).toBe(1000);
   });
 
   test("取消订阅：状态为 canceled，保留可用到的时间", async () => {
