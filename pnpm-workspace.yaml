@@ -4,3 +4,8 @@ allowBuilds:
   esbuild: false
   sharp: false
   unrs-resolver: false
+
+# pnpm 12 不再读取 package.json 里的 pnpm 字段，overrides 必须写在这里。
+overrides:
+  toml: ">=4.2.0"
+  uuid: ">=11.1.1"

@@ -118,6 +118,21 @@ pnpm dev              # http://localhost:3000
 
 数据库：`DATABASE_URL` 必填（见 `.env.example`）。本地可以用 Docker 起一个 Postgres，再执行 `pnpm db:migrate`。设置了 `DATABASE_URL_TEST` 时，`pnpm test` 会运行数据库测试；未设置时跳过（CI 中必须设置）。
 
+### 依赖与 audit
+
+依赖覆盖写在 `pnpm-workspace.yaml` 的 `overrides`，**不是** `package.json` 的 `pnpm` 字段：pnpm 12 起不再读取后者（会打印警告并忽略），`overrides` 属于依赖解析设置，只能放在工作区文件里。
+
+目前强制两条传递依赖，都来自 `@content-collections/mdx > mdx-bundler`，都只在编译 MDX 时用到：
+
+| override           | 实际解析 | 修的 advisory                                                                  |
+| ------------------ | -------- | ------------------------------------------------------------------------------ |
+| `toml: ">=4.2.0"`  | 5.0.0    | GHSA-82x6-q7mm-w9cf（不受控递归）、GHSA-v5mp-jgw5-2x6j（`__proto__` 原型污染） |
+| `uuid: ">=11.1.1"` | 14.0.2   | GHSA-w5hq-g745-h8pq（v3/v5/v6 传入 `buf` 时缺少边界检查）                      |
+
+- 博客 frontmatter 是 YAML（`---`），由 gray-matter 解析；`toml` 只在文章以 `+++` 写 TOML frontmatter 时才会被调用，`uuid` 只用来给 mdx-bundler 的临时入口文件起名。升级前后同一篇文章解析出的 frontmatter 字段完全一致。
+- `uuid` 14 已是纯 ESM 包，而 mdx-bundler 是 CJS、用 `require("uuid")` 取 `v4`：能跑通是因为 Node 24 支持 `require(esm)`，换更低的 Node 会在这里失败（`engines.node` 已经要求 24.x）。
+- `pnpm audit` 目前只剩一条 moderate：`esbuild` 的 GHSA-67mh-4wv8-2f99（<= 0.24.2 的 dev server 允许任意网站发请求并读到响应）。它经 `drizzle-kit > @esbuild-kit/esm-loader > @esbuild-kit/core-utils > esbuild@0.18.20` 进来，`@esbuild-kit/*` 已归档、上游不再修；这条路径只调用 `esbuild.transform()`（加载 `drizzle.config.ts` 用），从不调用 `esbuild.serve()`，起不了那个 dev server，所以在本项目不可利用。drizzle-kit 是 devDependency（也是 better-auth 的可选 peer），不进运行时产物。不要用 overrides 强升这个 esbuild：`@esbuild-kit/core-utils` 按 `~0.18.20` 写死 API，且已归档。
+
 ## 配置
 
 - `site.config.ts`：站点名称、域名、品牌色、语言、功能开关（`features`）。由 `defineConfig()` 校验，写错时 `dev` / `build` 直接失败，并指出出错字段。
