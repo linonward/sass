@@ -137,11 +137,28 @@ pnpm dev              # http://localhost:3000
 | `pnpm db:generate`                  | 根据 schema 生成迁移文件（`drizzle/`，需提交）                           |
 | `pnpm db:migrate`                   | 对 `DATABASE_URL` 执行迁移                                               |
 | `pnpm db:studio`                    | 打开 Drizzle Studio 浏览数据                                             |
+| `pnpm db:seed`                      | 灌一批演示数据（示例用户、订阅、订单、积分流水），幂等                   |
 | `pnpm email:dev`                    | 预览邮件模板（http://localhost:3030）                                    |
 
 `pnpm install` 同时装好 git 钩子：提交时自动用 ESLint 和 Prettier 处理暂存的文件，并用 commitlint 检查提交信息（Conventional Commits）。
 
 数据库：`DATABASE_URL` 必填（见 `.env.example`）。本地可以用 Docker 起一个 Postgres，再执行 `pnpm db:migrate`。设置了 `DATABASE_URL_TEST` 时，`pnpm test` 会运行数据库测试；未设置时跳过（CI 中必须设置）。
+
+### 先看看有数据长什么样
+
+空库跑起来 dashboard 全是空状态，看不出这个模板能干什么。灌一批演示数据：
+
+```bash
+pnpm db:migrate   # 先建表
+pnpm db:seed      # 幂等，重复执行不会重复插入
+```
+
+跑完会有两个示例用户（`demo@example.com`、`demo-churn@example.com`）、两条订阅（一条 active、一条已取消但还没到期）、两笔订单，以及一份自洽的积分流水（余额等于流水之和）：
+
+- **看 dashboard**：用 `demo@example.com` 登录 —— 邮箱验证码会打到本地终端（`EMAIL_TRANSPORT=console` 时）或 `.tmp/emails/`（`file` 时），填进去就能看到有订阅、有积分余额、有流水和用量的首页。
+- **看后台**：用你自己的管理员邮箱登录（`ADMIN_EMAILS`）打开 `/admin`，用户列表、订单、订阅、指标都有数据；点进示例用户能看到它的积分流水和调整表单。
+
+想清掉：`delete from "user" where email like 'demo-%@example.com';`（订阅、订单、积分流水都挂在这个用户上，外键 cascade 一起删）。生产环境脚本会直接拒绝执行。
 
 ### 依赖与 audit
 

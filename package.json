@@ -17,6 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:seed": "node scripts/db-seed.mjs",
     "email:dev": "email dev --dir src/core/email/templates --port 3030",
     "auth:generate": "SKIP_ENV_VALIDATION=1 auth generate --config src/core/auth/server.ts --output src/core/db/schema/auth.ts --yes && node scripts/auth-schema-header.mjs src/core/db/schema/auth.ts && prettier --write src/core/db/schema/auth.ts",
     "prepare": "husky"

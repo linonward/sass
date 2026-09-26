@@ -64,7 +64,7 @@
 | T813                       | prod-sentinels        | `fix/prod-sentinels`          | T801             | todo |
 | T817                       | typecheck-env         | `fix/typecheck-env`           | T801             | todo |
 | T814                       | harden-misc           | `fix/harden-misc`             | T801             | done |
-| T815                       | seed-data             | `feat/seed-data`              | T801             | todo |
+| T815                       | seed-data             | `feat/seed-data`              | T801             | done |
 | T816                       | llms-txt              | `feat/llms-txt`               | T801             | done |
 | T818                       | dep-ignore-types-node | `chore/dep-ignore-types-node` | T801             | done |
 | **阶段 9：错误路径与边界** |                       |                               |                  |      |
