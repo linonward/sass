@@ -4,10 +4,9 @@
 
 v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性购买）、积分账本、AI（文字、图片、视频，按次扣积分）、文件上传（R2）、多语言、SEO、法律页、MDX 博客、后台。
 
-- 方案：[docs/plan.md](docs/plan.md)
 - 合并模板更新：[UPGRADING.md](UPGRADING.md)
-- 任务路径：[docs/tasks/README.md](docs/tasks/README.md)
-- 开发流程：[docs/workflow.md](docs/workflow.md)
+- 设计系统：[docs/design.md](docs/design.md) · 多语言：[docs/i18n.md](docs/i18n.md)
+- 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`
 
 ## 授权
 
@@ -21,6 +20,31 @@ v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性
 `LICENSE` 里的方括号（授权方名称、管辖法域与法院、联系邮箱）是占位符，正式售卖前替换成实际信息。
 
 > 上面这段说明和 `LICENSE` 的文本**仅供参考，不构成法律意见**：正式售卖前建议请律师按你的主体、销售方式和目标市场过目一遍。
+
+## 买家分发包包含什么
+
+不是从 GitHub 拿到模板时（比如购买后收到的 zip），包里是 `scripts/release-package.sh` 从仓库某次提交（`git archive`）导出的：
+
+**包含**
+
+- 全部源码与配置：`src/`、`content/`、`messages/`、`e2e/`、`drizzle/`（数据库迁移）、`scripts/`、`site.config.ts`、`package.json` + `pnpm-lock.yaml`
+- 上手与运维文档：`README.md`（本文）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`
+- 授权与依赖许可：`LICENSE`、`THIRD-PARTY-NOTICES.md`
+- 环境变量样例 `.env.example`、CI 与 git 钩子：`.github/`、`.husky/`
+
+**不包含**
+
+- 模板自己的开发过程文档：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`AGENTS.md`、`CLAUDE.md`
+- 任何**未跟踪**的文件：`.env.local`（真实凭据）、`.vercel/`、`node_modules/`、`.next/`、`.content-collections/`、测试产物
+
+包由 `git archive` 导出，未跟踪的文件天然进不去；导出后脚本会解压自检一遍（`README`/`LICENSE`/`package.json` 等在不在、凭据与卖家域名是否零命中），自检不过就不出包。自己验证或重新打包：
+
+```bash
+scripts/release-package.sh          # 打 HEAD，产物在 dist/（已 gitignore）
+scripts/release-package.sh v1.0.0   # 打某个 tag
+```
+
+解压后 `pnpm install && pnpm test` 应当直接跑通（没配 `.env.local` 时数据库相关的用例会跳过，`pnpm test` 的输出里会写明）。
 
 ## 快速开始：从 fork 到上线
 
@@ -114,7 +138,7 @@ pnpm dev              # http://localhost:3000
 | `pnpm db:studio`                    | 打开 Drizzle Studio 浏览数据                                             |
 | `pnpm email:dev`                    | 预览邮件模板（http://localhost:3030）                                    |
 
-`pnpm install` 同时装好 git 钩子：提交时自动用 ESLint 和 Prettier 处理暂存的文件，并用 commitlint 检查提交信息（Conventional Commits），见 [docs/workflow.md](docs/workflow.md#提交前的检查)。
+`pnpm install` 同时装好 git 钩子：提交时自动用 ESLint 和 Prettier 处理暂存的文件，并用 commitlint 检查提交信息（Conventional Commits）。
 
 数据库：`DATABASE_URL` 必填（见 `.env.example`）。本地可以用 Docker 起一个 Postgres，再执行 `pnpm db:migrate`。设置了 `DATABASE_URL_TEST` 时，`pnpm test` 会运行数据库测试；未设置时跳过（CI 中必须设置）。
 
@@ -467,7 +491,7 @@ grep -rn "Suspense" src/ | wc -l       # 0
 
 ### 5. GitHub
 
-- `main` 开启分支保护：必须通过 PR 合入，`ci` 为必需检查，禁止 force push。详见 [docs/workflow.md](docs/workflow.md#github-仓库设置)。
+- `main` 开启分支保护：必须通过 PR 合入，`ci` 为必需检查，禁止 force push。
 
 ### 6. 可用性监控
 
