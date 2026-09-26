@@ -2,7 +2,7 @@
 
 exports[`robots > 禁止抓取 API、dashboard、admin（含语言前缀）并指向 sitemap 1`] = `
 {
-  "host": "https://sass.linonward.com",
+  "host": "https://<domain>",
   "rules": {
     "allow": "/",
     "disallow": [
@@ -14,7 +14,7 @@ exports[`robots > 禁止抓取 API、dashboard、admin（含语言前缀）并�
     ],
     "userAgent": "*",
   },
-  "sitemap": "https://sass.linonward.com/sitemap.xml",
+  "sitemap": "https://<domain>/sitemap.xml",
 }
 `;
 
@@ -23,102 +23,102 @@ exports[`sitemap > 营销路由 × 语言，带 hreflang 1`] = `
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de",
-        "en": "https://sass.linonward.com",
-        "x-default": "https://sass.linonward.com",
+        "de": "https://<domain>/de",
+        "en": "https://<domain>",
+        "x-default": "https://<domain>",
       },
     },
-    "url": "https://sass.linonward.com",
+    "url": "https://<domain>",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de",
-        "en": "https://sass.linonward.com",
-        "x-default": "https://sass.linonward.com",
+        "de": "https://<domain>/de",
+        "en": "https://<domain>",
+        "x-default": "https://<domain>",
       },
     },
-    "url": "https://sass.linonward.com/de",
+    "url": "https://<domain>/de",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/pricing",
-        "en": "https://sass.linonward.com/pricing",
-        "x-default": "https://sass.linonward.com/pricing",
+        "de": "https://<domain>/de/pricing",
+        "en": "https://<domain>/pricing",
+        "x-default": "https://<domain>/pricing",
       },
     },
-    "url": "https://sass.linonward.com/pricing",
+    "url": "https://<domain>/pricing",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/pricing",
-        "en": "https://sass.linonward.com/pricing",
-        "x-default": "https://sass.linonward.com/pricing",
+        "de": "https://<domain>/de/pricing",
+        "en": "https://<domain>/pricing",
+        "x-default": "https://<domain>/pricing",
       },
     },
-    "url": "https://sass.linonward.com/de/pricing",
+    "url": "https://<domain>/de/pricing",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/privacy",
-        "en": "https://sass.linonward.com/privacy",
-        "x-default": "https://sass.linonward.com/privacy",
+        "de": "https://<domain>/de/privacy",
+        "en": "https://<domain>/privacy",
+        "x-default": "https://<domain>/privacy",
       },
     },
-    "url": "https://sass.linonward.com/privacy",
+    "url": "https://<domain>/privacy",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/privacy",
-        "en": "https://sass.linonward.com/privacy",
-        "x-default": "https://sass.linonward.com/privacy",
+        "de": "https://<domain>/de/privacy",
+        "en": "https://<domain>/privacy",
+        "x-default": "https://<domain>/privacy",
       },
     },
-    "url": "https://sass.linonward.com/de/privacy",
+    "url": "https://<domain>/de/privacy",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/terms",
-        "en": "https://sass.linonward.com/terms",
-        "x-default": "https://sass.linonward.com/terms",
+        "de": "https://<domain>/de/terms",
+        "en": "https://<domain>/terms",
+        "x-default": "https://<domain>/terms",
       },
     },
-    "url": "https://sass.linonward.com/terms",
+    "url": "https://<domain>/terms",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/terms",
-        "en": "https://sass.linonward.com/terms",
-        "x-default": "https://sass.linonward.com/terms",
+        "de": "https://<domain>/de/terms",
+        "en": "https://<domain>/terms",
+        "x-default": "https://<domain>/terms",
       },
     },
-    "url": "https://sass.linonward.com/de/terms",
+    "url": "https://<domain>/de/terms",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/refund",
-        "en": "https://sass.linonward.com/refund",
-        "x-default": "https://sass.linonward.com/refund",
+        "de": "https://<domain>/de/refund",
+        "en": "https://<domain>/refund",
+        "x-default": "https://<domain>/refund",
       },
     },
-    "url": "https://sass.linonward.com/refund",
+    "url": "https://<domain>/refund",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://sass.linonward.com/de/refund",
-        "en": "https://sass.linonward.com/refund",
-        "x-default": "https://sass.linonward.com/refund",
+        "de": "https://<domain>/de/refund",
+        "en": "https://<domain>/refund",
+        "x-default": "https://<domain>/refund",
       },
     },
-    "url": "https://sass.linonward.com/de/refund",
+    "url": "https://<domain>/de/refund",
   },
 ]
 `;

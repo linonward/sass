@@ -48,16 +48,16 @@ pnpm dev                 # http://localhost:3000
 
 ### 3. 改成自己的站点
 
-- `site.config.ts`（写错时 `dev` / `build` 直接报出字段名）：
+- `site.config.ts`（写错时 `dev` / `build` 直接报出字段名）。出厂值都是占位的（`domain` 是 `example.com`，付费套餐的产品 ID 是 `prod_placeholder_*`），换成自己的值就行，测试不用跟着改：
   - `name`、`domain`（不带协议，比如 `acme.com`）、`description`、`brand`（主色、logo）
   - `features`：用不到的模块关掉，对应的环境变量就不再要求
   - `legal`：公司或个人名称、联系邮箱、适用法域、生效日期
-  - `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分
+  - `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分。`providerProductId` 还是占位值时该套餐不能结账（接口返回 `plan_not_configured`），在 Creem 建好产品后替换成真实 ID
   - `email`：发件人名称和地址（域名要在 Resend 验证）
   - `ai.models`：开启 AI 时的模型和每次调用的积分成本
 - `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`public/`：logo、Hero 图。
 - 示例业务模块 `src/features/example/`（一个扣积分的宣传语生成器）演示了业务代码怎么调用 `runAI`、`deductCredits`，以及怎么在 `dashboard.nav` 里加菜单。看完后删掉：`src/features/example/`、`src/app/[locale]/(app)/example/`、`e2e/example.spec.ts`，以及 `site.config.ts` 里 `dashboard.nav` 的那一项。
-- 改完运行 `pnpm test -u`（域名和路由变了，sitemap 快照要更新）和 `pnpm build`。
+- 改完运行 `pnpm test` 和 `pnpm build` 确认没漏改。测试直接读 `site.config.ts` 和 `messages/*.json`，改域名、主色和文案都不用 `-u` 更新快照。
 
 写业务功能前先看一眼 [UPGRADING.md](UPGRADING.md) 的目录边界：业务代码放 `src/features/`，尽量不改 `src/core/`。
 
@@ -108,6 +108,7 @@ pnpm dev              # http://localhost:3000
 ## 配置
 
 - `site.config.ts`：站点名称、域名、品牌色、语言、功能开关（`features`）。由 `defineConfig()` 校验，写错时 `dev` / `build` 直接失败，并指出出错字段。
+  - 直接改文件里的字面量就行。另有 4 个环境变量可以覆盖其中 4 个字段（`SITE_DOMAIN`、`SITE_EMAIL_FROM`、`CREEM_PRODUCT_ID_PRO`、`CREEM_PRODUCT_ID_LIFETIME`，见 `.env.example`），给「一套代码、多个环境」用；不设置时以文件里的字面量为准。
   - `brand.primaryColor` 生成 shadcn 主题的 `--primary` 等变量，亮色、暗色共用；按钮、链接悬停色随之变化。
   - `nav.header` / `nav.footer` 决定营销页 Header 导航和 Footer 链接，`key` 对应 `messages/*.json` 中 `Nav` 下的文案。
   - `landing` 决定首页区块及顺序（`sections`）、Hero 图片、特性与 FAQ 条目；`billing.plans` 是定价区块展示的套餐。文案在 `messages/*.json` 的 `Landing` 下。
@@ -232,7 +233,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 #### 邮件（Resend）
 
-1. 在 Resend → Domains 添加发信域名，与 `site.config.ts` 的 `email.fromAddress` 的域名一致（比如 `sass.linonward.com`）。建议用子域名发信，不影响根域名的邮件信誉。
+1. 在 Resend → Domains 添加发信域名，与 `site.config.ts` 的 `email.fromAddress` 的域名一致（比如发件人填 `noreply@mail.acme.com`，就添加 `mail.acme.com`）。建议用子域名发信，不影响根域名的邮件信誉。
 2. 在 DNS 服务商处添加 Resend 给出的记录：
    - SPF：`send` 子域名下的 `MX` 和 `TXT`（具体取值以 Resend 面板给出的为准）
    - DKIM：`resend._domainkey` 的 `TXT`

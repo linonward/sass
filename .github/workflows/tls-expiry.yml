@@ -45,6 +45,8 @@ jobs:
         env:
           SSL_CHECK_HOSTS: ${{ inputs.hosts }}
           SSL_CHECK_DAYS: ${{ inputs.days }}
+          # site.config.ts 用 SITE_DOMAIN 覆盖域名时（演示站），这里要设成同一个值。
+          SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
         run: |
           set +e
           node scripts/check-tls-expiry.mjs | tee /tmp/tls-report.txt

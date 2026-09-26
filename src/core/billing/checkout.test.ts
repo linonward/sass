@@ -231,17 +231,13 @@ describe("billingOrigin", () => {
 
   test("生产环境固定用配置的域名，不信任请求的 Host", () => {
     expect(
-      billingOrigin(
-        request,
-        { VERCEL_ENV: "production" },
-        "sass.linonward.com",
-      ),
-    ).toBe("https://sass.linonward.com");
+      billingOrigin(request, { VERCEL_ENV: "production" }, "example.com"),
+    ).toBe("https://example.com");
   });
 
   test("本地和预览用请求自身的地址", () => {
     expect(
-      billingOrigin(request, { VERCEL_ENV: "preview" }, "sass.linonward.com"),
+      billingOrigin(request, { VERCEL_ENV: "preview" }, "example.com"),
     ).toBe("https://preview-abc.vercel.app");
     expect(
       billingOrigin(new Request("http://localhost:3000/x"), {}, "d.com"),
