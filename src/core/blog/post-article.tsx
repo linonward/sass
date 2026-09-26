@@ -15,11 +15,11 @@ export function PostArticle({ post }: { post: Post }) {
   const t = useTranslations("Blog");
 
   return (
-    <article className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+    <article className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
       <JsonLd data={postJsonLd(post, post.locale)} />
       <Link
         href={blogPath}
-        className="text-muted-foreground hover:text-primary inline-flex items-center gap-1.5 text-sm transition-colors"
+        className="text-muted-foreground hover:text-primary-text inline-flex items-center gap-1.5 text-sm transition-colors"
       >
         <ArrowLeft className="size-4" />
         {t("back")}
@@ -29,10 +29,10 @@ export function PostArticle({ post }: { post: Post }) {
           <PostDate date={post.date} />
           {post.draft && <DraftBadge />}
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-          {post.title}
-        </h1>
-        <p className="text-muted-foreground text-lg">{post.description}</p>
+        <h1 className="heading-display text-3xl sm:text-4xl">{post.title}</h1>
+        <p className="text-muted-foreground text-lg text-pretty">
+          {post.description}
+        </p>
         <TagLinks tags={post.tags} />
       </header>
       {post.cover && (
@@ -47,8 +47,9 @@ export function PostArticle({ post }: { post: Post }) {
           />
         </div>
       )}
-      {/* typography 默认给行内代码加反引号、给引用加引号和斜体，这里去掉，行内代码改成底色块。 */}
-      <div className="prose prose-neutral dark:prose-invert prose-a:text-primary prose-a:underline-offset-4 prose-headings:tracking-tight prose-headings:scroll-mt-20 prose-pre:border prose-code:before:content-none prose-code:after:content-none prose-blockquote:font-normal prose-blockquote:not-italic [&_:not(pre)>code]:bg-muted mt-10 max-w-none [&_:not(pre)>code]:rounded [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:font-medium [&_blockquote_p]:before:content-none [&_blockquote_p]:after:content-none">
+      {/* typography 默认给行内代码加反引号、给引用加引号和斜体，这里去掉，行内代码改成底色块。
+          标题换成 display 面：正文和标题的分工靠字体对比，不靠加粗。 */}
+      <div className="prose prose-neutral dark:prose-invert prose-a:text-primary-text prose-a:underline-offset-4 prose-headings:font-display prose-headings:font-semibold prose-headings:tracking-tight prose-headings:scroll-mt-20 prose-pre:border prose-code:before:content-none prose-code:after:content-none prose-blockquote:font-normal prose-blockquote:not-italic [&_:not(pre)>code]:bg-muted mt-10 max-w-none [&_:not(pre)>code]:rounded [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:font-medium [&_blockquote_p]:before:content-none [&_blockquote_p]:after:content-none">
         <MDXContent code={post.mdx} />
       </div>
     </article>

@@ -47,7 +47,7 @@
 | **阶段 7：视觉重设计**     |                   |                         |                  |      |
 | T605                       | redesign          | `feat/redesign`         | T108, T604       | done |
 | T606                       | redesign-app      | `feat/redesign-app`     | T605             | done |
-| T607                       | redesign-rest     | `feat/redesign-rest`    | T606             | todo |
+| T607                       | redesign-rest     | `feat/redesign-rest`    | T606             | done |
 | **阶段 8：商品化**         |                   |                         |                  |      |
 | T801                       | sell-plan         | `docs/sell-plan`        | 阶段 1–7         | done |
 | T802                       | license           | `docs/license`          | T801             | done |

@@ -68,11 +68,22 @@ export default async function RootNotFound() {
           )}
         >
           <title>{t.title}</title>
-          <p className="text-primary text-sm font-medium">404</p>
-          <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground">{t.description}</p>
+          {/* 和 [locale]/not-found.tsx 同一套语域：文字用 --primary-text 而不是
+              --primary（后者是配置原 hex，暗色画布上不够看），h1 走 display 面，
+              CTA 用营销面的 44px 贴纸按钮。这条路径穿不到营销面 layout，所以没有
+              Header / Footer —— 只接 /missing.png 这类带扩展名的请求。 */}
+          <p className="text-primary-text font-mono text-sm font-medium tracking-[0.2em]">
+            404
+          </p>
+          <h1 className="heading-display text-4xl sm:text-5xl">{t.title}</h1>
+          <p className="text-muted-foreground text-lg text-pretty">
+            {t.description}
+          </p>
           {/* 不用 next-intl 的 Link：它要 NextIntlClientProvider 的 context。 */}
-          <Link href="/" className={buttonVariants()}>
+          <Link
+            href="/"
+            className={`${buttonVariants({ size: "marketing", tone: "primary" })} mt-4`}
+          >
             {t.back}
           </Link>
         </main>

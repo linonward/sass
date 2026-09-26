@@ -26,14 +26,19 @@ export default function Error({
           React 会把它插到 <head> 里已有 <title> 的前面，浏览器取第一个，所以能盖住
           被替换掉的那页的标题。 */}
       <title>{t("title")}</title>
-      <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-      <p className="text-muted-foreground">{t("description")}</p>
+      <h1 className="heading-display text-4xl sm:text-5xl">{t("title")}</h1>
+      <p className="text-muted-foreground text-lg text-pretty">
+        {t("description")}
+      </p>
       {error.digest && (
         <p className="text-muted-foreground font-mono text-xs">
           {t("id", { digest: error.digest })}
         </p>
       )}
-      <Button onClick={() => retry()}>{t("retry")}</Button>
+      {/* 营销面的 CTA 是 44px 带唇边的贴纸；默认的 32px 也低于 design.md 的触控目标下限。 */}
+      <Button size="marketing" tone="primary" onClick={() => retry()}>
+        {t("retry")}
+      </Button>
     </main>
   );
 }

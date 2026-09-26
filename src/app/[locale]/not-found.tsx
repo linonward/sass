@@ -3,6 +3,8 @@ import { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
 
 import { Link } from "@/core/i18n/navigation";
+import { SiteFooter } from "@/core/layout/site-footer";
+import { SiteHeader } from "@/core/layout/site-header";
 import { buttonVariants } from "@/core/ui/button";
 
 /**
@@ -33,14 +35,36 @@ export default function NotFound() {
   const t = useTranslations("NotFound");
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
-      <title>{t("title")}</title>
-      <p className="text-primary text-sm font-medium">404</p>
-      <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-      <p className="text-muted-foreground">{t("description")}</p>
-      <Link href="/" className={buttonVariants()}>
-        {t("back")}
-      </Link>
-    </main>
+    // 这一页挂在 [locale]/ 下、不在 (marketing) 组里，穿不到营销面的 layout，
+    // 所以 Header / Footer 在这里自己渲染一份 —— 404 也得有站内导航，
+    // 只有「Back to home」一个出路是不够的。
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader />
+      <main className="container-marketing flex flex-1 items-center py-14 sm:py-20">
+        <div className="max-w-2xl">
+          <title>{t("title")}</title>
+          {/* 文字用 --primary-text 而不是 --primary：后者保留配置原 hex，
+              压在画布上暗色主题里不够看（design.md §2 的颜色分工）。 */}
+          <p className="text-primary-text font-mono text-sm font-medium tracking-[0.2em]">
+            404
+          </p>
+          {/* 全站的 h1 都走 display 面，这里以前漏了。 */}
+          <h1 className="heading-display mt-4 text-4xl sm:text-5xl">
+            {t("title")}
+          </h1>
+          <p className="text-muted-foreground mt-4 text-lg text-pretty">
+            {t("description")}
+          </p>
+          {/* 营销面的 CTA 是 44px 带唇边的贴纸；默认的 32px 也低于 design.md 的触控目标下限。 */}
+          <Link
+            href="/"
+            className={`${buttonVariants({ size: "marketing", tone: "primary" })} mt-8`}
+          >
+            {t("back")}
+          </Link>
+        </div>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }
