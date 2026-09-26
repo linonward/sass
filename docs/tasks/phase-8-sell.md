@@ -8,7 +8,7 @@
 
 - **批次 A（上架阻塞）**：T802–T808。不完成不能上架。
 - **批次 B（上架前建议）**：T809–T813。买家体验 / 评审会点名。
-- **批次 C（可后做）**：T814–T815。
+- **批次 C（可后做）**：T814–T816。其中 T816 是唯一的「卖点」项，不是审查发现的。
 
 批次内任务无相互依赖，可并行开 worktree。
 
@@ -347,3 +347,29 @@
 - [ ] 重复执行不报错不重复插入
 
 **测试**：seed 脚本对测试库执行 + 断言
+
+---
+
+## T816 llms-txt
+
+- 分支 / worktree：`feat/llms-txt` → `../sass-llms-txt`
+- 依赖：T801
+- 来源：买家问「AI 能不能读懂我的站」时的一个现成答案（不是审查项）
+
+**做**
+
+- `/llms.txt`（约定见 [llmstxt.org](https://llmstxt.org)）：给 agent 和答案引擎的站点索引
+- 内容全部生成，不写死字符串：站点名和简介取自 `site.config.ts`，小节标题复用 `Nav.*`，套餐名/特点取自 `Landing.pricing`，博客和标签取自 content-collections，法律页取自 `legalPages`
+- 小节：How to use this file / 产品（主页、定价、博客 + `marketingRoutes` 里其他已登记的页面）/ 定价（套餐名、价格、特点）/ 博客（最新 10 篇）/ 法律 / 机器可读（sitemap、robots、RSS）/ 需要登录（列出要账号的路径，纯文字不做链接）/ Optional（博客标签）
+- 博客关闭时不出博客和 RSS 小节；没有标签时不出 Optional
+- 排版（`src/core/seo/llms.ts`）和内容组装（`src/app/llms.txt/route.ts`）分开：前者是纯函数，可单测
+
+**不做**：`/llms-full.txt`、每页的 `.md` 端点、按语言各出一份（多语言站点只出一份根级文件，用默认语言的 URL）
+
+**验收**
+
+- [ ] `GET /llms.txt` 返回 200、`text/plain`，内容随 `site.config.ts` 和 `messages` 变化
+- [ ] 关掉 `features.blog` 后没有博客小节和 RSS 链接，也没有空的 `## ` 标题
+- [ ] 需要登录的路径以纯文字列出，不是链接
+
+**测试**：`src/core/seo/llms.test.ts`（排版）+ `e2e/seo.spec.ts` 加一条
