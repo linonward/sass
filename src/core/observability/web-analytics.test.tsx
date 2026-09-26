@@ -53,10 +53,10 @@ describe("webAnalyticsFlags", () => {
     ).toEqual({ analytics: true, speedInsights: false });
   });
 
-  test("默认配置两项都关闭", () => {
+  test("默认读取 site.config 的开关", () => {
     expect(webAnalyticsFlags()).toEqual({
-      analytics: false,
-      speedInsights: false,
+      analytics: true,
+      speedInsights: true,
     });
   });
 });
