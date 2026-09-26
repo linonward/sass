@@ -58,7 +58,7 @@
 | T807                       | dep-overrides         | `fix/dep-overrides`           | T801             | done |
 | T808                       | deps-hygiene          | `chore/deps-hygiene`          | T801             | done |
 | T809                       | refund-credits        | `feat/refund-credits`         | T801             | done |
-| T810                       | ts-strictness         | `chore/ts-strictness`         | T801             | todo |
+| T810                       | ts-strictness         | `chore/ts-strictness`         | T801             | done |
 | T811                       | distribution          | `chore/distribution`          | T801             | done |
 | T812                       | brand-assets          | `fix/brand-assets`            | T801             | todo |
 | T813                       | prod-sentinels        | `fix/prod-sentinels`          | T801             | todo |

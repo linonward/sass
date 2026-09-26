@@ -7,6 +7,21 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   prettier,
+  // 未使用的变量/参数：tsc 侧由 noUnusedLocals / noUnusedParameters 兜底，这条管
+  // ESLint 侧（两边的忽略约定要一致）。要保留但用不到的参数用 `_` 前缀。
+  {
+    files: ["**/*.{ts,tsx,mts}"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
   // 套件代码统一用 logger（src/core/observability），不直接 console.error / warn。
   // console.info 留给开发环境打印邮件内容等本地提示；测试里的跳过提示不受限制。
   {

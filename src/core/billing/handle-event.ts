@@ -317,11 +317,13 @@ async function applySubscription(
   if (inserted) return false;
 
   // 行锁：同一订阅的并发事件串行处理。
-  const [current] = await tx
+  const [locked] = await tx
     .select()
     .from(subscriptions)
     .where(where)
     .for("update");
+  // 走到这里时这一行必然存在（上面刚插过或本来就在），for update 保证同一订阅的并发事件串行。
+  const current = locked!;
 
   const fillMissing = defined({
     planId: current.planId ? undefined : patch.planId,
@@ -392,7 +394,9 @@ async function mergeOrder(
       target: [orders.provider, orders.providerOrderId],
     });
 
-  const [current] = await tx.select().from(orders).where(where).for("update");
+  const [locked] = await tx.select().from(orders).where(where).for("update");
+  // 走到这里时这一行必然存在（上面刚插过或本来就在），for update 保证同一订单的并发事件串行。
+  const current = locked!;
 
   // 付款成功优先：只要有一次成功就是 paid（退款也意味着付过款）。
   const base: OrderStatus =

@@ -65,7 +65,7 @@ test.describe("375px 宽度", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Open menu" }).click();
     const menu = page.getByRole("navigation", { name: "Mobile" });
-    const first = siteConfig.nav.header[0];
+    const first = siteConfig.nav.header[0]!;
     await menu
       .getByRole("link", { name: messages.Nav[first.key as "features"] })
       .click();

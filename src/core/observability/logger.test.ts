@@ -29,7 +29,7 @@ describe("json 格式", () => {
     const { logger, write, lines } = setup();
     logger.info("ai.usage", { modelId: "deepseek", credits: 1 });
     expect(write).toHaveBeenCalledWith("info", expect.any(String));
-    expect(write.mock.calls[0][1]).not.toContain("\n");
+    expect(write.mock.calls[0]![1]).not.toContain("\n");
     expect(lines()).toEqual([
       {
         level: "info",
@@ -127,7 +127,7 @@ describe("脱敏", () => {
   test("输出的日志里没有敏感值", () => {
     const { logger, write } = setup();
     logger.error("auth.failed", { email: "a@b.com", token: "secret-token" });
-    const line = write.mock.calls[0][1] as string;
+    const line = write.mock.calls[0]![1] as string;
     expect(line).not.toContain("a@b.com");
     expect(line).not.toContain("secret-token");
   });
@@ -203,7 +203,7 @@ describe("脱敏", () => {
     const { logger, write, lines } = setup();
     logger.info("otp", { code: "123456" });
     expect(lines()[0]).toMatchObject({ event: "otp", code: "[redacted]" });
-    expect(write.mock.calls[0][1]).not.toContain("123456");
+    expect(write.mock.calls[0]![1]).not.toContain("123456");
   });
 });
 

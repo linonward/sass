@@ -69,7 +69,7 @@ export async function listUsers(
   const where = q
     ? or(ilike(user.email, likePattern(q)), ilike(user.name, likePattern(q)))
     : undefined;
-  const [rows, [{ total }]] = await Promise.all([
+  const [rows, [counted]] = await Promise.all([
     db
       .select({
         id: user.id,
@@ -88,7 +88,7 @@ export async function listUsers(
       .offset(offsetOf(page)),
     db.select({ total: count() }).from(user).where(where),
   ]);
-  return paged(rows, total, page);
+  return paged(rows, counted?.total ?? 0, page);
 }
 
 export type AdminUserRow = Awaited<
@@ -171,7 +171,7 @@ export async function listOrders(
   { status, page = 1 }: { status?: OrderStatus; page?: number },
 ) {
   const where: SQL | undefined = status ? eq(orders.status, status) : undefined;
-  const [rows, [{ total }]] = await Promise.all([
+  const [rows, [counted]] = await Promise.all([
     db
       .select({
         id: orders.id,
@@ -194,7 +194,7 @@ export async function listOrders(
       .offset(offsetOf(page)),
     db.select({ total: count() }).from(orders).where(where),
   ]);
-  return paged(rows, total, page);
+  return paged(rows, counted?.total ?? 0, page);
 }
 
 /** 订阅列表，可按状态筛选，最新的在前。 */
@@ -203,7 +203,7 @@ export async function listSubscriptions(
   { status, page = 1 }: { status?: SubscriptionStatus; page?: number },
 ) {
   const where = status ? eq(subscriptions.status, status) : undefined;
-  const [rows, [{ total }]] = await Promise.all([
+  const [rows, [counted]] = await Promise.all([
     db
       .select({
         id: subscriptions.id,
@@ -225,5 +225,5 @@ export async function listSubscriptions(
       .offset(offsetOf(page)),
     db.select({ total: count() }).from(subscriptions).where(where),
   ]);
-  return paged(rows, total, page);
+  return paged(rows, counted?.total ?? 0, page);
 }

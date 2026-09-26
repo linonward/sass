@@ -55,7 +55,7 @@ describe("putObject", () => {
       .mockResolvedValue({} as never);
     const body = new Uint8Array([1, 2, 3]);
     await storage.putObject({ key: "k.png", mime: "image/png", body });
-    expect(send.mock.calls[0][0].input).toEqual({
+    expect(send.mock.calls[0]![0].input).toEqual({
       Bucket: "uploads",
       Key: "k.png",
       ContentType: "image/png",
@@ -74,7 +74,7 @@ describe("head", () => {
       size: 10,
       mime: "image/png",
     });
-    expect(send.mock.calls[0][0].input).toEqual({
+    expect(send.mock.calls[0]![0].input).toEqual({
       Bucket: "uploads",
       Key: "k",
     });

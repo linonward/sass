@@ -262,7 +262,7 @@ describe("发送方式", () => {
       const files = await readdir(dir);
       expect(files).toHaveLength(2);
       const stored = JSON.parse(
-        await readFile(path.join(dir, files.sort()[1]), "utf8"),
+        await readFile(path.join(dir, files.sort()[1]!), "utf8"),
       );
       expect(stored).toMatchObject({
         id,

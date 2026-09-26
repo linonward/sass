@@ -71,10 +71,10 @@ describe("posts", () => {
   test("按日期倒序，生产环境（非 development）不含草稿", () => {
     const posts = getPosts("en");
     expect(posts).toHaveLength(14);
-    expect(posts[0].slug).toBe("hello");
+    expect(posts[0]!.slug).toBe("hello");
     expect(posts.at(-1)!.slug).toBe("post-1");
     expect(getPost("en", "secret")).toBeUndefined();
-    expect(getPosts("en", { drafts: true })[0].slug).toBe("secret");
+    expect(getPosts("en", { drafts: true })[0]!.slug).toBe("secret");
   });
 
   test("未启用的语言没有文章", () => {
