@@ -85,7 +85,7 @@ pnpm dev                 # http://localhost:3000
 
 ### 3. 改成自己的站点
 
-- `site.config.ts`（写错时 `dev` / `build` 直接报出字段名）。出厂值都是占位的（`domain` 是 `example.com`，付费套餐的产品 ID 是 `prod_placeholder_*`），换成自己的值就行，测试不用跟着改：
+- `site.config.ts`（写错时 `dev` / `build` 直接报出字段名）。出厂值都是占位的（`domain` 是 `example.com`，付费套餐的产品 ID 是 `prod_placeholder_*`），换成自己的值就行，测试不用跟着改 —— **没改完之前生产构建会直接失败并列出是哪几个字段**（dev 只警告，见 `src/core/config/sentinels.ts`）：
   - `name`、`domain`（不带协议，比如 `acme.com`）、`description`
   - `brand.primaryColor`：**一个 hex 推导整站配色** —— 按钮、色带、链接文字、顶栏的内置 logo 标记、图表第一档都跟着它变，不用改任何 SVG 文件。想用自己的 logo：把文件放进 `public/`，再在 `brand` 里加 `logo: "/your-logo.svg"`（顶栏、侧边栏和结构化数据都会用它）；不配就一直是内置标记。
   - `features`：用不到的模块关掉，对应的环境变量就不再要求
@@ -202,7 +202,8 @@ pnpm db:seed      # 幂等，重复执行不会重复插入
 ## 配置
 
 - `site.config.ts`：站点名称、域名、品牌色、语言、功能开关（`features`）。由 `defineConfig()` 校验，写错时 `dev` / `build` 直接失败，并指出出错字段。
-  - 直接改文件里的字面量就行。另有 4 个环境变量可以覆盖其中 4 个字段（`SITE_DOMAIN`、`SITE_EMAIL_FROM`、`CREEM_PRODUCT_ID_PRO`、`CREEM_PRODUCT_ID_LIFETIME`，见 `.env.example`），给「一套代码、多个环境」用；不设置时以文件里的字面量为准。
+  - 直接改文件里的字面量就行。另有 6 个环境变量可以覆盖其中 6 个字段（`SITE_NAME`、`SITE_DOMAIN`、`SITE_LEGAL_NAME`、`SITE_EMAIL_FROM`、`CREEM_PRODUCT_ID_PRO`、`CREEM_PRODUCT_ID_LIFETIME`，见 `.env.example`），给「一套代码、多个环境」用 —— 演示站就是靠它们保持真值、又不必把真实名称写进仓库。不设置时以文件里的字面量为准。
+  - **占位哨兵**：`name`、`domain`、`legal.companyName`、`email.fromAddress` 还是出厂占位值时，开发环境启动会打一行警告，**生产构建直接失败**。买家忘了改就上线，站上挂着的是 Acme 和 example.com。
   - `brand.primaryColor` 生成 shadcn 主题的 `--primary` 等变量，亮色、暗色共用；按钮、链接悬停色随之变化。
   - `nav.header` / `nav.footer` 决定营销页 Header 导航和 Footer 链接，`key` 对应 `messages/*.json` 中 `Nav` 下的文案。
   - `landing` 决定首页区块及顺序（`sections`）、Hero 图片、特性与 FAQ 条目；`billing.plans` 是定价区块展示的套餐。文案在 `messages/*.json` 的 `Landing` 下。
@@ -211,7 +212,7 @@ pnpm db:seed      # 幂等，重复执行不会重复插入
 - 退款回收积分（`src/core/billing/reclaim-credits.ts`，`features.credits` 关闭时不生效）：`refund.created` 钩子按**已退金额占订单金额的比例**回收该订单发放过的积分，比例用累计口径（`floor(发放积分 × 累计已退 / 订单金额) − 已回收`），所以分几次部分退款加起来正好等于一次全额退款，不会因为逐次取整漏积分。回收走 `reclaimCredits`：余额不够时扣到 0，应扣未扣的差额记在服务端日志（流水 `amount` 有非零约束，且扣不动时根本没有流水可写）。流水是 `deduct` 类型、来源 `billing-refund`（`refund` 这个来源另有所指：退还一笔扣减），后台用户详情里能看到带原因的记录；重复推送由 `(source, sourceId)`（`provider:order:<订单>:refund:<退款>`）挡住。
 - e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。fake 是测试替身，生产运行时（`next build` / `next start` / Docker）、Vercel 上（任何环境）和 `CREEM_MODE=live` 时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404；CI 的 e2e 跑在生产构建上，靠 `ALLOW_FAKE_BILLING=1` 显式放行。
 - 接口限流（`src/core/ratelimit/`）：`checkRateLimit(policy, { userId, ip })` 按 `site.config.ts` 的 `rateLimit.policies` 做滑动窗口计数，用户和 IP 各计一次，任一超限即拒绝；被拒绝时 `return rateLimitResponse(result)`（超限 429、Redis 不可用 503，都带 `Retry-After`）。IP 用 `getClientIp(request.headers)` 取。本地没配 Upstash 时跳过限流并警告一次；Redis 出错或超时（1 秒）时按 `rateLimit.failMode` 处理：`open`（默认）放行并记录错误，`closed` 返回 503。登录限流由 Better Auth 负责，不走这里。
-- 文件上传（`src/core/upload/`，`features.upload`）：浏览器直传 Cloudflare R2。`POST /api/upload/presign`（body `{ mime, size }`，需要登录，走 `upload` 限流）按 `site.config.ts` 的 `upload.allowedMimeTypes` / `maxFileSize` 校验，登记一条 `pending` 的 `files` 记录，返回预签名 PUT 地址（10 分钟有效，签名覆盖 Content-Type 和 Content-Length，类型或大小不同时 R2 返回 403）；上传后 `POST /api/upload/complete`（body `{ fileId }`）用 HeadObject 确认对象存在、大小和类型一致，改为 `uploaded`。对象 key 为 `<userId>/<yyyy-mm>/<uuid>.<ext>`，扩展名由类型决定。`upload.public` 为 false（默认）时通过 1 小时有效的签名 GET 地址访问，`GET /api/upload/files/<id>` 会跳转过去，可以直接用作 `<img src>`；为 true 时用 `R2_PUBLIC_URL` 下的地址。前端用 `uploadFile(file)`（`src/core/upload/client.ts`）；开启后 Dashboard 首页有一个上传示例。删除账户时 `files` 记录随之删除，R2 上的对象和一直是 `pending` 的记录 v1 不清理。
+- 文件上传（`src/core/upload/`，`features.upload`）：浏览器直传 Cloudflare R2。`POST /api/upload/presign`（body `{ mime, size }`，需要登录，走 `upload` 限流）按 `site.config.ts` 的 `upload.allowedMimeTypes` / `maxFileSize` 校验，登记一条 `pending` 的 `files` 记录，返回预签名 PUT 地址（10 分钟有效，签名覆盖 Content-Type 和 Content-Length，类型或大小不同时 R2 返回 403）；上传后 `POST /api/upload/complete`（body `{ fileId }`）用 HeadObject 确认对象存在、大小和类型一致，改为 `uploaded`。对象 key 为 `<userId>/<yyyy-mm>/<uuid>.<ext>`，扩展名由类型决定。`upload.public` 为 false（**默认**）时通过 1 小时有效的签名 GET 地址访问，`GET /api/upload/files/<id>` 会跳转过去，可以直接用作 `<img src>`；为 true 时用 `R2_PUBLIC_URL` 下的地址 —— 代价是**拿到 URL 的人都能访问，而且撤不回**（改了配置对象也还在），用户上传的东西不该默认公开。前端用 `uploadFile(file)`（`src/core/upload/client.ts`）；开启后 Dashboard 首页有一个上传示例。删除账户时 `files` 记录随之删除，R2 上的对象和一直是 `pending` 的记录 v1 不清理。
 - AI（`src/core/ai/`，`features.ai` 控制）：`site.config.ts` 的 `ai.models` 列出可用模型（`id`、`provider`（`openai` / `anthropic` / `google`）、`model`、`creditCost`，可选 `maxOutputTokens`），`ai.defaultModel` 是默认模型。env 里配了哪家的 key 就启用哪家，没配 key 的模型调用返回 503。服务端调用 `runAI({ userId, ip, modelId, prompt | messages, ... })`：检查登录 → `ai` 策略限流（429）→ 在一个事务里预扣 `creditCost` 并写入 `ai_usage`（余额不足 402）→ 流式调用模型；模型报错时按 `ai_usage.id` 退回积分（流水里是一条 `refund`），成功时记录 token 用量和耗时。返回的 `result` 是 AI SDK 的 `streamText` 结果；路由里用 `after(() => run.settled)` 保证响应结束后记账跑完。示例接口 `POST /api/ai/chat`（useChat 的 UI message 流，请求体上限 64 KB），示例页 `/playground`。v1 按次固定扣费，不存对话历史。开启收费模型（`creditCost > 0`）需要同时开启 `features.credits`。
 - 法律页：`/privacy`、`/terms`、`/refund`，正文模板在 `content/legal/`（归业务方所有），主体信息取自 `site.config.ts` 的 `legal`。**模板仅供参考，不构成法律意见**，上线前请结合业务和适用法律自行审阅，必要时咨询律师。
 - 博客（`src/core/blog/`，`features.blog`）：文章是 `content/blog/<locale>/<slug>.mdx`，由 content-collections 在 `dev` / `build` 时编译（配置和 frontmatter schema 在 `content-collections.ts`）。frontmatter：`title`、`description`、`date`（`2026-01-31`）、`tags`（小写 kebab-case）、`cover`（`public/` 下的图片，可选）、`draft`（可选）。页面：`/blog`（每页 12 篇，第 2 页起是 `/blog/page/<n>`）、`/blog/<slug>`、`/blog/tags/<tag>`；RSS 在 `/blog/rss.xml`（其他语言 `/<locale>/blog/rss.xml`）。文章自动进入 sitemap，文章页带 `BlogPosting` JSON-LD 和生成的分享图（`/blog/<slug>/og`）。
@@ -221,7 +222,7 @@ pnpm db:seed      # 幂等，重复执行不会重复插入
   - 关闭 `features.blog` 时，把 `nav` 里的 Blog 链接一起删掉。
 - 后台（`src/core/admin/`，`features.admin`）：`/admin` 下有指标页和用户、订单、订阅三个列表，列表都在服务端分页。不是管理员（包括未登录）访问 `/admin` 下任何页面都返回 404，不跳转登录页（**这是设计，不是 bug**，理由和整套状态码约定见[错误与权限的边界](#错误与权限的边界)）。
   - 角色和封禁由 Better Auth 的 admin 插件提供（插件一直启用，`user` 表多了 `role`、`banned` 等字段）。v1 去掉了模拟登录（impersonate）权限。
-  - 首个管理员：把邮箱写进 `ADMIN_EMAILS`，用这个邮箱登录（邮箱已验证）时自动获得 `admin` 角色。只提升不降级，从名单里删掉邮箱不会收回角色。管理员在 dashboard 侧边栏里会看到 Admin 入口。
+  - 首个管理员：把邮箱写进 `ADMIN_EMAILS`，用这个邮箱登录（邮箱已验证）时自动获得 `admin` 角色。**只提升不降级** —— 从名单里删掉邮箱不会收回已经拿到的角色，要撤销用 `pnpm admin:demote <email>`（只摘 admin，其他角色保留；还在 `ADMIN_EMAILS` 里时脚本会提醒下次登录会被重新提上来）。管理员在 dashboard 侧边栏里会看到 Admin 入口。
   - 用户：按邮箱或名称搜索；详情页可以封禁 / 解封（封禁会让用户所有 session 失效，之后无法登录），调整积分（必须填原因，写一条 `adjust` 流水，`actor_id` 记录操作的管理员，同一次提交重复发送只生效一次），并查看该用户的订阅和订单。
   - 订单、订阅：可按状态筛选。
   - 指标（`/admin/metrics`，查询在 `src/core/admin/metrics.ts`）：最近 7 / 30 / 90 天（按 UTC 日期）的新注册、累计和被封禁用户；净收入（订单金额减去已退款，按币种）、付费用户、活跃订阅和 MRR（`active` 订阅按 `site.config.ts` 里的套餐原价折算，年付 ÷ 12）；积分发放、消耗、退款；AI 按类型和模型的调用次数与失败率（失败 ÷ 已结束的调用，进行中的不计）。没有付费套餐时不显示收入，关闭 `features.credits` / `features.ai` 时不显示对应区块。

@@ -1,14 +1,19 @@
+import {
+  placeholderAction,
+  placeholderIssues,
+} from "./src/core/config/sentinels";
 import { defineConfig } from "./src/core/config/schema";
 import { defaultLocale, locales } from "./src/core/i18n/locales";
 
 /**
  * 站点配置。买家直接改这个文件里的字面量。
  *
- * 有四个字段可以额外用环境变量覆盖，写法都是「envOverride(变量名) ?? 占位字面量」：
- * `domain`（`SITE_DOMAIN`）、`email.fromAddress`（`SITE_EMAIL_FROM`）、
- * 两个套餐的 `providerProductId`（`CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`）。
- * 模板里只留占位值，真实域名和产品 ID 放在部署环境里；不设这些变量时就是占位配置。
- * 没有对应变量的字段（名称、颜色、文案）只能改这个文件。
+ * 有六个字段可以额外用环境变量覆盖，写法都是「envOverride(变量名) ?? 占位字面量」：
+ * `name`（`SITE_NAME`）、`domain`（`SITE_DOMAIN`）、`email.fromAddress`（`SITE_EMAIL_FROM`）、
+ * `legal.companyName`（`SITE_LEGAL_NAME`）、两个套餐的 `providerProductId`
+ * （`CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`）。
+ * 模板里只留占位值，真实域名、名称和产品 ID 放在部署环境里；不设这些变量时就是占位配置。
+ * 没有对应变量的字段（颜色、文案）只能改这个文件。
  */
 const envOverride = (name: string): string | undefined => {
   // 空值按「没设置」处理，和 src/core/create-env.ts 的 emptyStringAsUndefined 一致：
@@ -17,8 +22,8 @@ const envOverride = (name: string): string | undefined => {
   return value === "" ? undefined : value;
 };
 
-export default defineConfig({
-  name: "Acme",
+const config = defineConfig({
+  name: envOverride("SITE_NAME") ?? "Acme",
   // 占位域名，改成自己的（不带协议）。演示站用 SITE_DOMAIN 覆盖。
   domain: envOverride("SITE_DOMAIN") ?? "example.com",
   description: "Ship your SaaS in a day.",
@@ -74,7 +79,7 @@ export default defineConfig({
   },
   // 法律页（content/legal/）里引用的主体信息，上线前改成你自己的。
   legal: {
-    companyName: "Acme Inc.",
+    companyName: envOverride("SITE_LEGAL_NAME") ?? "Acme Inc.",
     contactEmail: "support@example.com",
     jurisdiction: "the State of Delaware, United States",
     effectiveDate: "2026-01-01",
@@ -178,9 +183,10 @@ export default defineConfig({
     ],
     // 单个文件的大小上限（字节）。
     maxFileSize: 10 * 1024 * 1024,
-    // false：私有文件，只能通过有时效的签名地址访问；true：通过 R2_PUBLIC_URL 公开访问。
-    // 设为 true 时 R2_PUBLIC_URL 要填 bucket 的公开域名（例如 https://files.example.com）。
-    public: true,
+    // false（默认）：私有文件，只能通过有时效的签名地址访问；true：通过 R2_PUBLIC_URL 公开访问。
+    // 公开模式的代价：拿到 URL 的人都能访问，且撤不回（对象仍可枚举）；签名模式多一次跳转，
+    // 但用户上传的文件不该默认公开。真要做公开图床再打开，并把 R2_PUBLIC_URL 填成公开域名。
+    public: false,
   },
   // 可观测性（features.observability 开启时生效）。开启后生产环境日志是单行 JSON，带 traceId。
   observability: {
@@ -266,3 +272,14 @@ export default defineConfig({
     defaultVideoModel: "wan-t2v",
   },
 });
+
+// 占位哨兵：生产构建直接失败，dev 打一行警告（见 src/core/config/sentinels.ts）。
+// 放在这里而不是某个组件里，是为了让 `next build` 也拦得住。
+const sentinel = placeholderAction(
+  placeholderIssues(config),
+  process.env.NODE_ENV,
+);
+if (sentinel.throwMessage) throw new Error(sentinel.throwMessage);
+if (sentinel.warnMessage) console.warn(sentinel.warnMessage);
+
+export default config;
