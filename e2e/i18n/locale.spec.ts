@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import messages from "../../messages/en.json";
+import siteConfig from "../../site.config";
 import { TEST_LOCALE } from "./test-locale";
 
 const tr = (text: string) => `[${TEST_LOCALE}] ${text}`;
@@ -57,6 +58,24 @@ test("非默认语言下的 404 页使用该语言文案", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: tr(messages.NotFound.title) }),
   ).toBeVisible();
+});
+
+// 上面那条断言的是水合后的 DOM。关 JS 再看一遍，锁的是 [locale]/not-found.tsx 的
+// generateMetadata（T903）：它之前这里是站名，而且证明标题真的跟着语言走，
+// 不是写死在英文上。
+test.describe("非默认语言下 404 的静态 HTML（关 JS）", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("标题是该语言的 404 标题，并带 noindex", async ({ page }) => {
+    const response = await page.goto(`/${TEST_LOCALE}/does-not-exist`);
+    expect(response?.status()).toBe(404);
+    await expect(page).toHaveTitle(
+      `${tr(messages.NotFound.title)} | ${siteConfig.name}`,
+    );
+    const robots = page.locator('meta[name="robots"]');
+    await expect(robots).toHaveCount(1);
+    await expect(robots).toHaveAttribute("content", "noindex");
+  });
 });
 
 test("非默认语言下法律页正文保持英文，外框本地化", async ({ page }) => {

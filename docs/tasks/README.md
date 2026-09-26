@@ -50,7 +50,7 @@
 | T607                       | redesign-rest     | `feat/redesign-rest`    | T606             | todo |
 | **阶段 8：商品化**         |                   |                         |                  |      |
 | T801                       | sell-plan         | `docs/sell-plan`        | 阶段 1–7         | done |
-| T802                       | license           | `docs/license`          | T801             | todo |
+| T802                       | license           | `docs/license`          | T801             | done |
 | T803                       | fake-billing-gate | `fix/fake-billing-gate` | T801             | done |
 | T804                       | neutral-config    | `fix/neutral-config`    | T801             | done |
 | T805                       | prod-env-guards   | `fix/prod-env-guards`   | T801             | todo |
@@ -69,12 +69,12 @@
 | T901                       | review-cards      | `docs/review-cards`     | —                | done |
 | T902                       | not-found         | `fix/not-found`         | T901             | done |
 | T903                       | error-metadata    | `fix/error-metadata`    | T901             | done |
-| T904                       | error-e2e         | `chore/error-e2e`       | T902, T903       | todo |
+| T904                       | error-e2e         | `chore/error-e2e`       | T902, T903       | done |
 | T905                       | boundary-notes    | `docs/boundary-notes`   | T901             | done |
 | **阶段 10：渲染与包体积**  |                   |                         |                  |      |
 | T1001                      | config-leaf       | `fix/config-leaf`       | T901             | done |
 | T1002                      | playground-stream | `fix/playground-stream` | T901             | done |
-| T1003                      | playground-tabs   | `fix/playground-tabs`   | T901, T1002      | todo |
+| T1003                      | playground-tabs   | `fix/playground-tabs`   | T901, T1002      | done |
 | T1004                      | serial-queries    | `fix/serial-queries`    | T901             | done |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813）上架前建议，批次 C（T814–T816）可后做。T816 是唯一的「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。
