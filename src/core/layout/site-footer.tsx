@@ -11,33 +11,36 @@ export function SiteFooter() {
   const nav = (key: string) => t(`Nav.${key}` as "Nav.features");
 
   return (
-    <footer className="border-t">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-[2fr_repeat(3,1fr)]">
-        <div className="space-y-3">
+    // 深色锚点带，两套主题下都保持深色。不用 bg-foreground 反相：
+    // 暗色主题下 foreground 是浅色，会把页脚翻成一片白。
+    <footer className="bg-footer text-footer-foreground">
+      {/* 用 flex + 换行而不是固定列数：footer 分组数量来自配置，写死列数会留空或挤行。 */}
+      <div className="container-marketing flex flex-col gap-10 py-14 sm:flex-row sm:justify-between sm:gap-16">
+        <div className="max-w-xs space-y-3">
           <SiteLogo />
-          <p className="text-muted-foreground max-w-xs text-sm">
-            {t("Footer.tagline")}
-          </p>
+          <p className="text-sm opacity-70">{t("Footer.tagline")}</p>
         </div>
-        {siteConfig.nav.footer.map((group) => (
-          <nav key={group.key} aria-label={nav(group.key)}>
-            <h2 className="text-sm font-medium">{nav(group.key)}</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {group.links.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {nav(link.key)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ))}
+        <div className="flex flex-wrap gap-12 sm:gap-16">
+          {siteConfig.nav.footer.map((group) => (
+            <nav key={group.key} aria-label={nav(group.key)}>
+              <h2 className="text-sm font-medium">{nav(group.key)}</h2>
+              <ul className="mt-4 space-y-2.5 text-sm">
+                {group.links.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="inline-block opacity-70 transition-opacity hover:opacity-100"
+                    >
+                      {nav(link.key)}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
       </div>
-      <div className="text-muted-foreground mx-auto max-w-6xl px-4 pb-8 text-xs">
+      <div className="container-marketing border-t border-current/15 py-6 text-xs opacity-60">
         {t("Footer.copyright", {
           year: new Date().getFullYear(),
           name: siteConfig.name,

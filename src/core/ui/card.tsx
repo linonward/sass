@@ -1,17 +1,38 @@
 import * as React from "react";
 import { cn } from "cn";
 
+/**
+ * 贴纸表面。类名必须保持字面量：Tailwind 扫源码文本，拼接出来的 class 会被丢掉。
+ * 选了 tone 就用描边 + 硬唇边，不选则退回原来那圈 ring，两边互斥。
+ */
+const cardTones = {
+  primary: "sticker-lg border-[var(--edge)] [--edge:var(--primary-edge)]",
+  success: "sticker-lg border-[var(--edge)] [--edge:var(--success-edge)]",
+  warning: "sticker-lg border-[var(--edge)] [--edge:var(--warning-edge)]",
+  info: "sticker-lg border-[var(--edge)] [--edge:var(--info-edge)]",
+  destructive:
+    "sticker-lg border-[var(--edge)] [--edge:var(--destructive-edge)]",
+} as const;
+
+export type CardTone = keyof typeof cardTones;
+
 function Card({
   className,
   size = "default",
+  tone,
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+}: React.ComponentProps<"div"> & {
+  size?: "default" | "sm";
+  tone?: CardTone;
+}) {
   return (
     <div
       data-slot="card"
       data-size={size}
+      data-tone={tone}
       className={cn(
-        "group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm ring-1 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card bg-card text-card-foreground flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        tone ? cardTones[tone] : "ring-foreground/10 ring-1",
         className,
       )}
       {...props}

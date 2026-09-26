@@ -1,31 +1,29 @@
+import { ArrowRightIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Link } from "@/core/i18n/navigation";
 import { buttonVariants } from "@/core/ui/button";
 
+import { bands, type Band } from "./band";
 import { Section } from "./section";
 
-export function Cta() {
+export function Cta({ waveFrom }: { waveFrom?: Band }) {
   const t = useTranslations("Landing.cta");
 
   return (
-    <Section id="cta">
-      <div className="bg-primary text-primary-foreground flex flex-col items-center rounded-2xl px-6 py-16 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-          {t("title")}
-        </h2>
-        <p className="mt-4 max-w-xl text-lg text-pretty opacity-90">
+    <Section id="cta" band={bands.cta} waveFrom={waveFrom}>
+      {/* 左对齐而不是居中：整页的标题都是左起的，收尾突然居中会断掉阅读轴。 */}
+      <div className="max-w-2xl">
+        <h2 className="heading-display text-4xl sm:text-5xl">{t("title")}</h2>
+        <p className="text-muted-foreground mt-5 text-lg text-pretty">
           {t("subtitle")}
         </p>
         <Link
           href="/#pricing"
-          className={buttonVariants({
-            size: "lg",
-            variant: "secondary",
-            className: "mt-8",
-          })}
+          className={`${buttonVariants({ size: "marketing", tone: "primary" })} mt-8`}
         >
           {t("button")}
+          <ArrowRightIcon aria-hidden />
         </Link>
       </div>
     </Section>

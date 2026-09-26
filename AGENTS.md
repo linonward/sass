@@ -1,6 +1,8 @@
 # AGENTS.md
 
-出海 SaaS 模板仓库。方案：[docs/plan.md](docs/plan.md)；任务：[docs/tasks/README.md](docs/tasks/README.md)。
+出海 SaaS 模板仓库。方案：[docs/plan.md](docs/plan.md)；任务：[docs/tasks/README.md](docs/tasks/README.md)；视觉系统：[docs/design.md](docs/design.md)。
+
+改界面前先读 `docs/design.md`：整站颜色从一个配置色推导，表面深度靠 `--edge` 驱动的贴纸描边和硬唇边，不用模糊投影。改动 UI 时至少跑 `pnpm test` 和 `npx playwright test e2e/ui-shell.spec.ts e2e/landing.spec.ts`，那里锁着品牌色、可访问名和 375px 不横向溢出。
 
 ## Hard rules
 

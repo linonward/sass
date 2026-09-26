@@ -60,14 +60,11 @@ export default defineConfig({
   },
   landing: {
     sections: ["hero", "features", "pricing", "faq", "cta"],
-    hero: {
-      image: {
-        src: "/landing/hero.svg",
-        darkSrc: "/landing/hero-dark.svg",
-        width: 1200,
-        height: 720,
-      },
-    },
+    // hero 不配 image 时，首屏右侧渲染用真实 DOM 拼出来的产品 mock
+    // （终端 + 结账台 + 到账提示，报价取自下面 billing.plans 的高亮套餐）。
+    // 想换回静态图片就在 hero 下加 image: { src, darkSrc?, width, height }，
+    // 图片路径放 public/ 下，alt 文案在 messages 的 Landing.hero.imageAlt。
+    hero: {},
     features: [
       { key: "auth", icon: "shield" },
       { key: "billing", icon: "creditCard" },
