@@ -123,7 +123,7 @@ pnpm dev              # http://localhost:3000
   - 各语言的文章相互独立，同名文件视为同一篇的翻译（hreflang 只列出有翻译的语言）；没有文章的语言，列表页为空且 noindex。
   - frontmatter 必须是合法 YAML，值里有 `: ` 时加引号。写错的文件会让 `build` 失败并指出文件名；`dev` 里只打印错误。
   - 关闭 `features.blog` 时，把 `nav` 里的 Blog 链接一起删掉。
-- 后台（`src/core/admin/`，`features.admin`）：`/admin` 下有指标页和用户、订单、订阅三个列表，列表都在服务端分页。不是管理员（包括未登录）访问 `/admin` 下任何页面都返回 404，不跳转登录页。
+- 后台（`src/core/admin/`，`features.admin`）：`/admin` 下有指标页和用户、订单、订阅三个列表，列表都在服务端分页。不是管理员（包括未登录）访问 `/admin` 下任何页面都返回 404，不跳转登录页（**这是设计，不是 bug**，理由和整套状态码约定见[错误与权限的边界](#错误与权限的边界)）。
   - 角色和封禁由 Better Auth 的 admin 插件提供（插件一直启用，`user` 表多了 `role`、`banned` 等字段）。v1 去掉了模拟登录（impersonate）权限。
   - 首个管理员：把邮箱写进 `ADMIN_EMAILS`，用这个邮箱登录（邮箱已验证）时自动获得 `admin` 角色。只提升不降级，从名单里删掉邮箱不会收回角色。管理员在 dashboard 侧边栏里会看到 Admin 入口。
   - 用户：按邮箱或名称搜索；详情页可以封禁 / 解封（封禁会让用户所有 session 失效，之后无法登录），调整积分（必须填原因，写一条 `adjust` 流水，`actor_id` 记录操作的管理员，同一次提交重复发送只生效一次），并查看该用户的订阅和订单。
@@ -146,7 +146,7 @@ pnpm dev              # http://localhost:3000
   - 账单邮件：付款成功、付款失败、订阅取消由 `onBillingEvent` 钩子触发（`src/core/billing/emails.ts`），余额跌破 `credits.lowBalanceThreshold` 时发 `credits-low`（同一用户 24 小时内最多一封）。邮件都在数据库事务提交之后才发送：钩子通过 `afterCommit(fn)` 登记，事务回滚时不会发出；同一笔付款、同一订阅的取消只通知一次（`notification_log` 表去重）。发信失败只记日志，不影响 webhook 和扣减。
   - 生产构建默认使用 `resend`，本地没有 key 时用 `EMAIL_TRANSPORT=console pnpm build`。
 - 登录：Better Auth（`src/core/auth/`），Google 登录和邮箱验证码登录，路由 `/sign-in`、`/api/auth/*`。验证码参数在 `site.config.ts` 的 `auth.emailOtp`。
-  - 需要登录的页面放在 `src/app/[locale]/(app)/` 下：(app) 的 layout 校验 session，未登录时跳转登录页。写进 `site.config.ts` 的 `dashboard.nav` 的路径，proxy 还会按 cookie 提前拦截并带上回跳地址（`src/core/auth/routes.ts` 的 `protectedPrefixes`）。
+  - 需要登录的页面放在 `src/app/[locale]/(app)/` 下：(app) 的 layout 校验 session，未登录时跳转登录页（307，见[错误与权限的边界](#错误与权限的边界)）。写进 `site.config.ts` 的 `dashboard.nav` 的路径，proxy 还会按 cookie 提前拦截并带上回跳地址（`src/core/auth/routes.ts` 的 `protectedPrefixes`）。
   - 服务端取当前用户：`getSession()`（`src/core/auth/session.ts`）；客户端：`authClient`（`src/core/auth/client.ts`）。
   - auth 相关的表由 `pnpm auth:generate` 生成到 `src/core/db/schema/auth.ts`，再 `pnpm db:generate` 生成迁移。
 - 登录后的外框：`src/core/dashboard/`，侧边栏 + 用户菜单（头像、邮箱、切换语言、退出登录）。
@@ -161,6 +161,82 @@ pnpm dev              # http://localhost:3000
 - 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验。
 
 CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test → build → e2e 顺序执行。
+
+## 错误与权限的边界
+
+四条容易被当成 bug 的边界：前两条是刻意的设计，后两个是改一行就可能静默改变状态码的陷阱。依据都写在里面，可以自己验证。
+
+### `forbidden()` / `unauthorized()` 在本模板不可用
+
+`next/navigation` 的 `forbidden()` / `unauthorized()` 在 Next 16 是 experimental，**必须开开关才能用**。本仓库没开：`next.config.ts` 里连 `experimental` 这个键都没有（当前只有 `env`），所以 `experimental.authInterrupts` 是关的。文档 `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/authInterrupts.md` 说得很直接：要「enable the `authInterrupts` option in your `next.config.js` file to use them」。
+
+所以这**不是「少两个文件」**。开关不开时调用它会直接抛错，实现见 `node_modules/next/dist/client/components/forbidden.js`：
+
+```
+`forbidden()` is experimental and only allowed to be enabled when
+`experimental.authInterrupts` is enabled.
+```
+
+（`unauthorized()` 同形，在 `unauthorized.js`；两个错误码分别是 `E488` / `E411`。）关键是它抛的是**普通 Error，不是 403 / 401 的 fallback digest**，所以不会被 HTTP access fallback 接住，而是被最近的 `error.tsx` 接住 —— 你得到的是**一个 500，不是一个 403**，跟「写了就能用」的直觉正好相反。
+
+要用得同时做两件事：
+
+1. `next.config.ts` 开 `experimental.authInterrupts: true`；
+2. 建 `forbidden.tsx` / `unauthorized.tsx`，否则渲染的是框架默认的 403 / 401 页。
+
+另外三个约束：
+
+- **不能在 root layout 里调用**。本仓库没有 `src/app/layout.tsx`，root layout 是 `src/app/[locale]/layout.tsx` —— 文档 `.../file-conventions/layout.md` 说「Any layout without a `layout.js` above it is a root layout」，并明确 root layout 可以落在动态段下（`app/[lang]/layout.js`）。
+- 它靠**抛异常**工作：要 `await` 到那一层；`try/catch` 会把它吞掉；留在未 await 的 promise 里则什么都不渲染，开发环境只在服务端日志里留一条 `unhandledRejection`。
+- 放进 `<Suspense>` 边界里就拿不到真 403 / 401（响应已开始流式，见第 3 条）。
+
+`forbidden.tsx` / `unauthorized.tsx` 在 Next 16.3.6 仍是 experimental（两份 file-conventions 文档的 frontmatter 都是 `version: experimental`）。本模板没有这两个文件：`find src -iname "forbidden*" -o -iname "unauthorized*"` 无输出。
+
+需要权限拒绝时用现成的路子：页面 `notFound()` 或跳登录页，API 返回 JSON 401，Server Action 返回状态对象 —— 见下一条。
+
+### 权限模型的分野是有意的
+
+| 场景             | 现状                                        | 在哪                                                                                         |
+| ---------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 页面：不是管理员 | **404**，不跳登录页                         | `requireAdmin()`（`src/core/admin/session.ts`）                                              |
+| 页面：未登录     | **307** 跳 `/sign-in`，带 `callbackURL`     | `src/proxy.ts` 按 cookie 先拦一次；`(app)` 的 layout 再用 `getSession()` 校验一次            |
+| API：未登录      | **401** + JSON `{ error: "unauthorized" }`  | `src/app/api/billing/checkout/route.ts`、`portal/route.ts`、`status/route.ts`                |
+| Server Action    | **返回状态对象**，不抛错                    | `AdminActionState`（`src/core/admin/actions.ts`）：`{ status: "error", error: "forbidden" }` |
+| 错方法           | **405**（框架给的，空 body、无 `Allow` 头） | 见下                                                                                         |
+
+**`/admin` 对非管理员返回 404 而不是跳登录页，这是设计，不是 bug。** 后台不想让人知道它存在，所以未登录和已登录的非管理员拿到的是同一种响应。`e2e/admin.spec.ts` 锁着这个行为（两条用例都断言 404 且 URL 不变）。
+
+- **页面要 UX，API 要机器可读，所以两种形态并存是故意的。** 浏览器能从 404 页里拿到品牌化和「回首页」的出路；`curl` 一个接口的人要的是能解析的 JSON，不是一整页 HTML。
+- **307 不是随便挑的**：Next 的 `redirect()` 默认就是 307（文档 `.../functions/redirect.md`：「The `redirect()` method uses a `307` by default」，会保留请求方法）。站内跳转统一走 `src/core/i18n/navigation.ts` 的 `redirect`（next-intl 包装）。
+- **405 是框架行为，模板没写**：`src/app/api/**` 里 `route.ts` 没导出的方法，由 Next 自动补上 `new Response(null, { status: 405 })`（`node_modules/next/dist/server/route-modules/app-route/helpers/auto-implement-methods.js`）。它是**空 body、没有 `Allow` 头**，不像 `{ error }` 那样可解析；`OPTIONS` 自动实现为 204 + `Allow`，`HEAD` 自动复用 `GET`。全仓库（代码和 e2e）没有任何一处碰过 405 —— 想要 JSON 405 得自己写。
+- 顺带说明 404 为什么有两种形态：`src/proxy.ts` 的 matcher 排除了 `api|trpc|_next|_vercel|opengraph-image|monitoring|.*\..*`，所以 `/api/*` 和带点的路径（`/missing.png`）不经 proxy，走的是 `src/app/api/[...rest]/route.ts` 的 JSON 404（用 `X-Robots-Tag` 代替 HTML 里的 `noindex`）和根级 `src/app/not-found.tsx`。更具体的路由优先匹配。
+
+### 陷阱：在 `notFound()` 上方加流式边界，会把真 404 变成 200
+
+**现在全站 404 都是真 404，唯一的原因就是没有任何东西在流式：**
+
+```bash
+find src -name "loading.tsx" | wc -l   # 0
+grep -rn "Suspense" src/ | wc -l       # 0
+```
+
+在 `notFound()` 调用点的**上方**加 `loading.tsx` 或 `<Suspense>`，那条路径的 404 就变成 **200 软 404**：响应头已经发出去了，状态码改不了。文档（`.../file-conventions/loading.md`）：「The response body starts streaming when a Suspense fallback renders (for example, a `loading.tsx`) or when a Server Component suspends under a `Suspense` boundary. Place `notFound()` before those boundaries and before any `await` that may suspend.」之后只剩 Next 注入的 `<meta name="robots" content="noindex">` 兜底，爬虫会把它记成 soft 404。
+
+具体到这个仓库：买家访问 `/does-not-exist` 时渲染的是 `src/app/[locale]/not-found.tsx`。按文档，同段的 `loading.tsx` **会**把 `not-found.tsx` 和 `page.js` 一起包进 `<Suspense>`（「`loading.js` wraps `not-found.js`, `page.js`, and nested `layout.js` files in a `<Suspense>` boundary」）—— 也就是说这个边界一旦建立，那条 404 就在它的下方。
+
+**哪条路径真的会变成 200，取决于那个页面的实现**：先刷出 fallback、或页面先 `await` 到挂起，状态码就锁定在 200；同步渲染、还没等就抛 `notFound()` 的，可能仍是 404。所以别把它当成「加个骨架屏没副作用」—— 文档给的判据就一句：「Place `notFound()` before those boundaries and before any `await` that may suspend.」改完要**逐条实测状态码**，别只看界面渲染对不对。
+
+（本节写的是机制，没有逐条实测本仓库加 `loading.tsx` 之后的状态码 —— 那要起服务跑一遍。）
+
+「体验更好」和「真 404」在这里是有代价的：流式一旦开始，状态码就锁死。想两者都要，就得让 `notFound()` 在流式开始前跑完（文档给的办法是把存在性检查挪进 `proxy`）。真要加 instant loading，先掂量代价。
+
+### `loading.tsx` 在 `(app)` / `(admin)` 里不会生效
+
+`(app)` / `(admin)` 的 layout 都要读请求数据：`(app)` 的 layout 调 `getSession()`，`(admin)` 的调 `requireAdmin()`，两者最终都落到 `src/core/auth/session.ts` 里的 `auth.api.getSession({ headers: await headers() })`。文档（`.../file-conventions/loading.md`）：「If the layout accesses uncached or runtime data (e.g. `cookies()`, `headers()`, or uncached fetches), `loading.js` will not show a fallback for it.」没有 Cache Components 时「Navigation blocks until the layout finishes rendering」。
+
+本模板没开 Cache Components（`next.config.ts` 里没有 `experimental` 键），所以 `src/app/[locale]/(app)/loading.tsx` 不会显示骨架屏 —— 导航会一直等到 layout 渲染完，加了等于没加。
+
+想加 instant loading，按文档做两件事之一：**把取数从 layout 下移到 page**（`loading.tsx` 包的是 page），或把 layout 里读请求数据的那部分**单独**包一个 `<Suspense>`。**但先回头看上一条**：`<Suspense>` 会开始流式，会连带改变该路径 404 的状态码。
 
 ## 上线清单
 
