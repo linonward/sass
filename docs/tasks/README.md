@@ -87,7 +87,7 @@
 | T1203                       | video-settle-race       | `fix/video-settle-race`        | T1201                     | done |
 | T1204                       | checkout-idempotency    | `fix/checkout-idempotency`     | T1200                     | done |
 | T1205                       | favicon                 | `fix/favicon`                  | T1200                     | done |
-| T1206                       | template-handoff        | `fix/template-handoff`         | T1200                     | todo |
+| T1206                       | template-handoff        | `fix/template-handoff`         | T1200                     | done |
 | T1207                       | notices-sync            | `fix/notices-sync`             | T1200                     | done |
 | T1208                       | seed-gate               | `fix/seed-gate`                | T1200                     | done |
 | T1209                       | not-found-canonical     | `fix/not-found-canonical`      | T1200                     | done |
