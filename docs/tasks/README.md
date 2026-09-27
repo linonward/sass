@@ -110,7 +110,7 @@
 | T1306                       | referral-rewards        | `feat/referral-rewards`        | T1305, T303, T1202, T1204 | todo |
 | **阶段 14：审查后续小项**   |                         |                                |                           |      |
 | T1400                       | review-followups        | `docs/review-followups`        | —                         | done |
-| T1401                       | internal-terms          | `chore/internal-terms`         | T1400                     | todo |
+| T1401                       | internal-terms          | `chore/internal-terms`         | T1400                     | done |
 | T1402                       | e2e-flaky-auth          | `fix/e2e-flaky-auth`           | T1400                     | todo |
 | **阶段 15：差异化补齐**     |                         |                                |                           |      |
 | T1500                       | differentiation-plan    | `docs/differentiation-plan`    | —                         | todo |

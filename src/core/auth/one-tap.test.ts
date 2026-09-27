@@ -58,8 +58,8 @@ afterEach(() => {
 
 /**
  * 这条守的是打包体积：`one-tap.ts` 被登录页的客户端组件引用，只要 import 了
- * `./env`（zod + t3-env）或 `site.config.ts`，整个配置 schema 就会进客户端 bundle ——
- * 就是 T1001 修掉的那个 92 KB gzip。改坏了要等构建之后才看得出来，这里让它单测就红。
+ * `./env`（zod + t3-env）或 `site.config.ts`，整个配置 schema 就会进客户端 bundle，
+ * 凭空多出约 92 KB gzip。改坏了要等构建之后才看得出来，这里让它单测就红。
  */
 describe("one-tap 是客户端叶子模块", () => {
   it("不 import env 和配置", () => {

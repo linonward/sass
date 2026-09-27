@@ -590,7 +590,7 @@ Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-
 
 ### 渠道归因
 
-`site.config.ts` 的 `acquisition.attribution.enabled` 默认 `false`。先运行 `pnpm db:migrate`，再开启并重新构建部署；无需新增 env 或外部服务。控件通过配置派生的内部构建常量裁剪，默认关闭时不会下发其客户端脚本。留资见下节；`acquisition.referrals` 仍为后续任务预留开关，邀请配置要求 `features.credits`。
+`site.config.ts` 的 `acquisition.attribution.enabled` 默认 `false`。先运行 `pnpm db:migrate`，再开启并重新构建部署；无需新增 env 或外部服务。控件通过配置派生的内部构建常量裁剪，默认关闭时不会下发其客户端脚本。留资见下节；`acquisition.referrals` 目前只是一个预留开关，开启不产生任何页面或数据，且要求 `features.credits` 同时开启。
 
 开启后页面提供 **Source preferences**：访客明确允许后才写来源 Cookie；拒绝不影响注册、登录或付款。仅记录白名单 `utm_source` / `utm_medium` / `utm_campaign` / `utm_term` / `utm_content`、外部来源 hostname、落地 pathname 和捕获时间，字段有字符和长度限制。完整 URL、任意查询参数、IP 和指纹不会进入这份记录；也不要主动把邮箱等个人信息放入营销标签或路径。
 

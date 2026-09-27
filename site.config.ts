@@ -194,7 +194,8 @@ const config = defineConfig({
     public: false,
   },
   // 可观测性（features.observability 开启时生效）。开启后生产环境日志是单行 JSON，带 traceId。
-  // 获客能力按模块开启；线索与邀请的实现见阶段 13 后续任务。
+  // 获客能力按模块开启：渠道归因与邮箱留资见 README 的「渠道归因」「邮箱留资」两节。
+  // referrals 目前只是一个预留开关，开启不产生任何页面或数据；它要求 features.credits 同时开启。
   acquisition: {
     attribution: { enabled: false },
     leads: { enabled: false },

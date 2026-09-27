@@ -150,8 +150,8 @@ describe("initials", () => {
 
 describe("AppSidebar 的可访问名", () => {
   /**
-   * 侧栏的三处可访问名（抽屉标题/描述、触发器、导轨）都来自 messages，T1211 之前
-   * 写死在 `src/core/ui/sidebar.tsx` 里。这里用一份伪翻译的文案渲染：名字跟着 messages
+   * 侧栏的三处可访问名（抽屉标题/描述、触发器、导轨）都来自 messages，以前是
+   * 写死在 `src/core/ui/sidebar.tsx` 里的。这里用一份伪翻译的文案渲染：名字跟着 messages
    * 走才算接上了 i18n，写死的话这条会红。
    */
   test("移动端抽屉的标题、描述与导轨的名字都来自 messages", () => {

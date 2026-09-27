@@ -7,7 +7,7 @@ import { stubGoogleOneTap } from "./auth-helpers";
 // （ui-shell 只覆盖营销首页，另有 blog、legal、dashboard、admin）。这里补上两个此前
 // 完全没覆盖、却都要整页撑住的入口：
 //
-// - 404：`src/app/[locale]/not-found.tsx` 在 T607 之后自己渲染 SiteHeader（sticky + 硬
+// - 404：`src/app/[locale]/not-found.tsx` 自己渲染 SiteHeader（sticky + 硬
 //   唇边阴影）、SiteFooter 和营销面的 44px 贴纸按钮 —— 它挂在 [locale]/ 下、穿不到营销面
 //   layout，样式回归没有别的 CI 防线。`/missing.png` 走根级 `src/app/not-found.tsx`：没有
 //   Header / Footer，但共用同一套 404 语域和那个 44px 按钮，一并锁住。

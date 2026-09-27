@@ -1,5 +1,5 @@
 // 收款相关的表。只放与服务商无关的通用字段，服务商的原始数据存在 raw（jsonb）里。
-// 引用 user.id 的外键都是 cascade：删除账户前由 onUserDelete 钩子取消订阅（T303），
+// 引用 user.id 的外键都是 cascade：删除账户前由 onUserDelete 钩子取消订阅，
 // 之后账单记录随用户一起删除。
 import {
   boolean,

@@ -56,14 +56,14 @@ describe("createAppEnv", () => {
     ).not.toThrow();
   });
 
-  // T805：生产运行时（next build / next start / Docker）不再认这个开关。
+  // 生产运行时（next build / next start / Docker）不认这个开关。
   test("生产运行时 SKIP_ENV_VALIDATION 不生效，缺少必填项照旧报错", () => {
     expect(() =>
       aiEnv(true, { NODE_ENV: "production", SKIP_ENV_VALIDATION: "1" }),
     ).toThrow("- AI_API_KEY: ");
   });
 
-  // T817：Next 的 CLI 会把没设过的 NODE_ENV 补成该命令的默认值（`next typegen` 是
+  // Next 的 CLI 会把没设过的 NODE_ENV 补成该命令的默认值（`next typegen` 是
   // production，见 node_modules/next/dist/bin/next 的
   // `process.env.NODE_ENV = process.env.NODE_ENV || defaultEnv`），于是「只带
   // SKIP_ENV_VALIDATION 的本地命令」会被当成生产运行时 —— 干净检出（没有 .env.local）
@@ -128,7 +128,7 @@ describe("邮件变量", () => {
     [{ NODE_ENV: "development", EMAIL_TRANSPORT: "file" }, true],
     [{ NODE_ENV: "production", RESEND_API_KEY: "re_x" }, true],
     [{ EMAIL_TRANSPORT: "resend", RESEND_API_KEY: "re_x" }, true],
-    // T805 收紧的这几格：生产运行时不再允许 console / file。
+    // 下面这几格是生产运行时不再允许 console / file 的那几条。
     [{ NODE_ENV: "production", EMAIL_TRANSPORT: "file" }, false],
     [{ NODE_ENV: "production", EMAIL_TRANSPORT: "console" }, false],
     [{ VERCEL_ENV: "production", EMAIL_TRANSPORT: "file" }, false],
