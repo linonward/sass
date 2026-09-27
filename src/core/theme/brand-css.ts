@@ -7,9 +7,6 @@ import type { SiteConfig } from "@/core/config/schema";
 // 线上实际渲出来的对比度；而且 `oklch(from ...)` 在不支持的浏览器上整条声明失效，
 // 没有降级路径。算在这里，结果可单测、可断言 WCAG。
 
-/** 亮度高于此值时，品牌色上该用深色文字。0.179 是黑字白字对比度相等的分界点。 */
-const DARK_TEXT_THRESHOLD = 0.179;
-
 // 推导常量。edge 是「比填充色更深一档」的相对位移，不是绝对亮度 ——
 // 绝对亮度会让深色品牌推导出比填充还浅的 edge，贴纸的立体感就反了。
 const EDGE_LIGHTNESS_DROP = 0.22;
@@ -161,9 +158,35 @@ export const INK = oklchToHex({ L: 0.202, C: 0.006, H: 60 });
 /** 暖白，深色主题下的文字色；刻意不用纯白。 */
 export const PAPER = oklchToHex({ L: 0.985, C: 0.004, H: 60 });
 
-/** 品牌色上是否应该用深色文字。 */
-export function needsDarkText(hex: string): boolean {
-  return luminance(hex) > DARK_TEXT_THRESHOLD;
+/**
+ * 亮色主题的中性色阶（画布 / 卡片 / 文字 / 描边）。色相跟着品牌走，chroma 只有 0.006，
+ * 几乎看不出来，但买家的品牌色一换，整页会隐隐跟着协调。
+ *
+ * 单独导出是因为**邮件和 OG 图读不到 CSS 变量**，只能把十六进制内联进 HTML / 分享图。
+ * 它们必须和 `--background` / `--border` 这些 token 是同一组值：各写各的冷灰会让
+ * 买家换完品牌色后，站内是暖调中性色、邮件和分享图还留在另一套灰上。
+ */
+export function neutralScale(primaryColor: string) {
+  const { H } = hexToOklch(primaryColor);
+  const neutral = (L: number, chroma = NEUTRAL_CHROMA) =>
+    oklchToHex({ L, C: fitChroma(L, chroma, H), H });
+
+  return {
+    /** 画布 → `--background` */
+    canvas: neutral(CANVAS_LIGHTNESS),
+    /** 浅色带 → `--band-tint` */
+    bandTint: neutral(0.921, 0.012),
+    /** 卡片面 → `--card` / `--sidebar` */
+    card: neutral(0.983, 0.005),
+    /** 弹层与输入框 → `--popover` / `--input` */
+    popover: neutral(0.995, 0.003),
+    /** 中性填充 → `--muted` / `--secondary` / `--accent` / `--sidebar-accent` */
+    muted: neutral(0.945, 0.007),
+    /** 次要文字 → `--muted-foreground` */
+    mutedForeground: neutral(0.52, 0.008),
+    /** 1px 描边 → `--border` / `--sidebar-border` */
+    border: neutral(0.885, 0.008),
+  };
 }
 
 /**
@@ -195,12 +218,8 @@ export function deriveBrand(primaryColor: string) {
     return oklchToHex({ L: l, C: fitChroma(l, Math.min(C, maxChroma), H), H });
   };
 
-  // 推导时的浅色画布参照，和 brandCss 里生成的是同一个值。
-  const canvas = oklchToHex({
-    L: CANVAS_LIGHTNESS,
-    C: fitChroma(CANVAS_LIGHTNESS, NEUTRAL_CHROMA, H),
-    H,
-  });
+  // 推导时的浅色画布参照，和 brandCss 里生成的是同一个值（同一个来源）。
+  const { canvas } = neutralScale(primaryColor);
 
   const edgeLightness = Math.max(L - EDGE_LIGHTNESS_DROP, EDGE_MIN_LIGHTNESS);
 
@@ -248,9 +267,10 @@ function declare(pairs: Record<string, string>): string {
 export function brandCss(brand: SiteConfig["brand"]): string {
   const primary = brand.primaryColor;
   const d = deriveBrand(primary);
+  const n = neutralScale(primary);
   const { H } = hexToOklch(primary);
 
-  // 中性色朝品牌色相微调。所有 L 值固定，只让色相跟着品牌走。
+  // 暗色的中性色阶是另一套 L 值，只在 CSS 里用得到，邮件和 OG 图永远是亮色版。
   const neutral = (L: number, chroma = NEUTRAL_CHROMA) =>
     oklchToHex({ L, C: fitChroma(L, chroma, H), H });
 
@@ -264,28 +284,28 @@ export function brandCss(brand: SiteConfig["brand"]): string {
     "--sidebar-primary": d.fill,
     "--sidebar-primary-foreground": d.foreground,
 
-    "--background": d.canvas,
+    "--background": n.canvas,
     /* 浅色带的专用底色。比 --muted 再深一档：两者差太近的话，波浪在
        「画布 → 浅色带」这一段上根本看不出来，整页的横向色带节奏就散了。 */
-    "--band-tint": neutral(0.921, 0.012),
+    "--band-tint": n.bandTint,
     "--foreground": INK,
-    "--card": neutral(0.983, 0.005),
+    "--card": n.card,
     "--card-foreground": INK,
-    "--popover": neutral(0.995, 0.003),
+    "--popover": n.popover,
     "--popover-foreground": INK,
-    "--muted": neutral(0.945, 0.007),
-    "--muted-foreground": neutral(0.52, 0.008),
-    "--border": neutral(0.885, 0.008),
-    "--input": neutral(0.995, 0.003),
-    "--secondary": neutral(0.945, 0.007),
+    "--muted": n.muted,
+    "--muted-foreground": n.mutedForeground,
+    "--border": n.border,
+    "--input": n.popover,
+    "--secondary": n.muted,
     "--secondary-foreground": INK,
-    "--accent": neutral(0.945, 0.007),
+    "--accent": n.muted,
     "--accent-foreground": INK,
-    "--sidebar": neutral(0.983, 0.005),
+    "--sidebar": n.card,
     "--sidebar-foreground": INK,
-    "--sidebar-accent": neutral(0.945, 0.007),
+    "--sidebar-accent": n.muted,
     "--sidebar-accent-foreground": INK,
-    "--sidebar-border": neutral(0.885, 0.008),
+    "--sidebar-border": n.border,
     "--sidebar-ring": d.fill,
   };
 

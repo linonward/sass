@@ -98,7 +98,7 @@
 | T1214                       | readme-drift            | `docs/readme-drift`            | T1200                     | todo |
 | T1215                       | email-outbox            | `fix/email-outbox`             | T1200                     | todo |
 | T1216                       | ratelimit-selfhost      | `fix/ratelimit-selfhost`       | T1200                     | todo |
-| T1217                       | frontend-details        | `chore/frontend-details`       | T1200                     | todo |
+| T1217                       | frontend-details        | `chore/frontend-details`       | T1200                     | done |
 | T1218                       | docker-notes            | `docs/docker-notes`            | T1200                     | todo |
 | **阶段 13：获客**           |                         |                                |                           |      |
 | T1300                       | acquisition-plan        | `docs/acquisition-plan`        | —                         | done |

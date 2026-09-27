@@ -5,6 +5,8 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { foregroundFor, INK, neutralScale } from "@/core/theme/brand-css";
+
 import en from "../../../messages/en.json";
 import siteConfig from "../../../site.config";
 import { renderEmail, sendEmail } from "./send";
@@ -75,6 +77,21 @@ describe("renderEmail", () => {
     expect(emailBrand.name).toBe(siteConfig.name);
     expect(emailBrand.primary).toBe(siteConfig.brand.primaryColor);
     expect(emailBrand.siteUrl).toBe(`https://${siteConfig.domain}`);
+  });
+
+  test("颜色和站内 token 是同一组值", async () => {
+    // 邮件内联不了 CSS 变量，只能写死十六进制；但「主色上放什么字」「中性色是哪一档」
+    // 必须和站内是同一个决策，否则买家换完品牌色，邮件会留在另一套冷灰上。
+    const { emailBrand } =
+      await vi.importActual<typeof import("./brand")>("./brand");
+    const neutral = neutralScale(siteConfig.brand.primaryColor);
+    expect(emailBrand.onPrimary).toBe(
+      foregroundFor(siteConfig.brand.primaryColor),
+    );
+    expect(emailBrand.text).toBe(INK);
+    expect(emailBrand.muted).toBe(neutral.mutedForeground);
+    expect(emailBrand.border).toBe(neutral.border);
+    expect(emailBrand.background).toBe(neutral.canvas);
   });
 
   test("生成 html、纯文本、主题和发件信息", async () => {

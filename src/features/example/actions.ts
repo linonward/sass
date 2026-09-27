@@ -23,8 +23,6 @@ export type TaglineState =
   | (GenerateResult & {
       status: "done";
       nextRequestId: string;
-      // 表单提交后 React 会重置输入框，带回去作为默认值。
-      product: string;
     });
 
 /** 表单提交：按 mode 选择快速生成（deductCredits）或 AI 生成（runAI）。 */
@@ -35,7 +33,6 @@ export async function generateTaglines(
   const done = (result: GenerateResult): TaglineState => ({
     ...result,
     status: "done",
-    product: String(form.get("product") ?? ""),
     // 下一次提交用新的请求 ID；同一个 ID 重复提交只扣一次积分。
     nextRequestId: randomUUID(),
   });

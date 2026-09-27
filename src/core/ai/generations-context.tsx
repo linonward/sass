@@ -77,18 +77,22 @@ export function GenerationsProvider({
   const pendingIds = pendingVideos.map((v) => v.id).join(",");
   useEffect(() => {
     if (!pendingIds) return;
-    let stopped = false;
+    const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
 
     async function poll(id: string) {
       if (inFlight.current.has(id)) return;
       inFlight.current.add(id);
       try {
-        const response = await fetch(`/api/ai/video/${id}`);
+        const response = await fetch(`/api/ai/video/${id}`, {
+          signal: controller.signal,
+          // 每轮都会推进服务端状态，不能落任何缓存（路由也设了 no-store）。
+          cache: "no-store",
+        });
         if (response.ok)
           settle(((await response.json()) as { job: VideoJob }).job);
       } catch {
-        // 网络错误下一轮再查。
+        // 网络错误下一轮再查；离开页面时 abort 走的也是这里。
       } finally {
         inFlight.current.delete(id);
       }
@@ -96,12 +100,13 @@ export function GenerationsProvider({
 
     async function tick() {
       await Promise.all(pendingIds.split(",").map(poll));
-      if (!stopped) timer = setTimeout(tick, POLL_INTERVAL_MS);
+      if (!controller.signal.aborted)
+        timer = setTimeout(tick, POLL_INTERVAL_MS);
     }
 
     timer = setTimeout(tick, POLL_INTERVAL_MS);
     return () => {
-      stopped = true;
+      controller.abort();
       clearTimeout(timer);
     };
   }, [pendingIds, settle]);

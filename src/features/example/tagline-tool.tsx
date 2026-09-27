@@ -2,7 +2,7 @@
 
 import { Sparkles, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/core/ui/button";
 import { Input } from "@/core/ui/input";
@@ -25,6 +25,10 @@ export function TaglineTool({
 }) {
   const t = useTranslations("Example");
   const [state, action, pending] = useActionState(generateTaglines, idle);
+  // 受控输入。action 返回后 React 会重置表单，非受控输入是被重置的那一方 —— 想让它
+  // 保留提交前的内容得靠 `defaultValue` 正好赶上那次重置，读起来像死代码。受控的
+  // 值不受重置影响，这里也就直接是「提交后还能接着改 product 再生成」。
+  const [product, setProduct] = useState("");
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,7 +45,8 @@ export function TaglineTool({
           required
           minLength={3}
           maxLength={200}
-          defaultValue={state.status === "done" ? state.product : undefined}
+          value={product}
+          onChange={(event) => setProduct(event.target.value)}
           placeholder={t("productPlaceholder")}
         />
         <div className="flex flex-wrap gap-2">
@@ -70,8 +75,9 @@ export function TaglineTool({
             aria-label={t("results")}
             className="divide-y rounded-lg border text-sm"
           >
-            {state.taglines.map((line) => (
-              <li key={line} className="px-4 py-3">
+            {state.taglines.map((line, index) => (
+              // 生成内容可能重复（AI 尤其容易），key 里带上位置才是唯一的。
+              <li key={`${index}-${line}`} className="px-4 py-3">
                 {line}
               </li>
             ))}
