@@ -181,6 +181,8 @@ export async function getAcquisitionReport(
     isNotNull(orders.amount),
     ...where,
   );
+  const leadWhere: SQL[] = [];
+  if (filters.source) leadWhere.push(sql`${leadSourceOf} = ${filters.source}`);
   const [registrations, payers, revenue, pending, confirmedLeads] =
     await Promise.all([
       db
@@ -222,7 +224,7 @@ export async function getAcquisitionReport(
           ),
         )
         .groupBy(sql`1`, orders.currency),
-      // 已确认线索数：按线索自身快照里的 source 分组。只统计 confirmed 状态。
+      // 已确认线索数：按线索自身快照里的 source 分组，和归因报表共用同样的 source 筛选。
       db
         .select({ source: leadSourceOf, value: count() })
         .from(leads)
@@ -230,6 +232,7 @@ export async function getAcquisitionReport(
           and(
             eq(leads.status, "confirmed"),
             gte(leads.createdAt, window.since),
+            ...leadWhere,
           ),
         )
         .groupBy(sql`1`),
