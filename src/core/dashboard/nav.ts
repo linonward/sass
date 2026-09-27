@@ -35,6 +35,12 @@ const acquisitionNav: DashboardNavItem = {
   icon: "sparkles",
 };
 
+const leadsNav: DashboardNavItem = {
+  key: "adminLeads",
+  href: "/admin/leads",
+  icon: "fileText",
+};
+
 // 只在状态页开启时出现的后台项。
 const statusNav: DashboardNavItem = {
   key: "adminStatus",
@@ -49,12 +55,13 @@ const statusNav: DashboardNavItem = {
 export function adminNav(
   config: Pick<SiteConfig, "acquisition" | "statusPage">,
 ): readonly DashboardNavItem[] {
-  return [
-    adminNavBase[0]!,
-    ...(config.acquisition.attribution.enabled ? [acquisitionNav] : []),
-    ...adminNavBase.slice(1),
-    ...(config.statusPage.enabled ? [statusNav] : []),
-  ];
+  const extras: DashboardNavItem[] = [];
+  if (config.acquisition.attribution.enabled) extras.push(acquisitionNav);
+  if (config.acquisition.leads.enabled) extras.push(leadsNav);
+  if (config.statusPage.enabled) extras.push(statusNav);
+  return extras.length
+    ? [adminNavBase[0]!, ...extras, ...adminNavBase.slice(1)]
+    : adminNavBase;
 }
 
 // 只在对应模块开启时显示的套件项，排在 Dashboard 之后。

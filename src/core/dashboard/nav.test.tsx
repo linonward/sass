@@ -146,10 +146,14 @@ describe("adminNav", () => {
     });
   };
 
-  test("statusPage 开启时菜单末尾多一个 Status page", () => {
-    const nav = withStatusPage(true);
-    expect(nav.map((i) => i.href)).toContain("/admin/status");
-    expect(nav.at(-1)?.href).toBe("/admin/status");
+  test("statusPage 开启时，Status page 排在 Metrics 之后（可选模块同一条规则）", () => {
+    expect(withStatusPage(true).map((i) => i.href)).toEqual([
+      "/admin/metrics",
+      "/admin/status",
+      "/admin/users",
+      "/admin/orders",
+      "/admin/subscriptions",
+    ]);
   });
 
   test("statusPage 关闭时没有 Status page 入口（页面 404，留个点进去就 404 的入口只会让人以为坏了）", () => {
