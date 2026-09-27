@@ -131,14 +131,21 @@ export async function findUserId(email: string) {
 export async function openUserMenu(page: Page, isMobile: boolean) {
   const d = messages.Dashboard;
   // hydration 完成前点击没有反应，所以点到菜单真正出现为止。
+  // 循环里的每个动作都要有界：配置里没有 actionTimeout，一次落空的 click 会一直等到
+  // 用例超时（30s），把 toPass 的 10s 预算一把耗光 —— 于是整段不再重试，在 CI 上表现为
+  // 间歇性失败。单轮快速失败，重试才有机会等到 hydration 完成。
   await expect(async () => {
     if (isMobile) {
       const trigger = page.getByRole("button", { name: d.userMenu.open });
       if (!(await trigger.isVisible())) {
-        await page.getByRole("button", { name: d.toggleSidebar }).click();
+        await page
+          .getByRole("button", { name: d.toggleSidebar })
+          .click({ timeout: 1000 });
       }
     }
-    await page.getByRole("button", { name: d.userMenu.open }).click();
+    await page
+      .getByRole("button", { name: d.userMenu.open })
+      .click({ timeout: 1000 });
     await expect(page.getByRole("menu")).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 10_000 });
 }
