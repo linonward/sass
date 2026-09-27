@@ -421,4 +421,71 @@ describe.skipIf(!url)("videoService", () => {
     expect(limited.ok || limited.status).toBe(429);
     expect(await credits.getBalance(userId)).toBe(10);
   });
+
+  test("转存与超时结算竞态：不产生「视频 + 退款」双拿，也不留孤儿对象", async () => {
+    const userId = await newUser(50);
+    const storage = new MemoryStorage();
+    const s = setup({ storage });
+    const started = await s.startVideo({ userId, prompt: "hi" });
+    if (!started.ok) throw new Error("unexpected");
+    const { id } = started.job;
+    s.state.next = { status: "succeeded", videoUrl: VIDEO_URL };
+
+    // 在「下载完成、开始落库」的窗口里插一次并发查询：它看到任务仍在跑、但已超过超时
+    // 阈值，于是退款并置 failed —— 用户双开标签页时就是这个交错。
+    const put = storage.putObject.bind(storage);
+    vi.spyOn(storage, "putObject").mockImplementationOnce(async (input) => {
+      await put(input);
+      s.state.next = { status: "pending" };
+      s.clock.now += VIDEO_TIMEOUT_MS + 1000;
+      const settled = await s.pollVideo({ userId, id });
+      expect(settled.ok && settled.job.status).toBe("failed");
+      s.clock.now -= VIDEO_TIMEOUT_MS + 1000;
+    });
+
+    const raced = await s.pollVideo({ userId, id });
+
+    // 后到的这次不能报成功 —— 否则用户既拿到视频又拿到退款。
+    expect(raced.ok && raced.job.status).toBe("failed");
+    expect(await refunds(userId)).toHaveLength(1);
+    expect(await credits.getBalance(userId)).toBe(50);
+    expect((await usageRow(id)).status).toBe("failed");
+    // 没有孤儿：文件行被删掉，对象也从存储里删掉。
+    const rows = await dbClient.db
+      .select()
+      .from(files)
+      .where(eq(files.userId, userId));
+    expect(rows).toHaveLength(0);
+    expect(storage.objects.size).toBe(0);
+    expect(storage.deleted).toHaveLength(1);
+  });
+
+  test("退款失败不会锁死终态：事务回滚，下一次查询重试并退成功", async () => {
+    const userId = await newUser(50);
+    const s = setup();
+    const started = await s.startVideo({ userId, prompt: "hi" });
+    if (!started.ok) throw new Error("unexpected");
+    const { id } = started.job;
+    s.state.next = { status: "failed", error: "FAILED: DataInspectionFailed" };
+
+    const refundSpy = vi
+      .spyOn(credits, "refundCredits")
+      .mockRejectedValueOnce(new Error("db down"));
+    try {
+      const first = await s.pollVideo({ userId, id });
+      expect(first.ok && first.job.status).toBe("failed");
+      // 状态和退款在同一事务里：退款失败 → 状态一起回滚，还是 pending，下次还能重试。
+      expect((await usageRow(id)).status).toBe("pending");
+      expect(await refunds(userId)).toHaveLength(0);
+      expect(await credits.getBalance(userId)).toBe(30);
+    } finally {
+      refundSpy.mockRestore();
+    }
+
+    const second = await s.pollVideo({ userId, id });
+    expect(second.ok && second.job.status).toBe("failed");
+    expect((await usageRow(id)).status).toBe("failed");
+    expect(await refunds(userId)).toHaveLength(1);
+    expect(await credits.getBalance(userId)).toBe(50);
+  });
 });

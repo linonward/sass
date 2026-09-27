@@ -210,6 +210,23 @@ export function createVideoService({
     };
   }
 
+  /**
+   * 删掉 files 表里没人引用的对象。转存失败或撞上并发结算时，对象可能已经写进存储，
+   * 但对应的行没落成（回滚了、或按竞态删掉了）—— 不删就是永久的孤儿对象。
+   * 尽量做，失败只记日志，不影响本次查询的结果。
+   */
+  async function removeOrphanObject(storage: ObjectStorage, key: string) {
+    try {
+      const [row] = await getDb()
+        .select({ id: files.id })
+        .from(files)
+        .where(eq(files.key, key));
+      if (!row) await storage.delete(key);
+    } catch (error) {
+      logError("ai.video_cleanup_failed", { error, key });
+    }
+  }
+
   async function pollVideo({
     userId,
     id,
@@ -298,22 +315,25 @@ export function createVideoService({
         ? settleFailed("storage_unavailable")
         : pending;
     }
+    // key 由 ai_usage.id 决定：并发查询写的是同一个对象，files 按 key 去重。
+    const key = buildObjectKey({
+      userId,
+      mime: "video/mp4",
+      id,
+      now: usage.createdAt,
+    });
+    let stored = false;
     try {
       const response = await fetch(status.videoUrl);
       if (!response.ok) {
         throw new Error(`Failed to download video (${response.status})`);
       }
       const body = new Uint8Array(await response.arrayBuffer());
-      // key 由 ai_usage.id 决定：并发查询写的是同一个对象，files 按 key 去重。
-      const key = buildObjectKey({
-        userId,
-        mime: "video/mp4",
-        id,
-        now: usage.createdAt,
-      });
       await storage.putObject({ key, mime: "video/mp4", body });
-      const file = await getDb().transaction(async (tx) => {
-        await tx
+      stored = true;
+      const outcome = await getDb().transaction(async (tx) => {
+        // `.returning()` 用来分辨「这一行是不是本次插进去的」：竞态清理只能删自己建的行。
+        const inserted = await tx
           .insert(files)
           .values({
             userId,
@@ -322,19 +342,57 @@ export function createVideoService({
             mime: "video/mp4",
             status: "uploaded",
           })
-          .onConflictDoNothing({ target: files.key });
-        const [saved] = await tx.select().from(files).where(eq(files.key, key));
-        await tx
+          .onConflictDoNothing({ target: files.key })
+          .returning();
+        const created = inserted.length > 0;
+        const rows = created
+          ? inserted
+          : await tx.select().from(files).where(eq(files.key, key));
+        const saved = rows[0]!;
+        const claimed = await tx
           .update(aiUsage)
           .set({
             status: "succeeded",
-            fileId: saved!.id,
+            fileId: saved.id,
             durationMs: Math.max(0, Math.round(elapsed)),
             finishedAt: new Date(),
           })
-          .where(and(eq(aiUsage.id, id), eq(aiUsage.status, "pending")));
-        return saved!;
+          .where(and(eq(aiUsage.id, id), eq(aiUsage.status, "pending")))
+          .returning({ id: aiUsage.id });
+        if (claimed.length > 0) return { file: saved, created, claimed: true };
+
+        // 竞态：另一个并发查询（用户开两个标签页、连点刷新）已经把这条 usage 结算掉了。
+        // 这里必须按已定状态收场，不能还回「成功 + 视频地址」—— 否则用户视频和退款双拿。
+        const [current] = await tx
+          .select({ status: aiUsage.status, fileId: aiUsage.fileId })
+          .from(aiUsage)
+          .where(eq(aiUsage.id, id));
+        if (current?.status === "succeeded" && current.fileId) {
+          // 赢家也是一次转存（key 相同，只会有一行）：交回赢家的文件，别动它。
+          const [winner] = await tx
+            .select()
+            .from(files)
+            .where(eq(files.id, current.fileId));
+          if (winner) {
+            if (created && winner.id !== saved.id) {
+              await tx.delete(files).where(eq(files.key, key));
+            }
+            return { file: winner, created, claimed: true };
+          }
+        }
+        // 已按失败结算（款已退）：这次转存的记录不能留下。
+        if (created) await tx.delete(files).where(eq(files.key, key));
+        return { file: saved, created, claimed: false };
       });
+      if (!outcome.claimed) {
+        logError("ai.video_settled_elsewhere", {
+          usageId: id,
+          created: outcome.created,
+        });
+        // 本次写的对象已经没有行引用了，尽力删掉，避免孤儿。
+        if (outcome.created) await removeOrphanObject(storage, key);
+        return failed;
+      }
       logUsage({
         usageId: id,
         userId,
@@ -347,10 +405,11 @@ export function createVideoService({
         status: "succeeded",
         durationMs: elapsed,
       });
-      return { ok: true, job: await succeededJob(usage, file) };
+      return { ok: true, job: await succeededJob(usage, outcome.file) };
     } catch (error) {
       // 服务商的视频地址 24 小时后失效；超时之前都当作暂时性错误重试。
       logError("ai.video_store_failed", { error, usageId: id });
+      if (stored) await removeOrphanObject(storage, key);
       return elapsed > VIDEO_TIMEOUT_MS ? settleFailed(error) : pending;
     }
   }

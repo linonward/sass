@@ -84,7 +84,7 @@
 | T1200                       | review-cards            | `docs/review-cards`            | —                         | done |
 | T1201                       | video-timezone          | `fix/video-timezone`           | T1200                     | done |
 | T1202                       | refund-reclaim          | `fix/refund-reclaim`           | T1200                     | done |
-| T1203                       | video-settle-race       | `fix/video-settle-race`        | T1201                     | todo |
+| T1203                       | video-settle-race       | `fix/video-settle-race`        | T1201                     | done |
 | T1204                       | checkout-idempotency    | `fix/checkout-idempotency`     | T1200                     | todo |
 | T1205                       | favicon                 | `fix/favicon`                  | T1200                     | todo |
 | T1206                       | template-handoff        | `fix/template-handoff`         | T1200                     | todo |
