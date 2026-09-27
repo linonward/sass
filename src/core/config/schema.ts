@@ -565,6 +565,44 @@ export const acquisitionConfigSchema = z.strictObject({
     }),
 });
 
+// 组件 id：存进 `status_events.component` 的内部键。和展示名分开，
+// 改 label 不会让历史 incident 找不到组件。
+const statusComponentKeySchema = z
+  .string()
+  .regex(
+    /^[a-z][a-zA-Z0-9]{0,39}$/,
+    'must be a lowercase id such as "api" (letters and digits, starting with a letter)',
+  );
+
+// 系统状态页（/status）。手动模式由管理员在后台创建 incident；
+// 自动模式在页面渲染时探测 `healthUrl`（见 src/core/status/health.ts），
+// 连续失败到阈值才记为 degraded，探测成功会自动解决它开的那条 incident。
+export const statusPageSchema = z.strictObject({
+  // 关闭时 /status 返回 404、后台不出现入口。
+  enabled: z.boolean().default(false),
+  mode: z.enum(["manual", "auto"]).default("manual"),
+  // 展示在状态页上的服务清单。label 是给访客看的展示名（配置字面量，不进 messages）。
+  components: z
+    .record(
+      statusComponentKeySchema,
+      z.strictObject({
+        label: z.string().trim().min(1),
+        description: z.string().trim().min(1).optional(),
+        // 探测地址；不填的组件在 auto 模式下仍由管理员手动控制。
+        healthUrl: z
+          .string()
+          .regex(
+            /^https?:\/\//,
+            'must be an http(s) URL such as "https://example.com/health"',
+          )
+          .optional(),
+      }),
+    )
+    .default({}),
+  // 展示最近 N 天的 uptime 和 incident。
+  historyDays: z.number().int().min(1).max(365).default(30),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -612,10 +650,20 @@ export const siteConfigSchema = z
     acquisition: acquisitionConfigSchema.default(
       acquisitionConfigSchema.parse({}),
     ),
+    statusPage: statusPageSchema.default(statusPageSchema.parse({})),
     observability: observabilityConfigSchema.default(
       observabilityConfigSchema.parse({}),
     ),
   })
+  .refine(
+    (config) =>
+      !(config.statusPage.enabled && config.statusPage.mode === "auto") ||
+      config.features.observability,
+    {
+      message: "auto mode requires features.observability",
+      path: ["statusPage", "mode"],
+    },
+  )
   .refine(
     (config) =>
       !config.acquisition.referrals.enabled || config.features.credits,
@@ -682,6 +730,9 @@ export type ApiKeysConfig = SiteConfig["apiKeys"];
 export type UploadConfig = SiteConfig["upload"];
 export type AiConfig = SiteConfig["ai"];
 export type ObservabilityConfig = SiteConfig["observability"];
+export type StatusPageConfig = SiteConfig["statusPage"];
+export type StatusComponent = StatusPageConfig["components"][string];
+export type StatusPageMode = StatusPageConfig["mode"];
 export type AiModel = AiConfig["models"][number];
 export type AiProvider = (typeof aiProviders)[number];
 export type AiImageModel = AiConfig["imageModels"][number];

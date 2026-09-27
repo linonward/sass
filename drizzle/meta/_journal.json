@@ -141,6 +141,13 @@
       "when": 1811400000000,
       "tag": "0018_referral_rewards",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790522226214,
+      "tag": "0019_status_page",
+      "breakpoints": true
     }
   ]
 }

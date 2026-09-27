@@ -21,6 +21,7 @@ export const clientNamespaces = [
   "Leads",
   "Playground",
   "Referrals",
+  "Status",
   "Theme",
 ] as const;
 

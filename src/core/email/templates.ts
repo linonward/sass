@@ -20,6 +20,14 @@ import SignInCodeEmail, {
   signInCodeSubject,
   type SignInCodeProps,
 } from "./templates/sign-in-code";
+import StatusIncidentEmail, {
+  statusIncidentSubject,
+  type StatusIncidentProps,
+} from "./templates/status-incident";
+import StatusSubscriptionEmail, {
+  statusSubscriptionSubject,
+  type StatusSubscriptionProps,
+} from "./templates/status-subscription";
 import SubscriptionCanceledEmail, {
   subscriptionCanceledSubject,
   type SubscriptionCanceledProps,
@@ -65,6 +73,14 @@ export const emailTemplates = {
     Component: CreditsLowEmail,
     subject: creditsLowSubject,
   } satisfies TemplateDefinition<CreditsLowProps>,
+  "status-incident": {
+    Component: StatusIncidentEmail,
+    subject: statusIncidentSubject,
+  } satisfies TemplateDefinition<StatusIncidentProps>,
+  "status-subscription": {
+    Component: StatusSubscriptionEmail,
+    subject: statusSubscriptionSubject,
+  } satisfies TemplateDefinition<StatusSubscriptionProps>,
 };
 
 export type EmailTemplateName = keyof typeof emailTemplates;
@@ -77,6 +93,8 @@ export type EmailTemplateProps = {
   "payment-failed": PaymentFailedProps;
   "subscription-canceled": SubscriptionCanceledProps;
   "credits-low": CreditsLowProps;
+  "status-incident": StatusIncidentProps;
+  "status-subscription": StatusSubscriptionProps;
 };
 
 /** 按模板名取定义，props 类型随模板名收窄。 */

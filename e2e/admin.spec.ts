@@ -39,6 +39,7 @@ test("未登录访问 /admin 返回 404，不跳转登录页", async ({ page }) 
     "/admin/metrics",
     "/admin/acquisition",
     "/admin/api-keys",
+    "/admin/status",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
@@ -64,6 +65,7 @@ test("普通用户访问后台返回 404，侧边栏没有后台入口", async (
     "/admin/metrics",
     "/admin/acquisition",
     "/admin/api-keys",
+    "/admin/status",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
@@ -226,10 +228,13 @@ test.describe("管理员", () => {
     if (isMobile) {
       await admin.getByRole("button", { name: d.toggleSidebar }).click();
     }
-    // 五项：指标 / 用户 / API keys / 订单 / 订阅（API keys 由 site.config.ts 的
-    // apiKeys.enabled 开启；归因入口不在这五项里）。
+    // 六项：指标 / 状态页 / 用户 / API keys / 订单 / 订阅（状态页与 API keys 分别由
+    // site.config.ts 的 statusPage.enabled、apiKeys.enabled 开启；归因入口不在这六项里）。
     const nav = admin.getByRole("list", { name: d.adminNav });
-    await expect(nav.getByRole("link")).toHaveCount(5);
+    await expect(nav.getByRole("link")).toHaveCount(6);
+    await expect(
+      nav.getByRole("link", { name: d.nav.adminStatus }),
+    ).toHaveAttribute("href", "/admin/status");
     await expect(
       nav.getByRole("link", { name: d.nav.adminApiKeys }),
     ).toHaveAttribute("href", "/admin/api-keys");

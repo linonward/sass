@@ -9,5 +9,6 @@ export const marketingRoutes: readonly string[] = [
   "/",
   "/pricing",
   ...(siteConfig.acquisition.leads.enabled ? ["/waitlist"] : []),
+  ...(siteConfig.statusPage.enabled ? ["/status"] : []),
   ...Object.values(legalPages),
 ];
