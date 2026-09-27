@@ -3,6 +3,7 @@ import {
   CreditCardIcon,
   FileTextIcon,
   HouseIcon,
+  KeyRoundIcon,
   LayersIcon,
   SettingsIcon,
   SparklesIcon,
@@ -21,4 +22,5 @@ export const dashboardIconComponents: Record<DashboardIcon, LucideIcon> = {
   chart: ChartColumnIcon,
   users: UsersIcon,
   creditCard: CreditCardIcon,
+  key: KeyRoundIcon,
 };

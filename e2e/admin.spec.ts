@@ -9,9 +9,11 @@ import {
   signIn,
   uniqueEmail,
   useRandomIp,
+  withDatabase,
 } from "./auth-helpers";
 
 const ad = messages.Admin;
+const ak = messages.ApiKeys;
 const d = messages.Dashboard;
 
 /**
@@ -36,6 +38,7 @@ test("未登录访问 /admin 返回 404，不跳转登录页", async ({ page }) 
     "/admin/orders",
     "/admin/metrics",
     "/admin/acquisition",
+    "/admin/api-keys",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
@@ -60,6 +63,7 @@ test("普通用户访问后台返回 404，侧边栏没有后台入口", async (
     "/admin/subscriptions",
     "/admin/metrics",
     "/admin/acquisition",
+    "/admin/api-keys",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
@@ -222,12 +226,74 @@ test.describe("管理员", () => {
     if (isMobile) {
       await admin.getByRole("button", { name: d.toggleSidebar }).click();
     }
+    // 五项：指标 / 用户 / API keys / 订单 / 订阅（API keys 由 site.config.ts 的
+    // apiKeys.enabled 开启；归因入口不在这五项里）。
+    const nav = admin.getByRole("list", { name: d.adminNav });
+    await expect(nav.getByRole("link")).toHaveCount(5);
     await expect(
-      admin.getByRole("list", { name: d.adminNav }).getByRole("link"),
-    ).toHaveCount(4);
+      nav.getByRole("link", { name: d.nav.adminApiKeys }),
+    ).toHaveAttribute("href", "/admin/api-keys");
     await expect(
       admin.getByRole("link", { name: d.nav.adminAcquisition }),
     ).toHaveCount(0);
+  });
+
+  // 后台只看数量与时间：明文（库里根本没有）和哈希都不该出现在页面上。
+  test("API keys 后台页显示数量与最后使用时间，不含明文", async ({
+    browser,
+    isMobile,
+  }) => {
+    const ownerEmail = uniqueEmail("api-keys-owner");
+    const owner = await newSignedInPage(browser, ownerEmail);
+    await owner.goto("/api-keys");
+    await owner.getByTestId("api-key-create").click();
+    const form = owner.getByRole("dialog", { name: ak.create.title });
+    await form.getByTestId("api-key-name").fill("Admin view");
+    await form.getByRole("button", { name: ak.create.submit }).click();
+    const plaintext = await owner
+      .getByTestId("api-key-created-value")
+      .inputValue();
+    await owner.getByRole("button", { name: ak.create.done }).click();
+    // 用一次，让「最后使用」有值（记录发生在响应之后，所以等它落库）。
+    await owner.request.get("/api/api-keys/me", {
+      headers: { authorization: `Bearer ${plaintext}` },
+    });
+    const ownerId = await findUserId(ownerEmail);
+    await expect
+      .poll(
+        () =>
+          withDatabase(async (client) => {
+            const { rows } = await client.query<{ last_used_at: Date | null }>(
+              "select last_used_at from user_api_keys where user_id = $1",
+              [ownerId],
+            );
+            return rows[0]?.last_used_at ?? null;
+          }),
+        { timeout: 10_000 },
+      )
+      .not.toBeNull();
+    await owner.context().close();
+
+    await admin.goto("/admin/metrics");
+    if (isMobile) {
+      await admin.getByRole("button", { name: d.toggleSidebar }).click();
+    }
+    await admin
+      .getByRole("list", { name: d.adminNav })
+      .getByRole("link", { name: d.nav.adminApiKeys })
+      .click();
+    await expect(admin).toHaveURL("/admin/api-keys");
+    await expect(
+      admin.getByRole("heading", { level: 1, name: ad.apiKeys.title }),
+    ).toBeVisible();
+
+    const row = admin
+      .getByTestId("admin-api-key-owner")
+      .filter({ hasText: ownerEmail });
+    await expect(row.locator("td").nth(1)).toHaveText("1");
+    await expect(row.locator("td").nth(2)).toHaveText("1");
+    await expect(row.locator("td").nth(3)).not.toHaveText(ad.apiKeys.never);
+    expect(await admin.content()).not.toContain(plaintext);
   });
 
   // 产品面的横向溢出以前只测过营销首页（ui-shell）。后台是最容易溢出的地方：

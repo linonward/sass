@@ -37,6 +37,8 @@ export const config = {
   // metadata 路由必须在这里：它们注入的 URL 不带语言前缀（`/icon`、`/opengraph-image`），
   // 被 next-intl 改写成 `/<locale>/icon` 就成了 404 —— 标签页又变回空白。
   // `icon$` 锚到整段，免得把 `/icons` 这种普通页面也一起排除掉。
+  // `api/` 而不是 `api`：只排除 `/api/**` 接口，不然以 api 开头的页面路径（`/api-keys`）
+  // 会连语言前缀重写一起被跳过 —— 不带前缀访问时落到 `[locale] = "api-keys"`，页面变 404。
   matcher:
-    "/((?!api|trpc|_next|_vercel|opengraph-image|icon$|monitoring|.*\\..*).*)",
+    "/((?!api/|trpc|_next|_vercel|opengraph-image|icon$|monitoring|.*\\..*).*)",
 };
