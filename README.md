@@ -328,7 +328,7 @@ find src -name "loading.tsx" | wc -l   # 0
 grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提到 Suspense 不算）
 ```
 
-`src/` 里唯一提到 Suspense 的就是上面那条注释：`src/core/ai/playground-tabs.tsx` 用 `next/dynamic` + `loading` 给每个标签做客户端懒加载，所以上面的 grep 数的是手写的 JSX 标签。它和这一节说的路径无关 —— `/playground` 自己的 `notFound()`（`aiEnabled` 为 false 时，`src/app/[locale]/(app)/playground/page.tsx:40`）在渲染这个组件之前就抛了。
+`src/` 里唯一提到 Suspense 的就是上面那条注释：`src/core/ai/playground-tabs.tsx` 用 `next/dynamic` + `loading` 给每个标签做客户端懒加载，所以上面的 grep 数的是手写的 JSX 标签。这条边界只跟 `/playground` 自己有关（它自己的 `notFound()` 在 `aiEnabled` 为 false 时抛，`src/app/[locale]/(app)/playground/page.tsx:40`，在渲染这个组件之前）；本节说的 `/does-not-exist` 路径上没有 `<Suspense>`。
 
 在 `notFound()` 调用点的**上方**加 `loading.tsx` 或 `<Suspense>`，那条路径的 404 就变成 **200 软 404**：响应头已经发出去了，状态码改不了。文档（`.../file-conventions/loading.md`）：「The response body starts streaming when a Suspense fallback renders (for example, a `loading.tsx`) or when a Server Component suspends under a `Suspense` boundary. Place `notFound()` before those boundaries and before any `await` that may suspend.」之后只剩 Next 注入的 `<meta name="robots" content="noindex">` 兜底，爬虫会把它记成 soft 404。
 
