@@ -2,11 +2,15 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
 import { attributionSchema, isCurrent, type Attribution } from "./context";
+import { referralCodeSchema } from "./referrals/code";
 
 export const SOURCE_CHOICE_COOKIE = "source_preference";
 export const SOURCE_COOKIE = "acquisition_source";
 export const RETRY_COOKIE = "acquisition_registration";
 export const RETRY_SECONDS = 24 * 60 * 60;
+// 邀请上下文与渠道归因分开存：接受邀请不写 SOURCE_COOKIE，营销来源也不会写这里。
+export const REFERRAL_COOKIE = "acquisition_referral";
+export const REFERRAL_SECONDS = 30 * 24 * 60 * 60;
 export const cookieOptions = {
   path: "/",
   httpOnly: true,
@@ -25,6 +29,12 @@ const envelope = z.discriminatedUnion("purpose", [
     attribution: attributionSchema,
     userId: z.string().min(1).max(128),
     registeredAt: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    v: z.literal(1),
+    purpose: z.literal("referral"),
+    code: referralCodeSchema,
+    acceptedAt: z.number().int().nonnegative(),
   }),
 ]);
 type Envelope = z.infer<typeof envelope>;
@@ -61,6 +71,11 @@ export function readContext(
     const value = parsed.data;
     if (value.purpose === "source")
       return isCurrent(value.attribution, now) ? value : null;
+    if (value.purpose === "referral")
+      return value.acceptedAt <= now &&
+        now - value.acceptedAt < REFERRAL_SECONDS * 1000
+        ? value
+        : null;
     return value.registeredAt <= now &&
       now - value.registeredAt < RETRY_SECONDS * 1000 &&
       isCurrent(value.attribution, value.registeredAt)
@@ -78,6 +93,16 @@ export function sourceFromHeaders(
   if (readCookie(headers, SOURCE_CHOICE_COOKIE) === "declined") return null;
   const token = readContext(readCookie(headers, SOURCE_COOKIE), secret, now);
   return token?.purpose === "source" ? token.attribution : null;
+}
+export function referralFromHeaders(
+  headers: Headers | undefined,
+  secret: string,
+  now = Date.now(),
+): { code: string; acceptedAt: number } | null {
+  const token = readContext(readCookie(headers, REFERRAL_COOKIE), secret, now);
+  return token?.purpose === "referral"
+    ? { code: token.code, acceptedAt: token.acceptedAt }
+    : null;
 }
 export function readCookie(headers: Headers | undefined, name: string) {
   return headers

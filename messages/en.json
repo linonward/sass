@@ -313,7 +313,8 @@
       "adminUsers": "Users",
       "adminOrders": "Orders",
       "adminSubscriptions": "Subscriptions",
-      "example": "Taglines"
+      "example": "Taglines",
+      "referrals": "Referrals"
     },
     "userMenu": {
       "open": "Account menu",
@@ -797,6 +798,61 @@
       "description": "Remove your email, source information and consent record from this waitlist.",
       "button": "Remove my request",
       "done": "Your request has been removed."
+    }
+  },
+  "Referrals": {
+    "metaTitle": "Referrals",
+    "title": "Invite people",
+    "description": "Share your invite link. Anyone who opens it reads the invitation before they decide.",
+    "linkTitle": "Your invite link",
+    "linkDescription": "The link carries your personal invite code. It does not contain your account details.",
+    "linkLabel": "Invite link",
+    "code": "Invite code",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "copyManual": "Copy failed. The link is selected — press Ctrl/Cmd + C.",
+    "rewardsOff": "No invite rewards are enabled on this site. Accepting an invitation records who invited whom and nothing else.",
+    "invitedTitle": "Invitations you sent",
+    "invitedCount": "{count, plural, =0 {Nobody yet} one {# invitation accepted} other {# invitations accepted}}",
+    "invitedEmpty": "Nobody has signed up with your link yet.",
+    "invitedEmptyHint": "Share your link anywhere you like — nobody has to accept it first.",
+    "acceptedAt": "Accepted {date}",
+    "status": {
+      "awaiting_payment": "Awaiting their first payment"
+    },
+    "invitedByTitle": "You were invited",
+    "invitedByDescription": "Your account is linked to an invitation from another user. Status: {status}.",
+    "notInvitedTitle": "You signed up on your own",
+    "notInvitedDescription": "No invitation is linked to your account. You can still invite other people with the link above.",
+    "invite": {
+      "metaTitle": "Invitation",
+      "description": "Someone invited you to join. Read what it means, then decide whether to accept.",
+      "fromTitle": "{name} invited you",
+      "genericTitle": "You have an invitation",
+      "body": "Accepting stores the invitation in this browser for 30 days. If you create an account in that time, the person who invited you is recorded on your account.",
+      "termsTitle": "What accepting means",
+      "termsVoluntary": "Accepting is optional. You can decline, or clear the invitation later on this page. Declining does not affect your account.",
+      "termsIdentity": "The link is the only thing we store. We never show your email address to the person who invited you.",
+      "rewardsOff": "This site has no invite rewards enabled, so accepting does not promise points, credit, or anything else.",
+      "accept": "Accept invitation",
+      "decline": "Decline",
+      "acceptedTitle": "Invitation accepted",
+      "acceptedBody": "This invitation applies when you create a new account in this browser within 30 days.",
+      "acceptedCta": "Create an account",
+      "declined": "Invitation declined. Nothing was stored.",
+      "otherTitle": "You already accepted another invitation",
+      "otherBody": "The first invitation you accepted stays in effect. Clear it first if you want to use this one instead.",
+      "clear": "Clear the accepted invitation",
+      "signedInTitle": "You are already signed in",
+      "signedInBody": "Invitations are recorded when a new account is created, so this one cannot be added to your existing account.",
+      "selfTitle": "This is your own invite link",
+      "selfBody": "Share it with someone who has not created an account yet.",
+      "boundTitle": "Your account already has an invitation",
+      "boundBody": "An account can be linked to one invitation only, and the link cannot be changed.",
+      "invalidTitle": "This invite link is not valid",
+      "invalidBody": "The link may be incomplete or mistyped, or the invitation may no longer be available.",
+      "error": "We could not complete your request. Please try again.",
+      "back": "Back to home"
     }
   }
 }

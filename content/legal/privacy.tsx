@@ -91,6 +91,28 @@ export default defineLegalDocument({
           </p>
         </>
       )}
+      {siteConfig.acquisition.referrals.enabled && (
+        <>
+          <h3>Invitations</h3>
+          <p>
+            If you open an invite link and accept it, we store the invite code
+            and the time you accepted in a first-party cookie for 30 days. You
+            can decline, or clear an accepted invitation, on the invite page
+            without affecting your account. The link contains a random code only
+            — no email address, name or account identifier.
+          </p>
+          <p>
+            When you create a new account within those 30 days, we record on
+            your account that you were invited by the account that owns that
+            code. This record cannot be changed afterwards, and creating an
+            account is the only moment it is written. Invite credentials are
+            kept separately from campaign sources and are never shown to the
+            person who invited you; they see only that an invitation was
+            accepted and its status. Deleting your account removes your invite
+            code and invitation record.
+          </p>
+        </>
+      )}
       <h3>Payment information</h3>
       <p>
         Payments are processed by our reseller and Merchant of Record, Creem. We
