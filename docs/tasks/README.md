@@ -82,7 +82,7 @@
 | T1101                       | one-tap                 | `feat/one-tap`                 | T203                      | done |
 | **阶段 12：第三轮审查修复** |                         |                                |                           |      |
 | T1200                       | review-cards            | `docs/review-cards`            | —                         | done |
-| T1201                       | video-timezone          | `fix/video-timezone`           | T1200                     | todo |
+| T1201                       | video-timezone          | `fix/video-timezone`           | T1200                     | done |
 | T1202                       | refund-reclaim          | `fix/refund-reclaim`           | T1200                     | todo |
 | T1203                       | video-settle-race       | `fix/video-settle-race`        | T1201                     | todo |
 | T1204                       | checkout-idempotency    | `fix/checkout-idempotency`     | T1200                     | todo |
@@ -119,7 +119,7 @@
 
 阶段 11 只有一个任务（见 [phase-11-one-tap.md](phase-11-one-tap.md)）：登录页加 Google One Tap。它不改登录能力本身，只把「跳去 Google 再跳回来」压缩成「点一下头像」；没配 Google 凭据时行为与现在完全一致。
 
-阶段 12 分四批（见 [phase-12-review.md](phase-12-review.md)）：批次 A（T1201–T1204）结算加固 —— 本轮唯一 high 加退款/结算的资损路径；批次 B（T1205–T1209）交付闭环；批次 C（T1210–T1214）体验与防线；批次 D（T1215–T1218）可后置。批次内基本可并行，唯一的硬顺序是 T1203 在 T1201 之后（同改 `src/core/ai/video.ts`，先把时间基准钉死再修竞态）。T1204 自带一步 Creem test mode 实测，`requestId` 幂等语义的结论决定之后改多少。本轮审查结论与「明确不修 / 待定」清单写在 phase-12 文档开头。
+阶段 12 分四批（见 [phase-12-review.md](phase-12-review.md)）：批次 A（T1201–T1204）结算加固 —— 退款/结算的资损路径加一条环境正确性（T1201 的会话时区，落卡时实测把原 high 论断推翻并重新定性）；批次 B（T1205–T1209）交付闭环；批次 C（T1210–T1214）体验与防线；批次 D（T1215–T1218）可后置。批次内基本可并行，唯一的硬顺序是 T1203 在 T1201 之后（同改 `src/core/ai/video.ts`）。T1204 自带一步 Creem test mode 实测，`requestId` 幂等语义的结论决定之后改多少。本轮审查结论与「明确不修 / 待定」清单写在 phase-12 文档开头。
 
 阶段 7 分两个语域做：T605 是**营销面 + 设计基础**，T606 是**登录后产品面 + 后台**，T607 收尾剩下的营销侧细节页（blog 列表卡片与文章页、legal、404）和那几处还没换成 `--primary-text` 的链接。（2026-09-26 错误路径审计给 T607 补了两条：错误页 CTA 用错语域、h1 未用 display 字体。）
 

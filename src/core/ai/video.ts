@@ -249,6 +249,7 @@ export function createVideoService({
       ok: true as const,
       job: { id, status: "failed" as const },
     };
+    // createdAt 由 drizzle 的列映射按 UTC 解析（客户端保证会话时区也是 UTC，见 core/db/client.ts）。
     const elapsed = now() - usage.createdAt.getTime();
     const settleFailed = async (error: unknown) => {
       await settleUsage(usageDeps, {
