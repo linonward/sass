@@ -4,6 +4,10 @@ import { hasLocale } from "next-intl";
 import type { Database } from "@/core/db";
 import { billingCustomers, orders, subscriptions } from "@/core/db/schema";
 import { routing } from "@/core/i18n/routing";
+import type {
+  RateLimitIdentifiers,
+  RateLimitResult,
+} from "@/core/ratelimit/limiter";
 import { localizedPath } from "@/core/seo/urls";
 
 import { getPlan } from "./plans";
@@ -24,16 +28,23 @@ export type BillingError =
   | "plan_not_configured"
   | "already_subscribed"
   | "already_purchased"
-  | "no_customer";
+  | "no_customer"
+  | "rate_limited";
 
 export type BillingResult =
   | { ok: true; url: string }
-  | { ok: false; error: BillingError; status: number };
+  // rate_limited 带 retryAfter（秒），路由用它写 Retry-After 响应头。
+  | { ok: false; error: BillingError; status: number; retryAfter?: number };
 
-const fail = (error: BillingError, status: number): BillingResult => ({
+const fail = (
+  error: BillingError,
+  status: number,
+  retryAfter?: number,
+): BillingResult => ({
   ok: false,
   error,
   status,
+  ...(retryAfter ? { retryAfter } : {}),
 });
 
 /**
@@ -49,6 +60,8 @@ export async function startCheckout({
   planId,
   locale,
   origin,
+  ip,
+  checkRateLimit,
   now = new Date(),
 }: {
   db: Database;
@@ -58,6 +71,11 @@ export async function startCheckout({
   locale: unknown;
   /** 站点根地址，例如 https://example.com。 */
   origin: string;
+  ip?: string | null;
+  checkRateLimit: (
+    policy: string,
+    identifiers: RateLimitIdentifiers,
+  ) => Promise<RateLimitResult>;
   now?: Date;
 }): Promise<BillingResult> {
   if (!provider) return fail("billing_not_configured", 503);
@@ -70,6 +88,17 @@ export async function startCheckout({
     PLACEHOLDER_PRODUCT.test(plan.providerProductId)
   ) {
     return fail("plan_not_configured", 503);
+  }
+
+  // 每次调用都会在服务商侧真实建单，先限流再往下走（放在参数校验之后：
+  // 非法套餐不消耗额度，免得把同一用户的正常结账误伤掉）。
+  const limit = await checkRateLimit("checkout", { userId: user.id, ip });
+  if (!limit.ok) {
+    return fail(
+      "rate_limited",
+      limit.reason === "limited" ? 429 : 503,
+      limit.retryAfter,
+    );
   }
 
   if (plan.type === "subscription") {

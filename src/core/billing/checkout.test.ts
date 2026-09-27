@@ -20,6 +20,10 @@ import {
   subscriptions,
   user,
 } from "@/core/db/schema";
+import type {
+  RateLimitIdentifiers,
+  RateLimitResult,
+} from "@/core/ratelimit/limiter";
 
 import { billingOrigin, openPortal, startCheckout } from "./checkout";
 import { FakeProvider } from "./testing/fake-provider";
@@ -74,7 +78,14 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
 
   const checkout = (
     planId: unknown,
-    extra: { locale?: string; provider?: FakeProvider | null } = {},
+    extra: {
+      locale?: string;
+      provider?: FakeProvider | null;
+      checkRateLimit?: (
+        policy: string,
+        identifiers: RateLimitIdentifiers,
+      ) => Promise<RateLimitResult>;
+    } = {},
   ) =>
     startCheckout({
       db: client.db,
@@ -83,6 +94,8 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
       planId,
       locale: extra.locale,
       origin,
+      checkRateLimit:
+        extra.checkRateLimit ?? (async () => ({ ok: true, retryAfter: 0 })),
       now: new Date("2026-06-01T00:00:00Z"),
     });
 
@@ -198,6 +211,45 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     await expect(checkout("lifetime")).resolves.toMatchObject({
       error: "already_purchased",
       status: 409,
+    });
+  });
+
+  test("限流：超过阈值返回 429 + retryAfter，不再建结账会话", async () => {
+    const limitAfter = 2;
+    let calls = 0;
+    const checkRateLimit = async (): Promise<RateLimitResult> =>
+      ++calls > limitAfter
+        ? { ok: false, reason: "limited", retryAfter: 7 }
+        : { ok: true, retryAfter: 0 };
+
+    await expect(checkout("pro", { checkRateLimit })).resolves.toMatchObject({
+      ok: true,
+    });
+    await expect(checkout("pro", { checkRateLimit })).resolves.toMatchObject({
+      ok: true,
+    });
+    // 第 N+1 次：拒绝，且不落到服务商（fake.checkouts 只有前两次）。
+    await expect(checkout("pro", { checkRateLimit })).resolves.toEqual({
+      ok: false,
+      error: "rate_limited",
+      status: 429,
+      retryAfter: 7,
+    });
+    expect(fake.checkouts).toHaveLength(limitAfter);
+
+    // Redis 不可用（failMode: closed）时是 503，同样带 retryAfter。
+    const unavailable = await checkout("pro", {
+      checkRateLimit: async () => ({
+        ok: false,
+        reason: "unavailable",
+        retryAfter: 3,
+      }),
+    });
+    expect(unavailable).toEqual({
+      ok: false,
+      error: "rate_limited",
+      status: 503,
+      retryAfter: 3,
     });
   });
 

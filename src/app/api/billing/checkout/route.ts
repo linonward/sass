@@ -2,6 +2,7 @@ import { auth } from "@/core/auth/server";
 import { billingOrigin, startCheckout } from "@/core/billing/checkout";
 import { getBillingProvider } from "@/core/billing/providers";
 import { getDb } from "@/core/db";
+import { checkRateLimit, getClientIp } from "@/core/ratelimit";
 
 import siteConfig from "../../../../../site.config";
 
@@ -24,8 +25,17 @@ export async function POST(request: Request) {
     planId: body?.planId,
     locale: body?.locale,
     origin: billingOrigin(request, process.env, siteConfig.domain),
+    ip: getClientIp(request.headers),
+    checkRateLimit,
   });
-  return result.ok
-    ? Response.json({ url: result.url })
-    : Response.json({ error: result.error }, { status: result.status });
+  if (result.ok) return Response.json({ url: result.url });
+  return Response.json(
+    { error: result.error },
+    {
+      status: result.status,
+      ...(result.retryAfter && {
+        headers: { "retry-after": String(result.retryAfter) },
+      }),
+    },
+  );
 }
