@@ -180,8 +180,9 @@ ShipFast 的早期 traction 很大程度上来自 Product Hunt。我们需要：
 
 本策略不影响已完成的阶段 1–14。具体执行拆入后续阶段：
 
-- 阻塞缺口（审核指南、演示站打磨、上手时间验证）→ 入 **阶段 15（上线准备）**
-- 内容营销物料（博文、教程、PH 素材）→ 入 **阶段 16（内容与分发）**
+- **差异化补齐**（用户 API Key、Feature Flags、内置 Changelog、System Status Page）→ 入 **阶段 15**，见 [tasks/phase-15-differentiation.md](tasks/phase-15-differentiation.md)
+- 阻塞缺口（审核指南、演示站打磨、上手时间验证）→ 上线前补齐。原先写作「阶段 15（上线准备）」，该编号现已改作差异化补齐，这几项不再单独立卡
+- 内容营销物料（博文、教程、PH 素材）→ 上线后推进。原先写作「阶段 16（内容与分发）」，该编号现已改作合入后审查收口（见 [tasks/phase-16-postmerge.md](tasks/phase-16-postmerge.md)）
 - Stripe 适配器 → 保持"v1 不做"，但公开路线图
 - 英文化文档 → 评估后决定是否入 v1 范围
 
