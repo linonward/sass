@@ -539,8 +539,12 @@ grep -rn "Suspense" src/ | wc -l       # 0
 
 不用 Vercel 时，生产闸门由 `NODE_ENV=production` 触发 —— 邮件只允许 Resend、`SKIP_ENV_VALIDATION` 失效、fake 支付与占位哨兵都在构建期拦人，判断逻辑和 Vercel 上完全一样。所以：
 
-- 用 `pnpm build` + `pnpm start` 跑（或打包成 Docker），别用 `pnpm dev`；启动前先 `pnpm db:migrate`。
+- 用 `pnpm build` + `pnpm start` 跑，别用 `pnpm dev`；启动前先 `pnpm db:migrate`。
 - 环境变量照上面「环境变量」一节配齐；没有 Vercel 的自动推断，`BETTER_AUTH_URL` 要自己填成对外地址。
+- **仓库不带 Dockerfile，容器化要自己接**（出厂配置是给 Vercel 的，`next.config.ts` 没有 `output: "standalone"`）。Next 官方有现成的 [`with-docker` 示例](https://github.com/vercel/next.js/tree/canary/examples/with-docker) 可以抄，接的时候注意三点：
+  - **`output: "standalone"` 得自己加。** 产物在 `.next/standalone`，容器里跑 `node server.js` 而不是 `next start`，并且**显式设 `HOSTNAME=0.0.0.0`** —— Docker 默认把 `HOSTNAME` 设成容器 ID，`server.js` 拿它当监听地址，不设就直接起不来（`EADDRNOTAVAIL`）。`public/` 和 `.next/static` 不在产物里，要自己拷进去才会被伺服。
+  - **`pnpm db:migrate` 别指望在镜像里跑。** 迁移用的是 `drizzle-kit`（devDependency），standalone 产物只带生产依赖，迁移目录也不在里面。把迁移做成应用启动前独立的一步：同一个镜像里另装 devDependencies，或者直接用仓库 checkout 跑。
+  - **构建期和运行期要用同一套环境变量。** `next build` 在 `NODE_ENV=production` 下强制校验必填项，缺一个就构建失败；`GOOGLE_CLIENT_ID` 和 `R2_PUBLIC_URL` 还会被写进 CSP 白名单（见上面「环境变量」）。只在运行时注入这两项，登录页的 One Tap 和 R2 的图片会被 CSP 静默拦掉。
 - **限流必须有 Redis，否则生产环境直接拒绝请求。** 自托管时没有 Vercel 那套变量校验兜底，漏配 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` 的部署**不会**静默放行：AI、上传和结账接口统一返回 503（`{"error":"unavailable"}`，带 `Retry-After: 30`），启动日志里也有一条 error 级的 `ratelimit.unconfigured`（开着 Sentry 时同样会上报）。要么按上面「限流（Upstash）」配好这两个变量，要么明确接受「这个部署不做限流」—— 后者设 `ALLOW_UNRATELIMITED=1`，此时请求照常放行，启动日志里降为一条 warn。本地开发、CI 和 Vercel 预览不受影响，照旧跳过限流。
 - **时间一律按 UTC 处理。** 库里所有 `timestamp` 列都按 UTC 墙钟存取：客户端连接时会把**会话时区**强制成 UTC（`src/core/db/client.ts`，Neon 本来就是 UTC），`defaultNow()` 这类数据库侧默认值因此不会受服务器时区影响。自建 Postgres 时不用再自己确认服务器时区 —— 会话时区不是 UTC 的话，`defaultNow()` 写进去的时间会被整体读偏（+8 就是 8 小时，视频任务的超时判定、后台统计窗口都会算错）。
 
