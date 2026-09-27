@@ -5,7 +5,7 @@ import {
   type AfterCommitCallback,
   type Credits,
 } from "@/core/credits";
-import type { Database } from "@/core/db/client";
+import type { Database, DbTransaction } from "@/core/db/client";
 import {
   aiUsage,
   type AiUsageKind,
@@ -172,17 +172,20 @@ export async function settleUsage(
     onlyIfPending?: boolean;
   },
 ): Promise<boolean> {
-  const refund = () =>
+  const refund = (tx: DbTransaction) =>
     status === "failed" && model.creditCost > 0
-      ? credits.refundCredits({
-          userId,
-          source: AI_CREDIT_SOURCE,
-          sourceId: usageId,
-          reason: `ai_failed:${model.id}`,
-        })
+      ? credits.refundCredits(
+          {
+            userId,
+            source: AI_CREDIT_SOURCE,
+            sourceId: usageId,
+            reason: `ai_failed:${model.id}`,
+          },
+          { tx },
+        )
       : undefined;
-  const update = () =>
-    db()
+  const update = (executor: Database | DbTransaction) =>
+    executor
       .update(aiUsage)
       .set({
         status,
@@ -200,14 +203,20 @@ export async function settleUsage(
       )
       .returning({ id: aiUsage.id });
   try {
-    if (onlyIfPending) {
-      // 先抢到状态再退款，并发时只有一个请求会退。
-      if ((await update()).length === 0) return false;
-      await refund();
-    } else {
-      await refund();
-      await update();
-    }
+    // 状态和退款必须在同一个事务里。onlyIfPending 先抢状态是为了并发去重，但退款若在
+    // 事务外失败，会留下「已终态、钱没退」的行 —— 后续查询直接返回终态，没有重试入口。
+    // 一起回滚，下一次查询还能重来。
+    const settled = await db().transaction(async (tx) => {
+      if (onlyIfPending) {
+        if ((await update(tx)).length === 0) return false;
+        await refund(tx);
+      } else {
+        await refund(tx);
+        await update(tx);
+      }
+      return true;
+    });
+    if (!settled) return false;
     logUsage({
       usageId,
       userId,
