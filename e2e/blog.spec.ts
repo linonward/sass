@@ -75,6 +75,13 @@ test("标签页列出带该标签的文章，未知标签 404", async ({ page })
   await expect(page).toHaveURL(`/blog/tags/${post.tag}`);
   await expect(page.getByRole("link", { name: post.title })).toBeVisible();
 
+  // 标签页在 sitemap 里，所以必须真的可收录：canonical 自指、没有 meta robots。
+  await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${origin}/blog/tags/${post.tag}`,
+  );
+  await expect(page.locator('head meta[name="robots"]')).toHaveCount(0);
+
   const response = await page.goto("/blog/tags/no-such-tag");
   expect(response?.status()).toBe(404);
 });
@@ -90,7 +97,24 @@ test("RSS 和 sitemap 包含文章", async ({ request }) => {
   const map = await (await request.get("/sitemap.xml")).text();
   expect(map).toContain(`<loc>${origin}/blog</loc>`);
   expect(map).toContain(`<loc>${origin}/blog/${post.slug}</loc>`);
+  // 标签页（以及有第二页时的 /blog/page/<n>、/blog/tags/<tag>/page/<n>）也收录。
+  expect(map).toContain(`<loc>${origin}/blog/tags/${post.tag}</loc>`);
   expect(map).not.toContain(draft);
+});
+
+test("sitemap 列出的博客 URL 都能打开", async ({ request }) => {
+  // 收录 ⇔ 有页面：sitemap 里的条目不能有 404（列表页、标签页、翻页都算）。
+  const map = await (await request.get("/sitemap.xml")).text();
+  const urls = [...map.matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((match) => match[1]!)
+    .filter((url) => url.includes("/blog"));
+  expect(urls.length).toBeGreaterThan(0);
+
+  for (const url of urls) {
+    // <loc> 是站点域名下的绝对地址，这里换成对本地 server 的相对路径。
+    const response = await request.get(new URL(url).pathname);
+    expect(response.status(), url).toBe(200);
+  }
 });
 
 test("生产构建里草稿返回 404", async ({ page, request }) => {

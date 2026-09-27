@@ -16,7 +16,16 @@ export const feedPath = "/blog/rss.xml";
 export const postPath = (slug: string) => `${blogPath}/${slug}`;
 /** 文章分享图（src/app/[locale]/(marketing)/blog/[slug]/og/route.tsx）。 */
 export const postOgPath = (slug: string) => `${postPath(slug)}/og`;
-export const tagPath = (tag: string) => `${blogPath}/tags/${tag}`;
+/**
+ * 标签页的站内路径。标签来自 frontmatter，可能含非 ASCII（`中文`）或 `/`，所以拼 URL
+ * 的这一层做编码：canonical、og、sitemap、llms.txt 和内链都从这里取，编码只有一份。
+ *
+ * 编的是 URL，不是路由参数 —— `[tag]` 拿到的 params 已经过 Next 解码
+ * （`/blog/tags/%E4%B8%AD%E6%96%87` 对应 `tag === "中文"`），`generateStaticParams`
+ * 返回的也是原值，用 `tagPath()` 的结果去查文章会查不到。
+ */
+export const tagPath = (tag: string) =>
+  `${blogPath}/tags/${encodeURIComponent(tag)}`;
 /** 列表的第 n 页。第 1 页就是列表本身，不带 /page/1。 */
 export const pagePath = (base: string, page: number) =>
   page === 1 ? base : `${base}/page/${page}`;
@@ -62,9 +71,28 @@ export function blogLocales(): string[] {
   );
 }
 
-/** 某语言下用到的全部标签，按字母排序。 */
-export function getTags(locale: string): string[] {
-  return [...new Set(getPosts(locale).flatMap((post) => post.tags))].sort();
+/**
+ * 列表页（`/blog` 和它的翻页）声明 hreflang 的语言：第 1 页列出所有有文章的语言，
+ * 翻页后的页码在各语言间不对应，只列当前语言。
+ *
+ * 页面 metadata（pages.tsx 的 blogIndexMetadata）和 sitemap 共用这一条，两边才不会
+ * 各说各话 —— 标签页是例外，各语言的标签集合不同，始终只列当前语言。
+ */
+export function listLocales(locale: string, page: number): string[] {
+  return page === 1 ? blogLocales() : [locale];
+}
+
+/**
+ * 某语言下用到的全部标签，按字母排序。sitemap 传 `drafts: false`：只有草稿用到的标签
+ * 在生产里没有页面（路由的 generateStaticParams 也收不到它）。
+ */
+export function getTags(
+  locale: string,
+  options?: { drafts?: boolean },
+): string[] {
+  return [
+    ...new Set(getPosts(locale, options).flatMap((post) => post.tags)),
+  ].sort();
 }
 
 export function getPostsByTag(locale: string, tag: string): Post[] {

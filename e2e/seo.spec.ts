@@ -72,14 +72,34 @@ test("sitemap.xml 列出首页", async ({ request }) => {
   );
 });
 
-test("robots.txt 禁止抓取私有路径并指向 sitemap", async ({ request }) => {
+test("robots.txt 只挡机器端点 /api 并指向 sitemap", async ({ request }) => {
   const response = await request.get("/robots.txt");
   expect(response.status()).toBe(200);
   const text = await response.text();
-  for (const path of ["/api", "/dashboard", "/admin"]) {
-    expect(text).toContain(`Disallow: ${path}\n`);
-  }
+  expect(text).toContain("Disallow: /api\n");
   expect(text).toContain(`Sitemap: ${origin}/sitemap.xml`);
+});
+
+test("dashboard / admin 不进 robots，靠页面自己的 noindex 排除", async ({
+  page,
+  request,
+}) => {
+  // 两套封锁叠在一起是互相抵消：Disallow 挡住的路径爬虫抓不到，也就读不到页面上的
+  // meta noindex，有外链时反而可能以裸 URL 出现在结果里。留 noindex（页面侧在
+  // dashboard/page.tsx 和 admin/metadata.ts），robots 只留 /api 这种没有 HTML 的端点。
+  const text = await (await request.get("/robots.txt")).text();
+  for (const path of ["/dashboard", "/admin"]) {
+    expect(text).not.toContain(`Disallow: ${path}\n`);
+  }
+
+  // 爬虫抓 /dashboard 拿到的是 307 + 同样 noindex 的登录页，没有可收录的内容。
+  const response = await page.goto("/dashboard");
+  expect(response?.status()).toBe(200);
+  await expect(page).toHaveURL(/\/sign-in/);
+  await expect(page.locator('head meta[name="robots"]')).toHaveAttribute(
+    "content",
+    "noindex, nofollow",
+  );
 });
 
 test("llms.txt 是给 agent 的站点索引", async ({ request }) => {
