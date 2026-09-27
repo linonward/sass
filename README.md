@@ -305,6 +305,19 @@ ALLOW_DB_SEED=1 pnpm db:seed   # 幂等，重复执行不会重复插入
 
 CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test → build → e2e 顺序执行。
 
+### 收入口径
+
+`/admin/metrics` 和 `/admin/acquisition` 用同一份收入口径：条件只有一处定义，在 `src/core/admin/metrics.ts` 顶部（`collectedStatuses` / `recognizedOrder` / `orderNet` / `hasPositiveNet`），两个模块都从那里取，不各自再写一遍。
+
+- **计入收入**：状态是 `paid` / `partially_refunded` / `refunded`（有过实际收款）**且金额已知**（`orders.amount` 不为空）。金额未知的是「付款事件还没补齐」的占位订单（典型是退款先到），金额不可信，既不算收入也不算付费人数。
+- **净收入**：计入收入的订单按币种累计 `amount − refunded_amount`；退款按查询时的累计值扣，所以历史区间的数字会随后续退款变化。全额退款后净收入为 0 的币种不列出来。
+- **付费人数**：区间内至少有一笔净收入为正的订单的用户数（去重）。全额退款的不算付费；同一用户多笔（含续费）只算一个。
+- **待核对**（只有报表有这一列）：状态是收款、但金额未知的订单，按币种列出已经退掉的金额；金额未知又还没退款的订单列 0 —— 0 表示「还没有退款」，不表示这笔订单已经结清。这些金额不进收入。
+
+同一区间上两页的净收入和付费人数因此相等：报表按注册时冻结的来源分行，逐行相加就是 metrics 的总数（这条对照写在库集成测试里）。唯一的差异是币种分组 —— 报表按订单里存的原样分组（`usd` 和 `USD` 会是两行），metrics 统一成大写、NULL 回退到 `site.config.ts` 的 `billing.currency`。
+
+累计金额超过 `int4` 上限（21 亿分）时照常显示：聚合在 SQL 里按 `bigint` 读出，不会让后台整页 500。
+
 ## 错误与权限的边界
 
 四条容易被当成 bug 的边界：前两条是刻意的设计，后两个是改一行就可能静默改变状态码的陷阱。依据都写在里面，可以自己验证。

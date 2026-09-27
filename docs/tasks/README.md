@@ -120,7 +120,7 @@
 | T1504                       | status-page             | `feat/status-page`             | T1500, T601, T202, T502       | done |
 | **阶段 16：合入后审查收口** |                         |                                |                               |      |
 | T1600                       | postmerge-followups     | `docs/postmerge-followups`     | —                             | done |
-| T1601                       | report-money            | `fix/report-money`             | —                             | todo |
+| T1601                       | report-money            | `fix/report-money`             | —                             | done |
 | T1602                       | report-perf             | `fix/report-perf`              | T1601                         | todo |
 | T1603                       | report-ui               | `fix/report-ui`                | —                             | todo |
 | T1604                       | referral-fixes          | `fix/referral-fixes`           | —                             | todo |

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { mergeRows, parseReportFilters } from "./report";
+import { mergeRows, NO_SOURCE_BUCKET, parseReportFilters } from "./report";
 
 describe("parseReportFilters", () => {
   test("接受快照里可能出现的来源：utm 值、外部域名、direct 和 unknown", () => {
@@ -19,6 +19,12 @@ describe("parseReportFilters", () => {
     expect(parseReportFilters({ medium: "email", campaign: "spring" })).toEqual(
       { medium: "email", campaign: "spring" },
     );
+  });
+
+  test("合成桶也接受：它是表格里的一行，筛选框必须能选它", () => {
+    expect(parseReportFilters({ source: NO_SOURCE_BUCKET })).toEqual({
+      source: NO_SOURCE_BUCKET,
+    });
   });
 
   test("不在白名单里的值当作没传，不带进查询", () => {

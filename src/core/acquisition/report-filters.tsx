@@ -4,7 +4,11 @@ import { cn } from "@/core/lib/utils";
 import { Button } from "@/core/ui/button";
 import { Label } from "@/core/ui/label";
 
-import type { FilterOptions, ReportFilters as FilterValues } from "./report";
+import {
+  NO_SOURCE_BUCKET,
+  type FilterOptions,
+  type ReportFilters as FilterValues,
+} from "./report";
 
 /**
  * 渠道筛选：GET 表单，取值在 URL 里（可分享、可刷新），服务端按 context.ts 的
@@ -17,12 +21,17 @@ const selectClass = cn(
   "border-border focus-visible:border-ring focus-visible:ring-ring/50 h-8 min-w-40 rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:ring-3",
 );
 
-/** unknown / direct 是口径里的两个桶，显示成文案里的名字，其他取值原样显示。 */
+/**
+ * 合成桶（没有归因行 / 已撤回）显示成文案里的名字；快照里的取值原样显示 —— 真的把
+ * utm_source 填成 unknown 的流量是独立的一行，不能和「没有归因」显示成同一个词。
+ * direct 是快照里真实存在的一个取值（没有营销来源的访问），照旧给它文案里的名字。
+ */
 export function sourceLabel(
   value: string,
   labels: { unknown: string; direct: string },
 ) {
-  return value === "unknown" || value === "direct" ? labels[value] : value;
+  if (value === NO_SOURCE_BUCKET) return labels.unknown;
+  return value === "direct" ? labels.direct : value;
 }
 
 export function ReportFilters({
