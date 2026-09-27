@@ -79,6 +79,26 @@ exports[`sitemap > 营销路由 × 语言，带 hreflang 1`] = `
   {
     "alternates": {
       "languages": {
+        "de": "https://<domain>/de/changelog",
+        "en": "https://<domain>/changelog",
+        "x-default": "https://<domain>/changelog",
+      },
+    },
+    "url": "https://<domain>/changelog",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://<domain>/de/changelog",
+        "en": "https://<domain>/changelog",
+        "x-default": "https://<domain>/changelog",
+      },
+    },
+    "url": "https://<domain>/de/changelog",
+  },
+  {
+    "alternates": {
+      "languages": {
         "de": "https://<domain>/de/privacy",
         "en": "https://<domain>/privacy",
         "x-default": "https://<domain>/privacy",

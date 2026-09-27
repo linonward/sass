@@ -117,7 +117,7 @@ pnpm dev                 # http://localhost:3000
   - `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分。`providerProductId` 还是占位值时该套餐不能结账（接口返回 `plan_not_configured`），在 Creem 建好产品后替换成真实 ID
   - `email`：发件人名称和地址（域名要在 Resend 验证）
   - `ai.models`：开启 AI 时的模型和每次调用的积分成本
-- `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`public/`：你自己的 logo 图与 Hero 图（Hero 图要配 `landing.hero.image` 才用得上）。
+- `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`content/changelog/`：更新日志条目（`changelog.enabled` 开启时）；`public/`：你自己的 logo 图与 Hero 图（Hero 图要配 `landing.hero.image` 才用得上）。
 - 标签页图标：出厂的内置标记跟上面的 `brand.primaryColor` 走，在构建期生成（几何和顶栏的内置标记共用一份，见 `src/core/seo/favicon.tsx`），换主色就跟着变，不用管。想换成自己的图标：把 `icon.svg`（或 `icon.png`）放进 `src/app/`，并**删掉 `src/app/icon.tsx`** —— 换完就按你自己的文件来：地址变成那个文件的路径（`/icon.svg`），也不再跟主色走，颜色得画在文件里。两个同名的 icon 文件会各生成一个 `<link rel="icon">`，浏览器挑哪个不保证。
 - 示例业务模块 `src/features/example/`（一个扣积分的宣传语生成器）演示了业务代码怎么调用 `runAI`、`deductCredits`，以及怎么在 `dashboard.nav` 里加菜单。看完后删掉：`src/features/example/`、`src/app/[locale]/(app)/example/`、`e2e/example.spec.ts`，以及 `site.config.ts` 里 `dashboard.nav` 的那一项。
 - 改完运行 `pnpm test` 和 `pnpm build` 确认没漏改。测试直接读 `site.config.ts` 和 `messages/*.json`，改域名、主色和文案都不用 `-u` 更新快照。
@@ -256,6 +256,10 @@ ALLOW_DB_SEED=1 pnpm db:seed   # 幂等，重复执行不会重复插入
   - 各语言的文章相互独立，同名文件视为同一篇的翻译（hreflang 只列出有翻译的语言）；没有文章的语言，列表页为空且 noindex。
   - frontmatter 必须是合法 YAML，值里有 `: ` 时加引号。写错的文件会让 `build` 失败并指出文件名；`dev` 里只打印错误。
   - 关闭 `features.blog` 时，把 `nav` 里的 Blog 链接一起删掉。
+- 更新日志（`src/core/changelog/`，`changelog.enabled` 默认关）：`/changelog` 一页放全部条目，按日期倒序、按月份分组，每条带一个类别徽章（`feature` 绿 / `improvement` 蓝 / `fix` 中性）。条目是 `content/changelog/<slug>.mdx`，frontmatter：`title`、`date`（`2026-01-31`）、`category`（`feature` / `improvement` / `fix`）、`description`（可选，不填就从正文首段取一句），编译和博客同一套（见 `content-collections.ts`）。
+  - RSS 在 `/changelog/rss.xml`（其他语言 `/<locale>/changelog/rss.xml`），入口在页面右上角，页面 head 里也有 `<link rel="alternate">`。更新日志是单页，每条在页面上的锚点（`/changelog#<slug>`）就是它在 RSS 里的地址。
+  - 条目不分语言：内容只有一份，页面外框跟着当前语言走（和法律页同一个取舍）。想按语言分开写，就把 `content-collections.ts` 里的 `changelog` 集合改成 `posts` 那样按语言分目录。
+  - 关掉 `changelog.enabled` 时 `/changelog` 和它的 RSS 返回 404，sitemap 和页脚入口一起消失（页脚那一支见 `src/core/layout/footer-nav.ts`）；`content/changelog/` 里的文件留着不删也没关系。
 - 后台（`src/core/admin/`，`features.admin`）：`/admin` 下有指标页和用户、订单、订阅三个列表，列表都在服务端分页。不是管理员（包括未登录）访问 `/admin` 下任何页面都返回 404，不跳转登录页（**这是设计，不是 bug**，理由和整套状态码约定见[错误与权限的边界](#错误与权限的边界)）。
   - 角色和封禁由 Better Auth 的 admin 插件提供（插件一直启用，`user` 表多了 `role`、`banned` 等字段）。v1 去掉了模拟登录（impersonate）权限。
   - 首个管理员：把邮箱写进 `ADMIN_EMAILS`，用这个邮箱登录（邮箱已验证）时自动获得 `admin` 角色。**只提升不降级** —— 从名单里删掉邮箱不会收回已经拿到的角色，要撤销用 `pnpm admin:demote <email>`（只摘 admin，其他角色保留；还在 `ADMIN_EMAILS` 里时脚本会提醒下次登录会被重新提上来）。管理员在 dashboard 侧边栏里会看到 Admin 入口。

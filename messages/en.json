@@ -4,6 +4,7 @@
     "pricing": "Pricing",
     "faq": "FAQ",
     "blog": "Blog",
+    "changelog": "Changelog",
     "product": "Product",
     "legal": "Legal",
     "privacy": "Privacy Policy",
@@ -624,6 +625,18 @@
     "newer": "Newer posts",
     "older": "Older posts",
     "pageOf": "Page {page} of {total}"
+  },
+  "Changelog": {
+    "title": "Changelog",
+    "description": "New features, improvements and fixes, newest first.",
+    "feedTitle": "{name} Changelog",
+    "rss": "RSS feed",
+    "empty": "No updates yet. Check back soon.",
+    "categories": {
+      "feature": "Feature",
+      "improvement": "Improvement",
+      "fix": "Fix"
+    }
   },
   "Admin": {
     "metaTitle": "Admin",

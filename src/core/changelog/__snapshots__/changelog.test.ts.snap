@@ -1,0 +1,48 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RSS > RSS 2.0：channel 和 item 的必填字段齐全 1`] = `
+"<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Acme Changelog</title>
+    <link>https://example.com/changelog</link>
+    <description>New features &amp; fixes</description>
+    <language>en</language>
+    <atom:link href="https://example.com/changelog/rss.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 24 Sep 2026 00:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Dark mode &lt;everywhere&gt;</title>
+      <link>https://example.com/changelog#dark-mode</link>
+      <guid isPermaLink="true">https://example.com/changelog#dark-mode</guid>
+      <pubDate>Thu, 24 Sep 2026 00:00:00 GMT</pubDate>
+      <description>About dark-mode &amp; more</description>
+      <category>feature</category>
+    </item>
+    <item>
+      <title>Entry faster-checkout</title>
+      <link>https://example.com/changelog#faster-checkout</link>
+      <guid isPermaLink="true">https://example.com/changelog#faster-checkout</guid>
+      <pubDate>Sat, 12 Sep 2026 00:00:00 GMT</pubDate>
+      <description>About faster-checkout &amp; more</description>
+      <category>improvement</category>
+    </item>
+    <item>
+      <title>Entry twin</title>
+      <link>https://example.com/changelog#twin</link>
+      <guid isPermaLink="true">https://example.com/changelog#twin</guid>
+      <pubDate>Sat, 12 Sep 2026 00:00:00 GMT</pubDate>
+      <description>About twin &amp; more</description>
+      <category>feature</category>
+    </item>
+    <item>
+      <title>Entry annual-invoice-fix</title>
+      <link>https://example.com/changelog#annual-invoice-fix</link>
+      <guid isPermaLink="true">https://example.com/changelog#annual-invoice-fix</guid>
+      <pubDate>Fri, 28 Aug 2026 00:00:00 GMT</pubDate>
+      <description>About annual-invoice-fix &amp; more</description>
+      <category>fix</category>
+    </item>
+  </channel>
+</rss>
+"
+`;

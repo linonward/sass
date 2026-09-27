@@ -67,6 +67,9 @@ const config = defineConfig({
           { key: "pricing", href: "/#pricing" },
           { key: "faq", href: "/#faq" },
           { key: "blog", href: "/blog" },
+          // 关掉 changelog.enabled 时这一项会自动隐藏（见 src/core/layout/footer-nav.ts），
+          // 不用手删。
+          { key: "changelog", href: "/changelog" },
         ],
       },
       {
@@ -165,6 +168,11 @@ const config = defineConfig({
   credits: {
     // 余额跌破这个值时提醒用户充值（credits-low 邮件）。
     lowBalanceThreshold: 100,
+  },
+  // 更新日志。条目放在 content/changelog/<slug>.mdx，字段见 content-collections.ts。
+  // 关闭时 /changelog 和 /changelog/rss.xml 返回 404，页脚也不显示入口。
+  changelog: {
+    enabled: true,
   },
   // 接口限流（AI、上传、结账），计数存 Upstash Redis。每条策略同时按用户和按 IP 计数。
   rateLimit: {
