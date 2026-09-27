@@ -110,6 +110,8 @@ export const orders = pgTable(
     status: text("status", { enum: orderStatuses }).notNull(),
     amount: integer("amount"),
     currency: text("currency"),
+    // Exact billing grant ledger key; immutable across later refunds and plan edits.
+    creditGrantSourceId: text("credit_grant_source_id"),
     refundedAmount: integer("refunded_amount").default(0).notNull(),
     raw: jsonb("raw"),
     ...timestamps,

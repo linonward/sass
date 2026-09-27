@@ -1,12 +1,12 @@
 # 阶段 12：第三轮审查修复
 
-阶段完成后：**自托管与本地开发不再有「时区一漂、视频全坏」的功能性缺陷**；退款/结算路径在乱序与并发下不丢积分、不多退、不双拿；买家从 zip 与 GitHub template 两条路径拿到的东西一致可交付；一批体验与防线问题（串行瀑布、可访问名、sitemap 收录、375px 覆盖、文档漂移）收口。
+阶段完成后：**自托管连非 UTC 的自建数据库也不会把时间算错**（会话时区被钉成 UTC）；退款/结算路径在乱序与并发下不丢积分、不多退、不双拿；买家从 zip 与 GitHub template 两条路径拿到的东西一致可交付；一批体验与防线问题（串行瀑布、可访问名、sitemap 收录、375px 覆盖、文档漂移）收口。
 
-依据：2026-09-27 的第三轮全面审查（四个维度：安全与鉴权计费、数据层正确性、前端渲染与 i18n、模板交付与 DX；全部只读执行，high/medium 逐条读码复核）。结论是**无 blocker**：前两轮（阶段 8/9/10）的修复全部验证闭环，webhook 双层幂等、积分原子扣减、事务边界、zod 覆盖、admin 越权面、CSP、密钥与日志面均干净。本轮共 **1 high + 12 medium + 约 24 low**，落成四批 18 个任务。
+依据：2026-09-27 的第三轮全面审查（四个维度：安全与鉴权计费、数据层正确性、前端渲染与 i18n、模板交付与 DX；全部只读执行，high/medium 逐条读码复核）。结论是**无 blocker**：前两轮（阶段 8/9/10）的修复全部验证闭环，webhook 双层幂等、积分原子扣减、事务边界、zod 覆盖、admin 越权面、CSP、密钥与日志面均干净。本轮共 1 high + 12 medium + 约 24 low，落成四批 18 个任务。**落地过程中 T1201 的原 high 论断被实测推翻**，重新定性为「数据库会话时区」问题（medium 级），修正过程记录在 T1201 一节。
 
 ## 批次
 
-- **批次 A（结算加固，上架阻塞）**：T1201–T1204。唯一 high，加结算/退款的资损路径。
+- **批次 A（结算加固）**：T1201–T1204。退款/结算的资损路径，加一条环境正确性（T1201 会话时区）。
 - **批次 B（交付闭环）**：T1205–T1209。买家可见的缺口与守卫。
 - **批次 C（体验与防线）**：T1210–T1214。
 - **批次 D（可后置）**：T1215–T1218。
@@ -28,38 +28,33 @@
 
 - 分支 / worktree：`fix/video-timezone` → `../sass-video-timezone`
 - 依赖：—
-- 依据：审查 H1（时间基准混用，已复核）
+- 依据：审查 H1 —— **落卡后实测推翻原论断，重新定性为「数据库会话时区」问题**（见下面的更正）
+
+**审计更正（2026-09-27，真实数据库实测）**
+
+原 H1 的论断是「非 UTC 的 **Node 进程**会把 `timestamp` 列读偏 → 视频超时误判」。实测不成立：
+
+- drizzle 的列映射对无时区列**显式按 UTC 解析**（`drizzle-orm/pg-core/columns/timestamp.js:31`：`new Date(value + "+0000")`），写入用 `toISOString()`，比较参数按列的映射器编码（`sql/expressions/conditions.js` 的 `bindIfParam`）—— **ORM 路径与进程时区无关**。`TZ=Asia/Shanghai` 连真实库实测：默认值写读、JS Date 写读、`gte(列, date)` 比较全部正确。
+- raw `db.execute` 返回的是字符串（drizzle 关掉了驱动的日期解析），但 `src/core` 里没有一处这样用日期。
+- 真正的洞在**数据库会话时区**：`defaultNow()` 写的是**会话时区**墙钟，drizzle 读回按 UTC 解释。实测把会话时区设成 +8 后，`created_at` 读回来偏 **+480 分钟**。自建 Postgres 的服务器时区默认跟随操作系统，可能是本地时区。
 
 **问题**
 
-视频超时判断混用了两种时间基准，**非 UTC 的 Node 进程下功能全坏**：
-
-- `src/core/db/schema/ai.ts:62`：`createdAt: timestamp("created_at").defaultNow()` —— timestamp **without** time zone，值由 Postgres `now()` 按会话时区写入（Neon 默认 UTC 墙钟）。
-- `src/core/ai/video.ts:252`：`const elapsed = now() - usage.createdAt.getTime()`，与 `VIDEO_TIMEOUT_MS = 30 * 60 * 1000`（video.ts:28）比较，超时即 `settleFailed("timeout")` 退款置 failed。
-- 驱动行为：`pg` 的 dateToString 用 JS Date 的**本地分量**序列化；`@neondatabase/serverless` 对无时区 timestamp（OID 1114）走本地构造。即 DB 里的 UTC 墙钟会被按 Node 进程本地时区解释。
-- 全仓无 TZ 固定：`vercel.json`、`next.config.ts`、`package.json` 均无 TZ 设置（grep 零命中）。
-
-**触发场景**：自托管（T814 明确支持并文档化）或本地开发，Node TZ=UTC+8，连 Neon。`created_at` 的 UTC 墙钟被当成 +08:00 → createdAt 视为 8 小时前 → elapsed 虚增 8 小时 → **首次 poll 就超过 30 分钟阈值** → 立即退款置 failed，而服务商的视频任务仍在跑（真实成本已发生）、用户永远拿不到视频。反向（UTC−x）elapsed 恒为负 → 永不超时，pending 行永不结算、积分不退。Vercel 生产 TZ=UTC，不受影响。
-
-**同根因连带**：`src/core/admin/metrics.ts:42-44` 用 `Date.UTC(getUTCFullYear(), getUTCMonth(), getUTCDate())` 构造窗口起点，经驱动本地序列化后实际比较的是本地墙钟 → 非 UTC 部署下「最近 30 天」窗口整体平移。
+`src/core/db/client.ts` 建连接时没有约束会话时区；`src/core/db/schema/ai.ts:62` 的 `createdAt: timestamp("created_at").defaultNow()`（`video.ts:252` 的 elapsed 判定依赖它）在非 UTC 会话下会被读偏 8 小时。触发场景：自托管（T814 支持的场景）连一个服务器时区不是 UTC 的自建 Postgres —— 刚提交的视频任务首次 poll 就超过 30 分钟阈值、被误判超时并退款，或反向永不超时、积分卡住不退。Neon 与官方 postgres 镜像默认 UTC，不受影响。
 
 **做**
 
-三选一（推荐 1，改动最小、覆盖面最大）：
+- `createDbClient` 连接时把会话时区钉成 UTC（`options: "-c timezone=UTC"`；`pg` 与 `@neondatabase/serverless` 都支持该参数，后者本来就是 UTC，显式写出让行为一致）。
+- 在 `client.ts` 注释里写明两条约束：timestamp 列按 UTC 墙钟存取；**不要在 raw `sql` 模板里插值 JS Date**（没有列上下文时 pg 按**进程**本地时区序列化成带偏移的字面量，timestamp 列会忽略偏移只取墙钟），用 drizzle 的列表达式。
+- README 自托管一节写清楚 —— 买家不用再自己确认服务器时区。
 
-1. 入口强制固定进程时区：`process.env.TZ ??= "UTC"`（要落在所有模块加载之前的最早时机），并写进自托管文档与 `.env.example` 注释 —— **同时给 README 自托管一节加「TZ 必须为 UTC」的说明**。
-2. `created_at` 等时间戳改为 JS 端写入（drizzle `$defaultFn: () => new Date()`），与 `userCredits.updatedAt` 等既有写法对齐。
-3. 全库迁移到 timestamptz。
-
-**不做**：要求买家自己设 TZ 才能正确 —— 默认必须是对的。
+**不做**：改进程时区（实测无必要）；`$defaultFn` 改写或全库 timestamptz 迁移（改动面大，收益已被会话时区修复覆盖）。
 
 **验收**
 
-- [ ] 新增一个会失败的测试：在 `TZ=Asia/Shanghai` 下跑，超时判定把「刚提交 1 分钟的任务」误判为超时（修前必红、修后绿）
-- [ ] 时间基准在文档里写清楚（自托管一节）
+- [x] DB 测试：客户端会话时区为 UTC；`defaultNow()` 写读一致；`gte(列, date)` 比较一致
+- [x] DB 测试：`sessionTimezone: "Asia/Shanghai"` 时 `defaultNow()` 读偏 480 分钟 —— 既解释修复原因，也在实现被改动时报警（去掉 `options` 时两条测试都红）
 - [ ] `pnpm test` + e2e 全绿
-
-**测试**：单测直接构造 createdAt 与 now 的固定差值验证 elapsed 语义；再用 `TZ=Asia/Shanghai pnpm test` 复跑证明环境无关。
 
 ---
 
@@ -90,10 +85,10 @@
 
 **验收**
 
-- [ ] 单测：「refund 先到、paid 后到」的乱序场景 → 积分最终被回收
-- [ ] 单测：「套餐已从 config 下线」→ 仍按实际发放额回收
-- [ ] 单测：amount=null 的占位订单净退款计入营收合计（不再被 sum 忽略）
-- [ ] `pnpm test` + e2e 全绿
+- [x] 单测：「refund 先到、paid 后到」的乱序场景 → 积分最终被回收
+- [x] 单测：「套餐已从 config 下线」→ 仍按实际发放额回收
+- [x] 单测：amount=null 的占位订单净退款计入营收合计（不再被 sum 忽略）
+- [x] `pnpm test` + e2e 全绿
 
 ---
 
