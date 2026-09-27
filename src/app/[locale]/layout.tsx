@@ -3,6 +3,7 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 
+import { AttributionConsentSlot } from "@/core/acquisition/consent-slot";
 import { pickClientMessages } from "@/core/i18n/client-messages";
 import { routing } from "@/core/i18n/routing";
 import { cn } from "@/core/lib/utils";
@@ -69,6 +70,7 @@ export default async function RootLayout({
           <ThemeProvider>
             {children}
             <Toaster />
+            <AttributionConsentSlot />
           </ThemeProvider>
         </NextIntlClientProvider>
         <WebAnalyticsScripts />

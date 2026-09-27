@@ -7,6 +7,7 @@ import type { AbstractIntlMessages } from "next-intl";
  */
 export const clientNamespaces = [
   "Account",
+  "Acquisition",
   "Admin",
   "Auth",
   "Billing",

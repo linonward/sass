@@ -27,12 +27,12 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
-      testIgnore: "i18n/**",
+      testIgnore: ["i18n/**", "acquisition/**"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "mobile",
-      testIgnore: "i18n/**",
+      testIgnore: ["i18n/**", "acquisition/**"],
       use: { ...devices["Pixel 7"] },
     },
     {

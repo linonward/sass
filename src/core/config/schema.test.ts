@@ -539,3 +539,29 @@ describe("ai", () => {
     ).not.toThrow();
   });
 });
+
+describe("acquisition configuration", () => {
+  test("defaults all modules off and allows independent attribution/leads", () => {
+    expect(defineConfig(valid).acquisition).toEqual({
+      attribution: { enabled: false },
+      leads: { enabled: false },
+      referrals: { enabled: false },
+    });
+    expect(
+      defineConfig({ ...valid, acquisition: { leads: { enabled: true } } })
+        .acquisition.attribution.enabled,
+    ).toBe(false);
+  });
+  test("referrals require credits, without requiring attribution", () => {
+    expect(() =>
+      defineConfig({ ...valid, acquisition: { referrals: { enabled: true } } }),
+    ).toThrow();
+    expect(
+      defineConfig({
+        ...valid,
+        features: { credits: true },
+        acquisition: { referrals: { enabled: true } },
+      }).acquisition.attribution.enabled,
+    ).toBe(false);
+  });
+});

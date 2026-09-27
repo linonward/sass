@@ -10,6 +10,8 @@ import {
   shouldPromoteToAdmin,
   withAdminRole,
 } from "@/core/admin/roles";
+import { createRegistrationAttribution } from "@/core/acquisition/registration";
+import { createAttributionStore } from "@/core/acquisition/store";
 import { db } from "@/core/db";
 import * as schema from "@/core/db/schema";
 import { sendEmail } from "@/core/email";
@@ -31,6 +33,13 @@ const otp = siteConfig.auth.emailOtp;
 const google = googleCredentials(process.env);
 // 首个管理员：用这些邮箱登录时自动获得 admin 角色（见 src/core/admin/roles.ts）。
 const adminEmails = siteConfig.features.admin ? (env.ADMIN_EMAILS ?? []) : [];
+
+const registerAttribution = createRegistrationAttribution({
+  enabled: siteConfig.acquisition.attribution.enabled,
+  secret: env.BETTER_AUTH_SECRET,
+  freeze: createAttributionStore(db).freeze,
+  warn: (event, fields) => logger.warn(event, fields),
+});
 
 export const auth = betterAuth({
   appName: siteConfig.name,
@@ -88,6 +97,13 @@ export const auth = betterAuth({
         // 首次注册发欢迎邮件，放到响应之后发，不拖慢首次登录；发信失败不影响注册。
         after: async (user, ctx) => {
           const headers = ctx?.headers ?? ctx?.request?.headers;
+          await registerAttribution(
+            user.id,
+            headers,
+            ctx
+              ? (name, value, options) => ctx.setCookie(name, value, options)
+              : undefined,
+          );
           const locale = resolveRequestLocale(headers);
           await runAfterResponse(async () => {
             try {

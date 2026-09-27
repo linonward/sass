@@ -102,7 +102,7 @@
 | T1218                       | docker-notes            | `docs/docker-notes`            | T1200                     | todo |
 | **阶段 13：获客**           |                         |                                |                           |      |
 | T1300                       | acquisition-plan        | `docs/acquisition-plan`        | —                         | done |
-| T1301                       | acquisition-attribution | `feat/acquisition-attribution` | T1300, T102, T203         | todo |
+| T1301                       | acquisition-attribution | `feat/acquisition-attribution` | T1300, T102, T203         | done |
 | T1302                       | acquisition-report      | `feat/acquisition-report`      | T1301, T604, T1202        | todo |
 | T1303                       | lead-capture            | `feat/lead-capture`            | T1301, T202, T401         | todo |
 | T1304                       | lead-management         | `feat/lead-management`         | T1303, T1302, T502        | todo |
@@ -123,7 +123,7 @@
 
 阶段 7 分两个语域做：T605 是**营销面 + 设计基础**，T606 是**登录后产品面 + 后台**，T607 收尾剩下的营销侧细节页（blog 列表卡片与文章页、legal、404）和那几处还没换成 `--primary-text` 的链接。（2026-09-26 错误路径审计给 T607 补了两条：错误页 CTA 用错语域、h1 未用 display 字体。）
 
-阶段 13 分三块（见 [phase-13-acquisition.md](phase-13-acquisition.md)）：渠道归因与报表（T1301–T1302）、线索收集与管理（T1303–T1304）、邀请链接与积分奖励（T1305–T1306）。T1300 只完成规划，实施任务均为 todo；T1302 等待 T1202 的退款修复，T1306 等待 T1202、T1204 合入。首版不做现金返佣或营销群发。
+阶段 13 分三块（见 [phase-13-acquisition.md](phase-13-acquisition.md)）：渠道归因与报表（T1301–T1302）、线索收集与管理（T1303–T1304）、邀请链接与积分奖励（T1305–T1306）。T1300 完成规划，T1301 完成渠道归因基础，其余实施任务为 todo；T1302 等待 T1202 的退款修复，T1306 等待 T1202、T1204 合入。首版不做现金返佣或营销群发。
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
 

@@ -498,6 +498,18 @@ export const aiConfigSchema = z
     }
   });
 
+export const acquisitionConfigSchema = z.strictObject({
+  attribution: z
+    .strictObject({ enabled: z.boolean().default(false) })
+    .default({ enabled: false }),
+  leads: z
+    .strictObject({ enabled: z.boolean().default(false) })
+    .default({ enabled: false }),
+  referrals: z
+    .strictObject({ enabled: z.boolean().default(false) })
+    .default({ enabled: false }),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -541,10 +553,21 @@ export const siteConfigSchema = z
     rateLimit: rateLimitConfigSchema.default(rateLimitConfigSchema.parse({})),
     upload: uploadConfigSchema.default(uploadConfigSchema.parse({})),
     ai: aiConfigSchema.default(aiConfigSchema.parse({})),
+    acquisition: acquisitionConfigSchema.default(
+      acquisitionConfigSchema.parse({}),
+    ),
     observability: observabilityConfigSchema.default(
       observabilityConfigSchema.parse({}),
     ),
   })
+  .refine(
+    (config) =>
+      !config.acquisition.referrals.enabled || config.features.credits,
+    {
+      message: "referrals requires features.credits",
+      path: ["acquisition", "referrals", "enabled"],
+    },
+  )
   .refine((config) => config.locales.includes(config.defaultLocale), {
     message: "must be one of locales",
     path: ["defaultLocale"],
