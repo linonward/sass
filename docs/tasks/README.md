@@ -6,118 +6,118 @@
 
 ## 总览
 
-| ID                          | topic                   | 分支                           | 依赖                          | 状态 |
-| --------------------------- | ----------------------- | ------------------------------ | ----------------------------- | ---- |
-| T001                        | plan                    | `docs/plan`                    | —                             | done |
-| **阶段 1：落地站**          |                         |                                |                               |      |
-| T101                        | scaffold                | `chore/scaffold`               | T001                          | done |
-| T102                        | config                  | `feat/config`                  | T101                          | done |
-| T103                        | ui-shell                | `feat/ui-shell`                | T102                          | done |
-| T104                        | i18n                    | `feat/i18n`                    | T103                          | done |
-| T105                        | landing                 | `feat/landing`                 | T104                          | done |
-| T106                        | seo                     | `feat/seo`                     | T104                          | done |
-| T107                        | legal                   | `feat/legal`                   | T104                          | done |
-| T108                        | deploy                  | `chore/deploy`                 | T105, T106, T107              | done |
-| **阶段 2：登录**            |                         |                                |                               |      |
-| T201                        | db                      | `feat/db`                      | T102                          | done |
-| T202                        | email                   | `feat/email`                   | T102, T104                    | done |
-| T203                        | auth                    | `feat/auth`                    | T201, T202, T103              | done |
-| T204                        | dashboard               | `feat/dashboard`               | T203                          | done |
-| **阶段 3：收款**            |                         |                                |                               |      |
-| T301                        | billing-core            | `feat/billing-core`            | T201                          | done |
-| T302                        | credits                 | `feat/credits`                 | T201                          | done |
-| T303                        | creem                   | `feat/creem`                   | T301, T302, T203              | done |
-| T304                        | pricing                 | `feat/pricing`                 | T303, T105                    | done |
-| T305                        | billing-emails          | `feat/billing-emails`          | T303, T202                    | done |
-| **阶段 4：AI 工具**         |                         |                                |                               |      |
-| T401                        | ratelimit               | `feat/ratelimit`               | T102                          | done |
-| T402                        | ai                      | `feat/ai`                      | T302, T401, T203              | done |
-| T403                        | upload                  | `feat/upload`                  | T401, T203                    | done |
-| T404                        | ai-image                | `feat/ai-image`                | T402, T403                    | done |
-| T405                        | ai-video                | `feat/ai-video`                | T404                          | done |
-| **阶段 5：内容与运营**      |                         |                                |                               |      |
-| T501                        | blog                    | `feat/blog`                    | T104, T106                    | done |
-| T502                        | admin                   | `feat/admin`                   | T203, T302, T303              | done |
-| T503                        | starter-guide           | `docs/starter-guide`           | 阶段 1–5 全部                 | done |
-| **阶段 6：可观测性**        |                         |                                |                               |      |
-| T601                        | logger                  | `feat/logger`                  | 阶段 1–5                      | done |
-| T602                        | sentry                  | `feat/sentry`                  | T601                          | done |
-| T603                        | web-analytics           | `feat/web-analytics`           | T601                          | done |
-| T604                        | admin-metrics           | `feat/admin-metrics`           | T502                          | done |
-| **阶段 7：视觉重设计**      |                         |                                |                               |      |
-| T605                        | redesign                | `feat/redesign`                | T108, T604                    | done |
-| T606                        | redesign-app            | `feat/redesign-app`            | T605                          | done |
-| T607                        | redesign-rest           | `feat/redesign-rest`           | T606                          | done |
-| **阶段 8：商品化**          |                         |                                |                               |      |
-| T801                        | sell-plan               | `docs/sell-plan`               | 阶段 1–7                      | done |
-| T802                        | license                 | `docs/license`                 | T801                          | done |
-| T803                        | fake-billing-gate       | `fix/fake-billing-gate`        | T801                          | done |
-| T804                        | neutral-config          | `fix/neutral-config`           | T801                          | done |
-| T805                        | prod-env-guards         | `fix/prod-env-guards`          | T801                          | done |
-| T806                        | security-headers        | `feat/security-headers`        | T801                          | done |
-| T807                        | dep-overrides           | `fix/dep-overrides`            | T801                          | done |
-| T808                        | deps-hygiene            | `chore/deps-hygiene`           | T801                          | done |
-| T809                        | refund-credits          | `feat/refund-credits`          | T801                          | done |
-| T810                        | ts-strictness           | `chore/ts-strictness`          | T801                          | done |
-| T811                        | distribution            | `chore/distribution`           | T801                          | done |
-| T812                        | brand-assets            | `fix/brand-assets`             | T801                          | done |
-| T813                        | prod-sentinels          | `fix/prod-sentinels`           | T801                          | done |
-| T817                        | typecheck-env           | `fix/typecheck-env`            | T801                          | done |
-| T814                        | harden-misc             | `fix/harden-misc`              | T801                          | done |
-| T815                        | seed-data               | `feat/seed-data`               | T801                          | done |
-| T816                        | llms-txt                | `feat/llms-txt`                | T801                          | done |
-| T818                        | dep-ignore-types-node   | `chore/dep-ignore-types-node`  | T801                          | done |
-| **阶段 9：错误路径与边界**  |                         |                                |                               |      |
-| T901                        | review-cards            | `docs/review-cards`            | —                             | done |
-| T902                        | not-found               | `fix/not-found`                | T901                          | done |
-| T903                        | error-metadata          | `fix/error-metadata`           | T901                          | done |
-| T904                        | error-e2e               | `chore/error-e2e`              | T902, T903                    | done |
-| T905                        | boundary-notes          | `docs/boundary-notes`          | T901                          | done |
-| **阶段 10：渲染与包体积**   |                         |                                |                               |      |
-| T1001                       | config-leaf             | `fix/config-leaf`              | T901                          | done |
-| T1002                       | playground-stream       | `fix/playground-stream`        | T901                          | done |
-| T1003                       | playground-tabs         | `fix/playground-tabs`          | T901, T1002                   | done |
-| T1004                       | serial-queries          | `fix/serial-queries`           | T901                          | done |
-| **阶段 11：登录体验**       |                         |                                |                               |      |
-| T1101                       | one-tap                 | `feat/one-tap`                 | T203                          | done |
-| **阶段 12：第三轮审查修复** |                         |                                |                               |      |
-| T1200                       | review-cards            | `docs/review-cards`            | —                             | done |
-| T1201                       | video-timezone          | `fix/video-timezone`           | T1200                         | done |
-| T1202                       | refund-reclaim          | `fix/refund-reclaim`           | T1200                         | done |
-| T1203                       | video-settle-race       | `fix/video-settle-race`        | T1201                         | done |
-| T1204                       | checkout-idempotency    | `fix/checkout-idempotency`     | T1200                         | done |
-| T1205                       | favicon                 | `fix/favicon`                  | T1200                         | done |
-| T1206                       | template-handoff        | `fix/template-handoff`         | T1200                         | done |
-| T1207                       | notices-sync            | `fix/notices-sync`             | T1200                         | done |
-| T1208                       | seed-gate               | `fix/seed-gate`                | T1200                         | done |
-| T1209                       | not-found-canonical     | `fix/not-found-canonical`      | T1200                         | done |
-| T1210                       | serial-queries-2        | `fix/serial-queries-2`         | T1200                         | done |
-| T1211                       | ui-a11y-i18n            | `fix/ui-a11y-i18n`             | T1200                         | done |
-| T1212                       | blog-sitemap            | `fix/blog-sitemap`             | T1200                         | done |
-| T1213                       | overflow-e2e            | `chore/overflow-e2e`           | T1200                         | done |
-| T1214                       | readme-drift            | `docs/readme-drift`            | T1200                         | done |
-| T1215                       | email-outbox            | `fix/email-outbox`             | T1200                         | done |
-| T1216                       | ratelimit-selfhost      | `fix/ratelimit-selfhost`       | T1200                         | done |
-| T1217                       | frontend-details        | `chore/frontend-details`       | T1200                         | done |
-| T1218                       | docker-notes            | `docs/docker-notes`            | T1200                         | done |
-| **阶段 13：获客**           |                         |                                |                               |      |
-| T1300                       | acquisition-plan        | `docs/acquisition-plan`        | —                             | done |
-| T1301                       | acquisition-attribution | `feat/acquisition-attribution` | T1300, T102, T203             | done |
-| T1302                       | acquisition-report      | `feat/acquisition-report`      | T1301, T604, T1202            | done |
-| T1303                       | lead-capture            | `feat/lead-capture`            | T1301, T202, T401             | done |
-| T1304                       | lead-management         | `feat/lead-management`         | T1303, T1302, T502            | todo |
-| T1305                       | referral-links          | `feat/referral-links`          | T1301, T203, T204, T302       | done |
-| T1306                       | referral-rewards        | `feat/referral-rewards`        | T1305, T303, T1202, T1204     | todo |
-| **阶段 14：审查后续小项**   |                         |                                |                               |      |
-| T1400                       | review-followups        | `docs/review-followups`        | —                             | done |
-| T1401                       | internal-terms          | `chore/internal-terms`         | T1400                         | done |
-| T1402                       | e2e-flaky-auth          | `fix/e2e-flaky-auth`           | T1400                         | done |
-| **阶段 15：差异化补齐**     |                         |                                |                               |      |
-| T1500                       | differentiation-plan    | `docs/differentiation-plan`    | —                             | todo |
-| T1501                       | api-keys                | `feat/api-keys`                | T1500, T203, T201, T401, T204 | todo |
-| T1502                       | feature-flags           | `feat/feature-flags`           | T1500, T102, T201, T502       | todo |
-| T1503                       | changelog               | `feat/changelog`               | T1500, T501, T104, T105       | todo |
-| T1504                       | status-page             | `feat/status-page`             | T1500, T601, T202, T502       | todo |
+| ID                          | topic                   | 分支                           | 依赖                          | 状态             |
+| --------------------------- | ----------------------- | ------------------------------ | ----------------------------- | ---------------- |
+| T001                        | plan                    | `docs/plan`                    | —                             | done             |
+| **阶段 1：落地站**          |                         |                                |                               |                  |
+| T101                        | scaffold                | `chore/scaffold`               | T001                          | done             |
+| T102                        | config                  | `feat/config`                  | T101                          | done             |
+| T103                        | ui-shell                | `feat/ui-shell`                | T102                          | done             |
+| T104                        | i18n                    | `feat/i18n`                    | T103                          | done             |
+| T105                        | landing                 | `feat/landing`                 | T104                          | done             |
+| T106                        | seo                     | `feat/seo`                     | T104                          | done             |
+| T107                        | legal                   | `feat/legal`                   | T104                          | done             |
+| T108                        | deploy                  | `chore/deploy`                 | T105, T106, T107              | done             |
+| **阶段 2：登录**            |                         |                                |                               |                  |
+| T201                        | db                      | `feat/db`                      | T102                          | done             |
+| T202                        | email                   | `feat/email`                   | T102, T104                    | done             |
+| T203                        | auth                    | `feat/auth`                    | T201, T202, T103              | done             |
+| T204                        | dashboard               | `feat/dashboard`               | T203                          | done             |
+| **阶段 3：收款**            |                         |                                |                               |                  |
+| T301                        | billing-core            | `feat/billing-core`            | T201                          | done             |
+| T302                        | credits                 | `feat/credits`                 | T201                          | done             |
+| T303                        | creem                   | `feat/creem`                   | T301, T302, T203              | done             |
+| T304                        | pricing                 | `feat/pricing`                 | T303, T105                    | done             |
+| T305                        | billing-emails          | `feat/billing-emails`          | T303, T202                    | done             |
+| **阶段 4：AI 工具**         |                         |                                |                               |                  |
+| T401                        | ratelimit               | `feat/ratelimit`               | T102                          | done             |
+| T402                        | ai                      | `feat/ai`                      | T302, T401, T203              | done             |
+| T403                        | upload                  | `feat/upload`                  | T401, T203                    | done             |
+| T404                        | ai-image                | `feat/ai-image`                | T402, T403                    | done             |
+| T405                        | ai-video                | `feat/ai-video`                | T404                          | done             |
+| **阶段 5：内容与运营**      |                         |                                |                               |                  |
+| T501                        | blog                    | `feat/blog`                    | T104, T106                    | done             |
+| T502                        | admin                   | `feat/admin`                   | T203, T302, T303              | done             |
+| T503                        | starter-guide           | `docs/starter-guide`           | 阶段 1–5 全部                 | done             |
+| **阶段 6：可观测性**        |                         |                                |                               |                  |
+| T601                        | logger                  | `feat/logger`                  | 阶段 1–5                      | done             |
+| T602                        | sentry                  | `feat/sentry`                  | T601                          | done             |
+| T603                        | web-analytics           | `feat/web-analytics`           | T601                          | done             |
+| T604                        | admin-metrics           | `feat/admin-metrics`           | T502                          | done             |
+| **阶段 7：视觉重设计**      |                         |                                |                               |                  |
+| T605                        | redesign                | `feat/redesign`                | T108, T604                    | done             |
+| T606                        | redesign-app            | `feat/redesign-app`            | T605                          | done             |
+| T607                        | redesign-rest           | `feat/redesign-rest`           | T606                          | done             |
+| **阶段 8：商品化**          |                         |                                |                               |                  |
+| T801                        | sell-plan               | `docs/sell-plan`               | 阶段 1–7                      | done             |
+| T802                        | license                 | `docs/license`                 | T801                          | done             |
+| T803                        | fake-billing-gate       | `fix/fake-billing-gate`        | T801                          | done             |
+| T804                        | neutral-config          | `fix/neutral-config`           | T801                          | done             |
+| T805                        | prod-env-guards         | `fix/prod-env-guards`          | T801                          | done             |
+| T806                        | security-headers        | `feat/security-headers`        | T801                          | done             |
+| T807                        | dep-overrides           | `fix/dep-overrides`            | T801                          | done             |
+| T808                        | deps-hygiene            | `chore/deps-hygiene`           | T801                          | done             |
+| T809                        | refund-credits          | `feat/refund-credits`          | T801                          | done             |
+| T810                        | ts-strictness           | `chore/ts-strictness`          | T801                          | done             |
+| T811                        | distribution            | `chore/distribution`           | T801                          | done             |
+| T812                        | brand-assets            | `fix/brand-assets`             | T801                          | done             |
+| T813                        | prod-sentinels          | `fix/prod-sentinels`           | T801                          | done             |
+| T817                        | typecheck-env           | `fix/typecheck-env`            | T801                          | done             |
+| T814                        | harden-misc             | `fix/harden-misc`              | T801                          | done             |
+| T815                        | seed-data               | `feat/seed-data`               | T801                          | done             |
+| T816                        | llms-txt                | `feat/llms-txt`                | T801                          | done             |
+| T818                        | dep-ignore-types-node   | `chore/dep-ignore-types-node`  | T801                          | done             |
+| **阶段 9：错误路径与边界**  |                         |                                |                               |                  |
+| T901                        | review-cards            | `docs/review-cards`            | —                             | done             |
+| T902                        | not-found               | `fix/not-found`                | T901                          | done             |
+| T903                        | error-metadata          | `fix/error-metadata`           | T901                          | done             |
+| T904                        | error-e2e               | `chore/error-e2e`              | T902, T903                    | done             |
+| T905                        | boundary-notes          | `docs/boundary-notes`          | T901                          | done             |
+| **阶段 10：渲染与包体积**   |                         |                                |                               |                  |
+| T1001                       | config-leaf             | `fix/config-leaf`              | T901                          | done             |
+| T1002                       | playground-stream       | `fix/playground-stream`        | T901                          | done             |
+| T1003                       | playground-tabs         | `fix/playground-tabs`          | T901, T1002                   | done             |
+| T1004                       | serial-queries          | `fix/serial-queries`           | T901                          | done             |
+| **阶段 11：登录体验**       |                         |                                |                               |                  |
+| T1101                       | one-tap                 | `feat/one-tap`                 | T203                          | done             |
+| **阶段 12：第三轮审查修复** |                         |                                |                               |                  |
+| T1200                       | review-cards            | `docs/review-cards`            | —                             | done             |
+| T1201                       | video-timezone          | `fix/video-timezone`           | T1200                         | done             |
+| T1202                       | refund-reclaim          | `fix/refund-reclaim`           | T1200                         | done             |
+| T1203                       | video-settle-race       | `fix/video-settle-race`        | T1201                         | done             |
+| T1204                       | checkout-idempotency    | `fix/checkout-idempotency`     | T1200                         | done             |
+| T1205                       | favicon                 | `fix/favicon`                  | T1200                         | done             |
+| T1206                       | template-handoff        | `fix/template-handoff`         | T1200                         | done             |
+| T1207                       | notices-sync            | `fix/notices-sync`             | T1200                         | done             |
+| T1208                       | seed-gate               | `fix/seed-gate`                | T1200                         | done             |
+| T1209                       | not-found-canonical     | `fix/not-found-canonical`      | T1200                         | done             |
+| T1210                       | serial-queries-2        | `fix/serial-queries-2`         | T1200                         | done             |
+| T1211                       | ui-a11y-i18n            | `fix/ui-a11y-i18n`             | T1200                         | done             |
+| T1212                       | blog-sitemap            | `fix/blog-sitemap`             | T1200                         | done             |
+| T1213                       | overflow-e2e            | `chore/overflow-e2e`           | T1200                         | done             |
+| T1214                       | readme-drift            | `docs/readme-drift`            | T1200                         | done             |
+| T1215                       | email-outbox            | `fix/email-outbox`             | T1200                         | done             |
+| T1216                       | ratelimit-selfhost      | `fix/ratelimit-selfhost`       | T1200                         | done             |
+| T1217                       | frontend-details        | `chore/frontend-details`       | T1200                         | done             |
+| T1218                       | docker-notes            | `docs/docker-notes`            | T1200                         | done             |
+| **阶段 13：获客**           |                         |                                |                               |                  |
+| T1300                       | acquisition-plan        | `docs/acquisition-plan`        | —                             | done             |
+| T1301                       | acquisition-attribution | `feat/acquisition-attribution` | T1300, T102, T203             | done             |
+| T1302                       | acquisition-report      | `feat/acquisition-report`      | T1301, T604, T1202            | done             |
+| T1303                       | lead-capture            | `feat/lead-capture`            | T1301, T202, T401             | done             |
+| T1304                       | lead-management         | `feat/lead-management`         | T1303, T1302, T502            | in review (#115) |
+| T1305                       | referral-links          | `feat/referral-links`          | T1301, T203, T204, T302       | done             |
+| T1306                       | referral-rewards        | `feat/referral-rewards`        | T1305, T303, T1202, T1204     | todo             |
+| **阶段 14：审查后续小项**   |                         |                                |                               |                  |
+| T1400                       | review-followups        | `docs/review-followups`        | —                             | done             |
+| T1401                       | internal-terms          | `chore/internal-terms`         | T1400                         | done             |
+| T1402                       | e2e-flaky-auth          | `fix/e2e-flaky-auth`           | T1400                         | done             |
+| **阶段 15：差异化补齐**     |                         |                                |                               |                  |
+| T1500                       | differentiation-plan    | `docs/differentiation-plan`    | —                             | todo             |
+| T1501                       | api-keys                | `feat/api-keys`                | T1500, T203, T201, T401, T204 | todo             |
+| T1502                       | feature-flags           | `feat/feature-flags`           | T1500, T102, T201, T502       | todo             |
+| T1503                       | changelog               | `feat/changelog`               | T1500, T501, T104, T105       | todo             |
+| T1504                       | status-page             | `feat/status-page`             | T1500, T601, T202, T502       | todo             |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
