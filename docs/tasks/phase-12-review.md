@@ -142,20 +142,25 @@
 
 **触发场景**：双击升级按钮 → 两个并发 startCheckout 都查不到 active 订阅 → 创建两个结账会话 → 用户两个标签页都完成支付 → **双重扣款 + 双份订阅/积分**（若 requestId 非幂等）。反向风险：若 requestId 是长效幂等键，用户退订后再订阅同一套餐可能拿到旧 session。另有：任意登录免费用户脚本循环 POST `{planId:"pro"}` → 刷爆商户在 Creem 侧的 API 配额/触发风控，连带真实用户无法结账。
 
-**做**
+**实测结论（2026-09-27，Creem test mode）**
 
-1. **先实测再动手**：在 Creem test mode 用同一 `requestId` 连续调 `POST /v1/checkouts` 两次，记录返回的 session id 是否相同、幂等有效窗口 —— 结论写进本任务 PR。
-2. 按结论加固：服务端对 `(userId, planId)` 加互斥（`SELECT ... FOR UPDATE` 锁用户行，或 DB 唯一约束兜底）。
-3. 给 checkout 加限流策略（如 `5/1m`，user+IP 双键；限流基建与 `site.config.ts` 策略表现成）。
+同一 `request_id` 连发两次 `POST /v1/checkouts`（`test-api.creem.io`）→ 返回**两个不同的 session**（`ch_4lVzH1lQD01EXLg3Kdx0YQ` / `ch_35TegH5nHwmLKOJPWQAj2C`），都能独立支付。即 **`request_id` 不是幂等键**（文档也没承诺）—— 双击确实能建出两个会话。附带发现：该接口对不带 `User-Agent` 的请求返回 403，实测脚本要带上。
 
-**不做**：只靠前端禁用重复提交（服务端必须自洽）。
+**做（按实测结论落地）**
+
+1. 限流：`site.config.ts` 加 `checkout` 策略（5/1m）；`startCheckout` 在参数校验后调 `checkRateLimit`，超限返回 `rate_limited`（limited → 429、Redis 不可用 → 503），路由写 `Retry-After`。
+2. **去重与互斥**（关键）：单靠「锁用户行」挡不住 —— 刚建的结账会话在订阅/订单表里没有痕迹，第二个请求拿到锁后复查仍然查不到东西。落地成 **`checkout_sessions` 表 + 事务**：锁住用户行 → 复查重 → 未过期的会话直接复用同一个 URL → 都没有才建单并落库（`(user_id, plan_id)` 唯一，upsert）。复用窗口 30 分钟（`CHECKOUT_SESSION_TTL_MS`），过期后重建。
+   取舍：provider 调用落在事务内（仓库里唯一一处），持连接约 0.5 秒；结账低频、正确性优先，代码注释里写明了这个取舍。
+
+**不做**：只靠前端禁用重复提交（服务端必须自洽；前端 `disabled={pending}` 作为第一道防线保留）。
 
 **验收**
 
-- [ ] test mode 实测结论落 PR（同 requestId 两次调用的返回对比）
-- [ ] 并发双击不产生双重结账（测试或实测证据）
-- [ ] checkout 限流生效（单测：第 N+1 次请求返回 429）
-- [ ] `pnpm test` + e2e 全绿
+- [x] 实测结论落 PR（同 request_id 两次调用返回两个不同 session）
+- [x] 并发双击只建一个会话：`SlowProvider` 逼出真交错，**去掉行锁 → 用例红，恢复 → 绿**
+- [x] 窗口内复用同一 URL、过期后重建（单测）
+- [x] checkout 限流生效（第 N+1 次 429 + retryAfter；Redis 不可用 503）
+- [ ] `pnpm test` + e2e 全绿（本地 899 passed；e2e 以 CI 为准）
 
 ---
 

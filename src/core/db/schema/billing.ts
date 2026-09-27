@@ -142,3 +142,29 @@ export const webhookEvents = pgTable(
     uniqueIndex("webhook_events_provider_event_idx").on(t.provider, t.eventId),
   ],
 );
+
+/**
+ * 最近一次创建的结账会话。用来给并发/重复的结账请求**去重**：同一个 (user, plan)
+ * 在有效期内复用同一个会话 URL，不再向服务商建新单。
+ *
+ * 为什么必须自己存：Creem 的 `request_id` 不是幂等键 —— 实测同一 request_id 连发两次
+ * 会返回两个可分别支付的会话；而「刚建的结账会话」在订阅/订单表里没有痕迹（那要等支付
+ * webhook），只靠查重挡不住双击。
+ */
+export const checkoutSessions = pgTable(
+  "checkout_sessions",
+  {
+    id: id(),
+    userId: userId(),
+    provider: text("provider").notNull(),
+    planId: text("plan_id").notNull(),
+    providerSessionId: text("provider_session_id").notNull(),
+    url: text("url").notNull(),
+    // 到期后不再复用，下次结账重新建单。
+    expiresAt: timestamp("expires_at").notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("checkout_sessions_user_plan_idx").on(t.userId, t.planId),
+  ],
+);
