@@ -105,7 +105,7 @@
 | T1301                       | acquisition-attribution | `feat/acquisition-attribution` | T1300, T102, T203             | done             |
 | T1302                       | acquisition-report      | `feat/acquisition-report`      | T1301, T604, T1202            | done             |
 | T1303                       | lead-capture            | `feat/lead-capture`            | T1301, T202, T401             | done             |
-| T1304                       | lead-management         | `feat/lead-management`         | T1303, T1302, T502            | in review (#115) |
+| T1304                       | lead-management         | `feat/lead-management`         | T1303, T1302, T502            | done             |
 | T1305                       | referral-links          | `feat/referral-links`          | T1301, T203, T204, T302       | done             |
 | T1306                       | referral-rewards        | `feat/referral-rewards`        | T1305, T303, T1202, T1204     | in review (#116) |
 | **阶段 14：审查后续小项**   |                         |                                |                               |                  |
@@ -113,11 +113,18 @@
 | T1401                       | internal-terms          | `chore/internal-terms`         | T1400                         | done             |
 | T1402                       | e2e-flaky-auth          | `fix/e2e-flaky-auth`           | T1400                         | done             |
 | **阶段 15：差异化补齐**     |                         |                                |                               |                  |
-| T1500                       | differentiation-plan    | `docs/differentiation-plan`    | —                             | todo             |
+| T1500                       | differentiation-plan    | `docs/differentiation-plan`    | —                             | done             |
 | T1501                       | api-keys                | `feat/api-keys`                | T1500, T203, T201, T401, T204 | todo             |
 | T1502                       | feature-flags           | `feat/feature-flags`           | T1500, T102, T201, T502       | todo             |
 | T1503                       | changelog               | `feat/changelog`               | T1500, T501, T104, T105       | todo             |
 | T1504                       | status-page             | `feat/status-page`             | T1500, T601, T202, T502       | todo             |
+| **阶段 16：合入后审查收口** |                         |                                |                               |                  |
+| T1600                       | postmerge-followups     | `docs/postmerge-followups`     | —                             | done             |
+| T1601                       | report-money            | `fix/report-money`             | —                             | todo             |
+| T1602                       | report-perf             | `fix/report-perf`              | T1601                         | todo             |
+| T1603                       | report-ui               | `fix/report-ui`                | —                             | todo             |
+| T1604                       | referral-fixes          | `fix/referral-fixes`           | —                             | todo             |
+| T1605                       | internal-terms-2        | `chore/internal-terms-2`       | —                             | done             |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
@@ -136,6 +143,8 @@
 阶段 13 分三块（见 [phase-13-acquisition.md](phase-13-acquisition.md)）：渠道归因与报表（T1301–T1302）、线索收集与管理（T1303–T1304）、邀请链接与积分奖励（T1305–T1306）。T1300 完成规划，T1301 完成渠道归因基础，T1302 完成渠道报表，T1303 完成邮箱留资，其余实施任务为 todo；T1306 等待 T1202、T1204 合入。首版不做现金返佣或营销群发。
 
 阶段 14 是阶段 12 实施期间各任务记录下来的遗留小项（见 [phase-14-followups.md](phase-14-followups.md)）：T1401 清掉交付代码/配置里残留的内部任务编号，T1402 修 `e2e/auth.spec.ts` 那条已知的间歇性失败（T1211 已定位到未 hydrate 时点击 + 内层 30s 默认超时耗尽 `toPass` 预算）。两条互不重叠可并行；standalone 的 `HOSTNAME` 坑与 `release-package.sh` 随包交付等项记录在该文件开头，不落卡。
+
+阶段 16 是 T1302（#107）与 T1305（#108）**合入 `main` 之后**才回来的两份代码审查（见 [phase-16-postmerge.md](phase-16-postmerge.md)）：批次 A（T1601–T1603）收报表的收入口径、查询性能与 UI/文档，批次 B（T1604）收邀请链接，T1605 单独修 T1401 那条被打破的零命中口径、并把它从人工 grep 变成脚本里的闸。T1601 与 T1602 同改 `report.ts`，T1601 先；T1306 的删号外键方向补进了它自己的卡，不新开卡。
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
 
@@ -195,6 +204,8 @@
 阶段 14  T1400 → T1401 T1402（两条互不重叠，可并行）
 
 阶段 15  T1500 → T1501 T1502 T1503 T1504（四条互不重叠，可并行）
+
+阶段 16  T1600 → T1601 → T1602；T1603 T1604 T1605（T1602 在 T1601 之后，其余可并行）
 ```
 
 ## 推荐顺序
@@ -208,6 +219,8 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 阶段 14：T1400 已随落卡完成，T1401 与 T1402 可并行（两者不碰同一批文件）。
 
 阶段 15：T1500 完成后，T1501–T1504 可并行（四条不碰同一批文件、无相互依赖）。
+
+阶段 16：T1605 可随时做（修的是已合入的回归，顺带给 CI 加闸）；T1601 与 T1602 先后做（同改 `report.ts`），T1603 / T1604 独立并行。
 
 可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做；T601 / T604；T602 / T603；阶段 8 批次内全部并行（见 phase-8-sell.md）；阶段 9 的 T902 / T903 / T905；阶段 10 的 T1001 / T1004；阶段 12 批次内除 T1203 外全部（T1203 在 T1201 之后，见 phase-12-review.md）。
 
@@ -228,3 +241,4 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 - [阶段 13：获客](phase-13-acquisition.md)
 - [阶段 14：审查后续小项](phase-14-followups.md)
 - [阶段 15：差异化补齐](phase-15-differentiation.md)
+- [阶段 16：合入后审查收口](phase-16-postmerge.md)

@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { collectedStatuses, type MetricWindow } from "@/core/admin/metrics";
 import type { Database } from "@/core/db/client";
-import { orders, user, userAttribution } from "@/core/db/schema";
+import { leads, orders, user, userAttribution } from "@/core/db/schema";
 
 import { campaignField, sourceField } from "./context";
 
@@ -33,6 +33,9 @@ const mediumOf = sql<string | null>`${userAttribution.snapshot}->>'utm_medium'`;
 const campaignOf = sql<
   string | null
 >`${userAttribution.snapshot}->>'utm_campaign'`;
+
+/** 线索来源：从线索快照里取 source，和归因报告的 sourceOf 口径一致。 */
+const leadSourceOf = sql<string>`coalesce(${leads.snapshot}->>'source', 'unknown')`;
 
 export type ReportFilters = {
   source?: string;
@@ -68,6 +71,10 @@ export type ReportRow = {
   source: string;
   registrations: number;
   payingUsers: number;
+  /** 该渠道已确认的线索数（status = 'confirmed'）。撤销/删除会导致历史指标变化。 */
+  confirmedLeads: number;
+  /** 注册转化率：confirmedLeads / registrations，百分数。未确认线索不计入分母。 */
+  conversionRate: number | null;
   /** 净收入：区间内成功付款的订单金额减去这些订单截至查询时的累计退款，按币种。 */
   revenue: Money[];
   /** 待核对：退款先到、订单金额还没补齐的退款额，不计入净收入。 */
@@ -86,11 +93,13 @@ export function mergeRows({
   payers,
   revenue,
   pending,
+  confirmedLeads,
 }: {
   registrations: Counted[];
   payers: Counted[];
   revenue: Priced[];
   pending: Priced[];
+  confirmedLeads: Counted[];
 }): ReportRow[] {
   const rows = new Map<string, ReportRow>();
   const row = (source: string) => {
@@ -98,6 +107,8 @@ export function mergeRows({
       source,
       registrations: 0,
       payingUsers: 0,
+      confirmedLeads: 0,
+      conversionRate: null,
       revenue: [],
       pending: [],
     };
@@ -106,6 +117,15 @@ export function mergeRows({
   };
   for (const item of registrations) row(item.source).registrations = item.value;
   for (const item of payers) row(item.source).payingUsers = item.value;
+  for (const item of confirmedLeads)
+    row(item.source).confirmedLeads = item.value;
+  // 计算转化率：已确认线索 / 注册数。未确认线索不计入分母。
+  for (const [, entry] of rows) {
+    entry.conversionRate =
+      entry.registrations > 0
+        ? Math.round((entry.confirmedLeads / entry.registrations) * 1000) / 10
+        : null;
+  }
   for (const item of revenue)
     if (item.value !== 0)
       row(item.source).revenue.push({
@@ -147,7 +167,7 @@ function filterWhere(filters: ReportFilters) {
  *
  * 付费人数是「区间内成功付款过的用户」去重（全额退款过也算付过款，退款额在收入那一列）。
  * 金额未知的占位订单（退款先到、付款事件还没补齐）不算付款，只进待核对 ——
- * 混进收入会把它当成零退款，净收入变成负数（T1202）。
+ * 混进收入会把它当成零退款，净收入变成负数。
  */
 export async function getAcquisitionReport(
   db: Database,
@@ -161,48 +181,63 @@ export async function getAcquisitionReport(
     isNotNull(orders.amount),
     ...where,
   );
-  const [registrations, payers, revenue, pending] = await Promise.all([
-    db
-      .select({ source: sourceOf, value: count() })
-      .from(user)
-      .leftJoin(userAttribution, eq(userAttribution.userId, user.id))
-      .where(and(gte(user.createdAt, window.since), ...where))
-      .groupBy(sql`1`),
-    db
-      .select({ source: sourceOf, value: countDistinct(orders.userId) })
-      .from(orders)
-      .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
-      .where(paid)
-      .groupBy(sql`1`),
-    db
-      .select({
-        source: sourceOf,
-        currency: orders.currency,
-        value: sql<number>`coalesce(sum(${orders.amount} - ${orders.refundedAmount}), 0)::int`,
-      })
-      .from(orders)
-      .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
-      .where(paid)
-      .groupBy(sql`1`, orders.currency),
-    db
-      .select({
-        source: sourceOf,
-        currency: orders.currency,
-        value: sql<number>`coalesce(sum(${orders.refundedAmount}), 0)::int`,
-      })
-      .from(orders)
-      .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
-      .where(
-        and(
-          gte(orders.createdAt, window.since),
-          isNull(orders.amount),
-          gt(orders.refundedAmount, 0),
-          ...where,
-        ),
-      )
-      .groupBy(sql`1`, orders.currency),
-  ]);
-  return mergeRows({ registrations, payers, revenue, pending });
+  const leadWhere: SQL[] = [];
+  if (filters.source) leadWhere.push(sql`${leadSourceOf} = ${filters.source}`);
+  const [registrations, payers, revenue, pending, confirmedLeads] =
+    await Promise.all([
+      db
+        .select({ source: sourceOf, value: count() })
+        .from(user)
+        .leftJoin(userAttribution, eq(userAttribution.userId, user.id))
+        .where(and(gte(user.createdAt, window.since), ...where))
+        .groupBy(sql`1`),
+      db
+        .select({ source: sourceOf, value: countDistinct(orders.userId) })
+        .from(orders)
+        .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
+        .where(paid)
+        .groupBy(sql`1`),
+      db
+        .select({
+          source: sourceOf,
+          currency: orders.currency,
+          value: sql<number>`coalesce(sum(${orders.amount} - ${orders.refundedAmount}), 0)::int`,
+        })
+        .from(orders)
+        .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
+        .where(paid)
+        .groupBy(sql`1`, orders.currency),
+      db
+        .select({
+          source: sourceOf,
+          currency: orders.currency,
+          value: sql<number>`coalesce(sum(${orders.refundedAmount}), 0)::int`,
+        })
+        .from(orders)
+        .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
+        .where(
+          and(
+            gte(orders.createdAt, window.since),
+            isNull(orders.amount),
+            gt(orders.refundedAmount, 0),
+            ...where,
+          ),
+        )
+        .groupBy(sql`1`, orders.currency),
+      // 已确认线索数：按线索自身快照里的 source 分组，和归因报表共用同样的 source 筛选。
+      db
+        .select({ source: leadSourceOf, value: count() })
+        .from(leads)
+        .where(
+          and(
+            eq(leads.status, "confirmed"),
+            gte(leads.createdAt, window.since),
+            ...leadWhere,
+          ),
+        )
+        .groupBy(sql`1`),
+    ]);
+  return mergeRows({ registrations, payers, revenue, pending, confirmedLeads });
 }
 
 export type FilterOptions = {

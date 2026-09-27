@@ -1,6 +1,6 @@
 {
   "id": "91bc6004-d8b7-4076-9356-a9959b929dd0",
-  "prevId": "f87e7c93-9515-4962-9d55-3274737b0914",
+  "prevId": "076d770f-0c41-497d-a50f-5f97d380a53d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -39,7 +39,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "user_attribution_source_idx": {
+          "name": "user_attribution_source_idx",
+          "columns": [
+            {
+              "expression": "coalesce(\"snapshot\"->>'source', 'unknown')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "user_attribution_user_id_user_id_fk": {
           "name": "user_attribution_user_id_user_id_fk",

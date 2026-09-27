@@ -557,8 +557,11 @@
         "registrations": "Sign-ups",
         "payingUsers": "Paying customers",
         "revenue": "Net revenue",
-        "pending": "Refunds to reconcile"
+        "pending": "Refunds to reconcile",
+        "confirmedLeads": "Confirmed leads",
+        "conversionRate": "Conv. rate"
       },
+      "leadsHint": "Confirmed leads and conversion rates change when leads are withdrawn or deleted. Only confirmed leads count toward the rate; unconfirmed leads are not included.",
       "filters": {
         "source": "Source",
         "medium": "Medium",
@@ -678,6 +681,29 @@
       "noSubscriptions": "No subscriptions.",
       "ordersTitle": "Orders",
       "noOrders": "No orders."
+    },
+    "leads": {
+      "title": "Leads",
+      "description": "Waitlist sign-ups and their confirmation status. Export for CRM import.",
+      "empty": "No leads found.",
+      "searchEmail": "Search by email",
+      "searchButton": "Search",
+      "exportCsv": "Export CSV",
+      "unknownSource": "Unknown",
+      "columns": {
+        "email": "Email",
+        "status": "Status",
+        "list": "List",
+        "source": "Source",
+        "created": "Signed up",
+        "confirmed": "Confirmed",
+        "user": "Registered user"
+      },
+      "status": {
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "withdrawn": "Withdrawn"
+      }
     },
     "orders": {
       "title": "Orders",
