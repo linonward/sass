@@ -1,6 +1,6 @@
 {
-  "id": "3c894141-c8f9-4c83-8afe-1bc5342f7810",
-  "prevId": "c2fef6f0-9a6c-458f-984c-0c6e945623f5",
+  "id": "49e26b32-65d7-40d8-9132-2fc0017fa467",
+  "prevId": "829231e6-7306-4614-a897-bfd9057b5220",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1709,58 +1709,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.notification_log": {
-      "name": "notification_log",
-      "schema": "",
-      "columns": {
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_sent_at": {
-          "name": "last_sent_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "notification_log_user_id_user_id_fk": {
-          "name": "notification_log_user_id_user_id_fk",
-          "tableFrom": "notification_log",
-          "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "notification_log_kind_key_pk": {
-          "name": "notification_log_kind_key_pk",
-          "columns": ["kind", "key"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.acquisition_leads": {
       "name": "acquisition_leads",
       "schema": "",
@@ -1976,6 +1924,58 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.notification_log": {
+      "name": "notification_log",
+      "schema": "",
+      "columns": {
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_sent_at": {
+          "name": "last_sent_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "notification_log_user_id_user_id_fk": {
+          "name": "notification_log_user_id_user_id_fk",
+          "tableFrom": "notification_log",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "notification_log_kind_key_pk": {
+          "name": "notification_log_kind_key_pk",
+          "columns": ["kind", "key"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.referral_codes": {
       "name": "referral_codes",
       "schema": "",
@@ -2063,6 +2063,12 @@
           "notNull": true,
           "default": "'awaiting_payment'"
         },
+        "rule_snapshot": {
+          "name": "rule_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2114,195 +2120,154 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.status_checks": {
-      "name": "status_checks",
+    "public.referral_reward_debt": {
+      "name": "referral_reward_debt",
       "schema": "",
       "columns": {
-        "component": {
-          "name": "component",
+        "id": {
+          "name": "id",
           "type": "text",
           "primaryKey": true,
           "notNull": true
         },
-        "consecutive_failures": {
-          "name": "consecutive_failures",
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reward_id": {
+          "name": "reward_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "referral_reward_debt_user_idx": {
+          "name": "referral_reward_debt_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "referral_reward_debt_settled_idx": {
+          "name": "referral_reward_debt_settled_idx",
+          "columns": [
+            {
+              "expression": "settled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "referral_reward_debt_user_id_user_id_fk": {
+          "name": "referral_reward_debt_user_id_user_id_fk",
+          "tableFrom": "referral_reward_debt",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.referral_rewards": {
+      "name": "referral_rewards",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "invitee_user_id": {
+          "name": "invitee_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "inviter_user_id": {
+          "name": "inviter_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_ref": {
+          "name": "order_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "inviter_credits": {
+          "name": "inviter_credits",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 0
         },
-        "last_checked_at": {
-          "name": "last_checked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_ok": {
-          "name": "last_ok",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_error": {
-          "name": "last_error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.status_events": {
-      "name": "status_events",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "component": {
-          "name": "component",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "message": {
-          "name": "message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "source": {
-          "name": "source",
-          "type": "text",
+        "invitee_credits": {
+          "name": "invitee_credits",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "'manual'"
+          "default": 0
         },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "resolved_at": {
-          "name": "resolved_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notified_at": {
-          "name": "notified_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "status_events_component_idx": {
-          "name": "status_events_component_idx",
-          "columns": [
-            {
-              "expression": "component",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "status_events_open_idx": {
-          "name": "status_events_open_idx",
-          "columns": [
-            {
-              "expression": "component",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "resolved_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.status_subscribers": {
-      "name": "status_subscribers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "locale": {
-          "name": "locale",
+        "inviter_grant_source_id": {
+          "name": "inviter_grant_source_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "confirm_hash": {
-          "name": "confirm_hash",
+        "invitee_grant_source_id": {
+          "name": "invitee_grant_source_id",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "confirm_expires_at": {
-          "name": "confirm_expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "confirmed_at": {
-          "name": "confirmed_at",
-          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -2315,38 +2280,72 @@
         }
       },
       "indexes": {
-        "status_subscribers_email_idx": {
-          "name": "status_subscribers_email_idx",
+        "referral_rewards_invitee_idx": {
+          "name": "referral_rewards_invitee_idx",
           "columns": [
             {
-              "expression": "email",
+              "expression": "invitee_user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
         },
-        "status_subscribers_confirm_hash_idx": {
-          "name": "status_subscribers_confirm_hash_idx",
+        "referral_rewards_inviter_idx": {
+          "name": "referral_rewards_inviter_idx",
           "columns": [
             {
-              "expression": "confirm_hash",
+              "expression": "inviter_user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "referral_rewards_order_idx": {
+          "name": "referral_rewards_order_idx",
+          "columns": [
+            {
+              "expression": "order_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "referral_rewards_invitee_user_id_user_id_fk": {
+          "name": "referral_rewards_invitee_user_id_user_id_fk",
+          "tableFrom": "referral_rewards",
+          "tableTo": "user",
+          "columnsFrom": ["invitee_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "referral_rewards_inviter_user_id_user_id_fk": {
+          "name": "referral_rewards_inviter_user_id_user_id_fk",
+          "tableFrom": "referral_rewards",
+          "tableTo": "user",
+          "columnsFrom": ["inviter_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

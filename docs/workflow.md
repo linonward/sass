@@ -39,6 +39,16 @@ pnpm install   # T101 合入之后才有
 
 钩子只挡本地提交，CI 仍然完整跑一遍 lint、format、typecheck、test。临时跳过用 `git commit --no-verify`，但 CI 不会放过。
 
+### 改数据库 schema
+
+改 `src/core/db/schema/` 之后用 `pnpm db:generate` 生成迁移，生成的 SQL 文件不要手工改内容
+（改了也会被当成新迁移的同一份 `when`，已经跑过的库不会重跑）。迁移器判断「要不要执行」只比较
+`drizzle/meta/_journal.json` 的 `when` 和账本里的 `created_at`：`when` 比账本最大值小的迁移
+在已有数据的库上会被**静默跳过**，线上缺表直到构建挂掉才发现（2026-09 出过一次）。
+
+提交前跑 `pnpm migrations:check`（CI 也会跑）：检查 `idx` 连续、`when` 严格递增、tag 不重号、
+快照链闭合。报错照脚本开头的说明修，并在空库上 `pnpm db:migrate` 验一遍。
+
 ### 本地跑 e2e
 
 ```bash
