@@ -63,9 +63,31 @@ export default defineLegalDocument({
           <p>
             Use Source preferences on any page to decline or withdraw. When you
             are signed in, withdrawal also removes the source linked to your
-            account. We remember a decline in local storage without any source
-            data. These controls do not change our separate web analytics
-            settings.
+            account. We remember a decline in local storage and a 30-day
+            preference cookie without any source data. These controls do not
+            change our separate web analytics settings.
+          </p>
+        </>
+      )}
+      {siteConfig.acquisition.leads.enabled && (
+        <>
+          <h3>Waitlists and email confirmation</h3>
+          <p>
+            When you explicitly join a list, we keep your email, the list,
+            consent wording and version, consent time and any source you allowed
+            us to record. We send a confirmation email; joining does not create
+            an account or subscribe you to marketing emails. If you later
+            register with the same verified email, we link your confirmed lead
+            to your account. A permitted source within 30 days may be inherited.
+          </p>
+          <p>
+            Use the withdrawal link in the latest confirmation email to remove
+            your email, consent, source and account link. Unconfirmed leads
+            expire after 7 days and confirmed leads after 180 days from
+            confirmation, with expired data removed by daily cleanup. Anonymous
+            list counts remain. Deleting your account also removes leads for
+            that email. We use hashed email and IP identifiers in short-lived
+            rate limits to prevent abusive submissions.
           </p>
         </>
       )}

@@ -503,8 +503,27 @@ export const acquisitionConfigSchema = z.strictObject({
     .strictObject({ enabled: z.boolean().default(false) })
     .default({ enabled: false }),
   leads: z
-    .strictObject({ enabled: z.boolean().default(false) })
-    .default({ enabled: false }),
+    .strictObject({
+      enabled: z.boolean().default(false),
+      lists: z
+        .array(
+          z.strictObject({
+            id: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
+            consentVersion: z.string().trim().min(1).max(40),
+          }),
+        )
+        .min(1)
+        .refine(
+          (lists) =>
+            new Set(lists.map((list) => list.id)).size === lists.length,
+          "list ids must be unique",
+        )
+        .default([{ id: "waitlist", consentVersion: "1" }]),
+    })
+    .default({
+      enabled: false,
+      lists: [{ id: "waitlist", consentVersion: "1" }],
+    }),
   referrals: z
     .strictObject({ enabled: z.boolean().default(false) })
     .default({ enabled: false }),

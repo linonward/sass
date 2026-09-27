@@ -92,6 +92,13 @@
       "when": 1790478194026,
       "tag": "0012_hot_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790480747771,
+      "tag": "0013_magical_hulk",
+      "breakpoints": true
     }
   ]
 }

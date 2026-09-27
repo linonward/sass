@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { attributionSchema, isCurrent, type Attribution } from "./context";
 
+export const SOURCE_CHOICE_COOKIE = "source_preference";
 export const SOURCE_COOKIE = "acquisition_source";
 export const RETRY_COOKIE = "acquisition_registration";
 export const RETRY_SECONDS = 24 * 60 * 60;
@@ -74,6 +75,7 @@ export function sourceFromHeaders(
   secret: string,
   now = Date.now(),
 ): Attribution | null {
+  if (readCookie(headers, SOURCE_CHOICE_COOKIE) === "declined") return null;
   const token = readContext(readCookie(headers, SOURCE_COOKIE), secret, now);
   return token?.purpose === "source" ? token.attribution : null;
 }
