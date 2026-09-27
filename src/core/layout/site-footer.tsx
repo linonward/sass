@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/core/i18n/navigation";
 
 import siteConfig from "../../../site.config";
+import { footerNav } from "./footer-nav";
 import { SiteLogo } from "./site-logo";
 
 export function SiteFooter() {
@@ -21,7 +22,7 @@ export function SiteFooter() {
           <p className="text-sm opacity-70">{t("Footer.tagline")}</p>
         </div>
         <div className="flex flex-wrap gap-12 sm:gap-16">
-          {siteConfig.nav.footer.map((group) => (
+          {footerNav(siteConfig).map((group) => (
             <nav key={group.key} aria-label={nav(group.key)}>
               <h2 className="text-sm font-medium">{nav(group.key)}</h2>
               <ul className="mt-4 space-y-2.5 text-sm">

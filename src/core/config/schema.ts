@@ -514,6 +514,12 @@ export const aiConfigSchema = z
     }
   });
 
+// 更新日志：`content/changelog/` 的 MDX 驱动 `/changelog` 页面和 RSS。关闭时两者都返回 404，
+// 页脚也不显示入口（见 core/layout/footer-nav.ts）。
+export const changelogConfigSchema = z.strictObject({
+  enabled: z.boolean().default(false),
+});
+
 export const acquisitionConfigSchema = z.strictObject({
   attribution: z
     .strictObject({ enabled: z.boolean().default(false) })
@@ -651,6 +657,7 @@ export const siteConfigSchema = z
       acquisitionConfigSchema.parse({}),
     ),
     statusPage: statusPageSchema.default(statusPageSchema.parse({})),
+    changelog: changelogConfigSchema.default(changelogConfigSchema.parse({})),
     observability: observabilityConfigSchema.default(
       observabilityConfigSchema.parse({}),
     ),
@@ -725,14 +732,15 @@ export type AuthConfig = SiteConfig["auth"];
 export type DashboardIcon = (typeof dashboardIcons)[number];
 export type DashboardNavItem = SiteConfig["dashboard"]["nav"][number];
 export type CreditsConfig = SiteConfig["credits"];
+export type ChangelogConfig = SiteConfig["changelog"];
+export type StatusPageConfig = SiteConfig["statusPage"];
+export type StatusComponent = StatusPageConfig["components"][string];
+export type StatusPageMode = StatusPageConfig["mode"];
 export type RateLimitConfig = SiteConfig["rateLimit"];
 export type ApiKeysConfig = SiteConfig["apiKeys"];
 export type UploadConfig = SiteConfig["upload"];
 export type AiConfig = SiteConfig["ai"];
 export type ObservabilityConfig = SiteConfig["observability"];
-export type StatusPageConfig = SiteConfig["statusPage"];
-export type StatusComponent = StatusPageConfig["components"][string];
-export type StatusPageMode = StatusPageConfig["mode"];
 export type AiModel = AiConfig["models"][number];
 export type AiProvider = (typeof aiProviders)[number];
 export type AiImageModel = AiConfig["imageModels"][number];
