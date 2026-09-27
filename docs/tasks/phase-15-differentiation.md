@@ -14,6 +14,7 @@
 - **Status Page**：`/status` 公开页面展示核心服务状态；支持手动设置和自动 health check 两种模式；显示过往 incident。
 
 不做：
+
 - 不做 API Key 的 OAuth2/scope 体系、不做多级权限 key、不做 key 的调用量计费（积分已有）
 - 不做 Feature Flag 的 A/B 实验统计、不做按国家/IP 维度的规则、不做 kill switch 紧急熔断
 - 不做 Changelog 的后台发布 UI（v1 直接改 MDX 文件）
@@ -23,6 +24,7 @@
 复用 TypeScript + Node、Postgres、现有认证、邮件、content-collections、可观测性；首版不新增外部服务、SDK 或运行时。实施中确需新增依赖时先查官方最新稳定版。
 
 通用能力位于：
+
 - `src/core/api-keys/` —— key 生成、hash、验证、中间件
 - `src/core/flags/` —— flag 评估逻辑与组件
 - `src/app/[locale]/(app)/api-keys/`、`(marketing)/changelog/`、`/status/` —— 页面
@@ -125,13 +127,16 @@ SaaS 上线后需要灰度发布新功能——先给 admin 看、再给 10% 用
 - `site.config.ts` 新增 `userFlags` 段：
   ```typescript
   userFlags: {
-    enabled: boolean  // 默认 false，关闭后 isEnabled() 永远返回 false
-    definitions: Record<string, {
-      description: string
-      enabled: boolean          // 总开关
-      rollout: number           // 0–100，百分比灰度
-      adminOnly: boolean        // 仅 admin 可见
-    }>
+    enabled: boolean; // 默认 false，关闭后 isEnabled() 永远返回 false
+    definitions: Record<
+      string,
+      {
+        description: string;
+        enabled: boolean; // 总开关
+        rollout: number; // 0–100，百分比灰度
+        adminOnly: boolean; // 仅 admin 可见
+      }
+    >;
   }
   ```
 - `src/core/flags/evaluate.ts`：
@@ -187,6 +192,7 @@ SaaS 上线后需要灰度发布新功能——先给 admin 看、再给 10% 用
   date: "2026-10-15"
   category: "feature"  // feature | improvement | fix
   ---
+
   用户现在可以在 dashboard 生成和管理自己的 API Key...
   ```
 - collection 定义 (`src/core/content/changelog-collection.ts`) 或扩展现有 content-collections 配置
@@ -236,14 +242,17 @@ SaaS 上线后出故障是必然的。用户第一反应是"我的问题还是�
 - `site.config.ts` 新增 `statusPage` 段：
   ```typescript
   statusPage: {
-    enabled: boolean             // 默认 false
-    mode: "manual" | "auto"     // 默认 "manual"
-    components: Record<string, {
-      label: string              // 展示名（如 "API"、"Database"、"AI Provider"）
-      description?: string
-      healthUrl?: string         // auto 模式下的 health check URL
-    }>
-    historyDays: number          // 默认 30，展示最近 N 天的 uptime 和 incident
+    enabled: boolean; // 默认 false
+    mode: "manual" | "auto"; // 默认 "manual"
+    components: Record<
+      string,
+      {
+        label: string; // 展示名（如 "API"、"Database"、"AI Provider"）
+        description?: string;
+        healthUrl?: string; // auto 模式下的 health check URL
+      }
+    >;
+    historyDays: number; // 默认 30，展示最近 N 天的 uptime 和 incident
   }
   ```
 - `src/core/status/`：

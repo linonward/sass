@@ -6,7 +6,7 @@ v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性
 
 - 合并模板更新：[UPGRADING.md](UPGRADING.md)
 - 设计系统：[docs/design.md](docs/design.md) · 多语言：[docs/i18n.md](docs/i18n.md)
-- 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`AGENTS.md`、`CLAUDE.md` —— 走 GitHub「Use this template」拿到仓库的话，按[第 1 步](#1-用模板建仓库)的清单删掉
+- 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`docs/go-to-market.md`、`docs/competitive-landscape.md`、`AGENTS.md`、`CLAUDE.md` —— 走 GitHub「Use this template」拿到仓库的话，按[第 1 步](#1-用模板建仓库)的清单删掉
 
 ## 授权
 
@@ -34,7 +34,7 @@ v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性
 
 **不包含**
 
-- 模板自己的开发过程文档：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`AGENTS.md`、`CLAUDE.md`
+- 模板自己的开发过程文档：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`docs/go-to-market.md`、`docs/competitive-landscape.md`、`AGENTS.md`、`CLAUDE.md`
 - 任何**未跟踪**的文件：`.env.local`（真实凭据）、`.vercel/`、`node_modules/`、`.next/`、`.content-collections/`、测试产物
 
 包由 `git archive` 导出，未跟踪的文件天然进不去；导出后脚本会解压自检一遍（`README`/`LICENSE`/`package.json` 等在不在、凭据与卖家域名是否零命中），自检不过就不出包。自己验证或重新打包：
@@ -71,17 +71,19 @@ git remote add upstream https://github.com/linonward/sass.git
 **接着删掉模板自己的开发文档。** 走 GitHub 这条路这些文件会原样留在你的仓库里（购买后收到的 zip 里没有它们，脚本已经剔掉了），留着会带来实际麻烦：
 
 ```bash
-git rm -r docs/plan.md docs/workflow.md docs/tasks AGENTS.md CLAUDE.md
+git rm -r docs/plan.md docs/workflow.md docs/tasks docs/go-to-market.md docs/competitive-landscape.md AGENTS.md CLAUDE.md
 git commit -m "chore: remove template author's internal docs"
 ```
 
-| 删掉               | 为什么                                                                                                                                                                                                                                                                                         |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AGENTS.md`        | 模板作者写给 **AI 编码助手**的仓库说明。Claude Code 这类工具打开仓库时会**自动加载**它，把模板作者的工作流当成你的项目规则执行 —— 「不在 `main` 上提交」「一个任务 = 一个分支 = 一个 worktree = 一个 PR」「PR 内同步更新任务表状态」。在你的产品仓库里这些既没有意义，又会挡住正常的提交流程。 |
-| `CLAUDE.md`        | 只有一行 `@AGENTS.md`，把上面那份说明喂给 Claude Code。                                                                                                                                                                                                                                        |
-| `docs/plan.md`     | 模板的方案与关键决策记录，上面那些规则的出处。                                                                                                                                                                                                                                                 |
-| `docs/workflow.md` | 模板的分支 / worktree / PR 流程，就是 AGENTS.md 里硬规则的展开。                                                                                                                                                                                                                               |
-| `docs/tasks/`      | 模板的任务表（每个阶段一份）。AGENTS.md 要求「PR 内同步更新任务表状态」，指的就是这里。                                                                                                                                                                                                        |
+| 删掉                            | 为什么                                                                                                                                                                                                                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`                     | 模板作者写给 **AI 编码助手**的仓库说明。Claude Code 这类工具打开仓库时会**自动加载**它，把模板作者的工作流当成你的项目规则执行 —— 「不在 `main` 上提交」「一个任务 = 一个分支 = 一个 worktree = 一个 PR」「PR 内同步更新任务表状态」。在你的产品仓库里这些既没有意义，又会挡住正常的提交流程。 |
+| `CLAUDE.md`                     | 只有一行 `@AGENTS.md`，把上面那份说明喂给 Claude Code。                                                                                                                                                                                                                                        |
+| `docs/plan.md`                  | 模板的方案与关键决策记录，上面那些规则的出处。                                                                                                                                                                                                                                                 |
+| `docs/workflow.md`              | 模板的分支 / worktree / PR 流程，就是 AGENTS.md 里硬规则的展开。                                                                                                                                                                                                                               |
+| `docs/tasks/`                   | 模板的任务表（每个阶段一份）。AGENTS.md 要求「PR 内同步更新任务表状态」，指的就是这里。                                                                                                                                                                                                        |
+| `docs/go-to-market.md`          | 模板作者的市场策略：卖给谁、怎么定价、渠道怎么铺。写作时默认读者是作者本人，里面是作者的站点、定价与投放计划。                                                                                                                                                                                 |
+| `docs/competitive-landscape.md` | 模板作者对同类产品的调研与差异定位。同一个市场里的同行看到这份东西只会尴尬。                                                                                                                                                                                                                   |
 
 这些文件都是文档和 AI 指令：**没有任何代码、脚本或测试读取它们**，删掉不影响 `pnpm install` / `pnpm dev` / `pnpm test` / `pnpm build` 和部署（`src/` 里有几处注释指向它们，注释不影响运行）。
 

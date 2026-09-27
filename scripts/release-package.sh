@@ -29,6 +29,8 @@ excludes=(
   ":(exclude)docs/plan.md"
   ":(exclude)docs/workflow.md"
   ":(exclude)docs/tasks"
+  ":(exclude)docs/go-to-market.md"
+  ":(exclude)docs/competitive-landscape.md"
 )
 
 git archive --format=zip --prefix="$name/" -o "$out" "$ref" -- . "${excludes[@]}"
@@ -69,10 +71,11 @@ check "没有构建产物、依赖和本地临时目录" \
   \( -name ".vercel" -o -name "node_modules" -o -name ".next" \
   -o -name ".content-collections" -o -name "test-results" \
   -o -name "playwright-report" -o -name ".tmp" \)
-check "没有内部文档（AGENTS / CLAUDE / 计划 / 流程 / 任务表）" \
+check "没有内部文档（AGENTS / CLAUDE / 计划 / 流程 / 任务表 / 市场策略）" \
   find "$pkg" \
   \( -name "AGENTS.md" -o -name "CLAUDE.md" -o -path "*/docs/tasks*" \
-  -o -path "*/docs/plan.md" -o -path "*/docs/workflow.md" \)
+  -o -path "*/docs/plan.md" -o -path "*/docs/workflow.md" \
+  -o -path "*/docs/go-to-market.md" -o -path "*/docs/competitive-landscape.md" \)
 # 卖家痕迹：域名和邮箱一律不许出现。上游仓库地址是例外 —— README / UPGRADING
 # 教买家把它加为 upstream 以合并模板更新，那是买家需要的。
 # 模式写成 `[.]` / `[@]` 而不是 `\.` / `@`：否则脚本自己的源码会命中自己，
