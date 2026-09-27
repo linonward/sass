@@ -111,10 +111,16 @@ export default async function AdminAcquisitionPage({
               <TableHead className="text-right">
                 {t("columns.pending")}
               </TableHead>
+              <TableHead className="text-right">
+                {t("columns.confirmedLeads")}
+              </TableHead>
+              <TableHead className="text-right">
+                {t("columns.conversionRate")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 && <EmptyRow colSpan={5} text={t("empty")} />}
+            {rows.length === 0 && <EmptyRow colSpan={7} text={t("empty")} />}
             {rows.map((row) => (
               <TableRow key={row.source}>
                 <TableCell className="max-w-56">
@@ -135,11 +141,20 @@ export default async function AdminAcquisitionPage({
                 <TableCell className="text-right tabular-nums">
                   {moneyList(row.pending)}
                 </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {format.number(row.confirmedLeads)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.conversionRate != null
+                    ? `${format.number(row.conversionRate)}%`
+                    : "—"}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
         <p className="text-muted-foreground text-xs">{t("pendingHint")}</p>
+        <p className="text-muted-foreground text-xs">{t("leadsHint")}</p>
       </MetricSection>
     </div>
   );

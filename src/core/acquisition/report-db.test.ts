@@ -198,6 +198,8 @@ describe.skipIf(!url)("渠道报表", () => {
       payingUsers: 2,
       revenue: [{ currency: "USD", amount: 750 }],
       pending: [],
+      confirmedLeads: 0,
+      conversionRate: 0,
     });
 
     // 两笔订单（含续费、另一币种）只算一个付费用户；全额退款的不列收入。
@@ -210,6 +212,8 @@ describe.skipIf(!url)("渠道报表", () => {
         { currency: "EUR", amount: 500 },
       ],
       pending: [],
+      confirmedLeads: 0,
+      conversionRate: 0,
     });
 
     expect(row(rows, "direct")).toEqual({
@@ -218,6 +222,8 @@ describe.skipIf(!url)("渠道报表", () => {
       payingUsers: 1,
       revenue: [{ currency: "USD", amount: 1000 }],
       pending: [],
+      confirmedLeads: 0,
+      conversionRate: 0,
     });
 
     // 退款先到的占位订单单列待核对，也不算付费人数。
@@ -227,6 +233,8 @@ describe.skipIf(!url)("渠道报表", () => {
       payingUsers: 0,
       revenue: [],
       pending: [{ currency: "USD", amount: 400 }],
+      confirmedLeads: 0,
+      conversionRate: 0,
     });
   });
 
