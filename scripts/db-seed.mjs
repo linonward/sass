@@ -2,8 +2,8 @@
 /**
  * 灌一批演示数据：两个示例用户、一条订阅、两笔订单、一份积分流水。
  *
- * 用法：pnpm db:seed
- *      DATABASE_URL=postgres://… pnpm db:seed
+ * 用法：ALLOW_DB_SEED=1 pnpm db:seed
+ *      ALLOW_DB_SEED=1 DATABASE_URL=postgres://… pnpm db:seed
  *
  * 给「刚 clone 下来想看看有数据长什么样」用：空库里 dashboard 一片空，跑完这个就有东西可看。
  * 幂等：所有写入都按自然键 upsert / 不覆盖已有值，重复执行不会报错也不会多出数据。
@@ -11,7 +11,12 @@
  * 演示数据挂在 demo-*@example.com 这两个邮箱下，想清掉直接删用户（外键是 cascade）：
  *   delete from "user" where email like 'demo-%@example.com';
  *
- * 生产环境拒绝执行：演示数据不该出现在真实站点里。
+ * 闸门：生产环境拒绝执行（演示数据不该出现在真实站点里）。判断口径和 src/core/billing/env.ts
+ * 的 fakeBillingAllowed 一致 —— **NODE_ENV 没设置时按生产处理**，只有
+ * NODE_ENV=development / test，或者显式 ALLOW_DB_SEED=1 才放行。
+ * 闸门收紧前是 `NODE_ENV === "production"` 才拒绝，于是直接敲
+ * `DATABASE_URL=… node scripts/db-seed.mjs`（shell 里没设 NODE_ENV）就会把演示数据
+ * 灌进它指向的库，包括生产库。
  */
 import { existsSync } from "node:fs";
 import process from "node:process";
@@ -143,14 +148,45 @@ const daysFromNow = (days) => new Date(Date.now() + days * 86_400_000);
 // `.env.local` 里写了 NODE_ENV=production 时被这条闸门漏过去。
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
-if (process.env.NODE_ENV === "production") {
-  fail("拒绝在生产环境灌演示数据。真要演示请用一个独立的库。");
+// 只有 development / test 算非生产运行时，名单和 src/core/billing/env.ts 的
+// nonProductionNodeEnvs 一致（脚本是 .mjs，import 不了 TS）。
+const nonProductionNodeEnvs = ["development", "test"];
+// `ALLOW_DB_SEED` 的合法取值：只有 1 / true 放行，0 / false 与不填等价。
+const seedOptInValues = ["1", "true", "0", "false"];
+
+const nodeEnv = process.env.NODE_ENV;
+const optInValue = process.env.ALLOW_DB_SEED;
+const optIn = optInValue === "1" || optInValue === "true";
+// NODE_ENV 没设置时按生产处理（nodeEnv 未定义 → 不是非生产运行时）：
+// `next build` / `next start`、Docker、以及直接敲脚本的裸 shell 命令都没设 NODE_ENV，宁可拒绝。
+const nonProductionRuntime =
+  nodeEnv !== undefined && nonProductionNodeEnvs.includes(nodeEnv);
+
+if (!nonProductionRuntime && !optIn) {
+  fail(
+    [
+      `拒绝灌演示数据：NODE_ENV=${nodeEnv ?? "（未设置）"}，按生产处理。`,
+      // 写成 ALLOW_DB_SEED=yes 时会走到这里，顺手点出来，别让人对着「明明设了」发呆。
+      optInValue !== undefined && !seedOptInValues.includes(optInValue)
+        ? `ALLOW_DB_SEED=${optInValue} 不是有效值（只认 1 / true 放行，0 / false 关闭）。`
+        : null,
+      "演示数据只该灌进独立的库：示例用户是 email_verified=true 的 example.com 保留域邮箱，",
+      "收不到验证码也接管不了，订阅/订单/积分流水却会真实计入 admin 后台、指标和收入统计。",
+      "确认 DATABASE_URL 指向的不是生产库后，任选一种方式放行：",
+      "  ALLOW_DB_SEED=1 pnpm db:seed",
+      "  NODE_ENV=development pnpm db:seed",
+      // 已经灌进真实库时的补救手段。
+      "清掉已灌进去的数据：delete from \"user\" where email like 'demo-%@example.com';",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
 }
 
 const url = process.env.DATABASE_URL;
 if (!url) {
   fail(
-    "缺少 DATABASE_URL：先配好 .env.local，或用 `DATABASE_URL=… pnpm db:seed`。",
+    "缺少 DATABASE_URL：先配好 .env.local，或用 `ALLOW_DB_SEED=1 DATABASE_URL=… pnpm db:seed`。",
   );
 }
 
