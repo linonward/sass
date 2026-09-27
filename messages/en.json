@@ -889,29 +889,35 @@
         "resolve": "Mark resolved",
         "resolved": "Incident resolved."
       },
-      "resolve": {
-        "title": "Resolve an incident",
-        "hint": "Subscribers will get a separate recovery email.",
-        "message": "What changed",
-        "messagePlaceholder": "The issue has been fixed.",
-        "submit": "Mark resolved",
-        "resolved": "Incident resolved."
+      "history": {
+        "title": "History",
+        "description": "Incidents in the last {days} days.",
+        "empty": "No incidents recorded yet."
+      },
+      "columns": {
+        "component": "Component",
+        "status": "Impact",
+        "createdAt": "Opened",
+        "message": "Message",
+        "resolvedAt": "Resolved"
       },
       "subscribers": {
         "title": "Subscribers",
-        "empty": "Nobody has subscribed yet.",
+        "description": "{count} addresses, confirmed and pending.",
+        "empty": "Nobody subscribed yet.",
         "email": "Email",
-        "since": "Subscribed",
-        "active": "Active"
+        "state": "State",
+        "createdAt": "Submitted",
+        "confirmed": "Confirmed",
+        "pending": "Pending"
       },
       "errors": {
-        "componentRequired": "Choose a component.",
-        "statusRequired": "Choose an impact level.",
-        "messageRequired": "Describe what is happening.",
-        "resolveMessageRequired": "Describe what changed.",
-        "notFound": "Incident not found.",
-        "alreadyResolved": "This incident is already resolved.",
-        "generic": "Something went wrong. Please try again."
+        "forbidden": "You do not have access to this page.",
+        "unknownComponent": "Pick a component from the list.",
+        "invalidStatus": "Pick an impact level from the list.",
+        "messageRequired": "Add a short message.",
+        "notFound": "That incident was already resolved.",
+        "generic": "Something went wrong. Try again."
       }
     },
     "apiKeys": {
@@ -1059,6 +1065,57 @@
       "invalidBody": "The link may be incomplete or mistyped, or the invitation may no longer be available.",
       "error": "We could not complete your request. Please try again.",
       "back": "Back to home"
+    }
+  },
+  "Status": {
+    "title": "System status",
+    "description": "Live status of every component, 30-day uptime for each one, and the incident history.",
+    "metaTitle": "Status",
+    "metaDescription": "{name} system status: live component status, uptime and incident history.",
+    "refresh": "Refresh",
+    "overall": {
+      "operational": "All systems operational",
+      "degraded": "Some systems degraded",
+      "outage": "Major outage"
+    },
+    "overallHint": {
+      "operational": "Everything is running normally. We post here when that changes.",
+      "degraded": "Some components are slower or partly unavailable. We are on it.",
+      "outage": "A core component is down. We are working on it and will post updates here."
+    },
+    "statusLabel": {
+      "operational": "Operational",
+      "degraded": "Degraded",
+      "outage": "Outage"
+    },
+    "componentsTitle": "Components",
+    "uptime": "{value}% uptime over {days} days",
+    "since": "Since {date}",
+    "incidentsTitle": "Incident history",
+    "noIncidents": "No incidents in the last {days} days.",
+    "resolvedAt": "Resolved {date}",
+    "ongoing": "Still ongoing",
+    "source": {
+      "auto": "Detected automatically"
+    },
+    "notice": {
+      "subscribed": "You are subscribed. We will email you when something breaks.",
+      "unsubscribed": "You have been unsubscribed and will not receive status emails.",
+      "expired": "That confirmation link has expired. Subscribe again to get a new one."
+    },
+    "subscribe": {
+      "title": "Get status updates by email",
+      "description": "We send one email when a component breaks, and one when it recovers. No newsletters, no marketing.",
+      "label": "Email address",
+      "placeholder": "you@example.com",
+      "cta": "Subscribe",
+      "done": "Check your inbox for a confirmation link.",
+      "errors": {
+        "invalidEmail": "Enter a valid email address.",
+        "rateLimited": "Too many attempts. Try again in a few minutes.",
+        "unavailable": "Subscriptions are unavailable right now.",
+        "generic": "Something went wrong. Try again in a moment."
+      }
     }
   }
 }
