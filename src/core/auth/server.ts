@@ -17,6 +17,8 @@ import {
   withAdminRole,
 } from "@/core/admin/roles";
 import { createRegistrationAttribution } from "@/core/acquisition/registration";
+import { createReferralBinding } from "@/core/acquisition/referrals/binding";
+import { createReferralService } from "@/core/acquisition/referrals/service";
 import { createAttributionStore } from "@/core/acquisition/store";
 import { db } from "@/core/db";
 import * as schema from "@/core/db/schema";
@@ -44,6 +46,13 @@ const registerAttribution = createRegistrationAttribution({
   enabled: siteConfig.acquisition.attribution.enabled,
   secret: env.BETTER_AUTH_SECRET,
   freeze: createAttributionStore(db).freeze,
+  warn: (event, fields) => logger.warn(event, fields),
+});
+// 邀请关系只在首次创建账号时建立；已有账号不会再走到这里，也就无法补绑。
+const bindReferral = createReferralBinding({
+  enabled: siteConfig.acquisition.referrals.enabled,
+  secret: env.BETTER_AUTH_SECRET,
+  bind: createReferralService(db).bind,
   warn: (event, fields) => logger.warn(event, fields),
 });
 
@@ -134,6 +143,8 @@ export const auth = betterAuth({
               ? (name, value, options) => ctx.setCookie(name, value, options)
               : undefined,
           );
+          // 邀请绑定失败或链接无效都不影响注册本身。
+          await bindReferral(user.id, headers);
           if (siteConfig.acquisition.leads.enabled) {
             try {
               await createLeadService(db).linkRegistration(

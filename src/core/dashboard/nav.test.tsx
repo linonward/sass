@@ -96,6 +96,45 @@ describe("dashboardNav", () => {
   ])("isActiveNav(%s, %s) = %s", (path, href, expected) => {
     expect(isActiveNav(path, href)).toBe(expected);
   });
+
+  test("acquisition.referrals 关闭时没有 Referrals 入口（出厂默认）", () => {
+    const config = configWithProjects();
+    expect(config.acquisition.referrals.enabled).toBe(false);
+    expect(dashboardNav(config).suite.map((i) => i.href)).not.toContain(
+      "/referrals",
+    );
+  });
+
+  test("acquisition.referrals 开启时，Dashboard 之后多一个 Referrals", () => {
+    const base = configWithProjects();
+    const nav = dashboardNav({
+      ...base,
+      acquisition: {
+        ...base.acquisition,
+        referrals: { enabled: true },
+      },
+    });
+    expect(nav.suite.map((i) => i.href)).toEqual([
+      "/dashboard",
+      "/referrals",
+      "/billing",
+      "/settings",
+    ]);
+    // 与 Playground 同时开启时，Referrals 排在它后面。
+    expect(
+      dashboardNav({
+        ...base,
+        features: { ...base.features, ai: true },
+        acquisition: { ...base.acquisition, referrals: { enabled: true } },
+      }).suite.map((i) => i.href),
+    ).toEqual([
+      "/dashboard",
+      "/playground",
+      "/referrals",
+      "/billing",
+      "/settings",
+    ]);
+  });
 });
 
 describe("AppSidebar", () => {
@@ -122,6 +161,19 @@ describe("AppSidebar", () => {
     expect(
       screen.getByRole("link", { name: messages.Dashboard.nav.settings }),
     ).toBeDefined();
+  });
+
+  test("模块开启时侧边栏出现 Referrals 入口", () => {
+    const base = configWithProjects();
+    renderSidebar(
+      defineConfig({
+        ...(base as SiteConfigInput),
+        acquisition: { ...base.acquisition, referrals: { enabled: true } },
+      }),
+    );
+    expect(
+      screen.getByRole("link", { name: messages.Dashboard.nav.referrals }),
+    ).toHaveProperty("href", expect.stringMatching(/\/referrals$/));
   });
 
   test("当前页的菜单项高亮", () => {

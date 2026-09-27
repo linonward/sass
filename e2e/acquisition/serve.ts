@@ -22,10 +22,18 @@ for (const file of [...new Set([...files, ".env.local"])]) {
 }
 const config = path.join(dest, "site.config.ts");
 const before = fs.readFileSync(config, "utf8");
-const after = before
-  .replace("leads: { enabled: false }", "leads: { enabled: true }")
-  .replace("attribution: { enabled: false }", "attribution: { enabled: true }");
-if (before === after) throw new Error("Expected default attribution flag off");
+const flags: [string, string][] = [
+  ["leads: { enabled: false }", "leads: { enabled: true }"],
+  ["attribution: { enabled: false }", "attribution: { enabled: true }"],
+  ["referrals: { enabled: false }", "referrals: { enabled: true }"],
+];
+const after = flags.reduce(
+  (text, [from, to]) => text.replace(from, to),
+  before,
+);
+for (const [from] of flags)
+  if (!before.includes(from))
+    throw new Error(`Expected default flag off in site.config.ts: ${from}`);
 fs.writeFileSync(config, after);
 // Only this disposable e2e copy stubs external Redis. Production has no bypass.
 const limiterPath = path.join(dest, "src/core/acquisition/leads/rate-limit.ts");

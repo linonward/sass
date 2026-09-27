@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 import messages from "../messages/en.json";
+import { newReferralCode } from "../src/core/acquisition/referrals/code";
+import { signIn, uniqueEmail, useRandomIp, withDatabase } from "./auth-helpers";
 
 test("default-off acquisition has no UI, cookies, API requests or enabled endpoint", async ({
   page,
@@ -37,6 +39,15 @@ test("default-off acquisition has no UI, cookies, API requests or enabled endpoi
     (await page.request.post("/api/acquisition/leads", { data: {} })).status(),
   ).toBe(404);
   expect((await page.request.get("/api/acquisition/leads")).status()).toBe(404);
+  expect(
+    (
+      await page.request.post("/api/acquisition/referrals", { data: {} })
+    ).status(),
+  ).toBe(404);
+  // 邀请落地页同样不存在：码的格式是对的，模块关着就只给 404。
+  expect(
+    (await page.request.get(`/invite/${newReferralCode()}`)).status(),
+  ).toBe(404);
   for (const route of ["/waitlist", "/waitlist/confirm", "/waitlist/withdraw"])
     expect((await page.request.get(route)).status()).toBe(404);
   await page.goto("/waitlist");
@@ -45,4 +56,28 @@ test("default-off acquisition has no UI, cookies, API requests or enabled endpoi
       script.includes("/api/acquisition/leads"),
     ),
   ).toBe(false);
+});
+
+test("default-off referrals: /referrals 对已登录用户也是 404，且不写任何数据", async ({
+  page,
+}) => {
+  await useRandomIp(page);
+  const email = uniqueEmail("referrals-disabled");
+  await signIn(page, email);
+  const response = await page.goto("/referrals");
+  expect(response?.status()).toBe(404);
+  await expect(
+    page.getByRole("heading", { name: messages.Referrals.title }),
+  ).toHaveCount(0);
+  // 页面没渲染，也就没人给这个账号生成邀请码。
+  const codes = await withDatabase(
+    async (db) =>
+      (
+        await db.query<{ count: number }>(
+          'select count(*)::int as count from referral_codes c join "user" u on u.id = c.user_id where u.email = $1',
+          [email],
+        )
+      ).rows[0]!.count,
+  );
+  expect(codes).toBe(0);
 });

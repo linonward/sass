@@ -53,13 +53,22 @@ const playgroundNav: DashboardNavItem = {
   href: "/playground",
   icon: "sparkles",
 };
+const referralsNav: DashboardNavItem = {
+  key: "referrals",
+  href: "/referrals",
+  icon: "users",
+};
 
-/** 侧边栏的两组菜单：套件项和业务项。`features.ai` 开启时套件项里多一个 Playground。 */
+/** 侧边栏的两组菜单：套件项和业务项。开启的模块会在套件项里多出对应入口。 */
 export function dashboardNav(
-  config: Pick<SiteConfig, "dashboard" | "features">,
+  config: Pick<SiteConfig, "dashboard" | "features" | "acquisition">,
 ): DashboardNav {
-  const suite = config.features.ai
-    ? [suiteNav[0]!, playgroundNav, ...suiteNav.slice(1)]
+  const optional = [
+    ...(config.features.ai ? [playgroundNav] : []),
+    ...(config.acquisition.referrals.enabled ? [referralsNav] : []),
+  ];
+  const suite = optional.length
+    ? [suiteNav[0]!, ...optional, ...suiteNav.slice(1)]
     : suiteNav;
   return { suite, business: config.dashboard.nav };
 }

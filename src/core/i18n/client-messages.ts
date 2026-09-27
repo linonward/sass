@@ -19,6 +19,7 @@ export const clientNamespaces = [
   "Locale",
   "Leads",
   "Playground",
+  "Referrals",
   "Theme",
 ] as const;
 

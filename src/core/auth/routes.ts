@@ -17,6 +17,8 @@ export const protectedPrefixes: readonly string[] = [
   "/settings",
   "/billing",
   "/playground",
+  // 邀请页只在模块开启时存在（关闭时页面自身 404）；这里只决定要不要走快速拦截。
+  "/referrals",
   ...siteConfig.dashboard.nav.map((item) => item.href),
 ];
 

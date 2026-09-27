@@ -1,9 +1,11 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { captureEntry } from "./context";
-import { signContext, SOURCE_COOKIE } from "./tokens";
+import { newReferralCode } from "./referrals/code";
+import { REFERRAL_COOKIE, signContext, SOURCE_COOKIE } from "./tokens";
 
-const { freeze, send, track } = vi.hoisted(() => ({
+const { bind, freeze, send, track } = vi.hoisted(() => ({
+  bind: vi.fn(),
   freeze: vi.fn(),
   send: vi.fn(),
   track: vi.fn(),
@@ -17,11 +19,15 @@ vi.mock("../../../site.config", async (original) => {
       acquisition: {
         ...configModule.default.acquisition,
         attribution: { enabled: true },
+        referrals: { enabled: true },
       },
     },
   };
 });
 vi.mock("./store", () => ({ createAttributionStore: () => ({ freeze }) }));
+vi.mock("./referrals/service", () => ({
+  createReferralService: () => ({ bind }),
+}));
 vi.mock("@/core/email", () => ({ sendEmail: send }));
 vi.mock("@/core/observability/track-server", () => ({ trackServer: track }));
 vi.mock("@/core/lib/after-response", () => ({
@@ -72,6 +78,74 @@ describe("configured Better Auth creation hook", () => {
       expect(track).toHaveBeenCalledOnce();
     },
   );
+  test("registration binds the referral code carried in the signed cookie", async () => {
+    bind.mockResolvedValue({ ok: true, inviterUserId: "inviter" });
+    const code = newReferralCode();
+    const snapshot = captureEntry(
+      { pathname: "/invite", utm_source: "launch" },
+      "site.test",
+    )!;
+    const headers = new Headers({
+      cookie: [
+        `${SOURCE_COOKIE}=${signContext({ v: 1, purpose: "source", attribution: snapshot }, env.BETTER_AUTH_SECRET)}`,
+        `${REFERRAL_COOKIE}=${signContext({ v: 1, purpose: "referral", code, acceptedAt: Date.now() }, env.BETTER_AUTH_SECRET)}`,
+      ].join("; "),
+    });
+    const context = {
+      path: "/sign-in/email-otp",
+      headers,
+      request: new Request("http://localhost:3000/api/auth/sign-in/email-otp", {
+        headers,
+      }),
+      setCookie: vi.fn(),
+    } as unknown as NonNullable<Parameters<typeof hook>[1]>;
+    await hook(
+      {
+        id: "new-user",
+        name: "Test",
+        email: "test@example.com",
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      context,
+    );
+    // 注册身份由服务端给出；邀请人不在请求里，只在 cookie 的码里。
+    expect(bind).toHaveBeenCalledWith({ inviteeUserId: "new-user", code });
+    // 两条上下文各走各的：UTM 归因照旧落库，不被邀请覆盖。
+    expect(freeze).toHaveBeenCalledWith(
+      "new-user",
+      snapshot,
+      expect.any(Number),
+    );
+  });
+
+  test("没有邀请上下文时不写关系", async () => {
+    const headers = new Headers();
+    await hook(
+      {
+        id: "new-user",
+        name: "Test",
+        email: "test@example.com",
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        path: "/sign-in/email-otp",
+        headers,
+        request: new Request(
+          "http://localhost:3000/api/auth/sign-in/email-otp",
+          {
+            headers,
+          },
+        ),
+        setCookie: vi.fn(),
+      } as unknown as NonNullable<Parameters<typeof hook>[1]>,
+    );
+    expect(bind).not.toHaveBeenCalled();
+  });
+
   test("existing-user session creation does not freeze attribution", async () => {
     const onSession = auth.options.databaseHooks!.session!.create!.after!;
     const context = {
