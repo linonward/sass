@@ -5,6 +5,11 @@ import { logger, type LogFn } from "@/core/observability/logger";
 export type RateLimitIdentifiers = {
   userId?: string | null;
   ip?: string | null;
+  /**
+   * 额外的一路计数器键，原样使用（api-keys 的 per-key 限流传 `api_key:<keyId>`）。
+   * 和 `userId` / `ip` 同理：不传就不计这一路。
+   */
+  key?: string | null;
 };
 
 export type RateLimitResult =
@@ -109,6 +114,7 @@ export function createRateLimiter({
     const keys = [
       identifiers.userId && `user:${identifiers.userId}`,
       identifiers.ip && `ip:${identifiers.ip}`,
+      identifiers.key,
     ].filter((key): key is string => Boolean(key));
 
     try {

@@ -41,19 +41,30 @@ const leadsNav: DashboardNavItem = {
   icon: "fileText",
 };
 
+// 只在 apiKeys 模块开启时出现的后台项，排在 Users 之后：和用户是同一类信息。
+const adminApiKeysNav: DashboardNavItem = {
+  key: "adminApiKeys",
+  href: "/admin/api-keys",
+  icon: "key",
+};
+
 /**
- * /admin 里的菜单。获客报表只在归因开启时出现，线索管理只在留资开启时出现 ——
- * 关闭时那个页面 404，菜单里留一个点进去就 404 的入口只会让人以为坏了。
+ * /admin 里的菜单。获客报表、线索管理和 API Key 报表只在对应模块开启时出现 ——
+ * 关闭时那些页面 404，菜单里留一个点进去就 404 的入口只会让人以为坏了。
+ * 顺序：Metrics →（归因 / 留资报表）→ Users →（API Key 报表）→ Orders → Subscriptions。
  */
 export function adminNav(
-  config: Pick<SiteConfig, "acquisition">,
+  config: Pick<SiteConfig, "acquisition" | "apiKeys">,
 ): readonly DashboardNavItem[] {
-  const extras: DashboardNavItem[] = [];
-  if (config.acquisition.attribution.enabled) extras.push(acquisitionNav);
-  if (config.acquisition.leads.enabled) extras.push(leadsNav);
-  return extras.length
-    ? [adminNavBase[0]!, ...extras, ...adminNavBase.slice(1)]
-    : adminNavBase;
+  const [metrics, users, ...rest] = adminNavBase;
+  return [
+    metrics!,
+    ...(config.acquisition.attribution.enabled ? [acquisitionNav] : []),
+    ...(config.acquisition.leads.enabled ? [leadsNav] : []),
+    users!,
+    ...(config.apiKeys.enabled ? [adminApiKeysNav] : []),
+    ...rest,
+  ];
 }
 
 // 只在对应模块开启时显示的套件项，排在 Dashboard 之后。
@@ -67,14 +78,23 @@ const referralsNav: DashboardNavItem = {
   href: "/referrals",
   icon: "users",
 };
+const apiKeysNav: DashboardNavItem = {
+  key: "apiKeys",
+  href: "/api-keys",
+  icon: "key",
+};
 
 /** 侧边栏的两组菜单：套件项和业务项。开启的模块会在套件项里多出对应入口。 */
 export function dashboardNav(
-  config: Pick<SiteConfig, "dashboard" | "features" | "acquisition">,
+  config: Pick<
+    SiteConfig,
+    "dashboard" | "features" | "acquisition" | "apiKeys"
+  >,
 ): DashboardNav {
   const optional = [
     ...(config.features.ai ? [playgroundNav] : []),
     ...(config.acquisition.referrals.enabled ? [referralsNav] : []),
+    ...(config.apiKeys.enabled ? [apiKeysNav] : []),
   ];
   const suite = optional.length
     ? [suiteNav[0]!, ...optional, ...suiteNav.slice(1)]
