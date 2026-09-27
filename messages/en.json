@@ -29,6 +29,9 @@
   "Locale": {
     "switch": "Change language"
   },
+  "Common": {
+    "close": "Close"
+  },
   "NotFound": {
     "title": "Page not found",
     "description": "The page you are looking for doesn't exist or has been moved.",
@@ -294,6 +297,7 @@
   },
   "Dashboard": {
     "sidebar": "Sidebar",
+    "sidebarDescription": "Displays the mobile sidebar.",
     "suiteNav": "Main",
     "businessNav": "Product",
     "adminNav": "Admin",

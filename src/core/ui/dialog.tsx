@@ -45,9 +45,15 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeLabel = "Close",
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
+  /**
+   * 角落关闭按钮的可访问名。原语不认识任何文案命名空间（套件代码），默认值是英文兜底，
+   * 调用方传本地化值覆盖（见 `DeleteAccount` 的 `t("close")`）。
+   */
+  closeLabel?: string;
 }) {
   return (
     <DialogPortal>
@@ -75,7 +81,7 @@ function DialogContent({
             }
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeLabel}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -96,10 +102,13 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 function DialogFooter({
   className,
   showCloseButton = false,
+  closeLabel = "Close",
   children,
   ...props
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean;
+  /** `showCloseButton` 那个按钮的文案。默认英文，调用方传本地化值覆盖。 */
+  closeLabel?: string;
 }) {
   return (
     <div
@@ -113,7 +122,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
-          Close
+          {closeLabel}
         </DialogPrimitive.Close>
       )}
     </div>

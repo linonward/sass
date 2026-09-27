@@ -19,11 +19,11 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-describe("clientNamespaces", () => {
-  const clientFiles = sourceFiles(src).filter((file) =>
-    readFileSync(file, "utf8").includes('"use client"'),
-  );
+const clientFiles = sourceFiles(src).filter((file) =>
+  readFileSync(file, "utf8").includes('"use client"'),
+);
 
+describe("clientNamespaces", () => {
   test("覆盖所有客户端组件用到的命名空间", () => {
     const used = new Set<string>();
     for (const file of clientFiles) {
@@ -53,5 +53,27 @@ describe("clientNamespaces", () => {
     expect(Object.keys(picked).sort()).toEqual([...clientNamespaces].sort());
     expect(picked).not.toHaveProperty("Email");
     expect(picked).not.toHaveProperty("Landing");
+  });
+});
+
+describe("客户端组件的可访问名", () => {
+  /**
+   * 可访问名同样是文案：读屏用户听的是 `sr-only` 文本和 `aria-label`，鼠标用户看的是
+   * `title` 悬停提示。写死在组件里就没法本地化 —— 买家新增语言后这几处永远是英文，
+   * 调用方也盖不住（T1211 的三处就是这么来的）。
+   *
+   * 所以 UI 原语一律「调用方传 labels，原语留英文兜底」：字面量只允许出现在原语的
+   * 常量里（源码中是 `{SIDEBAR_LABELS.toggle}` 这类引用），调用方传的必须是 `t(...)`。
+   * 这条扫的就是别再有字面量。
+   */
+  test("不写死可访问名", () => {
+    for (const file of clientFiles) {
+      const code = readFileSync(file, "utf8");
+      // 字面量的 `aria-label` / `title`；`aria-labelledby` 这类不受影响。
+      expect(code, file).not.toMatch(/\saria-label="/);
+      expect(code, file).not.toMatch(/\stitle="/);
+      // `sr-only` 容器里直接跟字面量文本（`{t(...)}` 表达式、子元素都不匹配）。
+      expect(code, file).not.toMatch(/sr-only[^>]*>\s*[A-Za-z]/);
+    }
   });
 });

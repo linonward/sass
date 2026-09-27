@@ -1,10 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import messages from "../../../messages/en.json";
 import { defineConfig, type SiteConfigInput } from "../config/schema";
-import { SidebarProvider } from "../ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 import { TooltipProvider } from "../ui/tooltip";
 import { AppSidebar } from "./app-sidebar";
 import { initials } from "./user-menu";
@@ -20,14 +20,18 @@ vi.mock("@/core/i18n/navigation", () => ({
   ),
 }));
 
-beforeAll(() => {
-  // jsdom 没有 matchMedia；按桌面端渲染。
+/** jsdom 没有 matchMedia。`isMobile` 决定媒体查询是否匹配；默认桌面端。 */
+function setViewport(isMobile: boolean) {
   window.matchMedia = ((query: string) => ({
-    matches: false,
+    matches: isMobile && query.includes("max-width"),
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
   })) as unknown as typeof window.matchMedia;
+}
+
+beforeEach(() => {
+  setViewport(false);
 });
 
 /** 模拟业务项目在 site.config.ts 里加了一项 dashboard.nav。AI 固定关闭，不受演示站点的开关影响。 */
@@ -141,5 +145,55 @@ describe("initials", () => {
     [{ name: "", email: "zoe@x.com" }, "Z"],
   ])("%o → %s", (user, expected) => {
     expect(initials(user)).toBe(expected);
+  });
+});
+
+describe("AppSidebar 的可访问名", () => {
+  /**
+   * 侧栏的三处可访问名（抽屉标题/描述、触发器、导轨）都来自 messages，T1211 之前
+   * 写死在 `src/core/ui/sidebar.tsx` 里。这里用一份伪翻译的文案渲染：名字跟着 messages
+   * 走才算接上了 i18n，写死的话这条会红。
+   */
+  test("移动端抽屉的标题、描述与导轨的名字都来自 messages", () => {
+    const copy = {
+      ...messages,
+      Dashboard: {
+        ...messages.Dashboard,
+        sidebar: "[de] Sidebar",
+        sidebarDescription: "[de] Displays the mobile sidebar.",
+        toggleSidebar: "[de] Toggle sidebar",
+      },
+    };
+    setViewport(true);
+
+    render(
+      <NextIntlClientProvider locale="de" messages={copy}>
+        <TooltipProvider>
+          <SidebarProvider>
+            {/* 站点里的触发器在 shell 的顶栏（`DashboardShell` 传 `t("toggleSidebar")`），
+                这里补一个打开抽屉；外壳那条链路由 e2e 锁。 */}
+            <SidebarTrigger label={copy.Dashboard.toggleSidebar} />
+            <AppSidebar
+              nav={dashboardNav(configWithProjects())}
+              header={null}
+              footer={null}
+            />
+          </SidebarProvider>
+        </TooltipProvider>
+      </NextIntlClientProvider>,
+    );
+
+    // 抽屉关着时导轨不在 DOM 里，只有触发器能匹配。
+    const trigger = screen.getByRole("button", { name: "[de] Toggle sidebar" });
+    expect(trigger.dataset.slot).toBe("sidebar-trigger");
+    fireEvent.click(trigger);
+
+    expect(screen.getByRole("dialog", { name: "[de] Sidebar" })).toBeDefined();
+    expect(screen.getByText("[de] Displays the mobile sidebar.")).toBeDefined();
+    // 抽屉打开后 popup 之外的内容对辅助技术不可见，此时按名字取到的就是抽屉里的导轨
+    //（`SidebarRail`，`AppSidebar` 自己传的 label）。
+    expect(
+      screen.getByRole("button", { name: "[de] Toggle sidebar" }).dataset.slot,
+    ).toBe("sidebar-rail");
   });
 });
