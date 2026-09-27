@@ -46,6 +46,19 @@ test("OG 图可以访问", async ({ request }) => {
   expect(response.headers()["content-type"]).toBe("image/png");
 });
 
+test("标签页图标（favicon）有 link 且能取到 PNG", async ({ page, request }) => {
+  await page.goto("/");
+  // Next 按 icon 文件约定注入；href 带构建期的哈希查询串，所以只断言前缀。
+  const icon = page.locator('head link[rel="icon"]');
+  await expect(icon).toHaveAttribute("href", /^\/icon/);
+  await expect(icon).toHaveAttribute("type", "image/png");
+
+  // 图标在构建期生成，取不到时浏览器标签页就是空白 —— 不是 404 才算数。
+  const response = await request.get("/icon");
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toBe("image/png");
+});
+
 test("sitemap.xml 列出首页", async ({ request }) => {
   const response = await request.get("/sitemap.xml");
   expect(response.status()).toBe(200);

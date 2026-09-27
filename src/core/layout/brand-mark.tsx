@@ -3,6 +3,19 @@ import { cn } from "@/core/lib/utils";
 import siteConfig from "../../../site.config";
 
 /**
+ * 内置标记的几何。顶栏的内联标记和 favicon（`src/app/icon.tsx` 用同一组值拼 SVG 字符串）
+ * 共用：两处分开写，改一处就会让标签页图标和顶栏的标记长得不一样。
+ */
+export const brandMarkGeometry = {
+  viewBox: "0 0 24 24",
+  /** 圆角方底的圆角半径。 */
+  cornerRadius: 6,
+  /** 「Λ」形，居中。 */
+  chevron: "M7 16.5 12 7l5 9.5",
+  strokeWidth: 2,
+} as const;
+
+/**
  * 站点标记。`site.config.ts` 里配了 `brand.logo` 就用那张图，没配就用内置的**内联**标记。
  *
  * 为什么内置的必须内联：`<img src="…svg">` 里的 SVG 是独立文档，`currentColor`
@@ -23,18 +36,23 @@ export function BrandMark({ className }: { className?: string }) {
 
   return (
     <svg
-      viewBox="0 0 24 24"
+      viewBox={brandMarkGeometry.viewBox}
       aria-hidden
       className={cn("text-primary", className)}
     >
-      <rect width="24" height="24" rx="6" fill="currentColor" />
+      <rect
+        width="24"
+        height="24"
+        rx={brandMarkGeometry.cornerRadius}
+        fill="currentColor"
+      />
       {/* 字形用 --primary-foreground：它是按主色对比度推出来的，浅色品牌色上是深字，
           深色品牌色上是浅字，永远看得清。 */}
       <path
-        d="M7 16.5 12 7l5 9.5"
+        d={brandMarkGeometry.chevron}
         fill="none"
         stroke="var(--primary-foreground)"
-        strokeWidth="2"
+        strokeWidth={brandMarkGeometry.strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />

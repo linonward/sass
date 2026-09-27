@@ -186,6 +186,7 @@ test("proxy 的 matcher 跳过 Sentry 转发路径", () => {
     new URL("../../proxy.ts", import.meta.url),
     "utf8",
   );
-  const matcher = /matcher: "(.+)"/.exec(source)?.[1] ?? "";
+  // 值贴着 printWidth，加减一个路径就会被 prettier 折到下一行，所以不能只认单行写法。
+  const matcher = /matcher:\s*"([^"]+)"/.exec(source)?.[1] ?? "";
   expect(matcher).toContain(`|${SENTRY_TUNNEL_ROUTE.slice(1)}|`);
 });
