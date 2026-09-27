@@ -112,8 +112,17 @@ describe("sitemap", () => {
 });
 
 describe("robots", () => {
-  test("禁止抓取 API、dashboard、admin（含语言前缀）并指向 sitemap", () => {
+  test("只挡机器端点 /api 并指向 sitemap", () => {
     expect(withoutSiteDomain(robots())).toMatchSnapshot();
+  });
+
+  test("dashboard / admin 不写进 Disallow，收录交给页面自己的 noIndex", () => {
+    // Disallow 挡住的路径爬虫抓不到，也就读不到页面上的 meta noindex，有外链时反而可能
+    // 以裸 URL 出现在结果里 —— 两套封锁叠在一起是互相抵消。页面那一半（noIndex）在
+    // src/app/[locale]/(app)/dashboard/page.tsx 和 src/core/admin/metadata.ts。
+    const { rules } = robots();
+    const disallow = (Array.isArray(rules) ? rules[0] : rules)?.disallow;
+    expect(disallow).toEqual(["/api"]);
   });
 });
 

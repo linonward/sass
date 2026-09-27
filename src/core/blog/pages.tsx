@@ -10,7 +10,6 @@ import { PostArticle } from "./post-article";
 import { PostList } from "./post-list";
 import {
   blogEnabled,
-  blogLocales,
   blogPath,
   extraPageParams,
   feedPath,
@@ -18,6 +17,7 @@ import {
   getPosts,
   getPostsByTag,
   getTags,
+  listLocales,
   pagePath,
   paginate,
   postLocales,
@@ -63,8 +63,9 @@ export async function blogIndexMetadata(locale: string, page: number) {
     path: pagePath(blogPath, page),
     title: page === 1 ? title : t("pageTitle", { title, page }),
     description: t("description"),
-    // 翻页后的页码在各语言间不对应，只有第 1 页输出 hreflang。
-    locales: page === 1 ? blogLocales() : [locale],
+    // 翻页后的页码在各语言间不对应，只有第 1 页输出 hreflang（规则在 listLocales，
+    // sitemap 用的是同一个）。
+    locales: listLocales(locale, page),
     // 还没有文章的语言不收录空列表。
     noIndex: getPosts(locale, { drafts: false }).length === 0,
     feeds: feeds(locale, t("feedTitle", { name: siteConfig.name })),

@@ -1,16 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`robots > 禁止抓取 API、dashboard、admin（含语言前缀）并指向 sitemap 1`] = `
+exports[`robots > 只挡机器端点 /api 并指向 sitemap 1`] = `
 {
   "host": "https://<domain>",
   "rules": {
     "allow": "/",
     "disallow": [
       "/api",
-      "/dashboard",
-      "/de/dashboard",
-      "/admin",
-      "/de/admin",
     ],
     "userAgent": "*",
   },

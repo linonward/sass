@@ -23,7 +23,7 @@ exports[`RSS > RSS 2.0 输出，转义标题和描述 1`] = `
 "
 `;
 
-exports[`sitemap > 博客列表和已发布文章，hreflang 只列出有翻译的语言 1`] = `
+exports[`sitemap > 博客列表、翻页、标签页和已发布文章，hreflang 只列出有翻译的语言 1`] = `
 [
   {
     "alternates": {
@@ -33,17 +33,58 @@ exports[`sitemap > 博客列表和已发布文章，hreflang 只列出有翻译�
         "x-default": "https://<domain>/blog",
       },
     },
+    "lastModified": "2026-02-01",
     "url": "https://<domain>/blog",
   },
   {
     "alternates": {
       "languages": {
-        "de": "https://<domain>/de/blog",
-        "en": "https://<domain>/blog",
-        "x-default": "https://<domain>/blog",
+        "en": "https://<domain>/blog/page/2",
+        "x-default": "https://<domain>/blog/page/2",
       },
     },
-    "url": "https://<domain>/de/blog",
+    "lastModified": "2026-02-01",
+    "url": "https://<domain>/blog/page/2",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "en": "https://<domain>/blog/tags/guides",
+        "x-default": "https://<domain>/blog/tags/guides",
+      },
+    },
+    "lastModified": "2026-02-01",
+    "url": "https://<domain>/blog/tags/guides",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "en": "https://<domain>/blog/tags/guides/page/2",
+        "x-default": "https://<domain>/blog/tags/guides/page/2",
+      },
+    },
+    "lastModified": "2026-02-01",
+    "url": "https://<domain>/blog/tags/guides/page/2",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "en": "https://<domain>/blog/tags/news",
+        "x-default": "https://<domain>/blog/tags/news",
+      },
+    },
+    "lastModified": "2026-02-01",
+    "url": "https://<domain>/blog/tags/news",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "en": "https://<domain>/blog/tags/%E4%B8%AD%E6%96%87",
+        "x-default": "https://<domain>/blog/tags/%E4%B8%AD%E6%96%87",
+      },
+    },
+    "lastModified": "2026-02-01",
+    "url": "https://<domain>/blog/tags/%E4%B8%AD%E6%96%87",
   },
   {
     "alternates": {
@@ -185,6 +226,27 @@ exports[`sitemap > 博客列表和已发布文章，hreflang 只列出有翻译�
     },
     "lastModified": "2026-01-01",
     "url": "https://<domain>/blog/post-1",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://<domain>/de/blog",
+        "en": "https://<domain>/blog",
+        "x-default": "https://<domain>/blog",
+      },
+    },
+    "lastModified": "2026-02-02",
+    "url": "https://<domain>/de/blog",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://<domain>/de/blog/tags/news",
+        "x-default": "https://<domain>/de/blog/tags/news",
+      },
+    },
+    "lastModified": "2026-02-02",
+    "url": "https://<domain>/de/blog/tags/news",
   },
   {
     "alternates": {
