@@ -176,17 +176,21 @@
 
 **做**
 
-- 加品牌化 favicon（Next 文件约定优先：`src/app/icon.svg`；如需跟随 `site.config.ts` 的品牌色，评估构建期生成或 `generateImageMetadata`）。
+- 加品牌化 favicon。**落地方式按实测调整**：卡片原写 `src/app/icon.svg`（静态文件），但静态 SVG 的颜色写死在文件里，买家换 `brand.primaryColor` 后 favicon 不跟随 —— 对一个「改一个配置换整站」的模板是同一个缺口，只是换了个地方。改为 `src/app/icon.tsx`（Next 的 icon 文件约定，`next/og` 构建期生成），颜色取 `brand.primaryColor`、字形取 `foregroundFor()` 推出来的前景色；`generateImageMetadata` 是多图标场景，这里只有一个图标用不上。
+- 图的几何与顶栏内置标记共用一份（`src/core/layout/brand-mark.tsx` 导出 `brandMarkGeometry`），避免标签页图标和顶栏 logo 各写一遍后走样。
+- 位图而非 SVG：Safari 26.0 之前不支持 SVG favicon，只放 SVG 会让老 Safari 的标签页依旧空白（正是要修的 bug）。取 96×96 —— 高分屏标签页要 32/48 物理像素，Google 搜索结果的图标要求 ≥48 且为 48 的倍数。
+- **`/icon` 必须加进 `src/proxy.ts` 的 matcher 排除集**（落地时实测发现）：注入的地址不带语言前缀，next-intl 会把它改写成 `/<locale>/icon` → 404，标签页依旧空白 —— 和当初 `/opengraph-image` 踩的是同一个坑。锚成 `icon$` 而不是裸 `icon`，免得把 `/icons` 这类普通页面一起排除掉（实测：`/icon` 返回 PNG，`/icons` 仍走本地化 404）。
+- `sentry.test.ts` 读 matcher 的正则放宽到容忍折行：这行本来就贴着 `printWidth`，加一个路径就会被 prettier 折行，旧正则 `/matcher: "(.+)"/` 只认单行（本次改动第一次跑 `pnpm test` 就是被它拦下的）。
 - README「改成自己的站点」步骤补一条：favicon 也要换。
-- 可选：e2e 断言 `<link rel="icon">` 存在。
+- e2e 断言首页有 `<link rel="icon">`，并拿它 DOM 里的 href 请求一次（200 + `image/*`）—— 不写死 `/icon` 与 PNG，买家按 README 换成自己的图标（地址会变成 `/icon.svg` 之类）后这条用例仍成立；防的是回归到空白图标。
 
 **不做**：PWA manifest / apple-touch 全套餐（除非顺手且零成本）。
 
 **验收**
 
-- [ ] `pnpm build` 产物里有 icon 路由；浏览器标签页显示品牌图标
-- [ ] README 品牌化步骤覆盖 favicon
-- [ ] `pnpm test` + e2e 全绿
+- [x] `pnpm build` 产物里有 icon 路由；浏览器标签页显示品牌图标（生产构建产物含 `○ /icon`，预渲染 HTML 里注入 `<link rel="icon" href="/icon?…" type="image/png" sizes="96x96">`；生成的 PNG 已肉眼确认是品牌色底 + 白色字形）
+- [x] README 品牌化步骤覆盖 favicon
+- [x] `pnpm test` + e2e 全绿（本地 901 passed；e2e 跑在生产构建上，PR #92 的 ci job 5m46s 通过）
 
 ---
 

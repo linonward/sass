@@ -33,6 +33,10 @@ export default function proxy(request: NextRequest) {
 
 export const config = {
   // 跳过 API、Next 内部路径、带扩展名的静态文件（含 sitemap.xml / robots.txt）、
-  // 根目录的 opengraph-image，以及 Sentry 的转发路径（SENTRY_TUNNEL_ROUTE，matcher 只能写字面量）。
-  matcher: "/((?!api|trpc|_next|_vercel|opengraph-image|monitoring|.*\\..*).*)",
+  // app 根目录的 metadata 路由，以及 Sentry 的转发路径（SENTRY_TUNNEL_ROUTE，matcher 只能写字面量）。
+  // metadata 路由必须在这里：它们注入的 URL 不带语言前缀（`/icon`、`/opengraph-image`），
+  // 被 next-intl 改写成 `/<locale>/icon` 就成了 404 —— 标签页又变回空白。
+  // `icon$` 锚到整段，免得把 `/icons` 这种普通页面也一起排除掉。
+  matcher:
+    "/((?!api|trpc|_next|_vercel|opengraph-image|icon$|monitoring|.*\\..*).*)",
 };

@@ -87,13 +87,14 @@ pnpm dev                 # http://localhost:3000
 
 - `site.config.ts`（写错时 `dev` / `build` 直接报出字段名）。出厂值都是占位的（`domain` 是 `example.com`，付费套餐的产品 ID 是 `prod_placeholder_*`），换成自己的值就行，测试不用跟着改 —— **没改完之前生产构建会直接失败并列出是哪几个字段**（dev 只警告，见 `src/core/config/sentinels.ts`）：
   - `name`、`domain`（不带协议，比如 `acme.com`）、`description`
-  - `brand.primaryColor`：**一个 hex 推导整站配色** —— 按钮、色带、链接文字、顶栏的内置 logo 标记、图表第一档都跟着它变，不用改任何 SVG 文件。想用自己的 logo：把文件放进 `public/`，再在 `brand` 里加 `logo: "/your-logo.svg"`（顶栏、侧边栏和结构化数据都会用它）；不配就一直是内置标记。
+  - `brand.primaryColor`：**一个 hex 推导整站配色** —— 按钮、色带、链接文字、顶栏的内置 logo 标记、标签页图标（favicon）、图表第一档都跟着它变，不用改任何 SVG 文件。想用自己的 logo：把文件放进 `public/`，再在 `brand` 里加 `logo: "/your-logo.svg"`（顶栏、侧边栏和结构化数据都会用它）；不配就一直是内置标记。
   - `features`：用不到的模块关掉，对应的环境变量就不再要求
   - `legal`：公司或个人名称、联系邮箱、适用法域、生效日期
   - `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分。`providerProductId` 还是占位值时该套餐不能结账（接口返回 `plan_not_configured`），在 Creem 建好产品后替换成真实 ID
   - `email`：发件人名称和地址（域名要在 Resend 验证）
   - `ai.models`：开启 AI 时的模型和每次调用的积分成本
 - `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`public/`：你自己的 logo 图与 Hero 图（Hero 图要配 `landing.hero.image` 才用得上）。
+- 标签页图标：出厂的内置标记跟上面的 `brand.primaryColor` 走，在构建期生成（几何和顶栏的内置标记共用一份，见 `src/core/seo/favicon.tsx`），换主色就跟着变，不用管。想换成自己的图标：把 `icon.svg`（或 `icon.png`）放进 `src/app/`，并**删掉 `src/app/icon.tsx`** —— 换完就按你自己的文件来：地址变成那个文件的路径（`/icon.svg`），也不再跟主色走，颜色得画在文件里。两个同名的 icon 文件会各生成一个 `<link rel="icon">`，浏览器挑哪个不保证。
 - 示例业务模块 `src/features/example/`（一个扣积分的宣传语生成器）演示了业务代码怎么调用 `runAI`、`deductCredits`，以及怎么在 `dashboard.nav` 里加菜单。看完后删掉：`src/features/example/`、`src/app/[locale]/(app)/example/`、`e2e/example.spec.ts`，以及 `site.config.ts` 里 `dashboard.nav` 的那一项。
 - 改完运行 `pnpm test` 和 `pnpm build` 确认没漏改。测试直接读 `site.config.ts` 和 `messages/*.json`，改域名、主色和文案都不用 `-u` 更新快照。
 
@@ -316,7 +317,7 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 - **页面要 UX，API 要机器可读，所以两种形态并存是故意的。** 浏览器能从 404 页里拿到品牌化和「回首页」的出路；`curl` 一个接口的人要的是能解析的 JSON，不是一整页 HTML。
 - **307 不是随便挑的**：Next 的 `redirect()` 默认就是 307（文档 `.../functions/redirect.md`：「The `redirect()` method uses a `307` by default」，会保留请求方法）。站内跳转统一走 `src/core/i18n/navigation.ts` 的 `redirect`（next-intl 包装）。
 - **405 是框架行为，模板没写**：`src/app/api/**` 里 `route.ts` 没导出的方法，由 Next 自动补上 `new Response(null, { status: 405 })`（`node_modules/next/dist/server/route-modules/app-route/helpers/auto-implement-methods.js`）。它是**空 body、没有 `Allow` 头**，不像 `{ error }` 那样可解析；`OPTIONS` 自动实现为 204 + `Allow`，`HEAD` 自动复用 `GET`。全仓库（代码和 e2e）没有任何一处碰过 405 —— 想要 JSON 405 得自己写。
-- 顺带说明 404 为什么有两种形态：`src/proxy.ts` 的 matcher 排除了 `api|trpc|_next|_vercel|opengraph-image|monitoring|.*\..*`，所以 `/api/*` 和带点的路径（`/missing.png`）不经 proxy，走的是 `src/app/api/[...rest]/route.ts` 的 JSON 404（用 `X-Robots-Tag` 代替 HTML 里的 `noindex`）和根级 `src/app/not-found.tsx`。更具体的路由优先匹配。
+- 顺带说明 404 为什么有两种形态：`src/proxy.ts` 的 matcher 排除了 `api|trpc|_next|_vercel|opengraph-image|icon|monitoring|.*\..*`，所以 `/api/*` 和带点的路径（`/missing.png`）不经 proxy，走的是 `src/app/api/[...rest]/route.ts` 的 JSON 404（用 `X-Robots-Tag` 代替 HTML 里的 `noindex`）和根级 `src/app/not-found.tsx`。更具体的路由优先匹配（`/opengraph-image`、`/icon` 在被排除的路径里，但它们自己是真实路由，正常返回图片）。
 
 ### 陷阱：在 `notFound()` 上方加流式边界，会把真 404 变成 200
 
