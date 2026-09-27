@@ -15,6 +15,7 @@ import {
 import en from "../../../messages/en.json";
 import { createDbClient, type DbClient } from "@/core/db/client";
 import { notificationLog, user } from "@/core/db/schema";
+import type { DeliveryRetry } from "@/core/email/delivery";
 import { sendEmail, type SendEmailOptions } from "@/core/email/send";
 import { readLatestEmail } from "@/core/email/testing";
 
@@ -157,16 +158,25 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     sent.push(message);
   };
 
-  function useHandler(send: typeof capture | typeof sendEmail = capture) {
+  function useHandler(
+    send: typeof capture | typeof sendEmail = capture,
+    retry: DeliveryRetry = { attempts: 1, delayMs: 0 },
+  ) {
     resetOnBillingEvent();
     registerOnBillingEvent(
       "billing:emails",
       createBillingEmailHandler({
         send: send as never,
         creditsEnabled: true,
+        db,
+        retry,
       }),
     );
   }
+
+  /** 这个用户的去重名额（每个用例用新用户，所以不会串）。 */
+  const claims = () =>
+    db.select().from(notificationLog).where(eq(notificationLog.userId, userId));
 
   const handle = (event: Parameters<typeof handleBillingEvent>[0]) =>
     handleBillingEvent(event, { db });
@@ -407,6 +417,59 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ status: "processed" });
+  });
+
+  test("发送失败会重试：瞬时故障之后照样发出，名额保留", async () => {
+    let calls = 0;
+    useHandler(
+      async (message: Sent) => {
+        if (++calls === 1) throw new Error("SMTP down");
+        sent.push(message);
+      },
+      { attempts: 3, delayMs: 1 },
+    );
+
+    const sub = `sub_${randomUUID()}`;
+    const fields = {
+      userId,
+      subscriptionId: sub,
+      planId: "pro",
+      ...period("2026-09-25T00:00:00.000Z"),
+    };
+    await handle(fake.event("subscription.renewed", fields));
+
+    expect(calls).toBe(2);
+    expect(sent.map((m) => m.template)).toEqual(["payment-succeeded"]);
+    // 发成功的那次留着名额：同一笔付款再推一次不会重复发。
+    expect(await claims()).toHaveLength(1);
+    await handle(fake.event("subscription.renewed", fields));
+    expect(sent).toHaveLength(1);
+  });
+
+  test("重试都失败：释放名额，同一笔付款之后还能发出", async () => {
+    useHandler(capture, { attempts: 2, delayMs: 1 });
+
+    const sub = `sub_${randomUUID()}`;
+    const fields = {
+      userId,
+      subscriptionId: sub,
+      planId: "pro",
+      ...period("2026-09-25T00:00:00.000Z"),
+    };
+
+    // 发不出去（服务商宕机、SMTP 拒绝）：事件照常处理，只有邮件没发出去。
+    failSend = true;
+    expect(
+      (await handle(fake.event("subscription.renewed", fields))).status,
+    ).toBe("processed");
+    expect(sent).toHaveLength(0);
+    expect(await claims()).toHaveLength(0);
+
+    // 之后同一笔付款再处理一次（服务商重放、人工补发）就能发出 —— 修复前名额会被占死。
+    failSend = false;
+    await handle(fake.event("subscription.renewed", fields));
+    expect(sent.map((m) => m.template)).toEqual(["payment-succeeded"]);
+    expect(await claims()).toHaveLength(1);
   });
 
   test("EMAIL_TRANSPORT=file：真实渲染并写入发件箱", async () => {
