@@ -35,6 +35,12 @@ const acquisitionNav: DashboardNavItem = {
   icon: "sparkles",
 };
 
+const adminReferralsNav: DashboardNavItem = {
+  key: "adminReferrals",
+  href: "/admin/referrals",
+  icon: "users",
+};
+
 const leadsNav: DashboardNavItem = {
   key: "adminLeads",
   href: "/admin/leads",
@@ -56,9 +62,9 @@ const adminApiKeysNav: DashboardNavItem = {
 };
 
 /**
- * /admin 里的菜单。获客报表、线索管理、状态页和 API Key 报表只在对应模块开启时出现 ——
+ * /admin 里的菜单。获客报表、线索管理、邀请管理、状态页和 API Key 报表只在对应模块开启时出现 ——
  * 关闭时那些页面 404，菜单里留一个点进去就 404 的入口只会让人以为坏了。
- * 顺序：Metrics →（归因 / 留资报表 / 状态页）→ Users →（API Key 报表）→ Orders → Subscriptions。
+ * 顺序：Metrics →（归因 / 留资报表）→（邀请管理 / 状态页）→ Users →（API Key 报表）→ Orders → Subscriptions。
  */
 export function adminNav(
   config: Pick<SiteConfig, "acquisition" | "apiKeys" | "statusPage">,
@@ -68,6 +74,7 @@ export function adminNav(
     metrics!,
     ...(config.acquisition.attribution.enabled ? [acquisitionNav] : []),
     ...(config.acquisition.leads.enabled ? [leadsNav] : []),
+    ...(config.acquisition.referrals.enabled ? [adminReferralsNav] : []),
     ...(config.statusPage.enabled ? [adminStatusNav] : []),
     users!,
     ...(config.apiKeys.enabled ? [adminApiKeysNav] : []),

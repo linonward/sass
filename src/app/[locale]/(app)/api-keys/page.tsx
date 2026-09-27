@@ -22,9 +22,9 @@ import {
 
 import siteConfig from "../../../../../site.config";
 
-export async function generateMetadata({
-  params,
-}: PageProps<"/[locale]/api-keys">) {
+type Props = { params: Promise<{ locale: string }> };
+
+export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "ApiKeys" });
   return buildMetadata({
@@ -58,9 +58,7 @@ function StatusBadge({
  * API Key 管理页：列出自己的 key（明文和哈希都不经过这里）、新建、撤销。
  * 明文只在新建的那个弹层里出现一次，之后连本人都看不到。
  */
-export default async function ApiKeysPage({
-  params,
-}: PageProps<"/[locale]/api-keys">) {
+export default async function ApiKeysPage({ params }: Props) {
   if (!siteConfig.apiKeys.enabled) notFound();
   const { locale } = await params;
   const [t, format, session] = await Promise.all([

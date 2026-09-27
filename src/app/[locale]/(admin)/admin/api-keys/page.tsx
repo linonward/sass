@@ -18,7 +18,7 @@ import {
 
 import siteConfig from "../../../../../../site.config";
 
-type Props = PageProps<"/[locale]/admin/api-keys">;
+type Props = { params: Promise<{ locale: string }> };
 
 export function generateMetadata({ params }: Props) {
   return adminMetadata(params, "/admin/api-keys", (t) => t("apiKeys.title"));
