@@ -61,7 +61,7 @@ test("非默认语言下的 404 页使用该语言文案", async ({ page }) => {
 });
 
 // 上面那条断言的是水合后的 DOM。关 JS 再看一遍，锁的是 [locale]/not-found.tsx 的
-// generateMetadata（T903）：它之前这里是站名，而且证明标题真的跟着语言走，
+// generateMetadata：它之前这里是站名，而且证明标题真的跟着语言走，
 // 不是写死在英文上。
 test.describe("非默认语言下 404 的静态 HTML（关 JS）", () => {
   test.use({ javaScriptEnabled: false });

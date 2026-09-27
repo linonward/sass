@@ -94,7 +94,7 @@ describe("buildMetadata", () => {
       description: "The page you are looking for doesn't exist.",
     });
     // 空对象而不是省略 —— Next 的 metadata 按字段浅合并，省略只会让 layout 那份
-    // 指向首页的 canonical 继承到 404 上，这正是 T1209 修掉的。
+    // 指向首页的 canonical 会继承到 404 上 —— 这个表现出过一次，空对象才挡得住。
     expect(Object.keys(metadata.alternates ?? {})).toEqual([]);
     expect(metadata.openGraph).toMatchObject({
       title: `Page not found | ${siteConfig.name}`,
