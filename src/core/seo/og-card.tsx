@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-import { needsDarkText } from "@/core/theme/brand-css";
+import { foregroundFor } from "@/core/theme/brand-css";
 
 import siteConfig from "../../../site.config";
 import { ogImageSize } from "./og-image-size";
@@ -21,10 +21,9 @@ export function ogCard({
   description,
   footer = siteConfig.domain,
 }: OgCardProps) {
-  // next/og 不支持 oklch，这里用十六进制颜色。
-  const color = needsDarkText(siteConfig.brand.primaryColor)
-    ? "#0a0a0a"
-    : "#fafafa";
+  // next/og 不支持 oklch，只能内联十六进制；但选色和 `--primary-foreground` 是同一个
+  // 决策、同一组值（暖墨 / 暖白），品牌色上放什么字全站一致。
+  const color = foregroundFor(siteConfig.brand.primaryColor);
 
   return new ImageResponse(
     <div

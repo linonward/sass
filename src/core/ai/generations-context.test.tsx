@@ -35,7 +35,7 @@ function Probe() {
 const state = () => JSON.parse(screen.getByTestId("state").textContent!);
 
 function renderWithPending() {
-  render(
+  return render(
     <GenerationsProvider
       initialGenerations={[]}
       initialPendingVideos={[{ id: "v1", prompt: "waves" }]}
@@ -64,7 +64,11 @@ describe("GenerationsProvider 轮询", () => {
     // 第一次查询一直不返回（服务端在转存视频），过几个轮询间隔也不会再发。
     await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 4));
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith("/api/ai/video/v1");
+    // 每一轮都会推进服务端状态，所以两侧都不许缓存（对照 /api/billing/status）。
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/ai/video/v1",
+      expect.objectContaining({ cache: "no-store" }),
+    );
 
     await act(async () => {
       resolve(
@@ -121,5 +125,26 @@ describe("GenerationsProvider 轮询", () => {
     renderWithPending();
     await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 2));
     expect(state().generations).toEqual(["v1"]);
+  });
+
+  test("卸载时中止 in-flight 请求，也不再排下一轮", async () => {
+    let signal: AbortSignal | undefined;
+    const fetch = vi.fn((_url: string, init?: RequestInit) => {
+      signal = init?.signal ?? undefined;
+      // 服务端正在转存视频：这一轮不会返回。
+      return new Promise<Response>(() => {});
+    });
+    vi.stubGlobal("fetch", fetch);
+    const view = renderWithPending();
+
+    await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS));
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(signal?.aborted).toBe(false);
+
+    view.unmount();
+    expect(signal?.aborted).toBe(true);
+
+    await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3));
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

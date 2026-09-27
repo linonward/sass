@@ -121,7 +121,11 @@ export async function handleVideoStart(
   return Response.json({ job: result.job }, { status: 202 });
 }
 
-/** `GET /api/ai/video/:id`：查询并推进任务，返回 `{ job }`（pending / failed / succeeded）。 */
+/**
+ * `GET /api/ai/video/:id`：查询并推进任务，返回 `{ job }`（pending / failed / succeeded）。
+ * 每次调用都可能改服务端状态（转存、结算、退款），响应按用户区分，因此不许缓存
+ * （和 `/api/billing/status` 一致）。
+ */
 export async function handleVideoStatus(
   request: Request,
   id: string,
@@ -138,5 +142,8 @@ export async function handleVideoStatus(
   }
   const result = await pollVideo({ userId, id });
   if (!result.ok) return result.response;
-  return Response.json({ job: result.job });
+  return Response.json(
+    { job: result.job },
+    { headers: { "cache-control": "no-store" } },
+  );
 }

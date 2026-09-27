@@ -182,6 +182,8 @@ describe("video", () => {
     );
     expect(await response.json()).toEqual({ job });
     expect(pollVideo).toHaveBeenCalledWith({ userId: "u1", id: "v1" });
+    // 每次轮询都会推进服务端状态，响应按用户区分，不许缓存。
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   test("关闭时 404，未登录 401", async () => {
