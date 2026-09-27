@@ -35,6 +35,18 @@ const acquisitionNav: DashboardNavItem = {
   icon: "sparkles",
 };
 
+const adminReferralsNav: DashboardNavItem = {
+  key: "adminReferrals",
+  href: "/admin/referrals",
+  icon: "users",
+};
+
+const leadsNav: DashboardNavItem = {
+  key: "adminLeads",
+  href: "/admin/leads",
+  icon: "fileText",
+};
+
 // 只在状态页开启时出现的后台项，和归因 / 留资报表一样排在 Metrics 之后。
 const adminStatusNav: DashboardNavItem = {
   key: "adminStatus",
