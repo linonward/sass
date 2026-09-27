@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ATTRIBUTION_SECONDS = 30 * 24 * 60 * 60;
 // Bound both character set and size; never persist arbitrary query strings or URLs.
-const campaignField = z
+export const campaignField = z
   .string()
   .min(1)
   .max(80)
@@ -14,6 +14,17 @@ const hostname = z
   .regex(
     /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/,
   );
+
+/**
+ * 快照里的 source 可能是哪些值：utm_source、外部 hostname，或确实没有来源的 direct。
+ * 后台报表按它筛选，用的是同一套规则；unknown 是「没有归因行 / 已撤回」那个桶。
+ */
+export const sourceField = z.union([
+  campaignField,
+  hostname,
+  z.literal("direct"),
+  z.literal("unknown"),
+]);
 export const entrySchema = z.strictObject({
   pathname: z
     .string()

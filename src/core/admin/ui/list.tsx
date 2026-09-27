@@ -15,8 +15,8 @@ import { isAdmin } from "../roles";
 
 type Query = Record<string, string | undefined>;
 
-/** 只保留有值的查询参数，第 1 页不写 page。 */
-function cleanQuery(query: Query) {
+/** 只保留有值的查询参数，第 1 页不写 page。筛选链接都用它拼 query。 */
+export function cleanQuery(query: Query) {
   return Object.fromEntries(
     Object.entries(query).filter(
       ([key, value]) => value && !(key === "page" && value === "1"),

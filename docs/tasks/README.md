@@ -103,7 +103,7 @@
 | **阶段 13：获客**           |                         |                                |                           |      |
 | T1300                       | acquisition-plan        | `docs/acquisition-plan`        | —                         | done |
 | T1301                       | acquisition-attribution | `feat/acquisition-attribution` | T1300, T102, T203         | done |
-| T1302                       | acquisition-report      | `feat/acquisition-report`      | T1301, T604, T1202        | todo |
+| T1302                       | acquisition-report      | `feat/acquisition-report`      | T1301, T604, T1202        | done |
 | T1303                       | lead-capture            | `feat/lead-capture`            | T1301, T202, T401         | done |
 | T1304                       | lead-management         | `feat/lead-management`         | T1303, T1302, T502        | todo |
 | T1305                       | referral-links          | `feat/referral-links`          | T1301, T203, T204, T302   | todo |
@@ -127,7 +127,7 @@
 
 阶段 7 分两个语域做：T605 是**营销面 + 设计基础**，T606 是**登录后产品面 + 后台**，T607 收尾剩下的营销侧细节页（blog 列表卡片与文章页、legal、404）和那几处还没换成 `--primary-text` 的链接。（2026-09-26 错误路径审计给 T607 补了两条：错误页 CTA 用错语域、h1 未用 display 字体。）
 
-阶段 13 分三块（见 [phase-13-acquisition.md](phase-13-acquisition.md)）：渠道归因与报表（T1301–T1302）、线索收集与管理（T1303–T1304）、邀请链接与积分奖励（T1305–T1306）。T1300 完成规划，T1301 完成渠道归因基础，T1303 完成邮箱留资，其余实施任务为 todo；T1302 等待 T1202 的退款修复，T1306 等待 T1202、T1204 合入。首版不做现金返佣或营销群发。
+阶段 13 分三块（见 [phase-13-acquisition.md](phase-13-acquisition.md)）：渠道归因与报表（T1301–T1302）、线索收集与管理（T1303–T1304）、邀请链接与积分奖励（T1305–T1306）。T1300 完成规划，T1301 完成渠道归因基础，T1302 完成渠道报表，T1303 完成邮箱留资，其余实施任务为 todo；T1306 等待 T1202、T1204 合入。首版不做现金返佣或营销群发。
 
 阶段 14 是阶段 12 实施期间各任务记录下来的遗留小项（见 [phase-14-followups.md](phase-14-followups.md)）：T1401 清掉交付代码/配置里残留的内部任务编号，T1402 修 `e2e/auth.spec.ts` 那条已知的间歇性失败（T1211 已定位到未 hydrate 时点击 + 内层 30s 默认超时耗尽 `toPass` 预算）。两条互不重叠可并行；standalone 的 `HOSTNAME` 坑与 `release-package.sh` 随包交付等项记录在该文件开头，不落卡。
 

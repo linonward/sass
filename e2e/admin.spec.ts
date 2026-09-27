@@ -35,6 +35,7 @@ test("未登录访问 /admin 返回 404，不跳转登录页", async ({ page }) 
     "/admin/users",
     "/admin/orders",
     "/admin/metrics",
+    "/admin/acquisition",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
@@ -58,6 +59,7 @@ test("普通用户访问后台返回 404，侧边栏没有后台入口", async (
     "/admin/orders",
     "/admin/subscriptions",
     "/admin/metrics",
+    "/admin/acquisition",
   ]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
@@ -202,7 +204,7 @@ test.describe("管理员", () => {
     ).toBeVisible();
 
     const range = admin.getByRole("navigation", {
-      name: ad.metrics.range.label,
+      name: ad.filter.range.label,
     });
     await range.getByRole("link", { name: "7 days" }).click();
     await expect(admin).toHaveURL("/admin/metrics?range=7");
@@ -210,6 +212,22 @@ test.describe("管理员", () => {
       "aria-current",
       "page",
     );
+  });
+
+  // 渠道报表只在归因开启时存在（见 e2e/acquisition/report.spec.ts）。模板默认关闭，
+  // 所以连管理员都该 404，菜单里也不该出现点了就 404 的入口。
+  test("归因关闭时渠道报表 404，后台菜单里没有入口", async ({ isMobile }) => {
+    expect((await admin.goto("/admin/acquisition"))?.status()).toBe(404);
+    await admin.goto("/admin/metrics");
+    if (isMobile) {
+      await admin.getByRole("button", { name: d.toggleSidebar }).click();
+    }
+    await expect(
+      admin.getByRole("list", { name: d.adminNav }).getByRole("link"),
+    ).toHaveCount(4);
+    await expect(
+      admin.getByRole("link", { name: d.nav.adminAcquisition }),
+    ).toHaveCount(0);
   });
 
   // 产品面的横向溢出以前只测过营销首页（ui-shell）。后台是最容易溢出的地方：
