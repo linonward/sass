@@ -137,7 +137,7 @@ pnpm dev              # http://localhost:3000
 | `pnpm db:generate`                  | 根据 schema 生成迁移文件（`drizzle/`，需提交）                           |
 | `pnpm db:migrate`                   | 对 `DATABASE_URL` 执行迁移                                               |
 | `pnpm db:studio`                    | 打开 Drizzle Studio 浏览数据                                             |
-| `pnpm db:seed`                      | 灌一批演示数据（示例用户、订阅、订单、积分流水），幂等                   |
+| `ALLOW_DB_SEED=1 pnpm db:seed`      | 灌一批演示数据（示例用户、订阅、订单、积分流水），幂等；默认拒绝，见下文 |
 | `pnpm email:dev`                    | 预览邮件模板（http://localhost:3030）                                    |
 
 `pnpm install` 同时装好 git 钩子：提交时自动用 ESLint 和 Prettier 处理暂存的文件，并用 commitlint 检查提交信息（Conventional Commits）。
@@ -149,16 +149,18 @@ pnpm dev              # http://localhost:3000
 空库跑起来 dashboard 全是空状态，看不出这个模板能干什么。灌一批演示数据：
 
 ```bash
-pnpm db:migrate   # 先建表
-pnpm db:seed      # 幂等，重复执行不会重复插入
+pnpm db:migrate                # 先建表
+ALLOW_DB_SEED=1 pnpm db:seed   # 幂等，重复执行不会重复插入
 ```
+
+`db:seed` 默认拒绝执行：`NODE_ENV` 未设置时按生产处理（和站点里 fake 支付那道闸门同一套口径），只有 `NODE_ENV=development` / `test` 或显式 `ALLOW_DB_SEED=1` 才放行。示例用户是 `email_verified=true` 的 `example.com` 保留域邮箱（收不到验证码、也接管不了），订阅/订单/积分流水却会真实计入后台和收入统计，所以演示数据只该灌进独立的库 —— 放行前先确认 `DATABASE_URL` 指向的不是生产库。
 
 跑完会有两个示例用户（`demo@example.com`、`demo-churn@example.com`）、两条订阅（一条 active、一条已取消但还没到期）、两笔订单，以及一份自洽的积分流水（余额等于流水之和）：
 
 - **看 dashboard**：用 `demo@example.com` 登录 —— 邮箱验证码会打到本地终端（`EMAIL_TRANSPORT=console` 时）或 `.tmp/emails/`（`file` 时），填进去就能看到有订阅、有积分余额、有流水和用量的首页。
 - **看后台**：用你自己的管理员邮箱登录（`ADMIN_EMAILS`）打开 `/admin`，用户列表、订单、订阅、指标都有数据；点进示例用户能看到它的积分流水和调整表单。
 
-想清掉：`delete from "user" where email like 'demo-%@example.com';`（订阅、订单、积分流水都挂在这个用户上，外键 cascade 一起删）。生产环境脚本会直接拒绝执行。
+想清掉：`delete from "user" where email like 'demo-%@example.com';`（订阅、订单、积分流水都挂在这个用户上，外键 cascade 一起删）。
 
 ### 依赖与 audit
 

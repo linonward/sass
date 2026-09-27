@@ -40,11 +40,26 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
 
   const script = path.resolve(__dirname, "../../../scripts/db-seed.mjs");
 
-  /** 跑脚本；非零退出时把 stderr 一起返回（测试自己断言）。 */
-  async function seed() {
+  /**
+   * 跑脚本。默认带 `NODE_ENV=test` —— 脚本按「NODE_ENV 未设置 = 生产」处理，不给就拒绝。
+   * `env` 里值为 undefined 的键会从子进程环境里删掉，用来验证「未设置」的场景。
+   */
+  async function seed(env: Record<string, string | undefined> = {}) {
+    const childEnv: Record<string, string | undefined> = {
+      ...process.env,
+      DATABASE_URL: url,
+      NODE_ENV: "test",
+      ALLOW_DB_SEED: undefined,
+      ...env,
+    };
+    for (const [key, value] of Object.entries(childEnv)) {
+      if (value === undefined) delete childEnv[key];
+    }
+
     try {
       const { stdout } = await execFileAsync(process.execPath, [script], {
-        env: { ...process.env, DATABASE_URL: url, NODE_ENV: "test" },
+        // 上面删过键，NODE_ENV 可能已经不在（ProcessEnv 的类型要求它必填），断言回去。
+        env: childEnv as NodeJS.ProcessEnv,
       });
       return { code: 0, stdout };
     } catch (error) {
@@ -154,17 +169,40 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
   });
 
   test("生产环境拒绝执行", async () => {
-    const result = await execFileAsync(process.execPath, [script], {
-      env: { ...process.env, DATABASE_URL: url, NODE_ENV: "production" },
-    }).then(
-      () => ({ code: 0, stdout: "" }),
-      (error: { code?: number; stderr?: string }) => ({
-        code: error.code ?? 1,
-        stdout: error.stderr ?? "",
-      }),
-    );
+    const result = await seed({ NODE_ENV: "production" });
 
     expect(result.code).not.toBe(0);
-    expect(result.stdout).toContain("拒绝在生产环境灌演示数据");
+    expect(result.stdout).toContain("拒绝灌演示数据");
+  });
+
+  test("NODE_ENV 未设置：按生产拒绝，一条数据都不写", async () => {
+    await clean();
+
+    const result = await seed({ NODE_ENV: undefined });
+
+    expect(result.code).not.toBe(0);
+    expect(result.stdout).toContain("拒绝灌演示数据");
+    // 拒绝时要说清怎么放行，否则只能靠翻源码猜（脚本里那句「请用一个独立的库」不够）。
+    expect(result.stdout).toContain("ALLOW_DB_SEED=1 pnpm db:seed");
+    expect(await counts()).toEqual({
+      users: 0,
+      subscriptions: 0,
+      transactions: 0,
+      orders: 0,
+    });
+  });
+
+  test("ALLOW_DB_SEED=1 显式放行：NODE_ENV 未设置也照常灌数据", async () => {
+    await clean();
+
+    const result = await seed({ NODE_ENV: undefined, ALLOW_DB_SEED: "1" });
+
+    expect(result.code).toBe(0);
+    expect(await counts()).toEqual({
+      users: 2,
+      subscriptions: 2,
+      transactions: 6,
+      orders: 2,
+    });
   });
 });
