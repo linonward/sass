@@ -205,7 +205,10 @@ describe("adminNav", () => {
 
 describe("adminNav", () => {
   test("userFlags 关闭时没有 Flags 入口（出厂默认）", () => {
-    const config = configWithProjects();
+    const config = defineConfig({
+      ...(configWithProjects() as SiteConfigInput),
+      statusPage: { enabled: false },
+    });
     expect(config.userFlags.enabled).toBe(false);
     expect(adminNav(config).map((i) => i.href)).toEqual([
       "/admin/metrics",
@@ -220,6 +223,7 @@ describe("adminNav", () => {
     const nav = adminNav(
       defineConfig({
         ...(base as SiteConfigInput),
+        statusPage: { enabled: false },
         userFlags: { ...base.userFlags, enabled: true },
       }),
     );
@@ -237,6 +241,7 @@ describe("adminNav", () => {
     const nav = adminNav(
       defineConfig({
         ...(base as SiteConfigInput),
+        statusPage: { enabled: false },
         userFlags: { ...base.userFlags, enabled: true },
         acquisition: { ...base.acquisition, attribution: { enabled: true } },
       }),
