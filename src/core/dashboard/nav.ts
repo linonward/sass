@@ -74,7 +74,10 @@ const flagsNav: DashboardNavItem = {
  * 顺序：Metrics →（flags / 归因 / 留资报表）→（邀请管理 / 状态页）→ Users →（API Key 报表）→ Orders → Subscriptions。
  */
 export function adminNav(
-  config: Pick<SiteConfig, "acquisition" | "apiKeys" | "statusPage" | "userFlags">,
+  config: Pick<
+    SiteConfig,
+    "acquisition" | "apiKeys" | "statusPage" | "userFlags"
+  >,
 ): readonly DashboardNavItem[] {
   const [metrics, users, ...rest] = adminNavBase;
   return [

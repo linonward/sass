@@ -231,7 +231,7 @@ export const dashboardIcons = [
   "chart",
   "users",
   "creditCard",
-"key",
+  "key",
   "flag",
 ] as const;
 
@@ -689,7 +689,7 @@ export const siteConfigSchema = z
     acquisition: acquisitionConfigSchema.default(
       acquisitionConfigSchema.parse({}),
     ),
-statusPage: statusPageSchema.default(statusPageSchema.parse({})),
+    statusPage: statusPageSchema.default(statusPageSchema.parse({})),
     changelog: changelogConfigSchema.default(changelogConfigSchema.parse({})),
     userFlags: userFlagsConfigSchema.default(userFlagsConfigSchema.parse({})),
     observability: observabilityConfigSchema.default(

@@ -23,6 +23,6 @@ export const dashboardIconComponents: Record<DashboardIcon, LucideIcon> = {
   chart: ChartColumnIcon,
   users: UsersIcon,
   creditCard: CreditCardIcon,
-key: KeyRoundIcon,
+  key: KeyRoundIcon,
   flag: FlagIcon,
 };
