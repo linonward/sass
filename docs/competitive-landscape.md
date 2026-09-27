@@ -8,11 +8,11 @@
 
 SaaS 模板/脚手架市场已相当拥挤，Next.js 生态内有 **20+ 个可选项**，大致分三层：
 
-| 层级 | 代表 | 价格 | 典型买家 |
-|------|------|------|----------|
-| 免费开源 | Vercel sub-payments、create-t3-app、Open SaaS、next-enterprise | $0 | 愿意自己拼的开发者 |
-| 商业低价 | ZapStart、ShipFast、NextBase、BuilderKit | $49–$299 | 独立开发者做 MVP |
-| 商业高价 | MakerKit、SaasRock、MuseMVP、Nexty | $249–$499 | 要生产级基础的企业/团队 |
+| 层级     | 代表                                                           | 价格      | 典型买家                |
+| -------- | -------------------------------------------------------------- | --------- | ----------------------- |
+| 免费开源 | Vercel sub-payments、create-t3-app、Open SaaS、next-enterprise | $0        | 愿意自己拼的开发者      |
+| 商业低价 | ZapStart、ShipFast、NextBase、BuilderKit                       | $49–$299  | 独立开发者做 MVP        |
+| 商业高价 | MakerKit、SaasRock、MuseMVP、Nexty                             | $249–$499 | 要生产级基础的企业/团队 |
 
 ## 主要竞品
 
@@ -20,95 +20,95 @@ SaaS 模板/脚手架市场已相当拥挤，Next.js 生态内有 **20+ 个可�
 
 Marc Lou 创建，目前市场上**知名度最高**的 SaaS 模板。
 
-| 维度 | 详情 |
-|------|------|
-| 技术栈 | Next.js + MongoDB + Stripe |
-| 认证 | NextAuth（Google OAuth + 邮箱） |
-| 定价 | ~$199 一次性（常有限时折扣） |
-| 规模 | 8400+ 买家，135K 推特粉丝 |
-| 优势 | 社区大、案例多、信任度高 |
-| 劣势 | UI 朴素（常被批评"买了还得重做落地页"）、MongoDB 非 SQL、无 i18n、无积分系统、无获客工具 |
+| 维度   | 详情                                                                                     |
+| ------ | ---------------------------------------------------------------------------------------- |
+| 技术栈 | Next.js + MongoDB + Stripe                                                               |
+| 认证   | NextAuth（Google OAuth + 邮箱）                                                          |
+| 定价   | ~$199 一次性（常有限时折扣）                                                             |
+| 规模   | 8400+ 买家，135K 推特粉丝                                                                |
+| 优势   | 社区大、案例多、信任度高                                                                 |
+| 劣势   | UI 朴素（常被批评"买了还得重做落地页"）、MongoDB 非 SQL、无 i18n、无积分系统、无获客工具 |
 
 ### MakerKit（makerkit.dev）
 
 定位**生产级多租户** Next.js 模板，2022 年起维护。
 
-| 维度 | 详情 |
-|------|------|
-| 技术栈 | Next.js + Stripe + 可换数据库 |
-| 认证 | 完整认证含 MFA |
-| 定价 | $349 终身（含所有未来更新） |
-| 规模 | 数百个生产应用，400+ 页文档 |
-| 优势 | 多租户（核心卖点）、AI Agent 工具（MCP server + Claude Code/Cursor 规则）、无供应商锁定、维护久 |
-| 劣势 | 仅 Stripe、无积分系统、无获客工具、价格高 |
+| 维度   | 详情                                                                                            |
+| ------ | ----------------------------------------------------------------------------------------------- |
+| 技术栈 | Next.js + Stripe + 可换数据库                                                                   |
+| 认证   | 完整认证含 MFA                                                                                  |
+| 定价   | $349 终身（含所有未来更新）                                                                     |
+| 规模   | 数百个生产应用，400+ 页文档                                                                     |
+| 优势   | 多租户（核心卖点）、AI Agent 工具（MCP server + Claude Code/Cursor 规则）、无供应商锁定、维护久 |
+| 劣势   | 仅 Stripe、无积分系统、无获客工具、价格高                                                       |
 
 ### NextBase（usenextbase.com）
 
 Supabase 生态的快速启动模板。
 
-| 维度 | 详情 |
-|------|------|
-| 技术栈 | Next.js + Supabase（认证 + 数据库） |
-| 认证 | Supabase Auth（Google / GitHub / Facebook / Twitter） |
-| 定价 | ~$299 一次性 |
-| 规模 | 400+ 创作者 |
-| 优势 | Supabase 深度集成、组织 + 邀请流程、React Email、应用内通知、管理面板 |
-| 劣势 | 强绑定 Supabase 生态、仅 Stripe/Lemon Squeezy、无积分系统、无获客工具、Supabase Auth 不如 Better Auth 灵活 |
+| 维度   | 详情                                                                                                       |
+| ------ | ---------------------------------------------------------------------------------------------------------- |
+| 技术栈 | Next.js + Supabase（认证 + 数据库）                                                                        |
+| 认证   | Supabase Auth（Google / GitHub / Facebook / Twitter）                                                      |
+| 定价   | ~$299 一次性                                                                                               |
+| 规模   | 400+ 创作者                                                                                                |
+| 优势   | Supabase 深度集成、组织 + 邀请流程、React Email、应用内通知、管理面板                                      |
+| 劣势   | 强绑定 Supabase 生态、仅 Stripe/Lemon Squeezy、无积分系统、无获客工具、Supabase Auth 不如 Better Auth 灵活 |
 
 ### SaasRock（saasrock.com）
 
 Remix 生态的 B2B SaaS 模板。
 
-| 维度 | 详情 |
-|------|------|
-| 技术栈 | React Router 7 (Remix) + Prisma + Stripe |
-| 定价 | $249 一次性 |
-| 优势 | 高度可配置（"no-code on steroids"）、B2B 功能完善、可选购 MVP 定制开发 |
-| 劣势 | Remix 而非 Next.js、仅 Stripe、无积分系统、无获客工具 |
+| 维度   | 详情                                                                   |
+| ------ | ---------------------------------------------------------------------- |
+| 技术栈 | React Router 7 (Remix) + Prisma + Stripe                               |
+| 定价   | $249 一次性                                                            |
+| 优势   | 高度可配置（"no-code on steroids"）、B2B 功能完善、可选购 MVP 定制开发 |
+| 劣势   | Remix 而非 Next.js、仅 Stripe、无积分系统、无获客工具                  |
 
 ### MuseMVP（musemvp.com）
 
 多支付网关 + 多部署目标的 出海模板。
 
-| 维度 | 详情 |
-|------|------|
-| 技术栈 | Next.js + Stripe/Creem/Dodo/Waffo/Pancake |
-| 部署 | Vercel / Cloudflare Workers / EdgeOne / Docker |
-| 定价 | $99 |
-| 优势 | 支付网关和部署目标可切换、Creem 原生支持、AGENTS.md 适配 vibe coding |
-| 劣势 | 无积分系统、无获客工具、视觉系统弱、社区小 |
+| 维度   | 详情                                                                 |
+| ------ | -------------------------------------------------------------------- |
+| 技术栈 | Next.js + Stripe/Creem/Dodo/Waffo/Pancake                            |
+| 部署   | Vercel / Cloudflare Workers / EdgeOne / Docker                       |
+| 定价   | $99                                                                  |
+| 优势   | 支付网关和部署目标可切换、Creem 原生支持、AGENTS.md 适配 vibe coding |
+| 劣势   | 无积分系统、无获客工具、视觉系统弱、社区小                           |
 
 ### MkSaaS
 
 中文生态的 AI SaaS 模板。
 
-| 维度 | 详情 |
-|------|------|
-| 技术栈 | Next.js + Stripe/Creem + Vercel AI SDK |
-| 定价 | 一次性付费 |
-| 优势 | AI 功能丰富（文本/图片/聊天）、积分系统、i18n、博客/文档、360+ UI 组件 |
-| 劣势 | 中文生态为主、设计系统不如本模板系统化、获客工具缺失 |
+| 维度   | 详情                                                                   |
+| ------ | ---------------------------------------------------------------------- |
+| 技术栈 | Next.js + Stripe/Creem + Vercel AI SDK                                 |
+| 定价   | 一次性付费                                                             |
+| 优势   | AI 功能丰富（文本/图片/聊天）、积分系统、i18n、博客/文档、360+ UI 组件 |
+| 劣势   | 中文生态为主、设计系统不如本模板系统化、获客工具缺失                   |
 
 ### ZapStart（zap-start.com）
 
 定位"预算友好"的低价模板。
 
-| 维度 | 详情 |
-|------|------|
-| 技术栈 | Next.js + Stripe |
-| 定价 | $49 一次性 |
-| 优势 | 极低价格、认证 + 支付 + 落地页 + 博客 |
-| 劣势 | 功能少、仅 Stripe、无积分、无 i18n、无获客 |
+| 维度   | 详情                                       |
+| ------ | ------------------------------------------ |
+| 技术栈 | Next.js + Stripe                           |
+| 定价   | $49 一次性                                 |
+| 优势   | 极低价格、认证 + 支付 + 落地页 + 博客      |
+| 劣势   | 功能少、仅 Stripe、无积分、无 i18n、无获客 |
 
 ### 开源选项
 
-| 项目 | 特点 |
-|------|------|
-| **Vercel nextjs-subscription-payments** | ⭐7.7k，Stripe + Supabase，官方维护但功能基础 |
-| **create-t3-app** | 社区最知名的全栈脚手架，Prisma + tRPC + NextAuth |
-| **Open SaaS (wasp-lang)** | React/Node/Prisma + Stripe/Lemon Squeezy，完全开源 |
-| **next-enterprise (Blazity)** | 企业级脚手架，Tailwind + TypeScript + 测试工具，无业务功能 |
-| **ixartz/Next-js-Boilerplate** | Next.js 16 + Drizzle ORM + Tailwind 4，DX 工具链完善 |
+| 项目                                    | 特点                                                       |
+| --------------------------------------- | ---------------------------------------------------------- |
+| **Vercel nextjs-subscription-payments** | ⭐7.7k，Stripe + Supabase，官方维护但功能基础              |
+| **create-t3-app**                       | 社区最知名的全栈脚手架，Prisma + tRPC + NextAuth           |
+| **Open SaaS (wasp-lang)**               | React/Node/Prisma + Stripe/Lemon Squeezy，完全开源         |
+| **next-enterprise (Blazity)**           | 企业级脚手架，Tailwind + TypeScript + 测试工具，无业务功能 |
+| **ixartz/Next-js-Boilerplate**          | Next.js 16 + Drizzle ORM + Tailwind 4，DX 工具链完善       |
 
 ## 本模板的差异定位
 
@@ -125,6 +125,7 @@ Remix 生态的 B2B SaaS 模板。
 **这是最大的差异。** 几乎所有竞品都以 Stripe 为主支付。少数加了 Creem（MuseMVP、MkSaaS、Nexty）但仍是 Stripe 优先，或作为中国市场补充。
 
 本模板 **Creem-first**：
+
 - **无需海外公司主体**。Creem 是 Merchant of Record，作为法律卖方替买家处理全球税务合规。Stripe 要求有美国/欧洲公司主体——这是 出海独立开发者的核心痛点。
 - Stripe 适配器留了 `PaymentProvider` 接口但 v1 不实现——明确的设计决策。
 - 买的不是一个"支付集成"，是一个**不需要海外公司就能收款的 SaaS**。
@@ -134,6 +135,7 @@ Remix 生态的 B2B SaaS 模板。
 **市场上几乎找不到内置积分账本的模板。** ShipFast、NextBase、SaasRock、MakerKit 都只管订阅/一次性付款。AI 调用的按次计费需要买家自己写。
 
 本模板内置：
+
 - Postgres 账本：`credit_transactions` 记流水 + `user_credits.balance` 作余额缓存
 - `UPDATE … SET balance = balance - n WHERE balance >= n` 保证原子扣减
 - AI 调用前预扣 → 失败退分 → 写入账本并注明原因
@@ -144,10 +146,10 @@ Remix 生态的 B2B SaaS 模板。
 
 **渠道归因、候补名单、邀请奖励**——这三块是通用获客能力，但现有模板几乎都不做。要么自己写，要么接第三方（Rewardful 等，月费 $25+）。
 
-| 能力 | 首版范围 |
-|------|----------|
-| 渠道归因 | 30 天首次来源、UTM/来源域名、注册关联、渠道注册与收入报表 |
-| 线索收集 | 邮箱留资/候补名单、确认与撤回、注册关联、后台筛选及 CSV 导出 |
+| 能力     | 首版范围                                                         |
+| -------- | ---------------------------------------------------------------- |
+| 渠道归因 | 30 天首次来源、UTM/来源域名、注册关联、渠道注册与收入报表        |
+| 线索收集 | 邮箱留资/候补名单、确认与撤回、注册关联、后台筛选及 CSV 导出     |
 | 邀请奖励 | 专属链接、新用户绑定、首次有效付款给双方积分、退款回收和后台审核 |
 
 #### 4. 视觉系统：单色推导 + 贴纸深度
@@ -155,6 +157,7 @@ Remix 生态的 B2B SaaS 模板。
 竞品 UI 的常见批评：**"买了还得自己重做落地页"**（ShipFast、supastarter 都因此被点名）。
 
 本模板的设计系统：
+
 - **一个 hex 换整套品牌**。`site.config.ts` 的 `brand.primaryColor` → 推导 15+ token（primary、edge、text、band、background、chart-1、中性色阶）
 - **贴纸表面**：1px 描边 + 同色零模糊硬唇边，不用模糊投影
 - **两个语域**：营销面（色带 + 波浪 + 贴纸）vs 产品面/后台（平面面板 + 高密度）
@@ -164,6 +167,7 @@ Remix 生态的 B2B SaaS 模板。
 #### 5. Better Auth + 邮箱验证码
 
 多数竞品用 Auth.js/NextAuth 或 Supabase Auth。Better Auth 是新一代选择：
+
 - **邮箱验证码**（6 位数字，5 分钟有效，跨设备输入），不用 magic link——magic link 会被企业邮箱链接扫描器提前消耗
 - 参数显式配置（不依赖插件默认值）：验证码长度、有效期、最大尝试次数、重发冷却
 - Admin 插件管理角色
@@ -178,6 +182,7 @@ Remix 生态的 B2B SaaS 模板。
 买了竞品模板后，上游更新靠什么？MakerKit 靠"daily updates + Discord"（手动跟），大多数小模板**根本不更新**。
 
 本模板设计为：
+
 - `src/core/` 套件代码，业务项目不改
 - 上游更新靠 `git merge upstream/main`
 - 目录边界 + lint 规则防止侵入
@@ -185,25 +190,25 @@ Remix 生态的 B2B SaaS 模板。
 
 ### 功能矩阵对比
 
-| 能力 | 本模板 | ShipFast | MakerKit | NextBase | SaasRock | MuseMVP | 开源 |
-|------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Creem (MoR)** | ✅ 一等 | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| **Stripe** | 接口预留 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **积分/账本** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **渠道归因** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **邀请奖励** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **候补名单** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **单色推导品牌** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Better Auth** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **邮箱验证码** | ✅ 默认 | ❌ | ❌ | ❌ | ❌ | ❌ | 少数 |
-| **Neon 可分支** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | 少数 |
-| **i18n** | ✅ | ❌ | 部分 | ❌ | ❌ | ❌ | ❌ |
-| **上游 git merge** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **MDX 博客** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | 部分 |
-| **管理后台** | ✅ | 基础 | ✅ | ✅ | ✅ | ✅ | 少数 |
-| **R2 文件上传** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **可观测性** | ✅ 四件套 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **多租户** | v1 不做 | ❌ | ✅ | 组织 | ❌ | ❌ | ❌ |
+| 能力               |  本模板   | ShipFast | MakerKit | NextBase | SaasRock | MuseMVP | 开源 |
+| ------------------ | :-------: | :------: | :------: | :------: | :------: | :-----: | :--: |
+| **Creem (MoR)**    |  ✅ 一等  |    ❌    |    ❌    |    ❌    |    ❌    |   ✅    |  ❌  |
+| **Stripe**         | 接口预留  |    ✅    |    ✅    |    ✅    |    ✅    |   ✅    |  ✅  |
+| **积分/账本**      |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ❌  |
+| **渠道归因**       |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ❌  |
+| **邀请奖励**       |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ❌  |
+| **候补名单**       |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ❌  |
+| **单色推导品牌**   |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ❌  |
+| **Better Auth**    |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ❌  |
+| **邮箱验证码**     |  ✅ 默认  |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    | 少数 |
+| **Neon 可分支**    |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    | 少数 |
+| **i18n**           |    ✅     |    ❌    |   部分   |    ❌    |    ❌    |   ❌    |  ❌  |
+| **上游 git merge** |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ✅  |
+| **MDX 博客**       |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    | 部分 |
+| **管理后台**       |    ✅     |   基础   |    ✅    |    ✅    |    ✅    |   ✅    | 少数 |
+| **R2 文件上传**    |    ✅     |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ❌  |
+| **可观测性**       | ✅ 四件套 |    ❌    |    ❌    |    ❌    |    ❌    |   ❌    |  ❌  |
+| **多租户**         |  v1 不做  |    ❌    |    ✅    |   组织   |    ❌    |   ❌    |  ❌  |
 
 ### 本模板的劣势与风险
 
