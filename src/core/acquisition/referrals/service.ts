@@ -9,7 +9,7 @@ import {
 } from "@/core/db/schema";
 import { newReferralCode } from "./code";
 
-/** 邀请关系状态。T1306 扩展为包含奖励相关状态。 */
+/** 邀请关系状态：包含奖励结算的 rewarded / revoked / pending_review。 */
 export type ReferralStatus =
   "awaiting_payment" | "rewarded" | "revoked" | "pending_review";
 export type RelationshipView = { status: ReferralStatus; createdAt: Date };
