@@ -15,10 +15,12 @@ import {
  * 规则重新校验（见 parseReportFilters）。
  *
  * 用原生 select 而不是像 status 筛选那样铺一排链接：三个维度组合起来链接会有几十条，
- * 而且只有取值多的时候才需要它。外观照 `Input`，产品语域用同一条发丝边。
+ * 而且只有取值多的时候才需要它。外观照 `Input`（含深色填充、禁用与 aria-invalid 态），
+ * 产品语域用同一条发丝边；`text-base md:text-sm` 不能省 —— 小字号会让 iOS Safari
+ * 在聚焦时把整页放大。
  */
 const selectClass = cn(
-  "border-border focus-visible:border-ring focus-visible:ring-ring/50 h-8 min-w-40 rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:ring-3",
+  "border-border focus-visible:border-ring focus-visible:ring-ring/50 disabled:bg-input/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 h-8 min-w-40 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 md:text-sm",
 );
 
 /**
@@ -77,8 +79,24 @@ export function ReportFilters({
     },
   ];
 
+  // 换了 searchParams 的客户端跳转不会重新挂载节点，React 也就不再把新的
+  // defaultValue 应用到 select 的当前值上（实测：同树更新后框里停在旧值，
+  // 只有重挂才会变），于是下拉显示的筛选和表格实际用的筛选会对不上。
+  // key 跟着 URL 走，两者就始终是同一份取值。留空 = 全部，空值由页面在服务端
+  // 从 URL 里收掉（parseReportFilters 本来就把空串当没传）。
+  const urlKey = JSON.stringify([
+    range,
+    current.source ?? "",
+    current.medium ?? "",
+    current.campaign ?? "",
+  ]);
+
   return (
-    <form action={action} className="flex flex-wrap items-end gap-3">
+    <form
+      key={urlKey}
+      action={action}
+      className="flex flex-wrap items-end gap-3"
+    >
       {/* 30 天是默认值，不写进 URL（和 RangeFilter 一致）。 */}
       {range !== 30 && <input type="hidden" name="range" value={range} />}
       {fields.map((field) => (
