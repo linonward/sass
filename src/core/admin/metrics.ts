@@ -109,7 +109,8 @@ export async function getRevenueMetrics(
   window: MetricWindow,
   billing: Pick<SiteConfig["billing"], "currency" | "plans">,
 ) {
-  const net = sql<number>`coalesce(sum(${orders.amount} - ${orders.refundedAmount}), 0)::int`;
+  const orderNet = sql`coalesce(${orders.amount}, 0) - coalesce(${orders.refundedAmount}, 0)`;
+  const net = sql<number>`coalesce(sum(${orderNet}), 0)::int`;
   const collected = and(
     gte(orders.createdAt, window.since),
     inArray(orders.status, collectedStatuses),
@@ -123,9 +124,7 @@ export async function getRevenueMetrics(
     db
       .select({ value: countDistinct(orders.userId) })
       .from(orders)
-      .where(
-        and(collected, sql`${orders.amount} - ${orders.refundedAmount} > 0`),
-      ),
+      .where(and(collected, sql`${orderNet} > 0`)),
     db
       .select({ planId: subscriptions.planId, value: count() })
       .from(subscriptions)

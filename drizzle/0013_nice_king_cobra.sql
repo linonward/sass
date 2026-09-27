@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "credit_grant_source_id" text;

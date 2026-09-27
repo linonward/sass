@@ -17,7 +17,12 @@ import {
 
 import { createCredits, type Credits } from "@/core/credits/service";
 import { createDbClient, type DbClient } from "@/core/db/client";
-import { creditTransactions, orders, user } from "@/core/db/schema";
+import {
+  creditTransactions,
+  orders,
+  user,
+  webhookEvents,
+} from "@/core/db/schema";
 
 import type { BillingEvent } from "./events";
 import { createGrantCreditsHandler } from "./grant-credits";
@@ -256,6 +261,191 @@ describe.skipIf(!url)("退款回收集分", () => {
       source: REFUND_RECLAIM_SOURCE,
     });
     expect(entry!.reason).toContain(orderId);
+  });
+
+  test.each(["checkout", "subscription"])(
+    "退款先到，%s 付款后到仍回收；重推不会重复回收",
+    async (kind) => {
+      const orderId = `ord_${randomUUID()}`;
+      await handle(refund(orderId));
+      expect(await balance()).toBe(0);
+      const paid =
+        kind === "checkout"
+          ? fake.event("checkout.completed", {
+              userId,
+              checkoutId: randomUUID(),
+              orderId,
+              planId: "lifetime",
+              amount: ORDER_AMOUNT,
+              currency: "USD",
+            })
+          : fake.event("subscription.renewed", {
+              userId,
+              subscriptionId: randomUUID(),
+              orderId,
+              planId: "pro",
+              amount: ORDER_AMOUNT,
+              currency: "USD",
+              currentPeriodStart: new Date("2026-01-01T00:00:00Z"),
+            });
+      await handle(paid);
+      expect(await balance()).toBe(0);
+      expect(
+        (await reclaims()).filter((tx) => tx.source === REFUND_RECLAIM_SOURCE),
+      ).toHaveLength(1);
+      expect(await handle(paid)).toEqual({ status: "duplicate" });
+      await handle({ ...paid, eventId: randomUUID() });
+      expect(await balance()).toBe(0);
+    },
+  );
+
+  test("套餐下线后按实际发放额回收，不依赖当前套餐配置", async () => {
+    const orderId = await purchase({ planId: "removed-plan" });
+    await credits.grantCredits({
+      userId,
+      amount: 777,
+      source: "billing",
+      sourceId: `${fake.id}:order:${orderId}`,
+    });
+    await handle(refund(orderId));
+    expect(await balance()).toBe(0);
+    expect(
+      (await reclaims()).find((tx) => tx.source === REFUND_RECLAIM_SOURCE)
+        ?.amount,
+    ).toBe(-777);
+  });
+
+  test("订阅跨账期且套餐下线：只回收被退款订单对应的实际积分", async () => {
+    const subscriptionId = randomUUID();
+    const first = fake.event("subscription.renewed", {
+      userId,
+      subscriptionId,
+      orderId: randomUUID(),
+      planId: "pro",
+      amount: ORDER_AMOUNT,
+      currency: "USD",
+      currentPeriodStart: new Date("2026-01-01T00:00:00Z"),
+    });
+    const second = {
+      ...first,
+      eventId: randomUUID(),
+      orderId: randomUUID(),
+      currentPeriodStart: new Date("2026-02-01T00:00:00Z"),
+    };
+    await handle(first);
+    await handle(second);
+    await db
+      .update(orders)
+      .set({ planId: "removed-plan" })
+      .where(eq(orders.providerOrderId, first.orderId!));
+    await handle(refund(first.orderId!));
+    expect(await balance()).toBe(GRANTED);
+    await handle(refund(second.orderId!));
+    expect(await balance()).toBe(0);
+  });
+
+  test("旧 Creem 订单没有关联字段时，从付款原文恢复旧账期，套餐下线不影响", async () => {
+    const orderId = randomUUID(),
+      subscriptionId = randomUUID(),
+      eventId = randomUUID();
+    const period = new Date("2026-01-01T00:00:00Z");
+    // Seed a pre-upgrade order and its actual grant, independent of current config.
+    await db.insert(orders).values({
+      userId,
+      provider: "creem",
+      providerOrderId: orderId,
+      providerSubscriptionId: subscriptionId,
+      planId: "removed-plan",
+      amount: ORDER_AMOUNT,
+      currency: "USD",
+      status: "paid",
+    });
+    await credits.grantCredits({
+      userId,
+      amount: 777,
+      source: "billing",
+      sourceId: `creem:subscription:${subscriptionId}:${period.toISOString()}`,
+    });
+    await db.insert(webhookEvents).values({
+      provider: "creem",
+      eventId,
+      type: "subscription.renewed",
+      occurredAt: period,
+      raw: {
+        id: eventId,
+        eventType: "subscription.paid",
+        created_at: period.getTime(),
+        object: {
+          id: subscriptionId,
+          last_transaction_id: orderId,
+          current_period_start_date: period.toISOString(),
+          metadata: { userId, planId: "removed-plan" },
+        },
+      },
+    });
+    await handle({ ...refund(orderId), provider: "creem" });
+    expect(await balance()).toBe(0);
+    expect(
+      (await reclaims()).find((tx) => tx.source === REFUND_RECLAIM_SOURCE)
+        ?.amount,
+    ).toBe(-777);
+  });
+
+  test("部分退款先到，后续多个退款按累计金额回收且不超过实际发放", async () => {
+    const orderId = randomUUID();
+    await handle(refund(orderId, { amount: 1000 }));
+    await purchase({ orderId });
+    expect(await balance()).toBe(GRANTED - 666);
+    await handle(refund(orderId, { amount: 1000 }));
+    expect(await balance()).toBe(GRANTED - 1333);
+    await handle(refund(orderId, { amount: 1000 }));
+    expect(await balance()).toBe(0);
+  });
+
+  test("付款与退款并发最终回收一次", async () => {
+    const orderId = randomUUID();
+    const paid = fake.event("checkout.completed", {
+      userId,
+      checkoutId: randomUUID(),
+      orderId,
+      planId: "lifetime",
+      amount: ORDER_AMOUNT,
+      currency: "USD",
+    });
+    await Promise.all([handle(paid), handle(refund(orderId))]);
+    expect(await balance()).toBe(0);
+    expect(
+      (await reclaims()).filter((tx) => tx.source === REFUND_RECLAIM_SOURCE),
+    ).toHaveLength(1);
+  });
+
+  test("补偿失败回滚整次付款，重试可以完成发放与回收", async () => {
+    const orderId = randomUUID();
+    await handle(refund(orderId));
+    registerOnBillingEvent(
+      "billing:reclaim-credits",
+      createReclaimCreditsHandler({
+        enabled: true,
+        reclaimCredits: async () => {
+          throw new Error("transient reclaim failure");
+        },
+      }),
+    );
+    const paid = fake.event("checkout.completed", {
+      userId,
+      checkoutId: randomUUID(),
+      orderId,
+      planId: "lifetime",
+      amount: ORDER_AMOUNT,
+      currency: "USD",
+    });
+    await expect(handle(paid)).rejects.toThrow();
+    expect(await balance()).toBe(0);
+    expect(await reclaims()).toHaveLength(0);
+    useCredits(true);
+    expect(await handle(paid)).toMatchObject({ status: "processed" });
+    expect(await balance()).toBe(0);
+    expect(await reclaims()).toHaveLength(2);
   });
 
   test("积分已经花掉一部分：扣到 0，差额不写流水（amount 有非零约束）", async () => {

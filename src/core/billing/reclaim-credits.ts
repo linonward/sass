@@ -1,13 +1,14 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 
 import type { DbTransaction } from "@/core/db";
 import { creditTransactions, orders } from "@/core/db/schema";
 import type { ReclaimInput, ReclaimResult, WriteOptions } from "@/core/credits";
 import { logger } from "@/core/observability/logger";
 
-import type { RefundCreatedEvent } from "./events";
+import type { BillingEvent } from "./events";
 import type { OnBillingEventHandler } from "./on-billing-event";
-import { getPlan } from "./plans";
+import { BILLING_CREDITS_SOURCE, billingGrantSourceId } from "./grant-credits";
+import { historicalGrantSourceId } from "./historical-grant";
 
 /**
  * 退款回收出来的积分流水的来源。
@@ -47,11 +48,22 @@ async function reclaimedForOrder(
     .where(
       and(
         eq(creditTransactions.source, REFUND_RECLAIM_SOURCE),
-        sql`${creditTransactions.sourceId} like ${`${escapeLike(prefix)}%`}`,
+        or(
+          sql`${creditTransactions.sourceId} like ${`${escapeLike(prefix)}%`}`,
+          eq(
+            creditTransactions.sourceId,
+            `${provider}:order:${orderId}:payment`,
+          ),
+        ),
       ),
     );
   return Number(row?.total ?? 0);
 }
+
+type ReclaimEvent = Extract<
+  BillingEvent,
+  { type: "refund.created" | "checkout.completed" | "subscription.renewed" }
+> & { orderId: string };
 
 export type ReclaimPlan = {
   /** 这次要回收的积分（还没按余额截断）。 */
@@ -78,7 +90,7 @@ export function creditsToReclaim({
   granted,
   alreadyReclaimed,
 }: {
-  event: RefundCreatedEvent;
+  event: ReclaimEvent;
   order: { amount: number | null; refundedAmount: number };
   granted: number;
   alreadyReclaimed: number;
@@ -88,10 +100,15 @@ export function creditsToReclaim({
   const owedTotal = Math.floor((granted * refunded) / order.amount);
   const owed = owedTotal - alreadyReclaimed;
   if (owed <= 0) return null;
-  const label = `Refund of ${event.provider} order ${event.orderId} (${event.refundId})`;
+  const refundId =
+    event.type === "refund.created" ? event.refundId : event.eventId;
+  const label = `Refund of ${event.provider} order ${event.orderId} (${refundId})`;
   return {
     amount: owed,
-    sourceId: reclaimSourceId(event.provider, event.orderId, event.refundId),
+    sourceId:
+      event.type === "refund.created"
+        ? reclaimSourceId(event.provider, event.orderId, event.refundId)
+        : `${event.provider}:order:${event.orderId}:payment`,
     reason: refunded < order.amount ? `Partial ${label}` : label,
   };
 }
@@ -99,7 +116,7 @@ export function creditsToReclaim({
 /**
  * 退款回收集分的 onBillingEvent 钩子。
  *
- * 回收额度按订单对应的套餐配置算（订阅每个账期发放的就是 plan.credits，与一次性购买同源），
+ * 回收额度取实际 billing 发放流水；退款先到时，由后续付款在发放钩子之后补偿。
  * 实际扣减由积分服务按余额截断：余额不够时扣到 0，差额记日志
  * （流水先写后改余额，且 amount 有非零约束，所以差额进不了流水备注）。
  * 重复由 webhook_events 与流水的 (source, sourceId) 两道幂等挡住。
@@ -115,12 +132,21 @@ export function createReclaimCreditsHandler({
   ) => Promise<ReclaimResult>;
 }): OnBillingEventHandler {
   return async (event, { tx, userId }) => {
-    if (!enabled || event.type !== "refund.created") return;
+    if (
+      !enabled ||
+      (event.type !== "refund.created" &&
+        event.type !== "checkout.completed" &&
+        event.type !== "subscription.renewed") ||
+      !event.orderId
+    )
+      return;
+    const trigger: ReclaimEvent = { ...event, orderId: event.orderId };
 
     const [order] = await tx
       .select({
         amount: orders.amount,
-        planId: orders.planId,
+        id: orders.id,
+        creditGrantSourceId: orders.creditGrantSourceId,
         refundedAmount: orders.refundedAmount,
       })
       .from(orders)
@@ -131,11 +157,35 @@ export function createReclaimCreditsHandler({
         ),
       );
 
-    const granted = order?.planId ? (getPlan(order.planId)?.credits ?? 0) : 0;
-    if (!order || granted <= 0) return;
+    if (!order) return;
+    const sourceId =
+      order.creditGrantSourceId ??
+      billingGrantSourceId(event) ??
+      (await historicalGrantSourceId(tx, event.provider, event.orderId)) ??
+      `${event.provider}:order:${event.orderId}`;
+    const [grant] = await tx
+      .select({ amount: creditTransactions.amount })
+      .from(creditTransactions)
+      .where(
+        and(
+          eq(creditTransactions.userId, userId),
+          eq(creditTransactions.source, BILLING_CREDITS_SOURCE),
+          eq(creditTransactions.sourceId, sourceId),
+          eq(creditTransactions.type, "grant"),
+        ),
+      );
+    const granted = grant?.amount ?? 0;
+    if (granted <= 0) return;
+    // mergeOrder already holds this order's row lock for the whole transaction.
+    if (!order.creditGrantSourceId)
+      await tx
+        .update(orders)
+        .set({ creditGrantSourceId: sourceId })
+        .where(eq(orders.id, order.id));
+    if (order.refundedAmount <= 0) return;
 
     const plan = creditsToReclaim({
-      event,
+      event: trigger,
       order,
       granted,
       alreadyReclaimed: await reclaimedForOrder(
@@ -149,7 +199,7 @@ export function createReclaimCreditsHandler({
         provider: event.provider,
         eventId: event.eventId,
         orderId: event.orderId,
-        refundId: event.refundId,
+        refundId: event.type === "refund.created" ? event.refundId : undefined,
         orderAmount: order.amount,
         refundedAmount: order.refundedAmount,
         granted,
@@ -174,7 +224,7 @@ export function createReclaimCreditsHandler({
       logger.warn("billing.refund_reclaim_shortfall", {
         provider: event.provider,
         orderId: event.orderId,
-        refundId: event.refundId,
+        refundId: event.type === "refund.created" ? event.refundId : undefined,
         userId,
         owed: plan.amount,
         reclaimed: result.reclaimed,
