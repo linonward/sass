@@ -2,3 +2,4 @@
 // 套件模块在这里 import 自己的注册文件；
 // 业务模块同样在这里加一行 import "@/features/<name>/on-user-delete"。
 import "@/core/billing/register-user-delete";
+import "@/core/acquisition/leads/register-user-delete";

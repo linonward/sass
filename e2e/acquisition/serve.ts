@@ -22,12 +22,28 @@ for (const file of [...new Set([...files, ".env.local"])]) {
 }
 const config = path.join(dest, "site.config.ts");
 const before = fs.readFileSync(config, "utf8");
-const after = before.replace(
-  "attribution: { enabled: false }",
-  "attribution: { enabled: true }",
-);
+const after = before
+  .replace("leads: { enabled: false }", "leads: { enabled: true }")
+  .replace("attribution: { enabled: false }", "attribution: { enabled: true }");
 if (before === after) throw new Error("Expected default attribution flag off");
 fs.writeFileSync(config, after);
+// Only this disposable e2e copy stubs external Redis. Production has no bypass.
+const limiterPath = path.join(dest, "src/core/acquisition/leads/rate-limit.ts");
+const liveLimiter = fs
+  .readFileSync(limiterPath, "utf8")
+  .replace("export const checkLeadLimit =", "const liveLeadLimit =")
+  .replace(
+    "export async function checkLeadActionLimit(",
+    "async function liveActionLimit(",
+  );
+fs.writeFileSync(
+  limiterPath,
+  liveLimiter +
+    `
+export const checkLeadLimit: typeof liveLeadLimit = async () => ({ ok: true, retryAfter: 0 });
+export const checkLeadActionLimit: typeof liveActionLimit = async () => ({ ok: true, retryAfter: 0 });
+`,
+);
 execFileSync("pnpm", ["install", "--offline", "--frozen-lockfile"], {
   cwd: dest,
   stdio: "inherit",

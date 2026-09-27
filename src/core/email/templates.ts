@@ -1,3 +1,7 @@
+import LeadConfirmationEmail, {
+  leadConfirmationSubject,
+  type LeadConfirmationProps,
+} from "./templates/lead-confirmation";
 import type { ComponentType } from "react";
 
 import CreditsLowEmail, {
@@ -33,6 +37,10 @@ type TemplateDefinition<P> = {
 
 /** 模板名 → 组件与 props 类型。新增模板时在这里登记，sendEmail 的参数会随之获得类型检查。 */
 export const emailTemplates = {
+  "lead-confirmation": {
+    Component: LeadConfirmationEmail,
+    subject: leadConfirmationSubject,
+  } satisfies TemplateDefinition<LeadConfirmationProps>,
   "sign-in-code": {
     Component: SignInCodeEmail,
     subject: signInCodeSubject,
@@ -62,6 +70,7 @@ export const emailTemplates = {
 export type EmailTemplateName = keyof typeof emailTemplates;
 
 export type EmailTemplateProps = {
+  "lead-confirmation": LeadConfirmationProps;
   "sign-in-code": SignInCodeProps;
   welcome: WelcomeProps;
   "payment-succeeded": PaymentSucceededProps;

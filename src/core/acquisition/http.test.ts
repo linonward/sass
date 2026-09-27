@@ -2,7 +2,12 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { captureEntry } from "./context";
 import { createAttributionHandlers } from "./http";
-import { RETRY_COOKIE, SOURCE_COOKIE, signContext } from "./tokens";
+import {
+  RETRY_COOKIE,
+  SOURCE_COOKIE,
+  SOURCE_CHOICE_COOKIE,
+  signContext,
+} from "./tokens";
 const secret = "test-acquisition-http-secret";
 const url = "http://localhost:3100/api/acquisition/attribution";
 const snapshot = captureEntry(
@@ -95,11 +100,13 @@ describe("attribution API", () => {
     getUserId.mockResolvedValue("user");
     const response = await handlers().POST(request({ action: "withdraw" }));
     expect(store.withdraw).toHaveBeenCalledWith("user");
+    expect(response.cookies.get(SOURCE_CHOICE_COOKIE)?.value).toBe("declined");
     expect(response.cookies.get(SOURCE_COOKIE)?.maxAge).toBe(0);
     expect(response.cookies.get(RETRY_COOKIE)?.maxAge).toBe(0);
     store.withdraw.mockRejectedValueOnce(new Error("db failed"));
     const failed = await handlers().POST(request({ action: "withdraw" }));
     expect(failed.status).toBe(503);
+    expect(failed.cookies.get(SOURCE_CHOICE_COOKIE)?.value).toBe("declined");
     expect(failed.cookies.get(SOURCE_COOKIE)?.maxAge).toBe(0);
   });
   test("retry only writes signed user identity and exact snapshot, not client fields", async () => {

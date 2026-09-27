@@ -247,6 +247,15 @@
       "body": "Your balance is down to {balance, plural, one {# credit} other {# credits}}, below {threshold}. Top up or upgrade your plan so you don't get interrupted.",
       "cta": "Get more credits",
       "note": "We send this reminder at most once a day."
+    },
+    "leadConfirmation": {
+      "subject": "Confirm your request for {name}",
+      "preview": "Confirm your email to complete your request.",
+      "heading": "Your request: {list}",
+      "body": "Use the button below, then confirm on the website. The confirmation link expires in 24 hours. If you have already confirmed, no further confirmation is needed.",
+      "confirm": "Review and confirm",
+      "ignore": "If you did not request this email, you can ignore it. This does not create an account or subscribe you to marketing emails.",
+      "withdraw": "Remove this request"
     }
   },
   "Auth": {
@@ -724,5 +733,37 @@
     "saved": "Source preference saved.",
     "removed": "Source data removed.",
     "error": "We could not complete the request. Please try again; account data removal may still be pending."
+  },
+  "Leads": {
+    "title": "Stay in the loop",
+    "description": "Join our waitlist and hear when we are ready.",
+    "email": "Email address",
+    "submit": "Join the waitlist",
+    "resend": "Resend confirmation",
+    "sending": "Sending…",
+    "sent": "If your request can be processed, a confirmation email will arrive shortly. Please wait a minute before trying again.",
+    "limited": "Too many requests. Please try again later.",
+    "retry": "We could not complete your request. Please try again.",
+    "expired": "This link is invalid or has expired. Request a new email from the waitlist page.",
+    "back": "Back to the waitlist",
+    "lists": {
+      "waitlist": {
+        "title": "Join the waitlist",
+        "description": "Leave your email to express interest. No account is created.",
+        "consent": "I agree to have my email stored for this waitlist and to receive messages about my request. This does not subscribe me to marketing emails."
+      }
+    },
+    "confirm": {
+      "title": "Confirm your email",
+      "description": "Press the button to confirm your request. Simply opening this page does not confirm it.",
+      "button": "Confirm my request",
+      "done": "Your email is confirmed. Thank you for your interest."
+    },
+    "withdraw": {
+      "title": "Remove your request",
+      "description": "Remove your email, source information and consent record from this waitlist.",
+      "button": "Remove my request",
+      "done": "Your request has been removed."
+    }
   }
 }

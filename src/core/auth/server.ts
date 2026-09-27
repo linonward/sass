@@ -1,3 +1,9 @@
+import { createLeadService } from "@/core/acquisition/leads/service";
+import {
+  sourceFromHeaders,
+  readCookie,
+  SOURCE_CHOICE_COOKIE,
+} from "@/core/acquisition/tokens";
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
@@ -79,11 +85,35 @@ export const auth = betterAuth({
       create: {
         // 每次登录时检查是否要提升为 admin。session 已经建好，同一请求之后读到的就是新角色。
         after: async (session, ctx) => {
-          if (adminEmails.length === 0 || !ctx) return;
+          if (
+            !ctx ||
+            (adminEmails.length === 0 && !siteConfig.acquisition.leads.enabled)
+          )
+            return;
           const adapter = ctx.context.internalAdapter;
           // internalAdapter 的类型不含插件字段；role 由 admin 插件添加。
           const user = (await adapter.findUserById(session.userId)) as
             (User & { role?: string | null }) | null;
+          if (user && siteConfig.acquisition.leads.enabled) {
+            try {
+              await createLeadService(db).linkRegistration(
+                user,
+                siteConfig.acquisition.attribution.enabled &&
+                  !sourceFromHeaders(
+                    ctx.headers ?? ctx.request?.headers,
+                    env.BETTER_AUTH_SECRET,
+                  ) &&
+                  readCookie(
+                    ctx.headers ?? ctx.request?.headers,
+                    SOURCE_CHOICE_COOKIE,
+                  ) !== "declined",
+              );
+            } catch {
+              logger.warn("leads.registration_link_failed", {
+                userId: user.id,
+              });
+            }
+          }
           if (user && shouldPromoteToAdmin(user, adminEmails)) {
             await adapter.updateUser(user.id, {
               role: withAdminRole(user.role),
@@ -104,6 +134,20 @@ export const auth = betterAuth({
               ? (name, value, options) => ctx.setCookie(name, value, options)
               : undefined,
           );
+          if (siteConfig.acquisition.leads.enabled) {
+            try {
+              await createLeadService(db).linkRegistration(
+                user,
+                siteConfig.acquisition.attribution.enabled &&
+                  !sourceFromHeaders(headers, env.BETTER_AUTH_SECRET) &&
+                  readCookie(headers, SOURCE_CHOICE_COOKIE) !== "declined",
+              );
+            } catch {
+              logger.warn("leads.registration_link_failed", {
+                userId: user.id,
+              });
+            }
+          }
           const locale = resolveRequestLocale(headers);
           await runAfterResponse(async () => {
             try {

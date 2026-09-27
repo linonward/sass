@@ -1,3 +1,4 @@
+import siteConfig from "../../../site.config";
 import { legalPages } from "@/core/legal/pages";
 
 /**
@@ -7,5 +8,6 @@ import { legalPages } from "@/core/legal/pages";
 export const marketingRoutes: readonly string[] = [
   "/",
   "/pricing",
+  ...(siteConfig.acquisition.leads.enabled ? ["/waitlist"] : []),
   ...Object.values(legalPages),
 ];

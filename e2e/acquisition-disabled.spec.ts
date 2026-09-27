@@ -33,4 +33,16 @@ test("default-off acquisition has no UI, cookies, API requests or enabled endpoi
   expect(
     (await page.request.get("/api/acquisition/attribution")).status(),
   ).toBe(404);
+  expect(
+    (await page.request.post("/api/acquisition/leads", { data: {} })).status(),
+  ).toBe(404);
+  expect((await page.request.get("/api/acquisition/leads")).status()).toBe(404);
+  for (const route of ["/waitlist", "/waitlist/confirm", "/waitlist/withdraw"])
+    expect((await page.request.get(route)).status()).toBe(404);
+  await page.goto("/waitlist");
+  expect(
+    (await Promise.all(scripts)).some((script) =>
+      script.includes("/api/acquisition/leads"),
+    ),
+  ).toBe(false);
 });

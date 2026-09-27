@@ -42,7 +42,8 @@ export const env = createAppEnv({
       enabled:
         siteConfig.features.rateLimit ||
         siteConfig.features.ai ||
-        siteConfig.features.upload,
+        siteConfig.features.upload ||
+        siteConfig.acquisition.leads.enabled,
     }),
     ...adminServerEnv(process.env, { enabled: siteConfig.features.admin }),
     ...uploadServerEnv(process.env, {

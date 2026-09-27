@@ -544,7 +544,10 @@ describe("acquisition configuration", () => {
   test("defaults all modules off and allows independent attribution/leads", () => {
     expect(defineConfig(valid).acquisition).toEqual({
       attribution: { enabled: false },
-      leads: { enabled: false },
+      leads: {
+        enabled: false,
+        lists: [{ id: "waitlist", consentVersion: "1" }],
+      },
       referrals: { enabled: false },
     });
     expect(

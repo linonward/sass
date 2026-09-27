@@ -1,3 +1,4 @@
+import { readSmallBody } from "./request-body";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -9,6 +10,7 @@ import {
   RETRY_COOKIE,
   signContext,
   SOURCE_COOKIE,
+  SOURCE_CHOICE_COOKIE,
   sourceFromHeaders,
 } from "./tokens";
 import type { createAttributionStore } from "./store";
@@ -27,28 +29,6 @@ type Dependencies = {
 };
 const json = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
-
-async function readSmallBody(request: Request): Promise<unknown> {
-  const reader = request.body?.getReader();
-  if (!reader) return null;
-  let length = 0;
-  const chunks: Uint8Array[] = [];
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      length += value.length;
-      if (length > 4096) {
-        await reader.cancel();
-        return null;
-      }
-      chunks.push(value);
-    }
-    return JSON.parse(Buffer.concat(chunks).toString());
-  } catch {
-    return null;
-  }
-}
 
 export function createAttributionHandlers(deps: Dependencies) {
   return {
@@ -81,6 +61,10 @@ export function createAttributionHandlers(deps: Dependencies) {
           existing ?? captureEntry(input.entry, new URL(request.url).hostname);
         if (!snapshot) return json({ error: "invalid" }, 400);
         const response = json({ accepted: true });
+        response.cookies.set(SOURCE_CHOICE_COOKIE, "", {
+          ...cookieOptions,
+          maxAge: 0,
+        });
         // Do not refresh the clock on a direct return or a later campaign.
         if (!existing)
           response.cookies.set(
@@ -98,6 +82,10 @@ export function createAttributionHandlers(deps: Dependencies) {
           const userId = await deps.getUserId(request.headers);
           if (userId) await deps.store.withdraw(userId);
           const response = json({ accepted: false });
+          response.cookies.set(SOURCE_CHOICE_COOKIE, "declined", {
+            ...cookieOptions,
+            maxAge: ATTRIBUTION_SECONDS,
+          });
           for (const cookie of [SOURCE_COOKIE, RETRY_COOKIE])
             response.cookies.set(cookie, "", { ...cookieOptions, maxAge: 0 });
           return response;
@@ -122,6 +110,11 @@ export function createAttributionHandlers(deps: Dependencies) {
         deps.warn("acquisition.request_failed");
         const response = json({ error: "retry" }, 503);
         // Stop anonymous capture even if clearing the account snapshot must be retried.
+        if (input.action === "withdraw")
+          response.cookies.set(SOURCE_CHOICE_COOKIE, "declined", {
+            ...cookieOptions,
+            maxAge: ATTRIBUTION_SECONDS,
+          });
         if (input.action === "withdraw")
           for (const cookie of [SOURCE_COOKIE, RETRY_COOKIE])
             response.cookies.set(cookie, "", { ...cookieOptions, maxAge: 0 });

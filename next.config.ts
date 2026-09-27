@@ -17,6 +17,7 @@ const sentryEnabled =
 
 const nextConfig: NextConfig = {
   env: {
+    ACQUISITION_LEADS: String(siteConfig.acquisition.leads.enabled),
     // 构建期常量，让默认关闭的获客控件连同客户端依赖被裁剪。
     ACQUISITION_ATTRIBUTION: String(siteConfig.acquisition.attribution.enabled),
     // 构建时写死，instrumentation 按它决定是否加载 Sentry；关闭时 SDK 不会打进产物。

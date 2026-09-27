@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Database } from "@/core/db";
-import { userAttribution } from "@/core/db/schema";
+import { leads, userAttribution } from "@/core/db/schema";
 import type { Attribution } from "./context";
 
 export function createAttributionStore(db: Database) {
@@ -13,13 +13,24 @@ export function createAttributionStore(db: Database) {
     },
     async withdraw(userId: string) {
       const now = new Date();
-      await db
-        .insert(userAttribution)
-        .values({ userId, snapshot: null, registeredAt: now, withdrawnAt: now })
-        .onConflictDoUpdate({
-          target: userAttribution.userId,
-          set: { snapshot: null, withdrawnAt: now },
-        });
+      await db.transaction(async (tx) => {
+        await tx
+          .update(leads)
+          .set({ snapshot: null })
+          .where(eq(leads.userId, userId));
+        await tx
+          .insert(userAttribution)
+          .values({
+            userId,
+            snapshot: null,
+            registeredAt: now,
+            withdrawnAt: now,
+          })
+          .onConflictDoUpdate({
+            target: userAttribution.userId,
+            set: { snapshot: null, leadId: null, withdrawnAt: now },
+          });
+      });
     },
     async get(userId: string) {
       const [row] = await db

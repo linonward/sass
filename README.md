@@ -558,7 +558,7 @@ Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-
 
 ### 渠道归因（T1301）
 
-`site.config.ts` 的 `acquisition.attribution.enabled` 默认 `false`。先运行 `pnpm db:migrate`，再开启并重新构建部署；无需新增 env 或外部服务。控件通过配置派生的内部构建常量裁剪，默认关闭时不会下发其客户端脚本。`acquisition.leads` / `acquisition.referrals` 是后续任务预留开关，本任务未实现线索或邀请功能；邀请配置要求 `features.credits`。
+`site.config.ts` 的 `acquisition.attribution.enabled` 默认 `false`。先运行 `pnpm db:migrate`，再开启并重新构建部署；无需新增 env 或外部服务。控件通过配置派生的内部构建常量裁剪，默认关闭时不会下发其客户端脚本。留资见下节；`acquisition.referrals` 仍为后续任务预留开关，邀请配置要求 `features.credits`。
 
 开启后页面提供 **Source preferences**：访客明确允许后才写来源 Cookie；拒绝不影响注册、登录或付款。仅记录白名单 `utm_source` / `utm_medium` / `utm_campaign` / `utm_term` / `utm_content`、外部来源 hostname、落地 pathname 和捕获时间，字段有字符和长度限制。完整 URL、任意查询参数、IP 和指纹不会进入这份记录；也不要主动把邮箱等个人信息放入营销标签或路径。
 
@@ -567,8 +567,21 @@ Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-
 - 邮箱验证码、Google OAuth 和 One Tap 共用 Better Auth 的 `user.create.after` 钩子，在首次创建用户时冻结来源。后续登录不会重写。签名只保证上下文未被改动，营销标签本身仍是访客提供的提示，不能拿来证明奖励资格。
 - `acquisition_source` 是 HttpOnly、SameSite=Lax、生产 Secure 的第一方 Cookie，使用现有 `BETTER_AUTH_SECRET` 做带用途隔离的 HMAC；更换 secret 会使现有来源 Cookie 失效。
 - 归因写入失败记录 `acquisition.freeze_failed`，不阻断注册；签发 24 小时的 `acquisition_registration` 重试 Cookie，后续页面在登录身份匹配时幂等重试。超过 24 小时、Cookie 被清除或用户不再回来则可能保留 unknown；不会从新的访问来源猜测补填。日志不包含来源载荷。
-- 撤回会清理两个 Cookie；已登录时同时清空账户来源，保留无来源的撤回标记，防止迟到重试恢复数据。未登录时只能清理该浏览器；跨设备需要登录原账户后再撤回。写库失败时匿名 Cookie 仍被清除，页面提示重试账户清理。删除账户通过外键级联删除记录并清理当前浏览器的来源 Cookie。
+- 拒绝/撤回使用 `source_preference=declined` 必要偏好 Cookie（30 天，不含来源）阻止注册时恢复已确认线索来源；再次接受会清除该偏好。撤回会清理两个获客 Cookie；已登录时同时清空账户来源，保留无来源的撤回标记，防止迟到重试恢复数据。未登录时只能清理该浏览器；跨设备需要登录原账户后再撤回。写库失败时匿名 Cookie 仍被清除，页面提示重试账户清理。删除账户通过外键级联删除记录并清理当前浏览器的来源 Cookie。
 - 来源快照在数据库中保留到用户撤回或删除账户；localStorage 只记拒绝偏好、不存来源。停用模块会停止捕获并隐藏入口，数据库记录保留，运营者仍可按用户请求执行数据清理。
 - Vercel Analytics 是独立开关，这个偏好控件不控制它；渠道报表由 T1302 实现。
 
 验证：`pnpm test` 覆盖上下文校验、签名/过期、接口、重试和数据库并发；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本启用归因，覆盖桌面及 375px 的接受 → 注册 → 撤回和拒绝路径，不改模板默认配置。普通 e2e 同时锁定关闭时没有控件、Cookie 或获客请求。Google 两种方式的真实账号端到端登录需在配置了 OAuth origin/回调的环境人工验证。
+
+### 邮箱留资（T1303）
+
+运行 `pnpm db:migrate` 后，在 `site.config.ts` 设置 `acquisition.leads.enabled: true` 并重新构建。默认关闭时 `/waitlist`、确认/撤回页和 `/api/acquisition/leads` 返回 404，表单脚本不下发；关闭不会自动删除旧数据，清理命令与账户删除仍清理旧数据。
+
+- `acquisition.leads.lists` 默认 `[{ id: "waitlist", consentVersion: "1" }]`，可配置多个唯一名单。每个名单在语言文件 `Leads.lists.<id>` 配置 `title`、`description`、`consent`；改变用途或同意文案时同时更新版本。页面 `/waitlist?list=<id>` 选择名单，也可在营销页面嵌入服务端 `<LeadCapture listId="waitlist" />`（`src/core/acquisition/leads/capture.tsx`）。
+- 邮箱与名单唯一，邮箱 trim/lowercase；明确勾选同意才提交，存当时文案、版本、时间。留资只发送确认邮件，不创建账户，也不订阅营销群发。已确认的同邮箱在首次注册且邮箱验证后关联，后补留资不会关联老账户；已有来源或撤回标记优先。
+- 确认链接 24 小时有效，GET 只显示页面，点击按钮 POST 才改变状态；重复确认不延长保留期。链接 token 仅哈希存库，原文放 URL fragment，避免进入请求日志；邮件域名取站点配置。重发轮换链接，旧邮件链接失效；同邮箱/名单 60 秒冷却，发送失败释放当前冷却以便重试。相同提交返回统一结果。
+- 复用现有 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`，提交/重发按 IP 每小时 10 次、邮箱每小时 3 次，确认/撤回按 IP 每小时 30 次。IP/邮箱以 HMAC 摘要作为 Redis 键，不写入线索。缺少客户端 IP、缺少 Redis 配置或 Redis 故障返回 503（超限 429），不写入、不发信；非 Vercel 部署必须由可信代理覆盖 `x-forwarded-for`。请求体上限 4 KiB，带蜜罐和同源校验。
+- 邮件撤回按钮清除该线索的邮箱、来源、同意载荷、token 和注册关联；如果账户来源继承自它，也一并清除并保留撤回标记，独立账户来源不受影响。账户删除清理同邮箱线索。匿名计数仅保留记录 ID、名单和生命周期时间。
+- **部署后至少每日调度一次 `pnpm leads:cleanup`**（在项目目录、Node 环境执行，使用 `DATABASE_URL`；可用现有外部定时任务）。命令清理 pending 满 7 天、confirmed 自确认起满 180 天的数据及继承来源，幂等可重跑；重新提交不延长既有记录期限。关闭模块后仍需执行。清理事务失败会非零退出，应由调度器告警。
+
+验证：`pnpm test` 覆盖限流失败关闭、去重并发、发送失败重试、token/到期、关联与撤回；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本启用归因与留资，文件邮件走通桌面/375px 留资 → 确认 → 注册 → 撤回及拒绝来源路径。该浏览器测试只在临时副本替换 Redis 限流器，不验证真实 Upstash 或邮件投递；上线前需验证真实服务凭据与域名配置。
