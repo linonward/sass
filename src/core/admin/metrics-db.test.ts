@@ -138,6 +138,13 @@ describe.skipIf(!url)("后台指标", () => {
       }),
       order(ids.banned, { createdAt: daysAgo(2), status: "failed" }),
       order(ids.old, { createdAt: daysAgo(30) }),
+      // 退款先到的占位订单：收款金额未知，但已退款必须进入净收入。
+      order(ids.banned, {
+        createdAt: daysAgo(2),
+        status: "refunded",
+        amount: null,
+        refundedAmount: 400,
+      }),
       // 其他币种单独列出，不进每日图表。
       order(ids.old, { createdAt: daysAgo(1), amount: 500, currency: "eur" }),
     ]);
@@ -240,7 +247,7 @@ describe.skipIf(!url)("后台指标", () => {
       plans,
     });
     expect(metrics.revenue).toEqual([
-      { currency: "USD", amount: 2900 },
+      { currency: "USD", amount: 2500 },
       { currency: "EUR", amount: 500 },
     ]);
     // recent（USD）、recent2（部分退款后仍有收入）、old（EUR）；全额退款的不算。
@@ -253,7 +260,7 @@ describe.skipIf(!url)("后台指标", () => {
       metrics.daily.map((p) => [p.day, p.value]),
     );
     expect(byDay[dayKey(daysAgo(1))]).toBe(1900);
-    expect(byDay[dayKey(daysAgo(2))]).toBe(1000);
+    expect(byDay[dayKey(daysAgo(2))]).toBe(600);
   });
 
   test("积分：发放、消耗和退款", async () => {
