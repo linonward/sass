@@ -10,7 +10,7 @@ export type LogFields = Record<string, unknown>;
 /** 可注入的日志函数（logger.error / logger.warn 的形状），测试里换成 vi.fn()。 */
 export type LogFn = (event: string, fieldsOrError?: unknown) => void;
 
-/** 错误上报钩子（T602 用它接 Sentry）。`error` 是字段里的第一个 Error，没有时为 undefined。 */
+/** 错误上报钩子。开了 Sentry 时由它上报；`error` 是字段里的第一个 Error，没有时为 undefined。 */
 export type ErrorReporter = (
   error: unknown,
   event: string,

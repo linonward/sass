@@ -12,7 +12,7 @@ export type CreateCheckoutInput = {
 export type Checkout = { checkoutId: string; url: string };
 
 /**
- * 支付服务商的统一接口。v1 只实现 Creem（T303）；换服务商时实现这个接口即可，
+ * 支付服务商的统一接口。当前只实现 Creem；换服务商时实现这个接口即可，
  * 账单表、事件处理和积分都不需要改。
  */
 export interface PaymentProvider {

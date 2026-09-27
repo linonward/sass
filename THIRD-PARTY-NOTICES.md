@@ -2,7 +2,7 @@
 
 本文件列出模板用到的第三方组件及其许可。模板**自身的代码**不在这里，按根目录 [LICENSE](LICENSE) 的专有 EULA 授权。
 
-- 统计时间：2026-09-27。本版是 T1207 在基线 `3c59e36` 上重跑同一套命令的结果：两张分布表的数字与上一版（T808，基线 `358d00d`，依赖卫生那批）**没有变化**，变的是「直接依赖明细」里 react / react-dom / `@types/react` / `@types/react-dom` / typescript 五行 —— dependabot 在本文件上次更新之后把它们升上去了，原来那五行写的是升级前的版本。上一版生产依赖树数字比更早的版本小，主要是 `shadcn` 那条链移进 `devDependencies` 所致。
+- 统计时间：2026-09-27。本版在基线 `3c59e36` 上重跑同一套命令：两张分布表的数字与上一版（基线 `358d00d`）**没有变化**，变的是「直接依赖明细」里 react / react-dom / `@types/react` / `@types/react-dom` / typescript 五行 —— dependabot 在本文件上次更新之后把它们升上去了，原来那五行写的是升级前的版本。上一版生产依赖树数字比更早的版本小，主要是 `shadcn` 那条链移进 `devDependencies` 所致。
 - 统计方式：`pnpm licenses list`（全量）与 `pnpm licenses list --prod`（仅生产依赖），读的是仓库已安装的依赖和 `pnpm-lock.yaml` 锁定的版本。
 - 依赖升级后数字会变，本文件不会自动跟着变 —— 改依赖时重跑上面的命令并按需更新。**「直接依赖明细」那一节已经不用靠人记**：`pnpm notices:check`（`scripts/check-notices.mjs`）会拿 `pnpm-lock.yaml` 逐条比对版本和依赖类型，CI 每个 PR 都跑，对不上就失败。
 - 本文件是情况说明，**不是法律意见**；正式售卖前建议由律师过目（见 README 的「授权」一节）。

@@ -12,7 +12,7 @@ const BILLABLE_STATUSES = ["active", "past_due"] as const;
 /**
  * 删除账户前取消该用户在服务商那边仍会续费的订阅。
  * provider.cancelSubscription 对已取消或不存在的订阅视为成功，所以钩子可以安全重试；
- * 真实错误向上抛出，T204 会中止删除，避免账户删了还在扣费。
+ * 真实错误向上抛出，删除账户的流程会中止，避免账户删了还在扣费。
  * 没配置服务商（本地、CI）但用户有待取消的订阅时同样抛错，不能静默跳过。
  */
 export function createCancelSubscriptionsHandler({

@@ -125,7 +125,7 @@ export const landingSchema = z.strictObject({
     .default([]),
 });
 
-// 只含展示字段；支付平台的产品 ID 等由 T301 / T303 添加。
+// 每个套餐分两段：上面是展示字段（价格、周期、卖点文案），下面从「交易字段」起是结账和发积分用的字段。
 export const billingSchema = z.strictObject({
   currency: z
     .string()
@@ -143,7 +143,7 @@ export const billingSchema = z.strictObject({
           // 每项文案在 Landing.pricing.features.<key>。
           features: z.array(messageKeySchema).min(1),
           highlighted: z.boolean().default(false),
-          // —— 交易字段（T301）——
+          // —— 交易字段 ——
           // 省略时按 interval 推导：once → one_time，month / year → subscription。
           type: z.enum(["subscription", "one_time"]).optional(),
           // 支付服务商的产品 ID。免费套餐（price 为 0）不能填，付费套餐必填。
@@ -344,9 +344,9 @@ export const observabilityConfigSchema = z.strictObject({
   sentry: z.boolean().default(false),
   // Sentry 性能追踪的采样率（0–1）。同时开了 otel 时追踪交给 OTel，这一项不生效。
   sentryTracesSampleRate: z.number().min(0).max(1).default(0.1),
-  // Vercel Analytics（T603）。
+  // Vercel Analytics（页面浏览）。要先去 Vercel 项目里 Enable，见 README 的「上线清单」。
   analytics: z.boolean().default(false),
-  // Vercel Speed Insights（T603）。
+  // Vercel Speed Insights（Web Vitals）。同样要先去 Vercel 项目里 Enable。
   speedInsights: z.boolean().default(false),
 });
 

@@ -139,7 +139,7 @@ test.describe("404 的元数据（关 JS）", () => {
     }) => {
       const response = await page.goto(path);
       expect(response?.status()).toBe(404);
-      // T903 之前这里是站名（React <title> 只在客户端生效，关 JS 就没了）——
+      // 以前这里是站名（React <title> 只在客户端生效，关 JS 就没了）——
       // 对关 JS 的爬虫来说，404 页标题和首页一模一样。
       await expect(page).toHaveTitle(
         `${messages.NotFound.title} | ${siteConfig.name}`,
@@ -148,7 +148,7 @@ test.describe("404 的元数据（关 JS）", () => {
       await expect(robots).toHaveCount(1);
       await expect(robots).toHaveAttribute("content", "noindex");
 
-      // T1209：404 没有自己的规范地址。以前这一页的 head 里是 [locale]/layout.tsx
+      // 404 没有自己的规范地址。以前这一页的 head 里是 [locale]/layout.tsx
       // 那份 —— canonical 和 hreflang 都指向首页（Next 的 metadata 按字段浅合并，
       // not-found 没写的字段会继承 layout 的），对爬虫等于声明「这一页就是首页」。
       const head = page.locator("head");
