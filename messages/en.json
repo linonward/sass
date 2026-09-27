@@ -336,6 +336,7 @@
       "playground": "Playground",
       "admin": "Admin",
       "adminMetrics": "Metrics",
+      "adminFlags": "Flags",
       "adminAcquisition": "Acquisition",
       "adminUsers": "Users",
       "adminOrders": "Orders",
@@ -378,6 +379,16 @@
         "mismatch": "The uploaded file didn't match what was requested.",
         "unknown": "Something went wrong. Please try again."
       }
+    },
+    "flags": {
+      "title": "Feature flags",
+      "description": "The demo flags in the userFlags section of site.config.ts. Delete this section along with the other examples.",
+      "beta": "Beta",
+      "dashboardOn": "You're in the beta-dashboard rollout, so you see the new layout.",
+      "dashboardOff": "beta-dashboard is rolling out to half of the users; you're not in it yet.",
+      "preview": "beta-preview is admin-only, so only admins see this line.",
+      "soonOn": "beta-soon is on and rolled out to everyone with an account.",
+      "soonOff": "beta-soon is disabled in site.config.ts, so it evaluates to false for everyone."
     }
   },
   "Account": {
@@ -640,6 +651,32 @@
   },
   "Admin": {
     "metaTitle": "Admin",
+    "flags": {
+      "title": "Feature flags",
+      "description": "Every flag comes from the userFlags section of site.config.ts, and this page is read-only: flags are build-time config, so a change means editing the file and redeploying.",
+      "list": {
+        "title": "Definitions",
+        "description": "Admins see everything that is on, whatever the rollout says; everyone else is bucketed by their user id."
+      },
+      "columns": {
+        "name": "Flag",
+        "description": "What it does",
+        "status": "Status",
+        "rollout": "Rollout",
+        "access": "Who sees it"
+      },
+      "status": {
+        "on": "On",
+        "off": "Off"
+      },
+      "access": {
+        "everyone": "Everyone",
+        "admins": "Admins only"
+      },
+      "rollout": "{percent}%",
+      "empty": "No flags defined yet. Add one to the userFlags section of site.config.ts.",
+      "configHint": "To change a flag, edit userFlags in site.config.ts and redeploy. Editing flags at runtime needs a flag table in the database, which this template deliberately leaves out."
+    },
     "acquisition": {
       "title": "Acquisition",
       "description": "Sign-ups and paying customers over the last {days} days (UTC), grouped by the source frozen at sign-up.",

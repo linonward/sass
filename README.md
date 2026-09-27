@@ -644,3 +644,15 @@ Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-
 - 绑定失败不影响注册：自邀、老账号、无效或封禁邀请人只记 `referrals.bind_rejected`，存储故障记 `referrals.bind_failed`，注册流程照常完成。删除账号由外键级联清掉其邀请码与关系。
 
 验证：`pnpm test` 覆盖码的解析/归一化/不可枚举、上下文签名与 30 天窗口、接口的同源与拒绝路径、资格判定（自邀、无效、封禁、封禁已过期）、邀请码与关系的唯一性和并发绑定；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本同时开启归因、留资与邀请，走通复制 → 接受 → 跨登录跳转注册 → 关系展示（并确认邀请人看不到受邀人邮箱）、拒绝、过期上下文、无效链接、自邀与老账号路径。普通 e2e 锁定关闭时三个入口都 404、已登录用户也打不开、且不会给账号生成邀请码。
+
+### 灰度开关
+
+`site.config.ts` 的 `userFlags.enabled` 默认 `false`。改成 `true` 重新部署即可开启，**不需要迁移、env 或外部服务**：v1 纯配置驱动，flag 状态不在数据库里，改了配置要重新部署一次（所以后台页只读，见下）。总开关关着时 `isEnabled()` 恒为 `false`、`<FeatureFlag>` 不渲染任何东西、后台页和侧栏入口都不存在。
+
+- `userFlags.definitions` 的每一项是一个 flag：`description`（后台列表里显示的说明）、`enabled`（这个 flag 自己的开关）、`rollout`（0–100 的灰度百分比）、`adminOnly`（只给管理员）。名字用小写字母数字加 `.` `_` `-`。出厂留了三个示例定义（50% 灰度、只给管理员、关掉的），换成自己的即可。
+- 判定顺序（`isEnabledFor`，`src/core/flags/evaluate.ts`）：总开关 → 该 flag 的 `enabled` → `adminOnly` → 灰度分桶。`rollout` 1–100 的 flag 对**管理员恒可见**（不参与分桶，方便自己先看）；**`rollout: 0` 是硬关闭**，对所有人都是 `false`，「只给管理员看」要配 `adminOnly: true`，不能靠把 rollout 写成 0；未登录（没有用户 ID）时为 `false`，因为没有身份就没法分桶。
+- 分桶是确定性的：`sha256(userId + flagName)` 的前 8 位十六进制换算成 [0, 1)，同一用户看同一个 flag 的结果永远一样（刷新、换设备、重新登录都不变）；调大 `rollout` 只会让更多用户进桶，已经在桶里的不会被踢出去。
+- 服务端用 `isEnabled(userId, flagName, { isAdmin })`；客户端用 `<FeatureFlag name="…">` 或 `useFlag("…")`（`src/core/flags/components.tsx`）。判定在服务端算好，经 `FlagsProvider` 下发（挂在登录后的外框上）：浏览器拿到的是 true/false 快照，`site.config.ts` 和 zod 不会进客户端产物。**没挂 provider 的页面（营销页、未登录页面）`useFlag` 一律返回 `false`**，所以别拿 flag 做营销内容的开关。Dashboard 上有一段示例（`src/core/flags/flag-example.tsx`），照它接自己的功能。
+- 后台 `/admin/flags` 列出全部定义、开关、灰度和可见范围，**只读**：v1 不能在运行时改写配置，要改就改 `site.config.ts` 再重新部署，页面底部写着这一点。总开关关着、或访问者不是管理员时该页返回 404。
+
+验证：`pnpm test` 覆盖分桶的确定性、均匀性与单调性，判定顺序的每个分支（总开关、flag 开关、`adminOnly`、`rollout: 0`、管理员、未登录），以及 `useFlag` / `<FeatureFlag>` 在有无 provider 下的行为；`EMAIL_TRANSPORT=file pnpm test:e2e:flags` 在临时副本打开总开关，覆盖管理员恒可见、普通用户按分桶拿到新区块或 fallback（含刷新后不变）、后台列表与 375px 不溢出；普通 e2e 锁定关闭状态下 Dashboard 没有区块、后台 404。

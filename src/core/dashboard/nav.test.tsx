@@ -203,6 +203,55 @@ describe("adminNav", () => {
   });
 });
 
+describe("adminNav", () => {
+  test("userFlags 关闭时没有 Flags 入口（出厂默认）", () => {
+    const config = configWithProjects();
+    expect(config.userFlags.enabled).toBe(false);
+    expect(adminNav(config).map((i) => i.href)).toEqual([
+      "/admin/metrics",
+      "/admin/users",
+      "/admin/orders",
+      "/admin/subscriptions",
+    ]);
+  });
+
+  test("userFlags 开启时，Metrics 之后多一个 Flags", () => {
+    const base = configWithProjects();
+    const nav = adminNav(
+      defineConfig({
+        ...(base as SiteConfigInput),
+        userFlags: { ...base.userFlags, enabled: true },
+      }),
+    );
+    expect(nav.map((i) => i.href)).toEqual([
+      "/admin/metrics",
+      "/admin/flags",
+      "/admin/users",
+      "/admin/orders",
+      "/admin/subscriptions",
+    ]);
+  });
+
+  test("Flags 和 Acquisition 都开启时，两个入口按顺序插在 Metrics 之后", () => {
+    const base = configWithProjects();
+    const nav = adminNav(
+      defineConfig({
+        ...(base as SiteConfigInput),
+        userFlags: { ...base.userFlags, enabled: true },
+        acquisition: { ...base.acquisition, attribution: { enabled: true } },
+      }),
+    );
+    expect(nav.map((i) => i.href)).toEqual([
+      "/admin/metrics",
+      "/admin/flags",
+      "/admin/acquisition",
+      "/admin/users",
+      "/admin/orders",
+      "/admin/subscriptions",
+    ]);
+  });
+});
+
 describe("AppSidebar", () => {
   test("在 dashboard.nav 加一项后，侧边栏出现对应入口", () => {
     renderSidebar();

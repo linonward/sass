@@ -35,18 +35,6 @@ const acquisitionNav: DashboardNavItem = {
   icon: "sparkles",
 };
 
-const adminReferralsNav: DashboardNavItem = {
-  key: "adminReferrals",
-  href: "/admin/referrals",
-  icon: "users",
-};
-
-const leadsNav: DashboardNavItem = {
-  key: "adminLeads",
-  href: "/admin/leads",
-  icon: "fileText",
-};
-
 // 只在状态页开启时出现的后台项，和归因 / 留资报表一样排在 Metrics 之后。
 const adminStatusNav: DashboardNavItem = {
   key: "adminStatus",
@@ -61,17 +49,25 @@ const adminApiKeysNav: DashboardNavItem = {
   icon: "key",
 };
 
+// 只在用户面 flag 模块开启时出现的后台项，排在 Metrics 之后。
+const flagsNav: DashboardNavItem = {
+  key: "adminFlags",
+  href: "/admin/flags",
+  icon: "flag",
+};
+
 /**
- * /admin 里的菜单。获客报表、线索管理、邀请管理、状态页和 API Key 报表只在对应模块开启时出现 ——
+ * /admin 里的菜单。获客报表、线索管理、邀请管理、状态页、feature flags 和 API Key 报表只在对应模块开启时出现 ——
  * 关闭时那些页面 404，菜单里留一个点进去就 404 的入口只会让人以为坏了。
- * 顺序：Metrics →（归因 / 留资报表）→（邀请管理 / 状态页）→ Users →（API Key 报表）→ Orders → Subscriptions。
+ * 顺序：Metrics →（flags / 归因 / 留资报表）→（邀请管理 / 状态页）→ Users →（API Key 报表）→ Orders → Subscriptions。
  */
 export function adminNav(
-  config: Pick<SiteConfig, "acquisition" | "apiKeys" | "statusPage">,
+  config: Pick<SiteConfig, "acquisition" | "apiKeys" | "statusPage" | "userFlags">,
 ): readonly DashboardNavItem[] {
   const [metrics, users, ...rest] = adminNavBase;
   return [
     metrics!,
+    ...(config.userFlags.enabled ? [flagsNav] : []),
     ...(config.acquisition.attribution.enabled ? [acquisitionNav] : []),
     ...(config.acquisition.leads.enabled ? [leadsNav] : []),
     ...(config.acquisition.referrals.enabled ? [adminReferralsNav] : []),

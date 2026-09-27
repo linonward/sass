@@ -249,6 +249,39 @@ const config = defineConfig({
       rewards: { inviterCredits: 0, inviteeCredits: 0 },
     },
   },
+  // 用户面 feature flag（灰度发布）：先把新功能给自己人看，再按百分比放量。
+  // 总开关关闭时 isEnabled() 恒为 false、<FeatureFlag> 不渲染 children、后台 /admin/flags 也 404。
+  // v1 纯配置驱动：flag 状态不在数据库里，改完这里要重新部署（页面只读，见 /admin/flags）。
+  // 评估逻辑与组件在 src/core/flags/；用法见 README 的「灰度开关」一节。
+  // 演示站点关闭总开关（e2e/flags 的临时副本会把它改成 true，用同一份定义验证打开后的行为）。
+  userFlags: {
+    enabled: false,
+    // 演示用的三个 flag；换成自己的功能开关即可，名字随便起（小写 + 短横线）。
+    definitions: {
+      // 灰度 50%：普通用户按分桶看到，admin 恒可见，未登录用户看不到。
+      "beta-dashboard": {
+        description: "New dashboard layout, rolling out to half of the users.",
+        enabled: true,
+        rollout: 50,
+        adminOnly: false,
+      },
+      // 只给管理员看的预览版：rollout 0 是硬关闭，配 adminOnly 才有人能看到。
+      "beta-preview": {
+        description: "Preview build, admins only until it is ready.",
+        enabled: true,
+        rollout: 0,
+        adminOnly: true,
+      },
+      // 单个 flag 关掉：定义留在配置里，随时能开，不必改代码。
+      "beta-soon": {
+        description:
+          "Not shipped yet; kept here as an example of a disabled flag.",
+        enabled: false,
+        rollout: 100,
+        adminOnly: false,
+      },
+    },
+  },
   observability: {
     logLevel: "info",
     // OpenTelemetry 追踪：Vercel 上开启 Tracing 或 OTel 集成，其他环境填 OTEL_EXPORTER_OTLP_ENDPOINT。

@@ -231,7 +231,8 @@ export const dashboardIcons = [
   "chart",
   "users",
   "creditCard",
-  "key",
+"key",
+  "flag",
 ] as const;
 
 // 业务的侧边栏菜单项；套件自带的（Dashboard、Settings）写在 src/core/dashboard 里。
@@ -609,6 +610,38 @@ export const statusPageSchema = z.strictObject({
   historyDays: z.number().int().min(1).max(365).default(30),
 });
 
+// 用户面 feature flag 的名字，也是 `isEnabled()` 的第一个参数。
+export const userFlagNameSchema = z
+  .string()
+  .regex(
+    /^[a-z0-9][a-z0-9._-]*$/,
+    'must be lowercase letters, digits, ".", "_" or "-", such as "beta-dashboard"',
+  );
+
+/**
+ * 用户面开关（灰度发布）。v1 纯配置驱动：flag 状态不落库，改配置要重新部署
+ * （`/admin/flags` 里能看到当前生效的定义）。评估逻辑见 `src/core/flags/evaluate.ts`。
+ */
+export const userFlagsConfigSchema = z.strictObject({
+  // 总开关。关闭时 isEnabled() 恒为 false、<FeatureFlag> 不渲染 children、/admin/flags 404。
+  enabled: z.boolean().default(false),
+  definitions: z
+    .record(
+      userFlagNameSchema,
+      z.strictObject({
+        // 给管理员看的说明。买家自己写的配置文本，和 flag 名一起展示在 /admin/flags。
+        description: z.string().trim().min(1).max(200),
+        // 单个 flag 的开关：留着定义但置 false，等于「还没上线」。
+        enabled: z.boolean().default(false),
+        // 灰度百分比 0–100。0 是硬关闭（可配 adminOnly 只给自己人开），100 是全量。
+        rollout: z.number().int().min(0).max(100).default(0),
+        // 只给管理员看：和灰度无关，admin 恒可见（dogfooding）。
+        adminOnly: z.boolean().default(false),
+      }),
+    )
+    .default({}),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -656,8 +689,9 @@ export const siteConfigSchema = z
     acquisition: acquisitionConfigSchema.default(
       acquisitionConfigSchema.parse({}),
     ),
-    statusPage: statusPageSchema.default(statusPageSchema.parse({})),
+statusPage: statusPageSchema.default(statusPageSchema.parse({})),
     changelog: changelogConfigSchema.default(changelogConfigSchema.parse({})),
+    userFlags: userFlagsConfigSchema.default(userFlagsConfigSchema.parse({})),
     observability: observabilityConfigSchema.default(
       observabilityConfigSchema.parse({}),
     ),
@@ -746,6 +780,9 @@ export type AiProvider = (typeof aiProviders)[number];
 export type AiImageModel = AiConfig["imageModels"][number];
 export type AiImageProvider = (typeof aiImageProviders)[number];
 export type AiVideoModel = AiConfig["videoModels"][number];
+export type UserFlagsConfig = SiteConfig["userFlags"];
+export type UserFlagDefinition =
+  UserFlagsConfig["definitions"][keyof UserFlagsConfig["definitions"]];
 
 /** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
 export function defineConfig(input: SiteConfigInput): SiteConfig {
