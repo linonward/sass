@@ -147,7 +147,7 @@ function filterWhere(filters: ReportFilters) {
  *
  * 付费人数是「区间内成功付款过的用户」去重（全额退款过也算付过款，退款额在收入那一列）。
  * 金额未知的占位订单（退款先到、付款事件还没补齐）不算付款，只进待核对 ——
- * 混进收入会把它当成零退款，净收入变成负数（T1202）。
+ * 混进收入会把它当成零退款，净收入变成负数。
  */
 export async function getAcquisitionReport(
   db: Database,
