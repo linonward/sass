@@ -25,7 +25,10 @@ const before = fs.readFileSync(config, "utf8");
 const flags: [string, string][] = [
   ["leads: { enabled: false }", "leads: { enabled: true }"],
   ["attribution: { enabled: false }", "attribution: { enabled: true }"],
-  ["referrals: { enabled: false }", "referrals: { enabled: true }"],
+  [
+    "referrals: { enabled: false, rewards: { inviterCredits: 0, inviteeCredits: 0 } }",
+    "referrals: { enabled: true }",
+  ],
 ];
 const after = flags.reduce(
   (text, [from, to]) => text.replace(from, to),
