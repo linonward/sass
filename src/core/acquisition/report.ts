@@ -3,7 +3,6 @@ import {
   count,
   countDistinct,
   eq,
-  gt,
   gte,
   inArray,
   isNotNull,
@@ -13,29 +12,47 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 
-import { collectedStatuses, type MetricWindow } from "@/core/admin/metrics";
+import {
+  collectedStatuses,
+  hasPositiveNet,
+  orderNet,
+  recognizedOrder,
+  sumAmounts,
+  toAmount,
+  type MetricWindow,
+} from "@/core/admin/metrics";
 import type { Database } from "@/core/db/client";
 import { leads, orders, user, userAttribution } from "@/core/db/schema";
 
 import { campaignField, sourceField } from "./context";
 
 // /admin/acquisition 的渠道报表聚合。时间口径直接复用 /admin/metrics 的实现：
-// UTC 半开区间、7 / 30 / 90 天。收入按**订单归属期**（区间内创建的订单）算，
-// 退款按查询时的累计值扣，所以历史区间会随之后的退款变化。
+// UTC 半开区间、7 / 30 / 90 天。收入口径同样与 /admin/metrics 共用（见 metrics.ts
+// 开头的「收入口径」，买家说明在 README 的「收入口径」一节）：收入按**订单归属期**
+// （区间内创建的订单）算，退款按查询时的累计值扣，所以历史区间会随之后的退款变化。
 
 /**
- * 冻结来源（快照里的 source）。没有归因行（功能开启前注册的老用户、跨设备）和
- * 已撤回（快照为 null）都算 unknown；direct 是确实没有来源，两者在报表里是两行。
- * 表达式要和 schema 里的 `user_attribution_source_idx` 完全一致才走得到索引。
+ * 「没有可用归因」的合成桶。没有归因行（功能开启前注册的老用户、跨设备）和已撤回
+ * （快照为 null）都落在它上面。取值故意做成不可能出现在快照里的字符串（括号不在
+ * context.ts 的白名单字符集里），所以真的把 utm_source 填成 `unknown` 的流量是**独立
+ * 的一行**，不会和「没有归因」混在一起；筛选框里两个取值也都列得出来。
  */
-const sourceOf = sql<string>`coalesce(${userAttribution.snapshot}->>'source', 'unknown')`;
+export const NO_SOURCE_BUCKET = "(none)";
+
+/**
+ * 冻结来源（快照里的 source）。direct 是确实没有来源，和 NO_SOURCE_BUCKET 是两行。
+ *
+ * 注意：schema 里的 `user_attribution_source_idx` 用的是旧口径（`unknown`），与这里的
+ * 表达式不再一致，报表的筛选查询用不到它（写入侧仍在维护）。
+ */
+const sourceOf = sql<string>`coalesce(${userAttribution.snapshot}->>'source', ${NO_SOURCE_BUCKET})`;
 const mediumOf = sql<string | null>`${userAttribution.snapshot}->>'utm_medium'`;
 const campaignOf = sql<
   string | null
 >`${userAttribution.snapshot}->>'utm_campaign'`;
 
-/** 线索来源：从线索快照里取 source，和归因报告的 sourceOf 口径一致。 */
-const leadSourceOf = sql<string>`coalesce(${leads.snapshot}->>'source', 'unknown')`;
+/** 线索来源：从线索快照里取 source，和归因报告的 sourceOf 口径一致（含合成桶）。 */
+const leadSourceOf = sql<string>`coalesce(${leads.snapshot}->>'source', ${NO_SOURCE_BUCKET})`;
 
 export type ReportFilters = {
   source?: string;
@@ -45,7 +62,8 @@ export type ReportFilters = {
 
 /**
  * 解析 ?source= / ?medium= / ?campaign=：只接受能写进快照的取值（见 context.ts 的
- * 校验规则），其他值一律当作没传，不把它们带进查询。
+ * 校验规则），其他值一律当作没传，不把它们带进查询。source 额外接受合成桶 ——
+ * 它是表格里会出现的一行，筛选框必须能选它。
  */
 export function parseReportFilters(query: {
   source?: unknown;
@@ -58,8 +76,9 @@ export function parseReportFilters(query: {
     );
     return parsed.success ? parsed.data : undefined;
   };
+  const sourceValue = z.union([sourceField, z.literal(NO_SOURCE_BUCKET)]);
   return {
-    source: pick(sourceField, query.source),
+    source: pick(sourceValue, query.source),
     medium: pick(campaignField, query.medium),
     campaign: pick(campaignField, query.campaign),
   };
@@ -68,16 +87,22 @@ export function parseReportFilters(query: {
 export type Money = { currency: string | null; amount: number };
 
 export type ReportRow = {
+  /** 标签里的 NO_SOURCE_BUCKET 是没有可用归因那一段；取值本身不是快照里的来源。 */
   source: string;
   registrations: number;
+  /** 付费人数：区间内有净收入为正的订单的用户数，和 /admin/metrics 同一口径。 */
   payingUsers: number;
   /** 该渠道已确认的线索数（status = 'confirmed'）。撤销/删除会导致历史指标变化。 */
   confirmedLeads: number;
   /** 注册转化率：confirmedLeads / registrations，百分数。未确认线索不计入分母。 */
   conversionRate: number | null;
-  /** 净收入：区间内成功付款的订单金额减去这些订单截至查询时的累计退款，按币种。 */
+  /** 净收入：区间内计入收入的订单金额减去这些订单截至查询时的累计退款，按币种。 */
   revenue: Money[];
-  /** 待核对：退款先到、订单金额还没补齐的退款额，不计入净收入。 */
+  /**
+   * 待核对：状态是收款、但金额未知（付款事件还没补齐）的订单，按币种列出这些订单
+   * 已经退掉的金额 —— 金额不可信，所以既不算收入也不算付费人数，单列在这里人工核对。
+   * 金额未知且还没有退款的订单列 0：那表示「还没有退款」，不表示这笔订单已经结清。
+   */
   pending: Money[];
 };
 
@@ -153,7 +178,7 @@ export function mergeRows({
     );
 }
 
-/** 三个筛选都用快照字段上的表达式，和 schema 里的表达式索引对上。 */
+/** 三个筛选都用快照字段上的表达式；source 也能筛合成桶（见 parseReportFilters）。 */
 function filterWhere(filters: ReportFilters) {
   const clauses: SQL[] = [];
   if (filters.source) clauses.push(sql`${sourceOf} = ${filters.source}`);
@@ -165,9 +190,10 @@ function filterWhere(filters: ReportFilters) {
 /**
  * 区间内按冻结来源分组的注册数、付费人数、按币种的净收入与待核对退款。
  *
- * 付费人数是「区间内成功付款过的用户」去重（全额退款过也算付过款，退款额在收入那一列）。
- * 金额未知的占位订单（退款先到、付款事件还没补齐）不算付款，只进待核对 ——
- * 混进收入会把它当成零退款，净收入变成负数。
+ * 收入与付费人数用 /admin/metrics 的同一份口径（recognizedOrder / orderNet /
+ * hasPositiveNet），两页在同一区间上给出相同的数字。金额未知的占位订单（退款先到、
+ * 付款事件还没补齐）不进收入、也不算付费人数，只进待核对 —— 混进收入会把它当成
+ * 零退款，净收入变成负数。
  */
 export async function getAcquisitionReport(
   db: Database,
@@ -175,10 +201,9 @@ export async function getAcquisitionReport(
   filters: ReportFilters = {},
 ): Promise<ReportRow[]> {
   const where = filterWhere(filters);
-  const paid = and(
+  const recognized = and(
     gte(orders.createdAt, window.since),
-    inArray(orders.status, collectedStatuses),
-    isNotNull(orders.amount),
+    ...recognizedOrder,
     ...where,
   );
   const leadWhere: SQL[] = [];
@@ -195,31 +220,33 @@ export async function getAcquisitionReport(
         .select({ source: sourceOf, value: countDistinct(orders.userId) })
         .from(orders)
         .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
-        .where(paid)
+        .where(and(recognized, hasPositiveNet))
         .groupBy(sql`1`),
       db
         .select({
           source: sourceOf,
           currency: orders.currency,
-          value: sql<number>`coalesce(sum(${orders.amount} - ${orders.refundedAmount}), 0)::int`,
+          value: sumAmounts(orderNet),
         })
         .from(orders)
         .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
-        .where(paid)
+        .where(recognized)
         .groupBy(sql`1`, orders.currency),
+      // 待核对：金额未知的收款订单都在这里，不管退款到没到（退款先到的是主力情形，
+      // 「付款事件还没补齐、也没有退款」的订单列 0，见 ReportRow 的说明）。
       db
         .select({
           source: sourceOf,
           currency: orders.currency,
-          value: sql<number>`coalesce(sum(${orders.refundedAmount}), 0)::int`,
+          value: sumAmounts(orders.refundedAmount),
         })
         .from(orders)
         .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
         .where(
           and(
             gte(orders.createdAt, window.since),
+            inArray(orders.status, collectedStatuses),
             isNull(orders.amount),
-            gt(orders.refundedAmount, 0),
             ...where,
           ),
         )
@@ -237,7 +264,15 @@ export async function getAcquisitionReport(
         )
         .groupBy(sql`1`),
     ]);
-  return mergeRows({ registrations, payers, revenue, pending, confirmedLeads });
+  const amounts = <T extends { value: string }>(rows: T[]) =>
+    rows.map((row) => ({ ...row, value: toAmount(row.value) }));
+  return mergeRows({
+    registrations,
+    payers,
+    confirmedLeads,
+    revenue: amounts(revenue),
+    pending: amounts(pending),
+  });
 }
 
 export type FilterOptions = {
@@ -246,10 +281,23 @@ export type FilterOptions = {
   campaigns: string[];
 };
 
-/** 筛选框里的取值：从已保存的归因里取，用过哪些渠道就列哪些，取不到就只剩「全部」。 */
+/**
+ * 筛选框里的取值：表格里会出现的来源都要选得到。注册那一列来自用户（含没有归因行
+ * 的合成桶），已确认线索那一列来自线索快照，只从 user_attribution 取会漏掉前两者。
+ * medium / campaign 只在快照里出现过的取值里选。
+ */
 export async function getFilterOptions(db: Database): Promise<FilterOptions> {
-  const [sources, mediums, campaigns] = await Promise.all([
-    db.select({ value: sourceOf }).from(userAttribution).groupBy(sourceOf),
+  const [sources, leadSources, mediums, campaigns] = await Promise.all([
+    // select distinct，不用 group by：合成桶是绑定参数，同一个表达式在 select 和
+    // group by 里会渲染成两个不同的位置参数，Postgres 不认它们相等（42803）。
+    db
+      .selectDistinct({ value: sourceOf })
+      .from(user)
+      .leftJoin(userAttribution, eq(userAttribution.userId, user.id)),
+    db
+      .selectDistinct({ value: leadSourceOf })
+      .from(leads)
+      .where(eq(leads.status, "confirmed")),
     db
       .selectDistinct({ value: mediumOf })
       .from(userAttribution)
@@ -259,13 +307,15 @@ export async function getFilterOptions(db: Database): Promise<FilterOptions> {
       .from(userAttribution)
       .where(isNotNull(campaignOf)),
   ]);
-  const values = (rows: { value: string | null }[]) =>
-    rows
-      .flatMap((entry) => (entry.value === null ? [] : [entry.value]))
-      .sort((a, b) => a.localeCompare(b));
+  const unique = (rows: { value: string | null }[]) =>
+    [
+      ...new Set(
+        rows.flatMap((entry) => (entry.value === null ? [] : [entry.value])),
+      ),
+    ].sort((a, b) => a.localeCompare(b));
   return {
-    sources: values(sources),
-    mediums: values(mediums),
-    campaigns: values(campaigns),
+    sources: unique([...sources, ...leadSources]),
+    mediums: unique(mediums),
+    campaigns: unique(campaigns),
   };
 }

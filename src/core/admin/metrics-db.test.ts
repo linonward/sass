@@ -138,13 +138,16 @@ describe.skipIf(!url)("后台指标", () => {
       }),
       order(ids.banned, { createdAt: daysAgo(2), status: "failed" }),
       order(ids.old, { createdAt: daysAgo(30) }),
-      // 退款先到的占位订单：收款金额未知，但已退款必须进入净收入。
+      // 退款先到的占位订单：收款金额未知，不算收入（累计值会变成负数），
+      // 只出现在渠道报表的待核对那一列。
       order(ids.banned, {
         createdAt: daysAgo(2),
         status: "refunded",
         amount: null,
         refundedAmount: 400,
       }),
+      // 收款但金额未知、也还没退款：同样不算收入。
+      order(ids.banned, { createdAt: daysAgo(2), amount: null }),
       // 其他币种单独列出，不进每日图表。
       order(ids.old, { createdAt: daysAgo(1), amount: 500, currency: "eur" }),
     ]);
@@ -247,10 +250,11 @@ describe.skipIf(!url)("后台指标", () => {
       plans,
     });
     expect(metrics.revenue).toEqual([
-      { currency: "USD", amount: 2500 },
+      { currency: "USD", amount: 2900 },
       { currency: "EUR", amount: 500 },
     ]);
-    // recent（USD）、recent2（部分退款后仍有收入）、old（EUR）；全额退款的不算。
+    // recent（USD）、recent2（部分退款后仍有收入）、old（EUR）；
+    // 全额退款的和金额未知的都不算。
     expect(metrics.payingUsers).toBe(3);
     expect(metrics.activeSubscriptions).toBe(4);
     // 2 × $19 + $190 ÷ 12 = 3800 + 1583.33 分。
@@ -260,7 +264,8 @@ describe.skipIf(!url)("后台指标", () => {
       metrics.daily.map((p) => [p.day, p.value]),
     );
     expect(byDay[dayKey(daysAgo(1))]).toBe(1900);
-    expect(byDay[dayKey(daysAgo(2))]).toBe(600);
+    // 当天只有 recent2 的部分退款净额；占位订单不进每日图。
+    expect(byDay[dayKey(daysAgo(2))]).toBe(1000);
   });
 
   test("积分：发放、消耗和退款", async () => {

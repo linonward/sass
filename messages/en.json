@@ -683,17 +683,17 @@
       "channels": {
         "title": "Channels"
       },
-      "sourcesHint": "Unknown means there is no usable source: the visit was never recorded, was declined, expired, or happened on another device. Direct means the visitor really arrived without one, for example by typing the address.",
-      "pendingHint": "Revenue is net of refunds as of now, so past periods change as refunds come in. Refunds that arrived before their payment record are listed under “Refunds to reconcile” and left out of revenue.",
-      "empty": "No channel data in this period. Attribution only records visits after it is switched on, so earlier sign-ups stay unknown.",
-      "unknown": "Unknown",
+      "sourcesHint": "Sources are frozen at sign-up. “No attribution” means there is no usable source: the visit was never recorded, was declined, expired, or happened on another device. “Direct” means the visitor arrived without a campaign, for example by typing the address. A campaign that literally sends utm_source=unknown is a separate row, spelled as sent.",
+      "pendingHint": "Net revenue is refund-adjusted as of now, so past periods change as refunds come in. Orders whose amount is not known yet — usually because a refund arrived before its payment record — count as neither revenue nor paying customers; their refunds so far are listed under “To reconcile”. A 0 there means nothing has been refunded yet, not that the order is settled.",
+      "empty": "No channel data in this period. Attribution only records visits after it is switched on, so earlier sign-ups show up under “No attribution”.",
+      "unknown": "No attribution",
       "direct": "Direct",
       "columns": {
         "source": "Source",
         "registrations": "Sign-ups",
         "payingUsers": "Paying customers",
         "revenue": "Net revenue",
-        "pending": "Refunds to reconcile",
+        "pending": "To reconcile",
         "confirmedLeads": "Confirmed leads",
         "conversionRate": "Conv. rate"
       },

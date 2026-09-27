@@ -1,4 +1,14 @@
-import { and, count, countDistinct, eq, gte, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  countDistinct,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
@@ -90,20 +100,50 @@ export async function getUserMetrics(db: Database, window: MetricWindow) {
   };
 }
 
-// 有过实际收款的订单状态；退款金额在 refunded_amount 里扣除。渠道报表（/admin/acquisition）
-// 用同一份定义，两页的收入口径才不会走偏。
+// 收入口径：/admin/metrics 与 /admin/acquisition 共用下面的定义，买家的说明在
+// README 的「收入口径」一节。两页都从这里取条件，口径不会再各自漂移。
+//
+// - 计入收入的订单（recognizedOrder）：状态是 collectedStatuses 之一，**且金额已知**。
+//   付款事件还没补齐的占位订单（典型是退款先到）金额不可信：既不算收入，也不算付费人数。
+// - 净收入（orderNet）：计入收入的订单按币种累计 amount − refunded_amount，退款按
+//   查询时的累计值扣，所以历史区间会随之后的退款变化。
+// - 付费人数（hasPositiveNet）：至少有一笔净收入为正的订单的用户数（去重）。全额退款的
+//   用户不算付费；同一用户多笔（含续费）只算一个。
+/** 有过实际收款的订单状态；退款金额在 refunded_amount 里扣除。 */
 export const collectedStatuses = [
   "paid",
   "partially_refunded",
   "refunded",
 ] as const;
 
+/** 计入收入的状态与金额条件，不含时间区间；调用方自己 and 上窗口起点。 */
+export const recognizedOrder: SQL[] = [
+  inArray(orders.status, collectedStatuses),
+  isNotNull(orders.amount),
+];
+
+/** 单笔订单的净收入（金额都以最小货币单位计）。 */
+export const orderNet = sql`coalesce(${orders.amount}, 0) - coalesce(${orders.refundedAmount}, 0)`;
+
+/** 付费人数按「有净收入为正的订单」判定。 */
+export const hasPositiveNet = sql`${orderNet} > 0`;
+
+/**
+ * 聚合金额用 bigint 读出：单笔金额受 int4 列约束，但累计值会超过 int4 上限
+ * （2147483647 分），`::int` 会让整页 500。pg 把 int8 读成字符串，用 `toAmount`
+ * 转回数字（金额在这里仍是「分」，精度不会丢）。
+ */
+export const sumAmounts = (expression: SQL | AnyPgColumn) =>
+  sql<string>`coalesce(sum(${expression}), 0)::bigint`;
+
+export const toAmount = (value: string) => Number(value);
+
 export type Money = { currency: string; amount: number };
 
 /**
- * 收入（金额都以最小货币单位计）：
- * - revenue：区间内创建的订单净收入（金额减去已退款），按币种
- * - payingUsers：区间内有净收入订单的用户数
+ * 收入（金额都以最小货币单位计，口径见文件开头的「收入口径」）：
+ * - revenue：区间内计入收入的订单的净收入，按币种
+ * - payingUsers：区间内有净收入为正的订单的用户数
  * - activeSubscriptions：当前状态为 active 的订阅数
  * - mrr：active 订阅按 site.config.ts 里的套餐原价折算的月收入（年付 ÷ 12），
  *   币种是 billing.currency。套餐已从配置删除的订阅计入 unpricedSubscriptions。
@@ -114,11 +154,10 @@ export async function getRevenueMetrics(
   window: MetricWindow,
   billing: Pick<SiteConfig["billing"], "currency" | "plans">,
 ) {
-  const orderNet = sql`coalesce(${orders.amount}, 0) - coalesce(${orders.refundedAmount}, 0)`;
-  const net = sql<number>`coalesce(sum(${orderNet}), 0)::int`;
+  const net = sumAmounts(orderNet);
   const collected = and(
     gte(orders.createdAt, window.since),
-    inArray(orders.status, collectedStatuses),
+    ...recognizedOrder,
   );
   const [revenue, [paying], active, daily] = await Promise.all([
     db
@@ -129,7 +168,7 @@ export async function getRevenueMetrics(
     db
       .select({ value: countDistinct(orders.userId) })
       .from(orders)
-      .where(and(collected, sql`${orderNet} > 0`)),
+      .where(and(collected, hasPositiveNet)),
     db
       .select({ planId: subscriptions.planId, value: count() })
       .from(subscriptions)
@@ -161,12 +200,13 @@ export async function getRevenueMetrics(
   }
 
   return {
+    // 聚合读出来是 bigint 字符串（见 sumAmounts），在返回前转回数字。
     revenue: revenue
-      .filter((row) => row.amount !== 0)
       .map((row) => ({
         currency: (row.currency ?? billing.currency).toUpperCase(),
-        amount: row.amount,
+        amount: toAmount(row.amount),
       }))
+      .filter((row) => row.amount !== 0)
       .sort((a, b) => b.amount - a.amount) satisfies Money[],
     payingUsers: paying!.value,
     activeSubscriptions: active.reduce((sum, row) => sum + row.value, 0),
@@ -175,7 +215,10 @@ export async function getRevenueMetrics(
       amount: Math.round(mrr),
     } satisfies Money,
     unpricedSubscriptions,
-    daily: fillDays(window.days, daily),
+    daily: fillDays(
+      window.days,
+      daily.map((row) => ({ day: row.day, value: toAmount(row.value) })),
+    ),
   };
 }
 
