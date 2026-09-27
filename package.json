@@ -24,6 +24,7 @@
     "prepare": "husky",
     "test:e2e:acquisition": "playwright test --config e2e/acquisition/playwright.config.ts",
     "leads:cleanup": "node scripts/cleanup-leads.mjs",
+    "migrations:check": "node scripts/check-migrations.mjs",
     "notices:check": "node scripts/check-notices.mjs"
   },
   "dependencies": {

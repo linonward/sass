@@ -85,6 +85,11 @@ jobs:
 
       - run: pnpm typecheck
 
+      # 迁移元数据自检：idx 连续、when 严格递增、tag 不重号、快照链闭合。
+      # when 不递增的迁移在已有账本的库上会被静默跳过（2026-09 生产事故），
+      # 这一步挡住的是「仓库文件层面」的不自洽，成本约一次 JSON 解析。
+      - run: pnpm migrations:check
+
       # 在空库上执行迁移，验证迁移文件可用。
       - run: pnpm db:migrate
 
