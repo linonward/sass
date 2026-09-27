@@ -7,10 +7,12 @@ import { expect, test, type Page } from "@playwright/test";
 import messages from "../../messages/en.json";
 import {
   clearResendCooldown,
+  findUserId,
   signIn,
   stubGoogleOneTap,
   uniqueEmail,
   useRandomIp,
+  withDatabase,
 } from "../auth-helpers";
 
 const ad = messages.Admin;
@@ -123,6 +125,132 @@ test.describe("渠道报表", () => {
     await admin.goto("/admin/acquisition?source=e2e-never-used");
     await expect(region.getByRole("row")).toHaveCount(2);
     await expect(region.getByText(t.empty)).toBeVisible();
+  });
+
+  test("填筛选 → 点 Apply → URL 与表格都对", async ({ browser }) => {
+    const region = admin.getByRole("region", { name: t.channels.title });
+    // 再注册一条带 medium 的：三个 select 里的 source 和 medium 才都有正例可验。
+    const medium = `e2e-medium-${randomUUID().slice(0, 8)}`;
+    const landing = await (await browser.newContext()).newPage();
+    await useRandomIp(landing);
+    await stubGoogleOneTap(landing);
+    await landing.goto(`/?utm_source=${source}&utm_medium=${medium}`);
+    await acceptConsent(landing);
+    await signIn(landing, uniqueEmail("apply"), { outboxDir });
+    await landing.context().close();
+
+    // 同一个来源现在有两条注册（第一条没带 medium）。
+    await admin.goto(`/admin/acquisition?source=${source}`);
+    const rows = region.getByRole("row").filter({ hasText: source });
+    await expect(rows.getByRole("cell").nth(1)).toHaveText("2");
+
+    // 换到 7 天（默认 30 天不写进 URL）再提交：range 是隐藏域，要跟着表单走。
+    await admin
+      .getByRole("link", { name: ad.filter.range.days.replace("{days}", "7") })
+      .click();
+    await expect(admin).toHaveURL(
+      `/admin/acquisition?source=${source}&range=7`,
+    );
+    await admin
+      .getByLabel(t.filters.medium, { exact: true })
+      .selectOption(medium);
+    await admin.getByRole("button", { name: t.filters.apply }).click();
+
+    // GET 提交后地址栏就是规范形式：range 与两个筛选都在，没有空的死参数。
+    await expect(admin).toHaveURL(
+      `/admin/acquisition?range=7&source=${source}&medium=${medium}`,
+    );
+    const submitted = new URL(admin.url());
+    expect(submitted.searchParams.get("campaign")).toBeNull();
+
+    // 表格用的是同一份筛选：medium 收窄到刚注册的那一条。
+    await expect(rows.getByRole("cell").nth(1)).toHaveText("1");
+    await expect(
+      admin.getByLabel(t.filters.source, { exact: true }),
+    ).toHaveValue(source);
+  });
+
+  test("空参数被收成规范 URL，下拉跟着客户端跳转走", async () => {
+    // 表单提交会把空选项写成 source=&medium=&campaign=（服务端当没传），
+    // 手拼这种地址也该落到没有死参数的那一份上。
+    await admin.goto("/admin/acquisition?source=&medium=&campaign=");
+    await expect(admin).toHaveURL("/admin/acquisition");
+
+    // 同路由的客户端跳转（链接、前进后退）不会重新挂载节点，
+    // 下拉得跟着 URL 变，不然显示的筛选和表格用的筛选会对不上。
+    await admin.goto(`/admin/acquisition?source=${source}`);
+    await admin
+      .getByRole("link", { name: ad.filter.range.days.replace("{days}", "7") })
+      .click();
+    await expect(admin).toHaveURL(
+      `/admin/acquisition?source=${source}&range=7`,
+    );
+    await expect(
+      admin.getByLabel(t.filters.source, { exact: true }),
+    ).toHaveValue(source);
+
+    // 后退回到另一个筛选值：表格与下拉都该是 URL 里那一份。
+    await admin.goto("/admin/acquisition?source=e2e-never-used");
+    await admin.goBack();
+    await expect(admin).toHaveURL(
+      `/admin/acquisition?source=${source}&range=7`,
+    );
+    await expect(
+      admin.getByLabel(t.filters.source, { exact: true }),
+    ).toHaveValue(source);
+    await expect(
+      admin
+        .getByRole("region", { name: t.channels.title })
+        .getByRole("cell", { name: source, exact: true }),
+    ).toBeVisible();
+  });
+
+  test("坏币种不会让报表挂掉，同一种货币不拆行", async ({ browser }) => {
+    const moneySource = `e2e-money-${randomUUID().slice(0, 8)}`;
+    const email = uniqueEmail("money");
+    const landing = await (await browser.newContext()).newPage();
+    await useRandomIp(landing);
+    await stubGoogleOneTap(landing);
+    await signUpFrom(landing, moneySource, email);
+    await landing.context().close();
+
+    const userId = await findUserId(email);
+    expect(userId).toBeTruthy();
+    // 三条已收款订单：NULL 币种（用配置里的兜底）、小写币种、以及四个字母的非法币种。
+    // `orders.currency` 是自由文本列，最后一种以前会让 Intl.NumberFormat 抛 RangeError，
+    // 整页 500 —— 开工单的人清不掉这笔数据就一直打不开报表。
+    await withDatabase(async (client) => {
+      const order = (amount: number, currency: string | null) => [
+        randomUUID(),
+        userId,
+        `e2e-order-${randomUUID().slice(0, 8)}`,
+        amount,
+        currency,
+      ];
+      for (const values of [
+        order(1250, null),
+        order(700, "usd"),
+        order(100, "USDC"),
+      ]) {
+        await client.query(
+          `insert into orders (id, user_id, provider, provider_order_id, status, amount, currency)
+           values ($1, $2, 'e2e', $3, 'paid', $4, $5)`,
+          values,
+        );
+      }
+    });
+
+    const response = await admin.goto(
+      `/admin/acquisition?source=${moneySource}`,
+    );
+    expect(response?.status()).toBe(200);
+    const row = admin
+      .getByRole("region", { name: t.channels.title })
+      .getByRole("row")
+      .filter({ hasText: moneySource });
+    // 兜底币种把 NULL 显示成金额（不是裸数字），它还和小写的 usd 合成一条；
+    // 非法币种退回「数字 + 原代码」，让人看得出是哪个币种写坏了。
+    await expect(row.getByRole("cell").nth(3)).toHaveText("$19.50 · 1 USDC");
   });
 
   test("普通用户访问渠道报表返回 404", async ({ browser }) => {

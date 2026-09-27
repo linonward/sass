@@ -260,12 +260,12 @@ ALLOW_DB_SEED=1 pnpm db:seed   # 幂等，重复执行不会重复插入
   - RSS 在 `/changelog/rss.xml`（其他语言 `/<locale>/changelog/rss.xml`），入口在页面右上角，页面 head 里也有 `<link rel="alternate">`。更新日志是单页，每条在页面上的锚点（`/changelog#<slug>`）就是它在 RSS 里的地址。
   - 条目不分语言：内容只有一份，页面外框跟着当前语言走（和法律页同一个取舍）。想按语言分开写，就把 `content-collections.ts` 里的 `changelog` 集合改成 `posts` 那样按语言分目录。
   - 关掉 `changelog.enabled` 时 `/changelog` 和它的 RSS 返回 404，sitemap 和页脚入口一起消失（页脚那一支见 `src/core/layout/footer-nav.ts`）；`content/changelog/` 里的文件留着不删也没关系。
-- 后台（`src/core/admin/`，`features.admin`）：`/admin` 下有指标页和用户、订单、订阅三个列表，列表都在服务端分页。不是管理员（包括未登录）访问 `/admin` 下任何页面都返回 404，不跳转登录页（**这是设计，不是 bug**，理由和整套状态码约定见[错误与权限的边界](#错误与权限的边界)）。
+- 后台（`src/core/admin/`，`features.admin`）：`/admin` 是概览，下面常驻指标、用户、订单、订阅四页，列表都在服务端分页；其余页面各按自己的开关出现 —— 渠道报表、留资、邀请（见「渠道归因」「邮箱留资」「邀请链接」三节）、Feature Flags（见「灰度开关」一节）、系统状态（`statusPage.enabled`）和 API Keys（见上一节）。不是管理员（包括未登录）访问 `/admin` 下任何页面都返回 404，不跳转登录页（**这是设计，不是 bug**，理由和整套状态码约定见[错误与权限的边界](#错误与权限的边界)）。
   - 角色和封禁由 Better Auth 的 admin 插件提供（插件一直启用，`user` 表多了 `role`、`banned` 等字段）。v1 去掉了模拟登录（impersonate）权限。
   - 首个管理员：把邮箱写进 `ADMIN_EMAILS`，用这个邮箱登录（邮箱已验证）时自动获得 `admin` 角色。**只提升不降级** —— 从名单里删掉邮箱不会收回已经拿到的角色，要撤销用 `pnpm admin:demote <email>`（只摘 admin，其他角色保留；还在 `ADMIN_EMAILS` 里时脚本会提醒下次登录会被重新提上来）。管理员在 dashboard 侧边栏里会看到 Admin 入口。
   - 用户：按邮箱或名称搜索；详情页可以封禁 / 解封（封禁会让用户所有 session 失效，之后无法登录），调整积分（必须填原因，写一条 `adjust` 流水，`actor_id` 记录操作的管理员，同一次提交重复发送只生效一次），并查看该用户的订阅和订单。
   - 订单、订阅：可按状态筛选。
-  - 指标（`/admin/metrics`，查询在 `src/core/admin/metrics.ts`）：最近 7 / 30 / 90 天（按 UTC 日期）的新注册、累计和被封禁用户；净收入（订单金额减去已退款，按币种；占位订单未知收款金额按 0 算，已退款仍扣除）、付费用户、活跃订阅和 MRR（`active` 订阅按 `site.config.ts` 里的套餐原价折算，年付 ÷ 12）；积分发放、消耗、退款；AI 按类型和模型的调用次数与失败率（失败 ÷ 已结束的调用，进行中的不计）。没有付费套餐时不显示收入，关闭 `features.credits` / `features.ai` 时不显示对应区块。
+  - 指标（`/admin/metrics`，查询在 `src/core/admin/metrics.ts`）：最近 7 / 30 / 90 天（按 UTC 日期）的新注册、累计和被封禁用户；净收入（按币种，口径见「收入口径」一节）、付费用户、活跃订阅和 MRR（`active` 订阅按 `site.config.ts` 里的套餐原价折算，年付 ÷ 12）；积分发放、消耗、退款；AI 按类型和模型的调用次数与失败率（失败 ÷ 已结束的调用，进行中的不计）。没有付费套餐时不显示收入区块（`/admin/acquisition` 的收入两列用同一个判定），关闭 `features.credits` / `features.ai` 时不显示对应区块。
   - 新增后台页面放在 `src/app/[locale]/(admin)/admin/` 下，页面开头调用 `await requireAdmin()`（`src/core/admin/session.ts`）；Server Action 里用 `getAdminSession()` 再校验一次。layout 和 page 并行渲染，只在 layout 里检查挡不住 page。
 - 可观测性（`src/core/observability/`，`features.observability`）：细项在 `site.config.ts` 的 `observability`（`logLevel`、`otel`、`sentry`、`sentryTracesSampleRate`、`analytics`、`speedInsights`）。
   - 日志：`src/core` 里统一用 `logger.info/warn/error(event, fields)`，不直接 `console.error` / `console.warn`（ESLint 会报错）。事件名用 `模块.动作`，例如 `ai.usage`、`billing.webhook`。`logger.error("x.failed", error)` 或 `logger.error("x.failed", { error, userId })` 都可以。
@@ -627,7 +627,7 @@ Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-
 - 归因写入失败记录 `acquisition.freeze_failed`，不阻断注册；签发 24 小时的 `acquisition_registration` 重试 Cookie，后续页面在登录身份匹配时幂等重试。超过 24 小时、Cookie 被清除或用户不再回来则可能保留 unknown；不会从新的访问来源猜测补填。日志不包含来源载荷。
 - 拒绝/撤回使用 `source_preference=declined` 必要偏好 Cookie（30 天，不含来源）阻止注册时恢复已确认线索来源；再次接受会清除该偏好。撤回会清理两个获客 Cookie；已登录时同时清空账户来源，保留无来源的撤回标记，防止迟到重试恢复数据。未登录时只能清理该浏览器；跨设备需要登录原账户后再撤回。写库失败时匿名 Cookie 仍被清除，页面提示重试账户清理。删除账户通过外键级联删除记录并清理当前浏览器的来源 Cookie。
 - 来源快照在数据库中保留到用户撤回或删除账户；localStorage 只记拒绝偏好、不存来源。停用模块会停止捕获并隐藏入口，数据库记录保留，运营者仍可按用户请求执行数据清理。
-- Vercel Analytics 是独立开关，这个偏好控件不控制它；模板不含渠道报表页，来源按用户存在 `user_attribution` 表，需要报表时自行查询。
+- Vercel Analytics 是独立开关，这个偏好控件不控制它。开启归因后，管理员在**渠道报表** `/admin/acquisition` 看每个来源的表现：最近 7 / 30 / 90 天（UTC）按注册时冻结的来源分组，列出注册数、付费人数、净收入、待核对退款、确认留资和转化率，可按来源 / 媒介 / 活动筛选（留空 = 全部）。净收入与待核对退款的口径见「收入口径」一节（和 `/admin/metrics` 是同一份定义）；没有付费套餐时收入两列不显示（和 `/admin/metrics` 同一判定）。关掉 `acquisition.attribution.enabled` 并重新构建后该页 404。
 
 验证：`pnpm test` 覆盖上下文校验、签名/过期、接口、重试和数据库并发；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本启用归因，覆盖桌面及 375px 的接受 → 注册 → 撤回和拒绝路径，不改模板默认配置。普通 e2e 同时锁定关闭时没有控件、Cookie 或获客请求。Google 两种方式的真实账号端到端登录需在配置了 OAuth origin/回调的环境人工验证。
 

@@ -1,10 +1,12 @@
 import { getFormatter, getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { adminMetadata } from "@/core/admin/metadata";
 import { metricWindow, parseRange } from "@/core/admin/metrics";
+import { formatMoneyList } from "@/core/admin/money";
+import { revenueEnabled } from "@/core/admin/sections";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow } from "@/core/admin/ui/list";
+import { EmptyRow, cleanQuery } from "@/core/admin/ui/list";
 import { MetricSection, RangeFilter } from "@/core/admin/ui/metrics";
 import {
   getAcquisitionReport,
@@ -25,7 +27,15 @@ import {
   TableRow,
 } from "@/core/ui/table";
 
+import siteConfig from "../../../../../../site.config";
+
 type Props = PageProps<"/[locale]/admin/acquisition">;
+
+/** 没有付费套餐时不出收入两列（和 /admin/metrics 的区块用同一个判定）。 */
+const sections = { revenue: revenueEnabled(siteConfig.billing) };
+
+/** 三个筛选框留空 = 全部，空值不该留在 URL 里（表单提交会带上 source=&medium=&campaign=）。 */
+const filterParams = ["source", "medium", "campaign"] as const;
 
 export function generateMetadata({ params }: Props) {
   return adminMetadata(params, "/admin/acquisition", (t) =>
@@ -50,6 +60,24 @@ export default async function AdminAcquisitionPage({
   const range = parseRange(search.range);
   const filters = parseReportFilters(search);
 
+  // 筛选框留空 = 全部，但表单提交会把空值写进 URL（source=&medium=&campaign=），
+  // 和服务端「空串当没传」的口径不一致。这里把地址栏收成规范形式，
+  // 和 RangeFilter 用 cleanQuery 拼的链接是同一份规范（同页只有一个规范 URL）。
+  const param = (value: string | string[] | undefined) =>
+    typeof value === "string" ? value : undefined;
+  if (filterParams.some((key) => search[key] === "")) {
+    const canonical = cleanQuery({
+      range: param(search.range),
+      source: param(search.source),
+      medium: param(search.medium),
+      campaign: param(search.campaign),
+    });
+    const query = new URLSearchParams(canonical).toString();
+    redirect(
+      `${localizedPath(locale, "/admin/acquisition")}${query ? `?${query}` : ""}`,
+    );
+  }
+
   // 文案、格式化和两组查询互不依赖，一次并发发出。
   const db = getDb();
   const [t, format, options, rows] = await Promise.all([
@@ -59,19 +87,10 @@ export default async function AdminAcquisitionPage({
     getAcquisitionReport(db, metricWindow(range), filters),
   ]);
 
-  const money = (amount: number, currency: string | null) =>
-    currency
-      ? format.number(amount / 100, {
-          style: "currency",
-          currency,
-          maximumFractionDigits: amount % 100 === 0 ? 0 : 2,
-        })
-      : format.number(amount / 100);
   const moneyList = (list: Money[]) =>
-    list.length === 0
-      ? "—"
-      : list.map((row) => money(row.amount, row.currency)).join(" · ");
+    formatMoneyList(format, list, siteConfig.billing.currency);
   const labels = { unknown: t("unknown"), direct: t("direct") };
+  const columnCount = sections.revenue ? 7 : 5;
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,12 +124,16 @@ export default async function AdminAcquisitionPage({
               <TableHead className="text-right">
                 {t("columns.payingUsers")}
               </TableHead>
-              <TableHead className="text-right">
-                {t("columns.revenue")}
-              </TableHead>
-              <TableHead className="text-right">
-                {t("columns.pending")}
-              </TableHead>
+              {sections.revenue && (
+                <>
+                  <TableHead className="text-right">
+                    {t("columns.revenue")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("columns.pending")}
+                  </TableHead>
+                </>
+              )}
               <TableHead className="text-right">
                 {t("columns.confirmedLeads")}
               </TableHead>
@@ -120,7 +143,9 @@ export default async function AdminAcquisitionPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 && <EmptyRow colSpan={7} text={t("empty")} />}
+            {rows.length === 0 && (
+              <EmptyRow colSpan={columnCount} text={t("empty")} />
+            )}
             {rows.map((row) => (
               <TableRow key={row.source}>
                 <TableCell className="max-w-56">
@@ -134,13 +159,17 @@ export default async function AdminAcquisitionPage({
                 <TableCell className="text-right tabular-nums">
                   {format.number(row.payingUsers)}
                 </TableCell>
-                {/* 净收入会随后续退款变化，历史区间重看时数字可能不同。 */}
-                <TableCell className="text-right tabular-nums">
-                  {moneyList(row.revenue)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {moneyList(row.pending)}
-                </TableCell>
+                {sections.revenue && (
+                  <>
+                    {/* 净收入会随后续退款变化，历史区间重看时数字可能不同。 */}
+                    <TableCell className="text-right tabular-nums">
+                      {moneyList(row.revenue)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {moneyList(row.pending)}
+                    </TableCell>
+                  </>
+                )}
                 <TableCell className="text-right tabular-nums">
                   {format.number(row.confirmedLeads)}
                 </TableCell>
@@ -153,7 +182,9 @@ export default async function AdminAcquisitionPage({
             ))}
           </TableBody>
         </Table>
-        <p className="text-muted-foreground text-xs">{t("pendingHint")}</p>
+        {sections.revenue && (
+          <p className="text-muted-foreground text-xs">{t("pendingHint")}</p>
+        )}
         <p className="text-muted-foreground text-xs">{t("leadsHint")}</p>
       </MetricSection>
     </div>

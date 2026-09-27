@@ -53,12 +53,13 @@ pnpm install   # T101 合入之后才有
 
 ```bash
 EMAIL_TRANSPORT=file E2E_PORT=3100 \
-  ADMIN_EMAILS=e2e-admin-desktop@example.com,e2e-admin-mobile@example.com \
+  ADMIN_EMAILS=e2e-admin-desktop@example.com,e2e-admin-mobile@example.com,e2e-admin-acquisition-desktop@example.com,e2e-admin-acquisition-mobile@example.com,e2e-admin-status-desktop@example.com,e2e-admin-status-mobile@example.com,e2e-admin-flags-desktop@example.com,e2e-admin-flags-mobile@example.com \
   npx playwright test
 ```
 
 - `EMAIL_TRANSPORT=file` 是必须的：本地默认是 `console`，验证码只打到服务端终端，e2e 从 `.tmp/emails/` 读不到（CI 里由 workflow 设置）。
-- `ADMIN_EMAILS` 给 `admin.spec.ts` 用；不设的话管理员登录后侧边栏没有后台入口，用例会卡在点击上。
+- `ADMIN_EMAILS` 给 `admin.spec.ts` 和 acquisition / status / flags 三个套件用；不设的话管理员登录后侧边栏没有后台入口（或被 `requireAdmin` 拦成 404），用例会卡在点击上。**这份名单要和 `.github/workflows/ci.yml` 的那一行一致**，少了谁就只有本地红、CI 绿。
+- 单独跑某个套件：`pnpm test:e2e:acquisition`（还有 `test:e2e:flags`），它们各自带 config，同样认上面的环境变量。
 - `E2E_PORT` 换一个端口，避免和你正在跑的 `pnpm dev`（默认 3000）撞车 —— `reuseExistingServer` 会直接复用那个服务器，测的就不是当前 worktree 的代码。
 
 如果所有页面突然一起报 `SyntaxError: Unexpected non-whitespace character after JSON`，那是 `.next/dev/` 里的缓存被中断的 dev server 写坏了（不是代码问题）：`rm -rf .next` 重来。

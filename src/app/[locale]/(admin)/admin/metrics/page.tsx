@@ -9,6 +9,8 @@ import {
   metricWindow,
   parseRange,
 } from "@/core/admin/metrics";
+import { formatMoney, formatMoneyList } from "@/core/admin/money";
+import { revenueEnabled } from "@/core/admin/sections";
 import { requireAdmin } from "@/core/admin/session";
 import { EmptyRow } from "@/core/admin/ui/list";
 import {
@@ -34,9 +36,9 @@ import siteConfig from "../../../../../../site.config";
 
 type Props = PageProps<"/[locale]/admin/metrics">;
 
-// 模块关闭时对应区块不显示；没有付费套餐时不显示收入。
+// 模块关闭时对应区块不显示；没有付费套餐时不显示收入（和 /admin/acquisition 同一判定）。
 const sections = {
-  revenue: siteConfig.billing.plans.some((plan) => plan.price > 0),
+  revenue: revenueEnabled(siteConfig.billing),
   credits: siteConfig.features.credits,
   ai: siteConfig.features.ai,
 };
@@ -67,12 +69,9 @@ export default async function AdminMetricsPage({
   ]);
 
   const number = (value: number) => format.number(value);
-  const money = (amount: number, currency: string) =>
-    format.number(amount / 100, {
-      style: "currency",
-      currency,
-      maximumFractionDigits: amount % 100 === 0 ? 0 : 2,
-    });
+  /** 币种可能缺失或非法（`orders.currency` 是自由文本列），一律走共用的兜底。 */
+  const money = (amount: number, currency: string | null) =>
+    formatMoney(format, amount, currency, siteConfig.billing.currency);
   const percent = (value: number | null) =>
     value === null
       ? "—"
@@ -118,10 +117,12 @@ export default async function AdminMetricsPage({
               label={t("revenue.net")}
               value={
                 revenue.revenue.length === 0
-                  ? money(0, siteConfig.billing.currency)
-                  : revenue.revenue
-                      .map((row) => money(row.amount, row.currency))
-                      .join(" · ")
+                  ? formatMoney(format, 0, null, siteConfig.billing.currency)
+                  : formatMoneyList(
+                      format,
+                      revenue.revenue,
+                      siteConfig.billing.currency,
+                    )
               }
               testId="metric-revenue"
             />

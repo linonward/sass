@@ -122,7 +122,7 @@
 | T1600                       | postmerge-followups     | `docs/postmerge-followups`     | —                             | done |
 | T1601                       | report-money            | `fix/report-money`             | —                             | done |
 | T1602                       | report-perf             | `fix/report-perf`              | T1601                         | todo |
-| T1603                       | report-ui               | `fix/report-ui`                | —                             | todo |
+| T1603                       | report-ui               | `fix/report-ui`                | —                             | done |
 | T1604                       | referral-fixes          | `fix/referral-fixes`           | —                             | todo |
 | T1605                       | internal-terms-2        | `chore/internal-terms-2`       | —                             | done |
 
