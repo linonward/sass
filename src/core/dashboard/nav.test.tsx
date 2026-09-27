@@ -34,11 +34,15 @@ beforeEach(() => {
   setViewport(false);
 });
 
-/** 模拟业务项目在 site.config.ts 里加了一项 dashboard.nav。AI 固定关闭，不受演示站点的开关影响。 */
+/**
+ * 模拟业务项目在 site.config.ts 里加了一项 dashboard.nav。AI 与 API Key 固定关闭，
+ * 不受演示站点的开关影响（下面各自有专门用例覆盖开启后的样子）。
+ */
 function configWithProjects() {
   return defineConfig({
     ...(siteConfig as SiteConfigInput),
     features: { ...siteConfig.features, ai: false },
+    apiKeys: { enabled: false },
     dashboard: {
       nav: [{ key: "projects", href: "/projects", icon: "layers" }],
     },
@@ -140,6 +144,33 @@ describe("dashboardNav", () => {
       "/dashboard",
       "/playground",
       "/referrals",
+      "/billing",
+      "/settings",
+    ]);
+  });
+
+  test("apiKeys 关闭时没有 API keys 入口（出厂默认）", () => {
+    const config = configWithProjects();
+    expect(config.apiKeys.enabled).toBe(false);
+    expect(dashboardNav(config).suite.map((i) => i.href)).not.toContain(
+      "/api-keys",
+    );
+  });
+
+  test("apiKeys 开启时，Referrals 之后多一个 API keys", () => {
+    const base = configWithProjects();
+    const nav = dashboardNav({
+      ...base,
+      apiKeys: { enabled: true },
+      acquisition: {
+        ...base.acquisition,
+        referrals: { ...base.acquisition.referrals, enabled: true },
+      },
+    });
+    expect(nav.suite.map((i) => i.href)).toEqual([
+      "/dashboard",
+      "/referrals",
+      "/api-keys",
       "/billing",
       "/settings",
     ]);

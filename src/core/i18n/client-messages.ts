@@ -9,6 +9,7 @@ export const clientNamespaces = [
   "Account",
   "Acquisition",
   "Admin",
+  "ApiKeys",
   "Auth",
   "Billing",
   "Common",

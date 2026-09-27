@@ -19,6 +19,8 @@ export const protectedPrefixes: readonly string[] = [
   "/playground",
   // 邀请页只在模块开启时存在（关闭时页面自身 404）；这里只决定要不要走快速拦截。
   "/referrals",
+  // API Key 页同上，由 site.config.ts 的 apiKeys.enabled 决定是否真的存在。
+  "/api-keys",
   ...siteConfig.dashboard.nav.map((item) => item.href),
 ];
 

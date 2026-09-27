@@ -114,7 +114,7 @@
 | T1402                       | e2e-flaky-auth          | `fix/e2e-flaky-auth`           | T1400                         | done             |
 | **阶段 15：差异化补齐**     |                         |                                |                               |                  |
 | T1500                       | differentiation-plan    | `docs/differentiation-plan`    | —                             | done             |
-| T1501                       | api-keys                | `feat/api-keys`                | T1500, T203, T201, T401, T204 | todo             |
+| T1501                       | api-keys                | `feat/api-keys`                | T1500, T203, T201, T401, T204 | done             |
 | T1502                       | feature-flags           | `feat/feature-flags`           | T1500, T102, T201, T502       | todo             |
 | T1503                       | changelog               | `feat/changelog`               | T1500, T501, T104, T105       | todo             |
 | T1504                       | status-page             | `feat/status-page`             | T1500, T601, T202, T502       | todo             |
