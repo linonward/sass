@@ -179,7 +179,6 @@ describe("adminNav", () => {
       "/admin/metrics",
       "/admin/status",
       "/admin/users",
-      "/admin/api-keys",
       "/admin/orders",
       "/admin/subscriptions",
     ]);
