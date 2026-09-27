@@ -548,7 +548,10 @@ describe("acquisition configuration", () => {
         enabled: false,
         lists: [{ id: "waitlist", consentVersion: "1" }],
       },
-      referrals: { enabled: false },
+      referrals: {
+        enabled: false,
+        rewards: { inviterCredits: 0, inviteeCredits: 0 },
+      },
     });
     expect(
       defineConfig({ ...valid, acquisition: { leads: { enabled: true } } })

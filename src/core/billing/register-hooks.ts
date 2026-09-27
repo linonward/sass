@@ -7,6 +7,18 @@ import { createGrantCreditsHandler } from "./grant-credits";
 import { registerOnBillingEvent } from "./on-billing-event";
 import { createPurchaseTrackingHandler } from "./track-purchase";
 import { createReclaimCreditsHandler } from "./reclaim-credits";
+import { createReferralGrantHandler } from "./referral-grant";
+import { createReferralReclaimHandler } from "./referral-reclaim";
+import siteConfig from "../../../site.config";
+import {
+  isRewardActive,
+  getRewardRule,
+} from "../acquisition/referrals/rewards-config";
+
+const referralsEnabled =
+  siteConfig.acquisition.referrals.enabled && creditsEnabled;
+const referralRewardsEnabled =
+  referralsEnabled && isRewardActive(getRewardRule(siteConfig));
 
 // 套件自带的 onBillingEvent 钩子：套餐配置了 credits 且 features.credits 开启时发放积分。
 registerOnBillingEvent(
@@ -18,6 +30,26 @@ registerOnBillingEvent(
 registerOnBillingEvent(
   "billing:reclaim-credits",
   createReclaimCreditsHandler({ enabled: creditsEnabled, reclaimCredits }),
+);
+
+// 邀请奖励发放：checkout.completed / subscription.renewed 时发放双方奖励。
+registerOnBillingEvent(
+  "referrals:grant-reward",
+  createReferralGrantHandler({
+    enabled: referralsEnabled,
+    grantCredits,
+    config: siteConfig,
+  }),
+);
+
+// 邀请奖励回收：refund.created 时回收双方奖励。
+registerOnBillingEvent(
+  "referrals:reclaim-reward",
+  createReferralReclaimHandler({
+    enabled: referralsEnabled,
+    reclaimCredits,
+    rewardsEnabled: referralRewardsEnabled,
+  }),
 );
 
 // 付款成功、付款失败、订阅取消的通知邮件；在事务提交后发送。

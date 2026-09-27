@@ -1,15 +1,37 @@
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import type { Database, DbTransaction } from "@/core/db";
-import { referralCodes, referralRelationships, user } from "@/core/db/schema";
+import {
+  referralCodes,
+  referralRelationships,
+  referralRewardDebt,
+  referralRewards,
+  user,
+} from "@/core/db/schema";
 import { newReferralCode } from "./code";
 
-/** 状态先只有「等待首次付款」；奖励结算（T1306）在此基础上推进，不改变归属。 */
-export type ReferralStatus = "awaiting_payment";
+/** 邀请关系状态。T1306 扩展为包含奖励相关状态。 */
+export type ReferralStatus =
+  "awaiting_payment" | "rewarded" | "revoked" | "pending_review";
 export type RelationshipView = { status: ReferralStatus; createdAt: Date };
 export type InviterView = { userId: string; name: string };
 export type BindResult =
   | { ok: true; inviterUserId: string }
   | { ok: false; reason: "invalid" | "self" | "exists" };
+
+export type RewardView = {
+  id: string;
+  type: "granted" | "revoked";
+  inviterCredits: number;
+  inviteeCredits: number;
+  orderRef: string;
+  createdAt: Date;
+};
+
+export type DebtView = {
+  id: string;
+  amount: number;
+  createdAt: Date;
+};
 
 // 与 better-auth 的登录判断保持一致：过期封禁不算封禁，永久封禁的 banExpires 为空。
 function activeBan(
@@ -118,6 +140,129 @@ export function createReferralService(db: Database) {
         .where(eq(referralRelationships.inviterUserId, inviterUserId))
         .orderBy(desc(referralRelationships.createdAt))
         .limit(limit);
+    },
+    /** 查看用户的奖励事件（作为邀请人或受邀人）。 */
+    async listRewards(userId: string, limit = 20): Promise<RewardView[]> {
+      const rows = await db
+        .select({
+          id: referralRewards.id,
+          type: referralRewards.type,
+          inviterCredits: referralRewards.inviterCredits,
+          inviteeCredits: referralRewards.inviteeCredits,
+          orderRef: referralRewards.orderRef,
+          createdAt: referralRewards.createdAt,
+        })
+        .from(referralRewards)
+        .where(eq(referralRewards.inviteeUserId, userId))
+        .orderBy(desc(referralRewards.createdAt))
+        .limit(limit);
+      return rows.map((r) => ({
+        ...r,
+        type: r.type as "granted" | "revoked",
+      }));
+    },
+    /** 查看用户作为邀请人获得的奖励事件。 */
+    async listInviterRewards(
+      inviterUserId: string,
+      limit = 20,
+    ): Promise<RewardView[]> {
+      const rows = await db
+        .select({
+          id: referralRewards.id,
+          type: referralRewards.type,
+          inviterCredits: referralRewards.inviterCredits,
+          inviteeCredits: referralRewards.inviteeCredits,
+          orderRef: referralRewards.orderRef,
+          createdAt: referralRewards.createdAt,
+        })
+        .from(referralRewards)
+        .where(eq(referralRewards.inviterUserId, inviterUserId))
+        .orderBy(desc(referralRewards.createdAt))
+        .limit(limit);
+      return rows.map((r) => ({
+        ...r,
+        type: r.type as "granted" | "revoked",
+      }));
+    },
+    /** 查看用户的未清偿债务。 */
+    async listDebts(userId: string): Promise<DebtView[]> {
+      return db
+        .select({
+          id: referralRewardDebt.id,
+          amount: referralRewardDebt.amount,
+          createdAt: referralRewardDebt.createdAt,
+        })
+        .from(referralRewardDebt)
+        .where(eq(referralRewardDebt.userId, userId));
+    },
+    /** 管理端：查询所有邀请关系（支持状态筛选）。 */
+    async listAllRelationships({
+      status,
+      page = 1,
+      limit = 20,
+    }: {
+      status?: ReferralStatus;
+      page?: number;
+      limit?: number;
+    }) {
+      const where = status
+        ? eq(referralRelationships.status, status)
+        : undefined;
+      const offset = (page - 1) * limit;
+      const [rows, [counted]] = await Promise.all([
+        db
+          .select({
+            inviteeUserId: referralRelationships.inviteeUserId,
+            inviterUserId: referralRelationships.inviterUserId,
+            code: referralRelationships.code,
+            status: referralRelationships.status,
+            ruleSnapshot: referralRelationships.ruleSnapshot,
+            createdAt: referralRelationships.createdAt,
+          })
+          .from(referralRelationships)
+          .where(where)
+          .orderBy(desc(referralRelationships.createdAt))
+          .limit(limit)
+          .offset(offset),
+        db.select({ total: count() }).from(referralRelationships).where(where),
+      ]);
+      return {
+        rows,
+        total: counted?.total ?? 0,
+        page,
+        totalPages: Math.max(1, Math.ceil((counted?.total ?? 0) / limit)),
+      };
+    },
+    /** 管理端：查询所有奖励事件。 */
+    async listAllRewards({ page = 1, limit = 20 }) {
+      const offset = (page - 1) * limit;
+      const [rows, [counted]] = await Promise.all([
+        db
+          .select({
+            id: referralRewards.id,
+            inviteeUserId: referralRewards.inviteeUserId,
+            inviterUserId: referralRewards.inviterUserId,
+            orderRef: referralRewards.orderRef,
+            type: referralRewards.type,
+            inviterCredits: referralRewards.inviterCredits,
+            inviteeCredits: referralRewards.inviteeCredits,
+            createdAt: referralRewards.createdAt,
+          })
+          .from(referralRewards)
+          .orderBy(desc(referralRewards.createdAt))
+          .limit(limit)
+          .offset(offset),
+        db.select({ total: count() }).from(referralRewards),
+      ]);
+      return {
+        rows: rows.map((r) => ({
+          ...r,
+          type: r.type as "granted" | "revoked",
+        })),
+        total: counted?.total ?? 0,
+        page,
+        totalPages: Math.max(1, Math.ceil((counted?.total ?? 0) / limit)),
+      };
     },
   };
 }

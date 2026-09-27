@@ -525,8 +525,28 @@ export const acquisitionConfigSchema = z.strictObject({
       lists: [{ id: "waitlist", consentVersion: "1" }],
     }),
   referrals: z
-    .strictObject({ enabled: z.boolean().default(false) })
-    .default({ enabled: false }),
+    .strictObject({
+      enabled: z.boolean().default(false),
+      rewards: z
+        .strictObject({
+          inviterCredits: z.number().int().nonnegative().default(0),
+          inviteeCredits: z.number().int().nonnegative().default(0),
+          allowedPlans: z.array(z.string()).optional(),
+          minPaymentByCurrency: z
+            .record(z.string(), z.number().int().positive())
+            .optional(),
+          dailyCapPerInviter: z.number().int().nonnegative().optional(),
+          monthlyCapPerInviter: z.number().int().nonnegative().optional(),
+        })
+        .default({
+          inviterCredits: 0,
+          inviteeCredits: 0,
+        }),
+    })
+    .default({
+      enabled: false,
+      rewards: { inviterCredits: 0, inviteeCredits: 0 },
+    }),
 });
 
 export const siteConfigSchema = z

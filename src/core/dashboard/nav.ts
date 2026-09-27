@@ -35,15 +35,24 @@ const acquisitionNav: DashboardNavItem = {
   icon: "sparkles",
 };
 
+const adminReferralsNav: DashboardNavItem = {
+  key: "adminReferrals",
+  href: "/admin/referrals",
+  icon: "users",
+};
+
 /**
- * /admin 里的菜单。获客报表只在归因开启时出现 —— 关闭时那个页面 404，
- * 菜单里留一个点进去就 404 的入口只会让人以为坏了。
+ * /admin 里的菜单。获客报表只在归因开启时出现，邀请管理只在推荐开启时出现 ——
+ * 关闭时那个页面 404，菜单里留一个点进去就 404 的入口只会让人以为坏了。
  */
 export function adminNav(
   config: Pick<SiteConfig, "acquisition">,
 ): readonly DashboardNavItem[] {
-  return config.acquisition.attribution.enabled
-    ? [adminNavBase[0]!, acquisitionNav, ...adminNavBase.slice(1)]
+  const extras: DashboardNavItem[] = [];
+  if (config.acquisition.attribution.enabled) extras.push(acquisitionNav);
+  if (config.acquisition.referrals.enabled) extras.push(adminReferralsNav);
+  return extras.length
+    ? [adminNavBase[0]!, ...extras, ...adminNavBase.slice(1)]
     : adminNavBase;
 }
 

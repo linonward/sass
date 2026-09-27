@@ -111,7 +111,10 @@ describe("dashboardNav", () => {
       ...base,
       acquisition: {
         ...base.acquisition,
-        referrals: { enabled: true },
+        referrals: {
+          enabled: true,
+          rewards: { inviterCredits: 0, inviteeCredits: 0 },
+        },
       },
     });
     expect(nav.suite.map((i) => i.href)).toEqual([
@@ -125,7 +128,13 @@ describe("dashboardNav", () => {
       dashboardNav({
         ...base,
         features: { ...base.features, ai: true },
-        acquisition: { ...base.acquisition, referrals: { enabled: true } },
+        acquisition: {
+          ...base.acquisition,
+          referrals: {
+            enabled: true,
+            rewards: { inviterCredits: 0, inviteeCredits: 0 },
+          },
+        },
       }).suite.map((i) => i.href),
     ).toEqual([
       "/dashboard",
@@ -168,7 +177,13 @@ describe("AppSidebar", () => {
     renderSidebar(
       defineConfig({
         ...(base as SiteConfigInput),
-        acquisition: { ...base.acquisition, referrals: { enabled: true } },
+        acquisition: {
+          ...base.acquisition,
+          referrals: {
+            enabled: true,
+            rewards: { inviterCredits: 0, inviteeCredits: 0 },
+          },
+        },
       }),
     );
     expect(

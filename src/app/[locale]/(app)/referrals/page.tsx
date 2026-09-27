@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/core/ui/card";
 import { EmptyState } from "@/core/ui/empty-state";
+import { Badge } from "@/core/ui/badge";
 
 export async function generateMetadata({
   params,
@@ -30,7 +31,7 @@ export async function generateMetadata({
   });
 }
 
-/** 邀请页：专属邀请码与可复制链接、自己作为受邀人的关系、以及已接受的邀请记录。 */
+/** 邀请页：专属邀请码与可复制链接、自己作为受邀人的关系、奖励记录、以及已接受的邀请记录。 */
 export default async function ReferralsPage({
   params,
 }: PageProps<"/[locale]/referrals">) {
@@ -43,14 +44,21 @@ export default async function ReferralsPage({
   ]);
   const userId = session.user.id;
   const service = createReferralService(getDb());
-  // 邀请码在首次进入这一页时生成，之后一直复用；三个查询互不依赖，并行发出。
-  const [code, relationship, invited] = await Promise.all([
-    service.ensureCode(userId),
-    service.relationshipFor(userId),
-    service.listInvited(userId),
-  ]);
+  // 邀请码在首次进入这一页时生成，之后一直复用；查询互不依赖，并行发出。
+  const [code, relationship, invited, rewards, inviterRewards, debts] =
+    await Promise.all([
+      service.ensureCode(userId),
+      service.relationshipFor(userId),
+      service.listInvited(userId),
+      service.listRewards(userId),
+      service.listInviterRewards(userId),
+      service.listDebts(userId),
+    ]);
 
   const { CopyLink } = await import("@/core/acquisition/referrals/copy-link");
+
+  const hasRewards =
+    rewards.length > 0 || inviterRewards.length > 0 || debts.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,6 +109,121 @@ export default async function ReferralsPage({
           </CardContent>
         )}
       </Card>
+
+      {hasRewards && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("rewardsTitle")}</CardTitle>
+            <CardDescription>{t("rewardsOff")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4 text-sm">
+              {inviterRewards.length > 0 && (
+                <div>
+                  <p className="text-muted-foreground mb-2">
+                    {t("invitedTitle")}
+                  </p>
+                  <ul className="divide-y">
+                    {inviterRewards.map((r) => (
+                      <li
+                        key={r.id}
+                        className="flex items-center justify-between gap-4 py-2"
+                      >
+                        <Badge
+                          variant={
+                            r.type === "granted"
+                              ? "secondary"
+                              : "destructive-band"
+                          }
+                          flat
+                        >
+                          {t(
+                            r.type === "granted"
+                              ? "rewardsTypeGranted"
+                              : "rewardsTypeRevoked",
+                          )}
+                        </Badge>
+                        <span className="tabular-nums">
+                          {t("rewardsInviterCredits", {
+                            credits: r.inviterCredits,
+                          })}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {format.dateTime(r.createdAt, {
+                            dateStyle: "medium",
+                          })}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {rewards.length > 0 && (
+                <div>
+                  <p className="text-muted-foreground mb-2">
+                    {t("invitedByTitle")}
+                  </p>
+                  <ul className="divide-y">
+                    {rewards.map((r) => (
+                      <li
+                        key={r.id}
+                        className="flex items-center justify-between gap-4 py-2"
+                      >
+                        <Badge
+                          variant={
+                            r.type === "granted"
+                              ? "secondary"
+                              : "destructive-band"
+                          }
+                          flat
+                        >
+                          {t(
+                            r.type === "granted"
+                              ? "rewardsTypeGranted"
+                              : "rewardsTypeRevoked",
+                          )}
+                        </Badge>
+                        <span className="tabular-nums">
+                          {t("rewardsInviteeCredits", {
+                            credits: r.inviteeCredits,
+                          })}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {format.dateTime(r.createdAt, {
+                            dateStyle: "medium",
+                          })}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {debts.length > 0 && (
+                <div>
+                  <p className="text-muted-foreground mb-2">{t("debtTitle")}</p>
+                  <ul className="divide-y">
+                    {debts.map((d) => (
+                      <li
+                        key={d.id}
+                        className="flex items-center justify-between gap-4 py-2"
+                      >
+                        <span className="text-muted-foreground">
+                          {t("debtAmount", { amount: d.amount })}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {format.dateTime(d.createdAt, {
+                            dateStyle: "medium",
+                          })}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
