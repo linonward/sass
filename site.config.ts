@@ -178,6 +178,15 @@ const config = defineConfig({
       checkout: { limit: 5, window: "1 m" },
     },
   },
+  // 用户 API Key（src/core/api-keys/）：用户在 dashboard 里生成、命名、撤销自己的 key，
+  // API 路由用 `Authorization: Bearer sk_...` 鉴权识别用户。关闭后 /api-keys 页面、
+  // 后台页和 /api/api-keys/* 都返回 404，侧边栏也没有入口；库里的 key 不删。
+  apiKeys: {
+    // 演示站点开着；模板出厂的 schema 默认是 false，改成 false 即可整块下线。
+    enabled: true,
+    // 每个 key 独立的滑动窗口限流（按 key 计数）。不填就是不限制；填了需要 Upstash Redis。
+    // rateLimitPerKey: { limit: 60, window: "1 m" },
+  },
   // 文件上传（Cloudflare R2）。只在 features.upload 开启时生效；SVG、HTML 不在可选类型里。
   upload: {
     allowedMimeTypes: [
