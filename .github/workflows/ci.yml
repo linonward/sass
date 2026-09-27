@@ -69,6 +69,16 @@ jobs:
 
       - run: pnpm format:check
 
+      # THIRD-PARTY-NOTICES.md 是随产品交付的法律合规文件，写的是买家 pnpm install
+      # 之后实际装到的版本与许可。dependabot 每周动依赖而 TPN 不会自己跟着变，
+      # 这一步拿 pnpm-lock.yaml 和 pnpm licenses list 逐条比对，漂移就失败。
+      - run: pnpm notices:check
+
+      # 发行物自检：凭据 / 卖家域名 / 内部文档零命中、必备文件齐全。
+      # 原来只在手动出包那一刻跑（防线等于没有），这里每次 PR 都跑一遍，
+      # 成本约一次 unzip + grep。
+      - run: scripts/release-package.sh
+
       - run: pnpm typecheck
 
       # 在空库上执行迁移，验证迁移文件可用。

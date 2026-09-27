@@ -2,9 +2,9 @@
 
 本文件列出模板用到的第三方组件及其许可。模板**自身的代码**不在这里，按根目录 [LICENSE](LICENSE) 的专有 EULA 授权。
 
-- 统计时间：2026-09-26。上一版数字对应基线 `358d00d`；本版是 T808（依赖卫生：`shadcn` 移入 `devDependencies`、`resend` / `better-auth` 升级、移除 `vite-tsconfig-paths`）之后的数字 —— 生产依赖树减少的主要是 `shadcn` 那条链（见下表）。
+- 统计时间：2026-09-27。本版是 T1207 在基线 `3c59e36` 上重跑同一套命令的结果：两张分布表的数字与上一版（T808，基线 `358d00d`，依赖卫生那批）**没有变化**，变的是「直接依赖明细」里 react / react-dom / `@types/react` / `@types/react-dom` / typescript 五行 —— dependabot 在本文件上次更新之后把它们升上去了，原来那五行写的是升级前的版本。上一版生产依赖树数字比更早的版本小，主要是 `shadcn` 那条链移进 `devDependencies` 所致。
 - 统计方式：`pnpm licenses list`（全量）与 `pnpm licenses list --prod`（仅生产依赖），读的是仓库已安装的依赖和 `pnpm-lock.yaml` 锁定的版本。
-- 依赖升级后数字会变，本文件不会自动跟着变 —— 改依赖时重跑上面的命令并按需更新。
+- 依赖升级后数字会变，本文件不会自动跟着变 —— 改依赖时重跑上面的命令并按需更新。**「直接依赖明细」那一节已经不用靠人记**：`pnpm notices:check`（`scripts/check-notices.mjs`）会拿 `pnpm-lock.yaml` 逐条比对版本和依赖类型，CI 每个 PR 都跑，对不上就失败。
 - 本文件是情况说明，**不是法律意见**；正式售卖前建议由律师过目（见 README 的「授权」一节）。
 
 ## 全量依赖树
@@ -127,8 +127,8 @@
 | `@testing-library/react`          | 16.3.3  | dev      |
 | `@types/node`                     | 24.13.6 | dev      |
 | `@types/pg`                       | 8.23.1  | dev      |
-| `@types/react`                    | 19.2.18 | dev      |
-| `@types/react-dom`                | 19.2.7  | dev      |
+| `@types/react`                    | 19.3.0  | dev      |
+| `@types/react-dom`                | 19.3.0  | dev      |
 | `@types/ws`                       | 8.18.1  | dev      |
 | `@upstash/ratelimit`              | 2.2.0   | prod     |
 | `@upstash/redis`                  | 1.39.0  | prod     |
@@ -152,8 +152,8 @@
 | `pg`                              | 8.23.0  | prod     |
 | `prettier`                        | 3.9.9   | dev      |
 | `prettier-plugin-tailwindcss`     | 0.8.1   | dev      |
-| `react`                           | 19.2.8  | prod     |
-| `react-dom`                       | 19.2.8  | prod     |
+| `react`                           | 19.3.0  | prod     |
+| `react-dom`                       | 19.3.0  | prod     |
 | `react-email`                     | 6.11.0  | prod     |
 | `resend`                          | 6.30.0  | prod     |
 | `shadcn`                          | 4.21.0  | dev      |
@@ -188,7 +188,7 @@
 | `ai`                             | 7.0.113  | prod     |
 | `class-variance-authority`       | 0.7.1    | prod     |
 | `drizzle-orm`                    | 0.45.3   | prod     |
-| `typescript`                     | 5.9.3    | dev      |
+| `typescript`                     | 6.0.3    | dev      |
 
 ### ISC（1）
 
@@ -206,11 +206,14 @@
 
 ```bash
 pnpm install --frozen-lockfile   # 保证装的是锁文件里的版本
+pnpm notices:check               # 检查本文件有没有和锁文件漂移（CI 也跑这个）
 pnpm licenses list               # 全量分布（本文件第一张表）
 pnpm licenses list --prod        # 仅生产依赖（第二张表）
 pnpm licenses list --json        # 机器可读，便于自己算分布
 ```
 
 每个包的许可全文都随 `node_modules` 一起装到本地，路径是 `node_modules/<包名>/LICENSE*`。改动依赖后重跑上面的命令、核对这两张表的数字，再决定是否需要更新本节。
+
+`pnpm notices:check` 管两件事：把「直接依赖明细」逐条按 `pnpm-lock.yaml` 校验（版本、prod / dev 类型、有没有多写或漏写），以及确认 `pnpm licenses list` 报出的许可都在本文件里出现过、且没有 GPL / AGPL / SSPL 这类强 copyleft。它**不比对两张分布表的包数**：那个数字按当前平台装上的可选依赖计（`@swc/core-*`、`@img/sharp-libvips-*`、`lightningcss-*` ……），在 macOS 上算出来的数字在 Linux CI 上必然对不上，所以包数只由脚本打印出来供人核对。改依赖时如果脚本报出没见过的许可，就在本节的两张表里补一行，并在「需要单独说明的许可」里交代它有没有义务。
 
 买家侧的义务不受模板 EULA 影响：第三方组件由各自的作者按各自的许可直接授权给买家，见 [LICENSE](LICENSE) 第 7 节。
