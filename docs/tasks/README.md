@@ -99,7 +99,7 @@
 | T1215                       | email-outbox            | `fix/email-outbox`             | T1200                     | done |
 | T1216                       | ratelimit-selfhost      | `fix/ratelimit-selfhost`       | T1200                     | done |
 | T1217                       | frontend-details        | `chore/frontend-details`       | T1200                     | done |
-| T1218                       | docker-notes            | `docs/docker-notes`            | T1200                     | todo |
+| T1218                       | docker-notes            | `docs/docker-notes`            | T1200                     | done |
 | **阶段 13：获客**           |                         |                                |                           |      |
 | T1300                       | acquisition-plan        | `docs/acquisition-plan`        | —                         | done |
 | T1301                       | acquisition-attribution | `feat/acquisition-attribution` | T1300, T102, T203         | done |
