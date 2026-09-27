@@ -94,7 +94,14 @@ export function AppSidebar({
   const t = useTranslations("Dashboard");
 
   return (
-    <Sidebar collapsible="icon" aria-label={t("sidebar")}>
+    <Sidebar
+      collapsible="icon"
+      aria-label={t("sidebar")}
+      labels={{
+        title: t("sidebar"),
+        description: t("sidebarDescription"),
+      }}
+    >
       <SidebarHeader>{header}</SidebarHeader>
       <SidebarContent>
         <NavGroup items={nav.suite} label={t("suiteNav")} />
@@ -102,7 +109,7 @@ export function AppSidebar({
         <NavGroup items={nav.admin ?? []} label={t("adminNav")} />
       </SidebarContent>
       <SidebarFooter>{footer}</SidebarFooter>
-      <SidebarRail aria-label={t("toggleSidebar")} title={t("toggleSidebar")} />
+      <SidebarRail label={t("toggleSidebar")} />
     </Sidebar>
   );
 }

@@ -122,6 +122,7 @@ export function LocaleForm({
 
 export function DeleteAccount({ email }: { email: string }) {
   const t = useTranslations("Account.delete");
+  const tc = useTranslations("Common");
   const locale = useLocale();
   const [confirm, setConfirm] = useState("");
   const [state, action, pending] = useActionState(
@@ -135,7 +136,7 @@ export function DeleteAccount({ email }: { email: string }) {
       <DialogTrigger render={<Button variant="destructive" />}>
         {t("open")}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent closeLabel={tc("close")}>
         <form action={action} className="flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>

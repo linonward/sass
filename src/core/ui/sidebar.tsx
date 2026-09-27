@@ -28,6 +28,27 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+/**
+ * 屏幕阅读器能念到的文案的英文兜底值。原语不认识任何文案命名空间（套件代码，买家
+ * 可能整文件复制走），所以默认值写在这里，调用方传本地化值覆盖：
+ * `Sidebar` 的两个标签见 `AppSidebar`，`SidebarTrigger` / `SidebarRail` 的见
+ * `DashboardShell`。
+ */
+const SIDEBAR_LABELS = {
+  /** 移动端抽屉（Sheet）的标题。 */
+  title: "Sidebar",
+  /** 移动端抽屉（Sheet）的描述。 */
+  description: "Displays the mobile sidebar.",
+  /** 展开/收起按钮的可访问名。 */
+  toggle: "Toggle sidebar",
+};
+
+/** `Sidebar` 的移动端抽屉标签，两个字段都可选，缺省用英文兜底。 */
+type SidebarLabels = {
+  title?: string;
+  description?: string;
+};
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
   open: boolean;
@@ -149,6 +170,7 @@ function Sidebar({
   side = "left",
   variant = "sidebar",
   collapsible = "offcanvas",
+  labels,
   className,
   children,
   dir,
@@ -157,6 +179,8 @@ function Sidebar({
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
+  /** 移动端抽屉的标题与描述（`sr-only`，只有读屏用户听得到）。 */
+  labels?: SidebarLabels;
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
@@ -192,8 +216,10 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>{labels?.title ?? SIDEBAR_LABELS.title}</SheetTitle>
+            <SheetDescription>
+              {labels?.description ?? SIDEBAR_LABELS.description}
+            </SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -248,10 +274,16 @@ function Sidebar({
 }
 
 function SidebarTrigger({
+  label = SIDEBAR_LABELS.toggle,
   className,
   onClick,
   ...props
-}: React.ComponentProps<typeof Button>) {
+}: React.ComponentProps<typeof Button> & {
+  /**
+   * 按钮的可访问名。传了 `aria-label` 时以 `aria-label` 为准（它盖得住这里的文本）。
+   */
+  label?: string;
+}) {
   const { toggleSidebar } = useSidebar();
 
   return (
@@ -268,22 +300,29 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">{label}</span>
     </Button>
   );
 }
 
-function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
+function SidebarRail({
+  label = SIDEBAR_LABELS.toggle,
+  className,
+  ...props
+}: React.ComponentProps<"button"> & {
+  /** `aria-label` 与悬停 `title` 的文案；单独传 `aria-label` / `title` 可各自覆盖。 */
+  label?: string;
+}) {
   const { toggleSidebar } = useSidebar();
 
   return (
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
+      aria-label={label}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      title={label}
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
@@ -717,3 +756,4 @@ export {
   SidebarTrigger,
   useSidebar,
 };
+export type { SidebarLabels };

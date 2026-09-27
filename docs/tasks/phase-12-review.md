@@ -345,9 +345,9 @@ shadcn 系 UI 原语的可访问名硬编码英文，绕过 i18n：
 
 **验收**
 
-- [ ] 上述三处原语的可访问名可本地化，en.json 有对应键
-- [ ] 读屏流程（侧栏、弹窗关闭）在非英文 locale 下读到本地化文本
-- [ ] `pnpm test` + e2e 全绿
+- [x] 上述三处原语的可访问名可本地化，en.json 有对应键（原语收 `labels` / `closeLabel`，调用方传 `t(...)`；新增 `Dashboard.sidebarDescription`、`Common.close`）
+- [x] 读屏流程（侧栏、弹窗关闭）在非英文 locale 下读到本地化文本（单测用伪翻译渲染侧栏抽屉/触发器/导轨；`a11y-labels.test.tsx` 锁原语的覆盖与兜底）
+- [x] `pnpm test` + e2e 全绿（本地 88 文件 927 passed；`ui-shell` + `dashboard` 两个 spec 共 36 passed，以 CI 为准）
 
 ---
 

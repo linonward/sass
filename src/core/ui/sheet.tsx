@@ -42,10 +42,16 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  closeLabel = "Close",
   ...props
 }: SheetPrimitive.Popup.Props & {
   side?: "top" | "right" | "bottom" | "left";
   showCloseButton?: boolean;
+  /**
+   * 关闭按钮的可访问名。原语不认识任何文案命名空间（套件代码），默认值是英文兜底，
+   * 调用方传本地化值覆盖（见 `MobileNav` 的 `t("close")`）。
+   */
+  closeLabel?: string;
 }) {
   return (
     <SheetPortal>
@@ -74,7 +80,7 @@ function SheetContent({
             }
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeLabel}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

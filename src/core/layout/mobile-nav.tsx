@@ -22,6 +22,7 @@ export function MobileNav({
   links: { href: string; label: string }[];
 }) {
   const t = useTranslations("Header");
+  const tc = useTranslations("Common");
   const [open, setOpen] = useState(false);
 
   return (
@@ -38,7 +39,7 @@ export function MobileNav({
       >
         <MenuIcon />
       </SheetTrigger>
-      <SheetContent side="right">
+      <SheetContent side="right" closeLabel={tc("close")}>
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
