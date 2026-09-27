@@ -35,10 +35,14 @@ export default async function BillingPage({
   params,
 }: PageProps<"/[locale]/billing">) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "Billing.page" });
-  const tp = await getTranslations({ locale, namespace: "Landing.pricing" });
-  const format = await getFormatter({ locale });
-  const userId = (await requirePageSession(locale)).user.id;
+  // 文案、格式化器和会话校验互不依赖，一次并发发出；会话的 userId 到下一段才用得上。
+  const [t, tp, format, session] = await Promise.all([
+    getTranslations({ locale, namespace: "Billing.page" }),
+    getTranslations({ locale, namespace: "Landing.pricing" }),
+    getFormatter({ locale }),
+    requirePageSession(locale),
+  ]);
+  const userId = session.user.id;
   // 账单状态、余额和流水互不依赖，并行查询。
   const [
     { subscription, purchasedPlanIds, hasCustomer },

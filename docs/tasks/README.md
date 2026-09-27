@@ -91,7 +91,7 @@
 | T1207                       | notices-sync            | `fix/notices-sync`             | T1200                     | todo |
 | T1208                       | seed-gate               | `fix/seed-gate`                | T1200                     | todo |
 | T1209                       | not-found-canonical     | `fix/not-found-canonical`      | T1200                     | todo |
-| T1210                       | serial-queries-2        | `fix/serial-queries-2`         | T1200                     | todo |
+| T1210                       | serial-queries-2        | `fix/serial-queries-2`         | T1200                     | done |
 | T1211                       | ui-a11y-i18n            | `fix/ui-a11y-i18n`             | T1200                     | todo |
 | T1212                       | blog-sitemap            | `fix/blog-sitemap`             | T1200                     | todo |
 | T1213                       | overflow-e2e            | `chore/overflow-e2e`           | T1200                     | todo |

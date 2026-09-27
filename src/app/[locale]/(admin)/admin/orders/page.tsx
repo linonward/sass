@@ -44,10 +44,13 @@ export default async function AdminOrdersPage({ params, searchParams }: Props) {
   const status = parseOrderStatus(search.status);
   const page = parsePage(search.page);
 
-  const t = await getTranslations({ locale, namespace: "Admin" });
-  const tp = await getTranslations({ locale, namespace: "Landing.pricing" });
-  const format = await getFormatter({ locale });
-  const data = await listOrders(getDb(), { status, page });
+  // 文案、格式化和列表查询互不依赖，一次并发发出。
+  const [t, tp, format, data] = await Promise.all([
+    getTranslations({ locale, namespace: "Admin" }),
+    getTranslations({ locale, namespace: "Landing.pricing" }),
+    getFormatter({ locale }),
+    listOrders(getDb(), { status, page }),
+  ]);
   const money = (amount: number, currency: string | null) =>
     currency
       ? format.number(amount / 100, { style: "currency", currency })
