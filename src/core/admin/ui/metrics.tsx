@@ -6,10 +6,22 @@ import { buttonVariants } from "@/core/ui/button";
 
 import type { DailyPoint, MetricRange } from "../metrics";
 import { metricRanges } from "../metrics";
+import { cleanQuery } from "./list";
 
-/** 时间范围切换：一排链接，服务端按 ?range= 统计。 */
-export function RangeFilter({ current }: { current: MetricRange }) {
-  const t = useTranslations("Admin.metrics.range");
+/**
+ * 时间范围切换：一排链接，服务端按 ?range= 统计。
+ * 链接要带上当前页面已有的筛选（`query`），切范围不该把来源筛选丢掉。
+ */
+export function RangeFilter({
+  current,
+  pathname,
+  query,
+}: {
+  current: MetricRange;
+  pathname: string;
+  query?: Record<string, string | undefined>;
+}) {
+  const t = useTranslations("Admin.filter.range");
   return (
     <nav aria-label={t("label")} className="flex flex-wrap gap-1.5">
       {metricRanges.map((range) => {
@@ -18,8 +30,11 @@ export function RangeFilter({ current }: { current: MetricRange }) {
           <Link
             key={range}
             href={{
-              pathname: "/admin/metrics",
-              query: range === 30 ? {} : { range: String(range) },
+              pathname,
+              query: cleanQuery({
+                ...query,
+                range: range === 30 ? undefined : String(range),
+              }),
             }}
             aria-current={active ? "page" : undefined}
             className={cn(

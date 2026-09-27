@@ -21,13 +21,31 @@ export const adminEntryNav: DashboardNavItem = {
   icon: "users",
 };
 
-/** /admin 里的菜单。 */
-export const adminNav: readonly DashboardNavItem[] = [
+const adminNavBase: readonly DashboardNavItem[] = [
   { key: "adminMetrics", href: "/admin/metrics", icon: "chart" },
   { key: "adminUsers", href: "/admin/users", icon: "users" },
   { key: "adminOrders", href: "/admin/orders", icon: "creditCard" },
   { key: "adminSubscriptions", href: "/admin/subscriptions", icon: "layers" },
 ];
+
+// 只在归因模块开启时出现的后台项，排在 Metrics 之后。
+const acquisitionNav: DashboardNavItem = {
+  key: "adminAcquisition",
+  href: "/admin/acquisition",
+  icon: "sparkles",
+};
+
+/**
+ * /admin 里的菜单。获客报表只在归因开启时出现 —— 关闭时那个页面 404，
+ * 菜单里留一个点进去就 404 的入口只会让人以为坏了。
+ */
+export function adminNav(
+  config: Pick<SiteConfig, "acquisition">,
+): readonly DashboardNavItem[] {
+  return config.acquisition.attribution.enabled
+    ? [adminNavBase[0]!, acquisitionNav, ...adminNavBase.slice(1)]
+    : adminNavBase;
+}
 
 // 只在对应模块开启时显示的套件项，排在 Dashboard 之后。
 const playgroundNav: DashboardNavItem = {

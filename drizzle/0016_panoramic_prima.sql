@@ -1,0 +1,1 @@
+CREATE INDEX "user_attribution_source_idx" ON "user_attribution" USING btree (coalesce("snapshot"->>'source', 'unknown'));

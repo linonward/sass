@@ -91,7 +91,7 @@ export default async function AdminMetricsPage({
         description={t("description", { days: range })}
       />
       {/* 和 orders / subscriptions 一样，筛选器自成一行，不塞进页头。 */}
-      <RangeFilter current={range} />
+      <RangeFilter current={range} pathname="/admin/metrics" />
 
       <MetricSection title={t("users.title")}>
         <StatGrid>

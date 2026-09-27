@@ -90,8 +90,13 @@ export async function getUserMetrics(db: Database, window: MetricWindow) {
   };
 }
 
-// 有过实际收款的订单状态；退款金额在 refunded_amount 里扣除。
-const collectedStatuses = ["paid", "partially_refunded", "refunded"] as const;
+// 有过实际收款的订单状态；退款金额在 refunded_amount 里扣除。渠道报表（/admin/acquisition）
+// 用同一份定义，两页的收入口径才不会走偏。
+export const collectedStatuses = [
+  "paid",
+  "partially_refunded",
+  "refunded",
+] as const;
 
 export type Money = { currency: string; amount: number };
 
