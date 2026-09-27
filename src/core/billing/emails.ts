@@ -1,7 +1,13 @@
 import { and, eq } from "drizzle-orm";
 
 import { preferredLocale } from "@/core/account/locale";
+import { db as defaultDb } from "@/core/db";
 import { subscriptions, user } from "@/core/db/schema";
+import {
+  createNotificationDelivery,
+  type DatabaseSource,
+  type DeliveryRetry,
+} from "@/core/email/delivery";
 import { siteLink } from "@/core/email/links";
 import { claimNotification } from "@/core/email/notification-log";
 import { planDisplayName } from "@/core/email/plan-name";
@@ -90,14 +96,23 @@ type Send = <T extends EmailTemplateName>(
  * 发送账单邮件的 onBillingEvent 钩子。
  * 在事件的事务里读取收件人、占用去重名额；邮件本身用 afterCommit 在事务提交后发送，
  * 所以事务回滚（Creem 会重试）时不会发出邮件，重复投递也因 webhook_events 幂等不会再触发。
+ *
+ * 提交后的发送失败会重试，最终失败则释放名额（见 `@/core/email/delivery`）：付款成功这类
+ * 关键邮件不会因为一次失败就永远发不出去。`db` 只用于释放名额（事务已经提交，不能再用它）。
  */
 export function createBillingEmailHandler({
   send,
   creditsEnabled,
+  db = defaultDb,
+  retry,
   now = () => new Date(),
 }: {
   send: Send;
   creditsEnabled: boolean;
+  /** 释放名额用的数据库；默认全局连接。 */
+  db?: DatabaseSource;
+  /** 发送失败的重试参数；默认 3 次、500ms 起指数退避。 */
+  retry?: DeliveryRetry;
   now?: () => Date;
 }): OnBillingEventHandler {
   return async (event, { tx, userId, stale, afterCommit }) => {
@@ -184,18 +199,26 @@ export function createBillingEmailHandler({
       }
     })();
 
-    // 名额和事件处理一起提交；邮件在提交之后才发。
+    // 名额和事件处理一起提交；邮件在提交之后才发，失败会重试、最终失败则释放名额。
+    const claimedAt = now();
     const claimed = await claimNotification(tx, {
       kind: spec.template,
       key: spec.key,
       userId,
       windowMs: spec.windowMs,
-      now: now(),
+      now: claimedAt,
     });
     if (!claimed) return;
-    afterCommit(async () => {
-      await send(message);
-    });
+    afterCommit(
+      createNotificationDelivery({
+        db,
+        kind: spec.template,
+        key: spec.key,
+        now: claimedAt,
+        send: () => send(message),
+        retry,
+      }),
+    );
   };
 }
 

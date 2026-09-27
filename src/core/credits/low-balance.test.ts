@@ -55,9 +55,16 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
       lowBalance: createLowBalanceHook({
         threshold: THRESHOLD,
         send: options.send ?? capture,
+        db,
+        // 用例里不关心重试次数，失败一次就直接释放名额。
+        retry: { attempts: 1, delayMs: 0 },
         now: () => clock,
       }),
     });
+
+  /** 这个用户的去重名额（每个用例用新用户，所以不会串）。 */
+  const claims = () =>
+    db.select().from(notificationLog).where(eq(notificationLog.userId, userId));
 
   const grant = (amount: number) =>
     credits().grantCredits({
@@ -176,6 +183,22 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     failSend = true;
     const result = await deduct(60);
     expect(result).toMatchObject({ status: "applied", balance: 90 });
+  });
+
+  test("发信失败会释放名额：24 小时内再次跨过阈值会重发", async () => {
+    await grant(150);
+    failSend = true;
+    await deduct(60); // 150 → 90，跨过阈值；发送失败 → 名额释放
+    expect(sent).toHaveLength(0);
+    expect(await claims()).toHaveLength(0);
+
+    // 距上次尝试只有 1 小时，但那次没发成功，所以这次还能提醒（窗口按发成功的那次算）。
+    failSend = false;
+    clock = new Date(clock.getTime() + HOUR);
+    await grant(100); // → 190
+    await deduct(100); // → 90，再次跨过阈值
+    expect(sent).toHaveLength(1);
+    expect(await claims()).toHaveLength(1);
   });
 
   test("外部事务：提交后由调用方的 afterCommit 发送；回滚时不发且名额回滚", async () => {
