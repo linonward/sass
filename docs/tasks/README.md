@@ -112,6 +112,12 @@
 | T1400                       | review-followups        | `docs/review-followups`        | —                         | done |
 | T1401                       | internal-terms          | `chore/internal-terms`         | T1400                     | todo |
 | T1402                       | e2e-flaky-auth          | `fix/e2e-flaky-auth`           | T1400                     | todo |
+| **阶段 15：差异化补齐**     |                         |                                |                           |      |
+| T1500                       | differentiation-plan    | `docs/differentiation-plan`    | —                         | todo |
+| T1501                       | api-keys                | `feat/api-keys`                | T1500, T203, T201, T401, T204 | todo |
+| T1502                       | feature-flags           | `feat/feature-flags`           | T1500, T102, T201, T502       | todo |
+| T1503                       | changelog               | `feat/changelog`               | T1500, T501, T104, T105       | todo |
+| T1504                       | status-page             | `feat/status-page`             | T1500, T601, T202, T502       | todo |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
@@ -187,6 +193,8 @@
          T1305, T303, T1202, T1204 → T1306
 
 阶段 14  T1400 → T1401 T1402（两条互不重叠，可并行）
+
+阶段 15  T1500 → T1501 T1502 T1503 T1504（四条互不重叠，可并行）
 ```
 
 ## 推荐顺序
@@ -198,6 +206,8 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 阶段 13：T1300 → T1301 → T1302 → T1303 → T1304 → T1305 → T1306；遇到 T1202/T1204 未合入时，先推进依赖已满足的任务。
 
 阶段 14：T1400 已随落卡完成，T1401 与 T1402 可并行（两者不碰同一批文件）。
+
+阶段 15：T1500 完成后，T1501–T1504 可并行（四条不碰同一批文件、无相互依赖）。
 
 可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做；T601 / T604；T602 / T603；阶段 8 批次内全部并行（见 phase-8-sell.md）；阶段 9 的 T902 / T903 / T905；阶段 10 的 T1001 / T1004；阶段 12 批次内除 T1203 外全部（T1203 在 T1201 之后，见 phase-12-review.md）。
 
@@ -217,3 +227,4 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 - [阶段 12：第三轮审查修复](phase-12-review.md)
 - [阶段 13：获客](phase-13-acquisition.md)
 - [阶段 14：审查后续小项](phase-14-followups.md)
+- [阶段 15：差异化补齐](phase-15-differentiation.md)
