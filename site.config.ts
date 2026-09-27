@@ -146,7 +146,7 @@ const config = defineConfig({
     fromAddress: envOverride("SITE_EMAIL_FROM") ?? "noreply@example.com",
     replyTo: "support@example.com",
   },
-  // 邮箱验证码登录的参数（见 docs/plan.md 关键决策 7）。
+  // 邮箱验证码登录的参数（显式配置，不依赖插件默认值）。
   auth: {
     emailOtp: {
       length: 6,

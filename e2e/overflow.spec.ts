@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import messages from "../messages/en.json";
 import { stubGoogleOneTap } from "./auth-helpers";
 
-// 375px 不横向溢出是 AGENTS.md 里点名要锁死的规则，但断言目前散在各页面的 spec 里
+// 375px 不横向溢出是模板的硬规则，但断言目前散在各页面的 spec 里
 // （ui-shell 只覆盖营销首页，另有 blog、legal、dashboard、admin）。这里补上两个此前
 // 完全没覆盖、却都要整页撑住的入口：
 //

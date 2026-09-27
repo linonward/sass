@@ -325,8 +325,10 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 ```bash
 find src -name "loading.tsx" | wc -l   # 0
-grep -rn "Suspense" src/ | wc -l       # 0
+grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提到 Suspense 不算）
 ```
+
+`src/` 里唯一提到 Suspense 的就是上面那条注释：`src/core/ai/playground-tabs.tsx` 用 `next/dynamic` + `loading` 给每个标签做客户端懒加载，所以上面的 grep 数的是手写的 JSX 标签。它和这一节说的路径无关 —— `/playground` 自己的 `notFound()`（`aiEnabled` 为 false 时，`src/app/[locale]/(app)/playground/page.tsx:40`）在渲染这个组件之前就抛了。
 
 在 `notFound()` 调用点的**上方**加 `loading.tsx` 或 `<Suspense>`，那条路径的 404 就变成 **200 软 404**：响应头已经发出去了，状态码改不了。文档（`.../file-conventions/loading.md`）：「The response body starts streaming when a Suspense fallback renders (for example, a `loading.tsx`) or when a Server Component suspends under a `Suspense` boundary. Place `notFound()` before those boundaries and before any `await` that may suspend.」之后只剩 Next 注入的 `<meta name="robots" content="noindex">` 兜底，爬虫会把它记成 soft 404。
 
@@ -398,19 +400,19 @@ grep -rn "Suspense" src/ | wc -l       # 0
 
 ### 4. 按已开启的模块准备外部账号
 
-| 模块                                   | 外部服务                    | 什么时候需要             |
-| -------------------------------------- | --------------------------- | ------------------------ |
-| 数据库                                 | Neon Postgres               | 登录功能上线时（阶段 2） |
-| 邮件                                   | Resend（并配置 SPF / DKIM） | 登录功能上线时（阶段 2） |
-| 登录                                   | Google Cloud OAuth 客户端   | 登录功能上线时（阶段 2） |
-| 支付                                   | Creem                       | 开始收款时（阶段 3）     |
-| `features.rateLimit` / `ai` / `upload` | Upstash Redis               | 生产环境开启任一模块时   |
-| `features.ai`                          | AI 模型服务商               | 开启 AI 时               |
-| `features.upload`                      | Cloudflare R2               | 开启上传时               |
-| `features.admin`                       | 无（只需 `ADMIN_EMAILS`）   | 开启后台时               |
-| `observability.sentry`                 | Sentry                      | 开启错误追踪时           |
+| 模块                                   | 外部服务                    | 什么时候需要           |
+| -------------------------------------- | --------------------------- | ---------------------- |
+| 数据库                                 | Neon Postgres               | 登录功能上线时         |
+| 邮件                                   | Resend（并配置 SPF / DKIM） | 登录功能上线时         |
+| 登录                                   | Google Cloud OAuth 客户端   | 登录功能上线时         |
+| 支付                                   | Creem                       | 开始收款时             |
+| `features.rateLimit` / `ai` / `upload` | Upstash Redis               | 生产环境开启任一模块时 |
+| `features.ai`                          | AI 模型服务商               | 开启 AI 时             |
+| `features.upload`                      | Cloudflare R2               | 开启上传时             |
+| `features.admin`                       | 无（只需 `ADMIN_EMAILS`）   | 开启后台时             |
+| `observability.sentry`                 | Sentry                      | 开启错误追踪时         |
 
-具体变量名由对应模块的任务补充到本节。
+各模块的变量名和申请步骤见下面各分节。
 
 #### 数据库（Neon）
 

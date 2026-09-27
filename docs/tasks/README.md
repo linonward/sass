@@ -95,7 +95,7 @@
 | T1211                       | ui-a11y-i18n            | `fix/ui-a11y-i18n`             | T1200                     | todo |
 | T1212                       | blog-sitemap            | `fix/blog-sitemap`             | T1200                     | todo |
 | T1213                       | overflow-e2e            | `chore/overflow-e2e`           | T1200                     | done |
-| T1214                       | readme-drift            | `docs/readme-drift`            | T1200                     | todo |
+| T1214                       | readme-drift            | `docs/readme-drift`            | T1200                     | done |
 | T1215                       | email-outbox            | `fix/email-outbox`             | T1200                     | done |
 | T1216                       | ratelimit-selfhost      | `fix/ratelimit-selfhost`       | T1200                     | done |
 | T1217                       | frontend-details        | `chore/frontend-details`       | T1200                     | done |

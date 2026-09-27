@@ -334,7 +334,7 @@ export const uploadConfigSchema = z.strictObject({
   public: z.boolean().default(false),
 });
 
-// 可观测性（features.observability 开启时生效），见 docs/plan.md 的可观测性一节。
+// 可观测性（features.observability 开启时生效），细项见 README 的「配置」一节。
 export const observabilityConfigSchema = z.strictObject({
   // 日志级别：低于这个级别的日志不输出。
   logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
@@ -382,7 +382,7 @@ const aiModelIdSchema = z
     'must be lowercase letters, digits, ".", "_" or "-", such as "fast"',
   );
 
-// AI 模型。v1 按次固定扣费（见 docs/plan.md 关键决策 6）。
+// AI 模型。v1 按次固定扣费：`creditCost` 是每次调用的积分成本，不按 token 计费。
 export const aiConfigSchema = z
   .strictObject({
     models: z
