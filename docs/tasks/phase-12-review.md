@@ -190,7 +190,7 @@
 
 - [x] `pnpm build` 产物里有 icon 路由；浏览器标签页显示品牌图标（生产构建产物含 `○ /icon`，预渲染 HTML 里注入 `<link rel="icon" href="/icon?…" type="image/png" sizes="96x96">`；生成的 PNG 已肉眼确认是品牌色底 + 白色字形）
 - [x] README 品牌化步骤覆盖 favicon
-- [ ] `pnpm test` + e2e 全绿（本地 `pnpm test` 全绿；e2e 以 CI 为准，未在本地跑）
+- [x] `pnpm test` + e2e 全绿（本地 901 passed；e2e 跑在生产构建上，PR #92 的 ci job 5m46s 通过）
 
 ---
 
