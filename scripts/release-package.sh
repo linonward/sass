@@ -7,7 +7,7 @@
 # 手工 zip 则会把它们一起打进去。这是这个脚本存在的唯一理由。
 #
 # 在 archive 之上再显式剔除内部文档（任务表、计划、流程、AGENTS/CLAUDE 说明），
-# 然后解压自检：凭据、卖家域名、内部文档必须零命中，缺文件或漏剔除就非零退出。
+# 然后解压自检：凭据、卖家域名、内部文档、内部任务编号必须零命中，缺文件或漏剔除就非零退出。
 #
 # 用法：scripts/release-package.sh [ref]      默认 HEAD，也可以传 tag
 #       scripts/release-package.sh v1.0.0
@@ -57,7 +57,10 @@ check() {
 }
 
 # 必须存在的东西：剔多了会打出空壳包，这里挡住。
-for required in README.md LICENSE package.json .env.example pnpm-lock.yaml; do
+# src / e2e / site.config.ts / UPGRADING.md 同时也是下面「内部任务编号」检查要扫的路径，
+# 缺了那条检查会退化成假绿（grep 报错被 `|| true` 吞掉），所以一并要求存在。
+for required in README.md LICENSE package.json .env.example pnpm-lock.yaml \
+  src e2e site.config.ts UPGRADING.md; do
   if [ ! -e "$pkg/$required" ]; then
     printf '✗ 缺少 %s\n' "$required"
     fail=1
@@ -82,6 +85,13 @@ check "没有内部文档（AGENTS / CLAUDE / 计划 / 流程 / 任务表 / 市�
 # 失败输出里多一行无关的噪音。
 check "没有卖家域名或邮箱" \
   grep -rIl -e "linonward[.]com" -e "[@]linonward" "$pkg"
+
+# 内部任务编号（T + 三位数字）只在本仓库的任务表里有解释，而任务表不随包交付：
+# 买家在源码里搜到它，找不到任何对应物。模式写成 `T[0-9]{3}` 而不是带具体数字的
+# 字面量，注释里也只用 `T###` 指代，这样脚本自己的源码不会成为一处命中（同上）。
+check "没有内部任务编号（T###）" \
+  grep -rInE "T[0-9]{3}" "$pkg/src" "$pkg/e2e" \
+  "$pkg/site.config.ts" "$pkg/README.md" "$pkg/UPGRADING.md"
 
 upstream="$(grep -rIoE "github\.com/linonward/sass" "$pkg" | wc -l | tr -d ' ')"
 

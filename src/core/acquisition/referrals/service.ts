@@ -3,7 +3,7 @@ import type { Database, DbTransaction } from "@/core/db";
 import { referralCodes, referralRelationships, user } from "@/core/db/schema";
 import { newReferralCode } from "./code";
 
-/** 状态先只有「等待首次付款」；奖励结算（T1306）在此基础上推进，不改变归属。 */
+/** 状态先只有「等待首次付款」；奖励结算在此基础上推进状态，不改变归属。 */
 export type ReferralStatus = "awaiting_payment";
 export type RelationshipView = { status: ReferralStatus; createdAt: Date };
 export type InviterView = { userId: string; name: string };
