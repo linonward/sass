@@ -552,3 +552,20 @@ location / {
 Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-Forwarded-*` 并按连接重写（[文档](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)）。前面还有一层 CDN 或负载均衡时，用 Caddy 的 `trusted_proxies` 信任那一层，否则真实 IP 会被丢掉。
 
 反代前面挂了 Cloudflare 之类的 CDN 时，Nginx 侧用 `real_ip` 模块恢复真实 IP（`set_real_ip_from <CDN 回源段>` + `real_ip_header CF-Connecting-IP`），再把恢复后的 `$remote_addr` 写进 XFF。
+
+### 渠道归因（T1301）
+
+`site.config.ts` 的 `acquisition.attribution.enabled` 默认 `false`。先运行 `pnpm db:migrate`，再开启并重新构建部署；无需新增 env 或外部服务。控件通过配置派生的内部构建常量裁剪，默认关闭时不会下发其客户端脚本。`acquisition.leads` / `acquisition.referrals` 是后续任务预留开关，本任务未实现线索或邀请功能；邀请配置要求 `features.credits`。
+
+开启后页面提供 **Source preferences**：访客明确允许后才写来源 Cookie；拒绝不影响注册、登录或付款。仅记录白名单 `utm_source` / `utm_medium` / `utm_campaign` / `utm_term` / `utm_content`、外部来源 hostname、落地 pathname 和捕获时间，字段有字符和长度限制。完整 URL、任意查询参数、IP 和指纹不会进入这份记录；也不要主动把邮箱等个人信息放入营销标签或路径。
+
+- first-touch 窗口固定 30 天，直接回访或新活动链接不会覆盖有效来源，也不会延长期限。过期后需重新允许才捕获新来源。
+- 来源优先级：`utm_source` → 外部域名 → direct。缺失、拒绝、过期或篡改时为 unknown，旧用户不会被补填来源。
+- 邮箱验证码、Google OAuth 和 One Tap 共用 Better Auth 的 `user.create.after` 钩子，在首次创建用户时冻结来源。后续登录不会重写。签名只保证上下文未被改动，营销标签本身仍是访客提供的提示，不能拿来证明奖励资格。
+- `acquisition_source` 是 HttpOnly、SameSite=Lax、生产 Secure 的第一方 Cookie，使用现有 `BETTER_AUTH_SECRET` 做带用途隔离的 HMAC；更换 secret 会使现有来源 Cookie 失效。
+- 归因写入失败记录 `acquisition.freeze_failed`，不阻断注册；签发 24 小时的 `acquisition_registration` 重试 Cookie，后续页面在登录身份匹配时幂等重试。超过 24 小时、Cookie 被清除或用户不再回来则可能保留 unknown；不会从新的访问来源猜测补填。日志不包含来源载荷。
+- 撤回会清理两个 Cookie；已登录时同时清空账户来源，保留无来源的撤回标记，防止迟到重试恢复数据。未登录时只能清理该浏览器；跨设备需要登录原账户后再撤回。写库失败时匿名 Cookie 仍被清除，页面提示重试账户清理。删除账户通过外键级联删除记录并清理当前浏览器的来源 Cookie。
+- 来源快照在数据库中保留到用户撤回或删除账户；localStorage 只记拒绝偏好、不存来源。停用模块会停止捕获并隐藏入口，数据库记录保留，运营者仍可按用户请求执行数据清理。
+- Vercel Analytics 是独立开关，这个偏好控件不控制它；渠道报表由 T1302 实现。
+
+验证：`pnpm test` 覆盖上下文校验、签名/过期、接口、重试和数据库并发；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本启用归因，覆盖桌面及 375px 的接受 → 注册 → 撤回和拒绝路径，不改模板默认配置。普通 e2e 同时锁定关闭时没有控件、Cookie 或获客请求。Google 两种方式的真实账号端到端登录需在配置了 OAuth origin/回调的环境人工验证。

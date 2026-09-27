@@ -710,5 +710,19 @@
       "ai_unavailable": "AI isn't available right now.",
       "failed": "Something went wrong. Your credits were not used."
     }
+  },
+  "Acquisition": {
+    "title": "Source preferences",
+    "description": "May we remember how you found us for 30 days? We save campaign tags, the referring website and the landing path. If you register, this source is linked to your account until you remove it or delete your account. Your choice does not affect access.",
+    "enabled": "Source recording is enabled in this browser.",
+    "disabled": "Source recording is off in this browser. Removing it also clears any source linked to your signed-in account.",
+    "accept": "Allow source recording",
+    "reject": "Decline and remove",
+    "withdraw": "Withdraw and remove",
+    "close": "Close",
+    "preferences": "Source preferences",
+    "saved": "Source preference saved.",
+    "removed": "Source data removed.",
+    "error": "We could not complete the request. Please try again; account data removal may still be pending."
   }
 }

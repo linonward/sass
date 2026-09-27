@@ -82,6 +82,8 @@ jobs:
 
       - run: pnpm test:e2e
 
+      - run: pnpm test:e2e:acquisition
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

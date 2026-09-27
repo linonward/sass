@@ -4,6 +4,11 @@ import { hasLocale } from "next-intl";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import {
+  cookieOptions,
+  SOURCE_COOKIE,
+  RETRY_COOKIE,
+} from "@/core/acquisition/tokens";
 import { SIGN_IN_PATH } from "@/core/auth/routes";
 import { auth } from "@/core/auth/server";
 import { routing } from "@/core/i18n/routing";
@@ -100,6 +105,9 @@ export async function deleteAccount(
   // session 已随用户级联删除；再清掉浏览器里的登录 cookie。
   const { authCookies } = await auth.$context;
   const jar = await cookies();
+  for (const name of [SOURCE_COOKIE, RETRY_COOKIE]) {
+    if (jar.has(name)) jar.set(name, "", { ...cookieOptions, maxAge: 0 });
+  }
   // 沿用 Better Auth 的属性（__Secure- 前缀的 cookie 必须带 Secure 才能被覆盖）。
   for (const { name, attributes } of Object.values(authCookies)) {
     jar.set(name, "", {

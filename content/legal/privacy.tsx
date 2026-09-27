@@ -1,5 +1,6 @@
 // 模板仅供参考，不构成法律意见。上线前请结合你的业务和适用法律自行审阅，必要时咨询律师。
 // 变量来自 site.config.ts 的 `legal`；本文件归业务方所有，可自由修改。
+import siteConfig from "../../site.config";
 import { Link } from "@/core/i18n/navigation";
 import { defineLegalDocument } from "@/core/legal/document";
 import { legalPages } from "@/core/legal/pages";
@@ -46,6 +47,28 @@ export default defineLegalDocument({
           storage to remember your theme preference.
         </li>
       </ul>
+      {siteConfig.acquisition.attribution.enabled && (
+        <>
+          <h3>Optional source recording</h3>
+          <p>
+            With your permission, we store campaign tags, the referring website
+            hostname, the landing page path and the capture time in a
+            first-party cookie for 30 days. We do not store the full referring
+            URL, arbitrary query parameters, IP addresses or device fingerprints
+            in this record. At registration, we link the source to your account
+            until you remove it or delete your account. A failed
+            registration-source write may be retried using a signed cookie that
+            expires after 24 hours.
+          </p>
+          <p>
+            Use Source preferences on any page to decline or withdraw. When you
+            are signed in, withdrawal also removes the source linked to your
+            account. We remember a decline in local storage without any source
+            data. These controls do not change our separate web analytics
+            settings.
+          </p>
+        </>
+      )}
       <h3>Payment information</h3>
       <p>
         Payments are processed by our reseller and Merchant of Record, Creem. We
