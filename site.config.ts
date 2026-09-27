@@ -171,6 +171,8 @@ const config = defineConfig({
     policies: {
       ai: { limit: 20, window: "1 m" },
       upload: { limit: 10, window: "1 m" },
+      // 结账会话：每次调用都会在服务商侧真实建单，防脚本循环创建（双击由幂等/互斥处理）。
+      checkout: { limit: 5, window: "1 m" },
     },
   },
   // 文件上传（Cloudflare R2）。只在 features.upload 开启时生效；SVG、HTML 不在可选类型里。

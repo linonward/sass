@@ -20,8 +20,17 @@ import {
   subscriptions,
   user,
 } from "@/core/db/schema";
+import type {
+  RateLimitIdentifiers,
+  RateLimitResult,
+} from "@/core/ratelimit/limiter";
 
-import { billingOrigin, openPortal, startCheckout } from "./checkout";
+import {
+  billingOrigin,
+  CHECKOUT_SESSION_TTL_MS,
+  openPortal,
+  startCheckout,
+} from "./checkout";
 import { FakeProvider } from "./testing/fake-provider";
 
 // 多语言站点，覆盖带前缀的回跳地址。
@@ -74,7 +83,15 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
 
   const checkout = (
     planId: unknown,
-    extra: { locale?: string; provider?: FakeProvider | null } = {},
+    extra: {
+      locale?: string;
+      provider?: FakeProvider | null;
+      now?: Date;
+      checkRateLimit?: (
+        policy: string,
+        identifiers: RateLimitIdentifiers,
+      ) => Promise<RateLimitResult>;
+    } = {},
   ) =>
     startCheckout({
       db: client.db,
@@ -83,7 +100,9 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
       planId,
       locale: extra.locale,
       origin,
-      now: new Date("2026-06-01T00:00:00Z"),
+      checkRateLimit:
+        extra.checkRateLimit ?? (async () => ({ ok: true, retryAfter: 0 })),
+      now: extra.now ?? new Date("2026-06-01T00:00:00Z"),
     });
 
   beforeAll(() => {
@@ -199,6 +218,80 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
       error: "already_purchased",
       status: 409,
     });
+  });
+
+  test("限流：超过阈值返回 429 + retryAfter，不再建结账会话", async () => {
+    const limitAfter = 2;
+    let calls = 0;
+    const checkRateLimit = async (): Promise<RateLimitResult> =>
+      ++calls > limitAfter
+        ? { ok: false, reason: "limited", retryAfter: 7 }
+        : { ok: true, retryAfter: 0 };
+
+    const first = await checkout("pro", { checkRateLimit });
+    const second = await checkout("pro", { checkRateLimit });
+    expect(first).toMatchObject({ ok: true });
+    // 窗口内复用同一个会话：第二次请求不会再向服务商建单。
+    expect(second).toEqual(first);
+    expect(fake.checkouts).toHaveLength(1);
+
+    // 第 N+1 次：拒绝，且不落到服务商。
+    await expect(checkout("pro", { checkRateLimit })).resolves.toEqual({
+      ok: false,
+      error: "rate_limited",
+      status: 429,
+      retryAfter: 7,
+    });
+    expect(fake.checkouts).toHaveLength(1);
+
+    // Redis 不可用（failMode: closed）时是 503，同样带 retryAfter。
+    const unavailable = await checkout("pro", {
+      checkRateLimit: async () => ({
+        ok: false,
+        reason: "unavailable",
+        retryAfter: 3,
+      }),
+    });
+    expect(unavailable).toEqual({
+      ok: false,
+      error: "rate_limited",
+      status: 503,
+      retryAfter: 3,
+    });
+  });
+
+  test("并发双击只建一个会话：两个请求拿到同一个 URL", async () => {
+    // 建单慢一点，逼出真正的交错：两个请求都在「还没提交」时进入创建流程。
+    // 没有行锁的话两边都会查不到会话、各建一单 —— 用户就可能两个页面都付款。
+    class SlowProvider extends FakeProvider {
+      override async createCheckout(
+        input: Parameters<FakeProvider["createCheckout"]>[0],
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return super.createCheckout(input);
+      }
+    }
+    const slow = new SlowProvider("secret", "slow");
+
+    const [a, b] = await Promise.all([
+      checkout("pro", { provider: slow }),
+      checkout("pro", { provider: slow }),
+    ]);
+    expect(a).toMatchObject({ ok: true });
+    expect(b).toEqual(a);
+    expect(slow.checkouts).toHaveLength(1);
+  });
+
+  test("会话过期后重新建单", async () => {
+    const first = await checkout("pro");
+    expect(first).toMatchObject({ ok: true });
+
+    const later = await checkout("pro", {
+      now: new Date(Date.now() + CHECKOUT_SESSION_TTL_MS + 1000),
+    });
+    expect(later).toMatchObject({ ok: true });
+    expect(later).not.toEqual(first);
+    expect(fake.checkouts).toHaveLength(2);
   });
 
   test("客户门户：没有客户记录时 404，有则返回链接", async () => {
