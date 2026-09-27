@@ -74,7 +74,7 @@
       "imageAlt": "Product dashboard preview",
       "mock": {
         "terminalTitle": "terminal",
-        "terminalCommand": "npx saas init --plan pro",
+        "terminalCommand": "cd your-project && pnpm dev",
         "terminalReady": "Checkout ready",
         "terminalCredits": "credits issued on payment",
         "checkoutTitle": "Checkout",
@@ -173,7 +173,7 @@
         },
         "license": {
           "question": "Can I use it for commercial projects?",
-          "answer": "Yes. Build and sell as many products as you like."
+          "answer": "Yes. Personal and commercial use are both covered."
         }
       }
     },

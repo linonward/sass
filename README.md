@@ -6,7 +6,7 @@ v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性
 
 - 合并模板更新：[UPGRADING.md](UPGRADING.md)
 - 设计系统：[docs/design.md](docs/design.md) · 多语言：[docs/i18n.md](docs/i18n.md)
-- 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`
+- 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`AGENTS.md`、`CLAUDE.md` —— 走 GitHub「Use this template」拿到仓库的话，按[第 1 步](#1-用模板建仓库)的清单删掉
 
 ## 授权
 
@@ -67,6 +67,28 @@ scripts/release-package.sh v1.0.0   # 打某个 tag
 git clone https://github.com/<you>/<project>.git && cd <project>
 git remote add upstream https://github.com/linonward/sass.git
 ```
+
+**接着删掉模板自己的开发文档。** 走 GitHub 这条路这些文件会原样留在你的仓库里（购买后收到的 zip 里没有它们，脚本已经剔掉了），留着会带来实际麻烦：
+
+```bash
+git rm -r docs/plan.md docs/workflow.md docs/tasks AGENTS.md CLAUDE.md
+git commit -m "chore: remove template author's internal docs"
+```
+
+| 删掉               | 为什么                                                                                                                                                                                                                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`        | 模板作者写给 **AI 编码助手**的仓库说明。Claude Code 这类工具打开仓库时会**自动加载**它，把模板作者的工作流当成你的项目规则执行 —— 「不在 `main` 上提交」「一个任务 = 一个分支 = 一个 worktree = 一个 PR」「PR 内同步更新任务表状态」。在你的产品仓库里这些既没有意义，又会挡住正常的提交流程。 |
+| `CLAUDE.md`        | 只有一行 `@AGENTS.md`，把上面那份说明喂给 Claude Code。                                                                                                                                                                                                                                        |
+| `docs/plan.md`     | 模板的方案与关键决策记录，上面那些规则的出处。                                                                                                                                                                                                                                                 |
+| `docs/workflow.md` | 模板的分支 / worktree / PR 流程，就是 AGENTS.md 里硬规则的展开。                                                                                                                                                                                                                               |
+| `docs/tasks/`      | 模板的任务表（每个阶段一份）。AGENTS.md 要求「PR 内同步更新任务表状态」，指的就是这里。                                                                                                                                                                                                        |
+
+这些文件都是文档和 AI 指令：**没有任何代码、脚本或测试读取它们**，删掉不影响 `pnpm install` / `pnpm dev` / `pnpm test` / `pnpm build` 和部署（`src/` 里有几处注释指向它们，注释不影响运行）。
+
+补充两点：
+
+- 如果在 Claude Code 里跑 `pnpm dev`，Next.js 会**重新生成** `AGENTS.md` 和 `CLAUDE.md`，里面只有它自己那段「This is NOT the Next.js you know」的 Next.js 版本提示（由 `next dev` 写入，与模板作者无关）。看到它们回来是正常的，留着或再删都可以。
+- `docs/design.md`（视觉系统）和 `docs/i18n.md`（多语言）是**面向买家**的，两条交付路径里都有，不要删。
 
 ### 2. 本地跑起来
 
