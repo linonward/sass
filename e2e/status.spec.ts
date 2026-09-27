@@ -19,9 +19,11 @@ const d = messages.Dashboard;
 
 /**
  * 管理员邮箱要写进 ADMIN_EMAILS（见 .github/workflows/ci.yml）。
- * 每个 project 用一个，避免并行时同一邮箱触发验证码的重发冷却。
+ * 每个 project 用一个，而且和 admin.spec.ts 分开：同一邮箱同时跑两条用例时，
+ * 一边的 `clearResendCooldown` 会让另一边手里的验证码作废（冷却只有 60s）。
  */
-const adminEmail = (project: string) => `e2e-admin-${project}@example.com`;
+const adminEmail = (project: string) =>
+  `e2e-admin-status-${project}@example.com`;
 
 /**
  * 邮件里的链接指向 `site.config.ts` 的域名（本地是 example.com，CI 是 ci.example.test），
