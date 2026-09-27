@@ -17,12 +17,15 @@ const config = (over: Partial<SiteConfig> = {}) =>
     ...over,
   }) as SiteConfig;
 
+// 「改过的值」用中性的一组。这里**不能**出现卖家的品牌和域名：本文件随模板一起
+// 进买家分发包，`scripts/release-package.sh` 会因为卖家域名命中而拦下整包
+// （CI 每个 PR 都跑那次自检），等于把卖家的联系方式发给买家。
 const customized = () =>
   config({
-    name: "Linonward",
-    domain: "linonward.com",
-    legal: { companyName: "Linonward" } as SiteConfig["legal"],
-    email: { fromAddress: "hello@linonward.com" } as SiteConfig["email"],
+    name: "Example Corp",
+    domain: "example.org",
+    legal: { companyName: "Example Corp" } as SiteConfig["legal"],
+    email: { fromAddress: "hello@example.org" } as SiteConfig["email"],
   });
 
 describe("占位哨兵", () => {
@@ -37,7 +40,7 @@ describe("占位哨兵", () => {
 
   test("只改了一部分时只报没改的", () => {
     const issues = placeholderIssues(
-      config({ name: "Linonward", domain: "linonward.com" }),
+      config({ name: "Example Corp", domain: "example.org" }),
     );
     expect(issues.map((issue) => issue.path)).toEqual([
       "legal.companyName",
