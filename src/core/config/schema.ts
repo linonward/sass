@@ -231,6 +231,7 @@ export const dashboardIcons = [
   "chart",
   "users",
   "creditCard",
+  "key",
 ] as const;
 
 // 业务的侧边栏菜单项；套件自带的（Dashboard、Settings）写在 src/core/dashboard 里。
@@ -287,6 +288,21 @@ export const rateLimitConfigSchema = z.strictObject({
       ai: { limit: 20, window: "1 m" },
       upload: { limit: 10, window: "1 m" },
     }),
+});
+
+// 用户 API Key（src/core/api-keys/）。关闭时 /api-keys 页面、后台页和鉴权接口都返回 404，
+// 数据库里的 key 不删（重新打开就能继续用）。
+export const apiKeysConfigSchema = z.strictObject({
+  enabled: z.boolean().default(false),
+  // 每个 key 独立的滑动窗口：按 key 计数（`api_key:<keyId>`），不按用户或 IP。
+  // 不填（默认）不限制。填了就需要 Upstash Redis，见 src/core/ratelimit/features.ts。
+  rateLimitPerKey: z
+    .strictObject({
+      // 窗口内允许的请求数。
+      limit: z.number().int().positive(),
+      window: durationSchema,
+    })
+    .optional(),
 });
 
 // 允许上传的 MIME 类型及对应的对象扩展名。扩展名由类型决定，不取用户的文件名。
@@ -608,6 +624,7 @@ export const siteConfigSchema = z
     dashboard: dashboardSchema.default(dashboardSchema.parse({})),
     credits: creditsConfigSchema.default(creditsConfigSchema.parse({})),
     rateLimit: rateLimitConfigSchema.default(rateLimitConfigSchema.parse({})),
+    apiKeys: apiKeysConfigSchema.default(apiKeysConfigSchema.parse({})),
     upload: uploadConfigSchema.default(uploadConfigSchema.parse({})),
     ai: aiConfigSchema.default(aiConfigSchema.parse({})),
     acquisition: acquisitionConfigSchema.default(
@@ -689,6 +706,7 @@ export type DashboardIcon = (typeof dashboardIcons)[number];
 export type DashboardNavItem = SiteConfig["dashboard"]["nav"][number];
 export type CreditsConfig = SiteConfig["credits"];
 export type RateLimitConfig = SiteConfig["rateLimit"];
+export type ApiKeysConfig = SiteConfig["apiKeys"];
 export type UploadConfig = SiteConfig["upload"];
 export type AiConfig = SiteConfig["ai"];
 export type ObservabilityConfig = SiteConfig["observability"];

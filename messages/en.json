@@ -341,7 +341,9 @@
       "adminSubscriptions": "Subscriptions",
       "example": "Taglines",
       "referrals": "Referrals",
-      "adminStatus": "Status page"
+      "adminStatus": "Status page",
+      "apiKeys": "API keys",
+      "adminApiKeys": "API keys"
     },
     "userMenu": {
       "open": "Account menu",
@@ -413,6 +415,63 @@
       "cancel": "Cancel",
       "confirm": "Delete account",
       "deleting": "Deleting…"
+    }
+  },
+  "ApiKeys": {
+    "metaTitle": "API keys",
+    "title": "API keys",
+    "description": "Create a key for a script or an integration. The full key is shown once — this page keeps only the name and the first few characters.",
+    "empty": "No keys yet",
+    "emptyHint": "Create a key when a script or a service needs to call the API as you.",
+    "never": "Never",
+    "columns": {
+      "name": "Name",
+      "key": "Key",
+      "created": "Created",
+      "lastUsed": "Last used",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    },
+    "usageHint": "Send the key as an Authorization: Bearer sk_... header. Anyone who has it can act as you, so revoke it here if it leaks.",
+    "create": {
+      "open": "Create key",
+      "title": "Create an API key",
+      "description": "Give it a name you will recognise later. Keys are per account; revoking one does not affect the others.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Production script",
+      "nameHint": "Up to 60 characters, unique among your keys.",
+      "submit": "Create",
+      "creating": "Creating...",
+      "cancel": "Cancel",
+      "createdTitle": "Copy your key now",
+      "createdDescription": "This is the only time the full key is shown. Store it somewhere safe — you cannot see it again.",
+      "createdName": "Key {name} is ready.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyManual": "Copy failed. The key is selected — press Ctrl/Cmd + C.",
+      "done": "Done",
+      "errors": {
+        "invalid_name": "Enter a name of up to 60 characters.",
+        "duplicate": "You already have a key with this name.",
+        "unavailable": "API keys are not available on this site."
+      }
+    },
+    "revoke": {
+      "open": "Revoke",
+      "title": "Revoke {name}?",
+      "description": "This cannot be undone. Anything using this key starts failing right away. Create a new key if you need one again.",
+      "confirm": "Revoke key",
+      "revoking": "Revoking...",
+      "cancel": "Cancel",
+      "errors": {
+        "invalid": "That key could not be found.",
+        "unavailable": "API keys are not available on this site."
+      }
     }
   },
   "Billing": {
@@ -841,6 +900,19 @@
         "notFound": "That incident was already resolved.",
         "generic": "Something went wrong. Try again."
       }
+    },
+    "apiKeys": {
+      "title": "API keys",
+      "description": "Who has created keys and when they were last used. Plaintext and hashes never leave the database.",
+      "columns": {
+        "user": "User",
+        "keys": "Keys",
+        "active": "Active",
+        "lastUsed": "Last used"
+      },
+      "empty": "Nobody has created a key yet.",
+      "never": "Never",
+      "hint": "Keys counts everything ever created; Active counts the ones that still work."
     }
   },
   "Example": {

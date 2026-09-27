@@ -6,13 +6,14 @@ import { env } from "@/core/env";
 import siteConfig from "../../../site.config";
 import { missingRedisPolicy } from "./env";
 import { rateLimitingEnabled } from "./features";
-import { createRateLimiter } from "./limiter";
+import { createRateLimiter, type WindowLimiter } from "./limiter";
 
 export {
   getClientIp,
   rateLimitResponse,
   type RateLimitIdentifiers,
   type RateLimitResult,
+  type WindowLimiter,
 } from "./limiter";
 
 // 等待 Redis 的上限。超时按 failMode 处理，不让限流拖慢接口。
@@ -29,6 +30,26 @@ function getRedis() {
   return redis;
 }
 
+/**
+ * 建一个滑动窗口计数器。Redis 没配时返回 null，由调用方决定怎么处理
+ * （`createRateLimiter` 走 `onMissingRedis`，api-keys 的 per-key 限流直接放行）。
+ * Redis 客户端在这里只建一次，套件策略和 api-keys 共用。
+ */
+export function createUpstashWindowLimiter(
+  prefix: string,
+  { limit, window }: { limit: number; window: string },
+): WindowLimiter | null {
+  const client = getRedis();
+  if (!client) return null;
+  return new Ratelimit({
+    redis: client,
+    // 调用方的 schema 已按 Duration 的格式校验过。
+    limiter: Ratelimit.slidingWindow(limit, window as Duration),
+    prefix,
+    timeout: REDIS_TIMEOUT_MS,
+  });
+}
+
 /** 绑定 Upstash Redis 和 `site.config.ts` 中 `rateLimit` 配置的限流检查。 */
 export const { checkRateLimit } = createRateLimiter({
   config: siteConfig.rateLimit,
@@ -37,15 +58,6 @@ export const { checkRateLimit } = createRateLimiter({
   onMissingRedis: missingRedisPolicy(process.env, {
     enabled: rateLimitingEnabled(),
   }),
-  createLimiter: (policy, { limit, window }) => {
-    const client = getRedis();
-    if (!client) return null;
-    return new Ratelimit({
-      redis: client,
-      // schema 已按 Duration 的格式校验过。
-      limiter: Ratelimit.slidingWindow(limit, window as Duration),
-      prefix: `ratelimit:${policy}`,
-      timeout: REDIS_TIMEOUT_MS,
-    });
-  },
+  createLimiter: (policy, options) =>
+    createUpstashWindowLimiter(`ratelimit:${policy}`, options),
 });

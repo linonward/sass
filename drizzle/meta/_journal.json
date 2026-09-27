@@ -127,6 +127,13 @@
       "when": 1790504308200,
       "tag": "0017_clever_toxin",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790516904312,
+      "tag": "0018_black_photon",
+      "breakpoints": true
     }
   ]
 }
