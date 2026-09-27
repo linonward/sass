@@ -32,6 +32,14 @@ export type RateLimiterDeps = {
     policy: string,
     options: RateLimitConfig["policies"][string],
   ) => WindowLimiter | null;
+  /**
+   * 没有配置 Redis（`createLimiter` 返回 null）时怎么办：
+   * - `"allow"`（默认）：放行，只记一次日志。本地开发、测试、CI 和 Vercel 预览都走这条；
+   * - `"unavailable"`：返回 503（自托管生产漏配 Upstash 时用，见 `env.ts` 的
+   *   `missingRedisPolicy`）—— 静默关掉限流比接口暂时不可用更糟：AI / 上传是按次花钱的，
+   *   结账会在服务商侧真的建单。
+   */
+  onMissingRedis?: "allow" | "unavailable";
   now?: () => number;
   warn?: LogFn;
   logError?: LogFn;
@@ -49,6 +57,7 @@ export class RateLimitRedisTimeout extends Error {
 export function createRateLimiter({
   config,
   createLimiter,
+  onMissingRedis = "allow",
   now = Date.now,
   warn = logger.warn,
   logError = logger.error,
@@ -67,7 +76,8 @@ export function createRateLimiter({
 
   /**
    * 按策略检查一次请求：用户和 IP 各计一次，任一超限即拒绝。
-   * 没有配置 Redis 时直接放行（只警告一次）；Redis 出错时按 `failMode` 处理。
+   * 没有配置 Redis 时按 `onMissingRedis` 放行或返回 unavailable（只记一次日志）；
+   * Redis 出错时按 `failMode` 处理。
    */
   async function checkRateLimit(
     policy: string,
@@ -77,11 +87,23 @@ export function createRateLimiter({
     if (!limiter) {
       if (!warned) {
         warned = true;
-        warn("ratelimit.disabled", {
+        const fields = {
           reason: "UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set",
-        });
+        };
+        // 漏配在生产里是故障（接口会开始 503），用 error 级；本地 / CI 只是提示。
+        if (onMissingRedis === "unavailable") {
+          logError("ratelimit.unconfigured", fields);
+        } else {
+          warn("ratelimit.disabled", fields);
+        }
       }
-      return { ok: true, retryAfter: 0 };
+      return onMissingRedis === "unavailable"
+        ? {
+            ok: false,
+            reason: "unavailable",
+            retryAfter: UNAVAILABLE_RETRY_AFTER,
+          }
+        : { ok: true, retryAfter: 0 };
     }
 
     const keys = [

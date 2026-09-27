@@ -540,6 +540,7 @@ grep -rn "Suspense" src/ | wc -l       # 0
 
 - 用 `pnpm build` + `pnpm start` 跑（或打包成 Docker），别用 `pnpm dev`；启动前先 `pnpm db:migrate`。
 - 环境变量照上面「环境变量」一节配齐；没有 Vercel 的自动推断，`BETTER_AUTH_URL` 要自己填成对外地址。
+- **限流必须有 Redis，否则生产环境直接拒绝请求。** 自托管时没有 Vercel 那套变量校验兜底，漏配 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` 的部署**不会**静默放行：AI、上传和结账接口统一返回 503（`{"error":"unavailable"}`，带 `Retry-After: 30`），启动日志里也有一条 error 级的 `ratelimit.unconfigured`（开着 Sentry 时同样会上报）。要么按上面「限流（Upstash）」配好这两个变量，要么明确接受「这个部署不做限流」—— 后者设 `ALLOW_UNRATELIMITED=1`，此时请求照常放行，启动日志里降为一条 warn。本地开发、CI 和 Vercel 预览不受影响，照旧跳过限流。
 - **时间一律按 UTC 处理。** 库里所有 `timestamp` 列都按 UTC 墙钟存取：客户端连接时会把**会话时区**强制成 UTC（`src/core/db/client.ts`，Neon 本来就是 UTC），`defaultNow()` 这类数据库侧默认值因此不会受服务器时区影响。自建 Postgres 时不用再自己确认服务器时区 —— 会话时区不是 UTC 的话，`defaultNow()` 写进去的时间会被整体读偏（+8 就是 8 小时，视频任务的超时判定、后台统计窗口都会算错）。
 
 **反向代理必须自己写对 `X-Forwarded-For`。** 限流按 IP 计数（`getClientIp` 取 XFF 的第一跳），如果反代把客户端自带的 XFF 原样透传，任何人加一个请求头就能冒充别的 IP、把限流绕过去。要点是用**连接的对端地址覆盖**，而不是在后面追加：

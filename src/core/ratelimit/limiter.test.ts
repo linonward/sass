@@ -26,6 +26,7 @@ function memoryLimiter(limit: number, windowMs = 60_000): WindowLimiter {
 function setup(
   limiter: WindowLimiter | null,
   failMode: "open" | "closed" = "open",
+  onMissingRedis?: "allow" | "unavailable",
 ) {
   const warn = vi.fn();
   const logError = vi.fn();
@@ -33,6 +34,7 @@ function setup(
   const { checkRateLimit } = createRateLimiter({
     config: rateLimitConfigSchema.parse({ failMode }),
     createLimiter,
+    onMissingRedis,
     now: () => NOW,
     warn,
     logError,
@@ -94,14 +96,41 @@ describe("checkRateLimit", () => {
   });
 
   test("没有配置 Redis 时跳过限流，只警告一次", async () => {
-    const { checkRateLimit, warn } = setup(null);
+    const { checkRateLimit, warn, logError } = setup(null);
     for (let i = 0; i < 3; i++) {
       expect((await checkRateLimit("ai", caller)).ok).toBe(true);
     }
     expect(warn).toHaveBeenCalledTimes(1);
+    expect(logError).not.toHaveBeenCalled();
     expect(JSON.stringify(warn.mock.calls[0])).toContain(
       "UPSTASH_REDIS_REST_URL",
     );
+  });
+
+  test("onMissingRedis 为 unavailable 时拒绝请求（自托管生产漏配），只记一次 error", async () => {
+    const { checkRateLimit, warn, logError } = setup(
+      null,
+      "open",
+      "unavailable",
+    );
+    for (let i = 0; i < 3; i++) {
+      expect(await checkRateLimit("ai", caller)).toEqual({
+        ok: false,
+        reason: "unavailable",
+        retryAfter: 30,
+      });
+    }
+    expect(logError).toHaveBeenCalledTimes(1);
+    expect(logError).toHaveBeenCalledExactlyOnceWith("ratelimit.unconfigured", {
+      reason: "UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set",
+    });
+    // 放行的那条 warn 不该再打一遍。
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  test("配了 Redis 时 onMissingRedis 不影响判定", async () => {
+    const { checkRateLimit } = setup(memoryLimiter(1), "open", "unavailable");
+    expect((await checkRateLimit("ai", caller)).ok).toBe(true);
   });
 
   const failing: Record<string, WindowLimiter> = {
