@@ -44,7 +44,9 @@ const config = defineConfig({
     blog: true,
     upload: true,
     admin: true,
-    // 策略见下面的 rateLimit；Redis 没配时放行（failMode open 兜底）。
+    // 策略见下面的 rateLimit。Redis 没配时：本地、CI 和 Vercel 预览放行（failMode open 兜底），
+    // 自托管生产（NODE_ENV=production 且不在 Vercel 上）拒绝请求并打 error 日志，
+    // 免得静默变成不限流；确实不要限流就设 ALLOW_UNRATELIMITED=1。
     rateLimit: true,
     // 结构化日志、追踪和分析，细项见下面的 observability。
     observability: true,
@@ -164,9 +166,10 @@ const config = defineConfig({
     // 余额跌破这个值时提醒用户充值（credits-low 邮件）。
     lowBalanceThreshold: 100,
   },
-  // 接口限流（AI、上传），计数存 Upstash Redis。每条策略同时按用户和按 IP 计数。
+  // 接口限流（AI、上传、结账），计数存 Upstash Redis。每条策略同时按用户和按 IP 计数。
   rateLimit: {
     // Redis 出错时：open 放行（积分扣减兜底），closed 返回 503。
+    // 这里是「Redis 在但请求失败」的行为；Redis 根本没配时见 features.rateLimit 的说明。
     failMode: "open",
     policies: {
       ai: { limit: 20, window: "1 m" },

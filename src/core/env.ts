@@ -12,6 +12,7 @@ import {
   observabilityServerEnv,
 } from "./observability/env";
 import { rateLimitServerEnv } from "./ratelimit/env";
+import { rateLimitingEnabled } from "./ratelimit/features";
 import { uploadServerEnv } from "./upload/env";
 
 export { createAppEnv, requiredWhen } from "./create-env";
@@ -39,11 +40,9 @@ export const env = createAppEnv({
       ],
     }),
     ...rateLimitServerEnv(process.env, {
-      enabled:
-        siteConfig.features.rateLimit ||
-        siteConfig.features.ai ||
-        siteConfig.features.upload ||
-        siteConfig.acquisition.leads.enabled,
+      // 判断放在 src/core/ratelimit/features.ts：限流的接线和启动检查用同一个，
+      // 免得「变量按开了要」和「运行时按没开处理」两边漂移。
+      enabled: rateLimitingEnabled(),
     }),
     ...adminServerEnv(process.env, { enabled: siteConfig.features.admin }),
     ...uploadServerEnv(process.env, {

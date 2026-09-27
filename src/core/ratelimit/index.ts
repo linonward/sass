@@ -4,6 +4,8 @@ import { Redis } from "@upstash/redis";
 import { env } from "@/core/env";
 
 import siteConfig from "../../../site.config";
+import { missingRedisPolicy } from "./env";
+import { rateLimitingEnabled } from "./features";
 import { createRateLimiter } from "./limiter";
 
 export {
@@ -30,6 +32,11 @@ function getRedis() {
 /** 绑定 Upstash Redis 和 `site.config.ts` 中 `rateLimit` 配置的限流检查。 */
 export const { checkRateLimit } = createRateLimiter({
   config: siteConfig.rateLimit,
+  // 自托管生产（`NODE_ENV=production` 且不在 Vercel 上）漏配 Redis 时拒绝请求，而不是静默
+  // 不限流：这类部署没有平台侧的变量校验，唯一的信号原本只有一行 warn 日志。
+  onMissingRedis: missingRedisPolicy(process.env, {
+    enabled: rateLimitingEnabled(),
+  }),
   createLimiter: (policy, { limit, window }) => {
     const client = getRedis();
     if (!client) return null;

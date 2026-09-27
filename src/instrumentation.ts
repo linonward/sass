@@ -23,6 +23,13 @@ export async function register() {
       await import("@/core/observability/sentry.edge");
     }
   }
+  // 限流漏配 Upstash 时在启动日志里说清楚（生产运行时会拒绝 AI / 上传 / 结账的请求）。
+  // 只在 Node runtime 判定：Edge 上的 process.env 不完整，会把配好的部署误判成漏配。
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { warnIfRateLimitUnconfigured } =
+      await import("@/core/ratelimit/startup");
+    warnIfRateLimitUnconfigured();
+  }
 }
 
 // 未捕获的请求错误（页面渲染、路由处理、Server Action、proxy）。

@@ -53,6 +53,9 @@ jobs:
       ADMIN_EMAILS: e2e-admin-desktop@example.com,e2e-admin-mobile@example.com
       # e2e 跑在生产构建上（next start，NODE_ENV=production），fake 服务商必须显式放行才可用。
       ALLOW_FAKE_BILLING: "1"
+      # CI 没有 Upstash（也没有 VERCEL_ENV，看起来就是自托管生产）：限流那一层默认在漏配时
+      # 拒绝 AI / 上传 / 结账的请求，这里显式放行成「跳过限流」，和本地开发一致。
+      ALLOW_UNRATELIMITED: "1"
     steps:
       - uses: actions/checkout@v7
 
