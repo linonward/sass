@@ -27,7 +27,14 @@ import {
   TableRow,
 } from "@/core/ui/table";
 
-type Props = PageProps<"/[locale]/admin/leads">;
+type Props = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{
+    status?: string | string[];
+    email?: string | string[];
+    page?: string | string[];
+  }>;
+};
 
 export function generateMetadata({ params }: Props) {
   return adminMetadata(params, "/admin/leads", (t) => t("leads.title"));

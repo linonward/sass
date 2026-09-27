@@ -22,18 +22,35 @@ for (const file of [...new Set([...files, ".env.local"])]) {
 }
 const config = path.join(dest, "site.config.ts");
 const before = fs.readFileSync(config, "utf8");
-const flags: [string, string][] = [
-  ["leads: { enabled: false }", "leads: { enabled: true }"],
-  ["attribution: { enabled: false }", "attribution: { enabled: true }"],
-  ["referrals: { enabled: false }", "referrals: { enabled: true }"],
+// Each flag: { check } verifies the default is disabled; { replace } turns it on.
+const flags: Array<{
+  check: RegExp;
+  replace: [RegExp, string];
+  label: string;
+}> = [
+  {
+    check: /leads:\s*\{\s*enabled:\s*false/,
+    replace: [/(leads:\s*\{[^}]*enabled:\s*)false/, "$1true"],
+    label: "leads: { enabled: false }",
+  },
+  {
+    check: /attribution:\s*\{\s*enabled:\s*false/,
+    replace: [/(attribution:\s*\{[^}]*enabled:\s*)false/, "$1true"],
+    label: "attribution: { enabled: false }",
+  },
+  {
+    check: /referrals:\s*\{[\s\S]*?enabled:\s*false/,
+    replace: [/(referrals:\s*\{[\s\S]*?enabled:\s*)false/, "$1true"],
+    label: "referrals: { enabled: false }",
+  },
 ];
 const after = flags.reduce(
-  (text, [from, to]) => text.replace(from, to),
+  (text, { replace: [re, replacement] }) => text.replace(re, replacement),
   before,
 );
-for (const [from] of flags)
-  if (!before.includes(from))
-    throw new Error(`Expected default flag off in site.config.ts: ${from}`);
+for (const { check, label } of flags)
+  if (!check.test(before))
+    throw new Error(`Expected default flag off in site.config.ts: ${label}`);
 fs.writeFileSync(config, after);
 // Only this disposable e2e copy stubs external Redis. Production has no bypass.
 const limiterPath = path.join(dest, "src/core/acquisition/leads/rate-limit.ts");

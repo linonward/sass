@@ -105,9 +105,9 @@
 | T1301                       | acquisition-attribution | `feat/acquisition-attribution` | T1300, T102, T203             | done             |
 | T1302                       | acquisition-report      | `feat/acquisition-report`      | T1301, T604, T1202            | done             |
 | T1303                       | lead-capture            | `feat/lead-capture`            | T1301, T202, T401             | done             |
-| T1304                       | lead-management         | `feat/lead-management`         | T1303, T1302, T502            | in review (#115) |
+| T1304                       | lead-management         | `feat/lead-management`         | T1303, T1302, T502            | done             |
 | T1305                       | referral-links          | `feat/referral-links`          | T1301, T203, T204, T302       | done             |
-| T1306                       | referral-rewards        | `feat/referral-rewards`        | T1305, T303, T1202, T1204     | todo             |
+| T1306                       | referral-rewards        | `feat/referral-rewards`        | T1305, T303, T1202, T1204     | in review (#116) |
 | **阶段 14：审查后续小项**   |                         |                                |                               |                  |
 | T1400                       | review-followups        | `docs/review-followups`        | —                             | done             |
 | T1401                       | internal-terms          | `chore/internal-terms`         | T1400                         | done             |

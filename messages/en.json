@@ -313,6 +313,7 @@
       "adminUsers": "Users",
       "adminOrders": "Orders",
       "adminSubscriptions": "Subscriptions",
+      "adminReferrals": "Referrals",
       "example": "Taglines",
       "referrals": "Referrals",
       "apiKeys": "API keys",
@@ -818,6 +819,24 @@
       "cannotBanSelf": "You can't suspend your own account.",
       "generic": "Something went wrong. Please try again."
     },
+    "referrals": {
+      "title": "Referrals",
+      "description": "Invitation relationships and their reward status.",
+      "empty": "No relationships found.",
+      "columns": {
+        "invitee": "Invitee",
+        "inviter": "Inviter",
+        "code": "Code",
+        "status": "Status",
+        "created": "Created"
+      },
+      "status": {
+        "awaiting_payment": "Awaiting payment",
+        "rewarded": "Rewarded",
+        "revoked": "Revoked",
+        "pending_review": "Pending review"
+      }
+    },
     "apiKeys": {
       "title": "API keys",
       "description": "Who has created keys and when they were last used. Plaintext and hashes never leave the database.",
@@ -916,8 +935,20 @@
     "invitedEmptyHint": "Share your link anywhere you like — nobody has to accept it first.",
     "acceptedAt": "Accepted {date}",
     "status": {
-      "awaiting_payment": "Awaiting their first payment"
+      "awaiting_payment": "Awaiting their first payment",
+      "rewarded": "Reward granted",
+      "revoked": "Reward revoked",
+      "pending_review": "Under review"
     },
+    "rewardsTitle": "Rewards",
+    "rewardsEmpty": "No reward events yet.",
+    "rewardsTypeGranted": "Granted",
+    "rewardsTypeRevoked": "Revoked",
+    "rewardsInviterCredits": "+{credits} credits (you invited them)",
+    "rewardsInviteeCredits": "+{credits} credits (you were invited)",
+    "debtTitle": "Outstanding debt",
+    "debtEmpty": "No outstanding debt.",
+    "debtAmount": "{amount, plural, one {# credit} other {# credits}} owed",
     "invitedByTitle": "You were invited",
     "invitedByDescription": "Your account is linked to an invitation from another user. Status: {status}.",
     "notInvitedTitle": "You signed up on your own",
