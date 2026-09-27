@@ -38,9 +38,12 @@ export default async function AdminUsersPage({ params, searchParams }: Props) {
   const query = typeof search.q === "string" ? search.q : "";
   const page = parsePage(search.page);
 
-  const t = await getTranslations({ locale, namespace: "Admin.users" });
-  const format = await getFormatter({ locale });
-  const data = await listUsers(getDb(), { query, page });
+  // 文案、格式化和列表查询互不依赖，一次并发发出。
+  const [t, format, data] = await Promise.all([
+    getTranslations({ locale, namespace: "Admin.users" }),
+    getFormatter({ locale }),
+    listUsers(getDb(), { query, page }),
+  ]);
   const columns = creditsEnabled ? 5 : 4;
 
   return (

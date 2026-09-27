@@ -37,12 +37,15 @@ export async function generateMetadata({ params }: Props) {
 export default async function AdminUserPage({ params }: Props) {
   const session = await requireAdmin();
   const { locale, id } = await params;
-  const user = (await getUserDetail(getDb(), id)) ?? notFound();
-
-  const t = await getTranslations({ locale, namespace: "Admin" });
-  const tb = await getTranslations({ locale, namespace: "Billing.page" });
-  const tp = await getTranslations({ locale, namespace: "Landing.pricing" });
-  const format = await getFormatter({ locale });
+  // 详情查询和四份文案互不依赖，一次并发发出；仍在渲染 JSX 之前 notFound()。
+  const [detail, t, tb, tp, format] = await Promise.all([
+    getUserDetail(getDb(), id),
+    getTranslations({ locale, namespace: "Admin" }),
+    getTranslations({ locale, namespace: "Billing.page" }),
+    getTranslations({ locale, namespace: "Landing.pricing" }),
+    getFormatter({ locale }),
+  ]);
+  const user = detail ?? notFound();
   const dateTime = (value: Date) =>
     format.dateTime(value, { dateStyle: "medium", timeStyle: "short" });
   const planName = (planId: string | null) => planLabel(tp, planId);

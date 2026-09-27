@@ -55,11 +55,14 @@ export default async function AdminSubscriptionsPage({
   const status = parseSubscriptionStatus(search.status);
   const page = parsePage(search.page);
 
-  const t = await getTranslations({ locale, namespace: "Admin" });
-  const tb = await getTranslations({ locale, namespace: "Billing.page" });
-  const tp = await getTranslations({ locale, namespace: "Landing.pricing" });
-  const format = await getFormatter({ locale });
-  const data = await listSubscriptions(getDb(), { status, page });
+  // 文案、格式化和列表查询互不依赖，一次并发发出。
+  const [t, tb, tp, format, data] = await Promise.all([
+    getTranslations({ locale, namespace: "Admin" }),
+    getTranslations({ locale, namespace: "Billing.page" }),
+    getTranslations({ locale, namespace: "Landing.pricing" }),
+    getFormatter({ locale }),
+    listSubscriptions(getDb(), { status, page }),
+  ]);
   const date = (value: Date | null) =>
     value ? format.dateTime(value, { dateStyle: "medium" }) : "—";
 
