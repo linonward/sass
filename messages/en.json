@@ -1064,6 +1064,7 @@
     "rewardsOff": "No invite rewards are enabled on this site. Accepting an invitation records who invited whom and nothing else.",
     "invitedTitle": "Invitations you sent",
     "invitedCount": "{count, plural, =0 {Nobody yet} one {# invitation accepted} other {# invitations accepted}}",
+    "invitedShown": "The list shows the {shown} most recent.",
     "invitedEmpty": "Nobody has signed up with your link yet.",
     "invitedEmptyHint": "Share your link anywhere you like — nobody has to accept it first.",
     "acceptedAt": "Accepted {date}",
@@ -1102,6 +1103,7 @@
       "acceptedBody": "This invitation applies when you create a new account in this browser within 30 days.",
       "acceptedCta": "Create an account",
       "declined": "Invitation declined. Nothing was stored.",
+      "cleared": "The earlier invitation was cleared. Nothing is stored now, so you can accept this one.",
       "otherTitle": "You already accepted another invitation",
       "otherBody": "The first invitation you accepted stays in effect. Clear it first if you want to use this one instead.",
       "clear": "Clear the accepted invitation",
@@ -1114,6 +1116,7 @@
       "invalidTitle": "This invite link is not valid",
       "invalidBody": "The link may be incomplete or mistyped, or the invitation may no longer be available.",
       "error": "We could not complete your request. Please try again.",
+      "rateLimited": "Too many attempts from this browser. Please wait a moment and try again.",
       "back": "Back to home"
     }
   },

@@ -93,6 +93,14 @@ async function expectNoOverflow(page: import("@playwright/test").Page) {
   ).toBe(true);
 }
 
+/** 取 ICU 复数消息里的某一个分支（e2e 只跑英文，取值够用）。 */
+function plural(message: string, branch: string, count: number) {
+  return message
+    .split(`${branch} {`)[1]!
+    .split("}")[0]!
+    .replace("#", String(count));
+}
+
 test.beforeEach(async ({ page }) => {
   await randomIp(page);
   await stubGoogleOneTap(page);
@@ -226,6 +234,109 @@ test("拒绝邀请不写上下文，之后的注册照常", async ({ page }) => 
   await expect(page.getByText(t.notInvitedTitle)).toBeVisible();
   await expect(page.getByText(t.invitedEmpty)).toBeVisible();
   expect(await relationships(inviteeEmail)).toEqual([]);
+});
+
+test("已接受过一份邀请时，第二份只提供清除，不给会静默失败的接受按钮", async ({
+  page,
+}) => {
+  const firstInviter = uniqueEmail("referral-first-by");
+  const secondInviter = uniqueEmail("referral-second-by");
+
+  const codeOf = async (email: string) => {
+    await switchIdentity(page, email);
+    await page.goto("/referrals");
+    return (await page.getByTestId("referral-code").textContent())!.trim();
+  };
+  const first = await codeOf(firstInviter);
+  const second = await codeOf(secondInviter);
+
+  // 新访客先接受第一份邀请。
+  await page.context().clearCookies();
+  await page.goto(`/invite/${first}`);
+  await closeConsent(page);
+  await page.getByTestId("referral-accept").click();
+  await expect(page.getByTestId("invite-title")).toHaveText(
+    invite.acceptedTitle,
+  );
+
+  // 再打开第二份：说明第一份仍然有效，并且不给接受按钮（服务端不会换，点了也没有反馈）。
+  await page.goto(`/invite/${second}`);
+  await expect(page.getByTestId("invite-title")).toHaveText(invite.otherTitle);
+  await expect(page.getByText(invite.otherBody)).toBeVisible();
+  await expect(page.getByTestId("referral-accept")).toHaveCount(0);
+
+  // 按页面说的先清除：给一句确认，页面回到可以接受这一份的状态。
+  await closeConsent(page);
+  await page.getByTestId("referral-decline").click();
+  await expect(page.getByText(invite.cleared)).toBeVisible();
+  await expect(page.getByTestId("referral-accept")).toBeVisible();
+
+  // 现在接受这一份是真的接受了：上下文里的码换成第二份。
+  await page.getByTestId("referral-accept").click();
+  await expect(page.getByTestId("invite-title")).toHaveText(
+    invite.acceptedTitle,
+  );
+  const cookie = (await page.context().cookies()).find(
+    (item) => item.name === REFERRAL_COOKIE,
+  )!;
+  const context = JSON.parse(
+    Buffer.from(cookie.value.split(".")[0]!, "base64url").toString(),
+  ) as { code: string };
+  expect(context.code).toBe(second);
+});
+
+test("邀请超过一页时，条数是真实总数，列表说明只显示最近一批", async ({
+  page,
+}) => {
+  const inviterEmail = uniqueEmail("referral-many");
+  const seedPrefix = `referral-seeded-${Date.now()}-`;
+
+  await signInHere(page, inviterEmail);
+  await page.goto("/referrals");
+  const code = (await page.getByTestId("referral-code").textContent())!.trim();
+  const invited = page.getByTestId("referral-invited");
+  const inviterId = (await withDatabase(async (db) => {
+    const { rows } = await db.query<{ id: string }>(
+      'select id from "user" where email = $1',
+      [inviterEmail],
+    );
+    return rows[0]?.id ?? null;
+  }))!;
+
+  // 直接种 51 条关系：注册 51 个账号太慢，这里要验证的是页面怎么显示已有数据。
+  // 编号越小种得越晚，被截断的应该是最早的那一条（编号 51）。
+  await withDatabase(async (db) => {
+    await db.query(
+      `insert into "user" (id, name, email, email_verified, created_at)
+       select gen_random_uuid()::text, 'Seeded', $1 || g || '@example.test', true, now()
+         from generate_series(1, 51) g`,
+      [seedPrefix],
+    );
+    await db.query(
+      `insert into referral_relationships
+         (invitee_user_id, inviter_user_id, code, status, created_at)
+       select u.id, $1, $2, 'awaiting_payment', now() - (g || ' minutes')::interval
+         from generate_series(1, 51) g
+         join "user" u on u.email = $3 || g || '@example.test'`,
+      [inviterId, code, seedPrefix],
+    );
+  });
+
+  try {
+    await page.reload();
+    await expect(invited.getByRole("listitem")).toHaveCount(50);
+    // 条数是 51，列表只有 50 条 —— 说明写清楚这个差别，别让人以为少了一条。
+    await expect(
+      page.getByText(plural(t.invitedCount, "other", 51)),
+    ).toBeVisible();
+    await expect(
+      page.getByText(t.invitedShown.replace("{shown}", "50")),
+    ).toBeVisible();
+  } finally {
+    await withDatabase((db) =>
+      db.query('delete from "user" where email like $1', [`${seedPrefix}%`]),
+    );
+  }
 });
 
 test("过期的邀请上下文在注册时被忽略", async ({ page }) => {

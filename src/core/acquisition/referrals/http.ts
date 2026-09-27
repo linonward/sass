@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
+  getClientIp,
+  rateLimitResponse,
+  type RateLimitResult,
+} from "@/core/ratelimit/limiter";
+import {
   cookieOptions,
   referralFromHeaders,
   REFERRAL_COOKIE,
@@ -20,6 +25,8 @@ type Dependencies = {
   enabled: boolean;
   secret: string;
   getUserId: (headers: Headers) => Promise<string | null>;
+  /** 公开接口的限流（按 IP），和留资入口同一套；拒绝时返回 429 / 503。 */
+  limit: (ip: string | null) => Promise<RateLimitResult>;
   service: Pick<
     ReturnType<typeof createReferralService>,
     "resolveInviter" | "relationshipFor"
@@ -57,8 +64,12 @@ export function createReferralHandlers(deps: Dependencies) {
       const code = normalizeReferralCode(parsed.data.code);
       if (!isReferralCode(code)) return json({ error: "invalid" }, 400);
       // 首个已接受且有效的邀请码胜出：已有上下文就保持不动。
+      // 这一步只验签、不查库，放在限流前，重复点击不会白耗配额。
       const accepted = referralFromHeaders(request.headers, deps.secret);
       if (accepted) return json({ accepted: true, code: accepted.code });
+      // 未登录也能调的公开接口：和留资入口一样先过限流，再查库。
+      const limit = await deps.limit(getClientIp(request.headers));
+      if (!limit.ok) return rateLimitResponse(limit);
       const inviter = await deps.service.resolveInviter(code);
       if (!inviter) return json({ error: "invalid" }, 400);
       const userId = await deps.getUserId(request.headers);

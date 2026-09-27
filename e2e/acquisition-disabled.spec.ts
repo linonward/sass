@@ -58,14 +58,21 @@ test("default-off acquisition has no UI, cookies, API requests or enabled endpoi
   ).toBe(false);
 });
 
-test("default-off referrals: /referrals 对已登录用户也是 404，且不写任何数据", async ({
+test("default-off referrals: /referrals 对未登录和已登录都是 404，且不写任何数据", async ({
   page,
 }) => {
   await useRandomIp(page);
+  // 未登录先来一次：模块关着，未登录访客不该被送去登录页（否则同一个地址
+  // 对未登录是 307、对已登录是 404 —— 页面在 (app) 下，layout 会先跳登录）。
+  const anonymous = await page.goto("/referrals");
+  expect(anonymous?.status()).toBe(404);
+  await expect(page).toHaveURL("/referrals");
+
   const email = uniqueEmail("referrals-disabled");
   await signIn(page, email);
   const response = await page.goto("/referrals");
   expect(response?.status()).toBe(404);
+  await expect(page).toHaveURL("/referrals");
   await expect(
     page.getByRole("heading", { name: messages.Referrals.title }),
   ).toHaveCount(0);
