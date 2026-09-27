@@ -134,7 +134,9 @@ test.describe("404 的元数据（关 JS）", () => {
   test.use({ javaScriptEnabled: false });
 
   for (const path of ["/does-not-exist", "/zh"]) {
-    test(`${path} 的静态 HTML 带本地化标题和 noindex`, async ({ page }) => {
+    test(`${path} 的静态 HTML 带本地化标题和 noindex，且不继承首页的 canonical`, async ({
+      page,
+    }) => {
       const response = await page.goto(path);
       expect(response?.status()).toBe(404);
       // T903 之前这里是站名（React <title> 只在客户端生效，关 JS 就没了）——
@@ -145,6 +147,23 @@ test.describe("404 的元数据（关 JS）", () => {
       const robots = page.locator('meta[name="robots"]');
       await expect(robots).toHaveCount(1);
       await expect(robots).toHaveAttribute("content", "noindex");
+
+      // T1209：404 没有自己的规范地址。以前这一页的 head 里是 [locale]/layout.tsx
+      // 那份 —— canonical 和 hreflang 都指向首页（Next 的 metadata 按字段浅合并，
+      // not-found 没写的字段会继承 layout 的），对爬虫等于声明「这一页就是首页」。
+      const head = page.locator("head");
+      await expect(head.locator('link[rel="canonical"]')).toHaveCount(0);
+      await expect(head.locator('link[rel="alternate"]')).toHaveCount(0);
+      // 同一份继承也落在 og / twitter 上：og:url 曾经指向首页，标题曾经是站名。
+      await expect(head.locator('meta[property="og:url"]')).toHaveCount(0);
+      await expect(head.locator('meta[property="og:title"]')).toHaveAttribute(
+        "content",
+        `${messages.NotFound.title} | ${siteConfig.name}`,
+      );
+      await expect(head.locator('meta[name="twitter:title"]')).toHaveAttribute(
+        "content",
+        `${messages.NotFound.title} | ${siteConfig.name}`,
+      );
     });
   }
 

@@ -85,6 +85,24 @@ describe("buildMetadata", () => {
     const metadata = buildMetadata({ locale: "en", path: "/x", noIndex: true });
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
+
+  test("path 为 null 时不输出 canonical / hreflang / og:url（404）", () => {
+    const metadata = buildMetadata({
+      locale: "en",
+      path: null,
+      title: "Page not found",
+      description: "The page you are looking for doesn't exist.",
+    });
+    // 空对象而不是省略 —— Next 的 metadata 按字段浅合并，省略只会让 layout 那份
+    // 指向首页的 canonical 继承到 404 上，这正是 T1209 修掉的。
+    expect(Object.keys(metadata.alternates ?? {})).toEqual([]);
+    expect(metadata.openGraph).toMatchObject({
+      title: `Page not found | ${siteConfig.name}`,
+      description: "The page you are looking for doesn't exist.",
+      siteName: siteConfig.name,
+    });
+    expect(metadata.openGraph).not.toHaveProperty("url");
+  });
 });
 
 describe("sitemap", () => {

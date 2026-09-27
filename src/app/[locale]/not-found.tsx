@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/core/i18n/navigation";
 import { SiteFooter } from "@/core/layout/site-footer";
 import { SiteHeader } from "@/core/layout/site-header";
+import { buildMetadata } from "@/core/seo/metadata";
 import { buttonVariants } from "@/core/ui/button";
 
 /**
@@ -13,7 +14,10 @@ import { buttonVariants } from "@/core/ui/button";
  * - metadata 导出决定**静态 HTML**里的 `<title>`，即关 JS 的浏览器和只抓 HTML 的爬虫看到的
  *   那份。Next 对 not-found 有专门的采集路径：HTTP access fallback 时 errorType 记为
  *   `'not-found'`，按 'not-found' convention 取本文件的导出，并排在 layout 之后覆盖它。
- *   这里不调 buildMetadata（canonical 会指向首页，留待后续任务处理）。
+ *   path 传 `null`：404 没有自己的规范地址，canonical / hreflang / og:url 都得显式清掉，
+ *   否则会继承 layout 那份指向首页的（见 src/core/seo/metadata.ts 的注释）。
+ *   noindex 是**框架注入**的（app-render.js 的 NonIndex），按 pagePath === '/404' 和状态码
+ *   判定，不经过这里 —— 所以别顺手传 noIndex 去「保住」它，那会多出一条 robots meta。
  * - React `<title>` 决定**水合后**的 DOM。404 的 fallback 由 client boundary 渲染，水合时
  *   client 树里只有 layout 那层的元数据，会把 `<title>` 改回站名；组件里再放一个 React
  *   `<title>`，React 会把它插到 head 里已有 title 的前面，浏览器取第一个，标题才对。
@@ -28,7 +32,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "NotFound" });
-  return { title: t("title") };
+  return buildMetadata({
+    locale,
+    path: null,
+    title: t("title"),
+    description: t("description"),
+  });
 }
 
 export default function NotFound() {
