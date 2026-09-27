@@ -176,6 +176,8 @@ const config = defineConfig({
       upload: { limit: 10, window: "1 m" },
       // 结账会话：每次调用都会在服务商侧真实建单，防脚本循环创建（双击由幂等/互斥处理）。
       checkout: { limit: 5, window: "1 m" },
+      // 状态页的邮件订阅：每次提交都可能发一封确认信，按 IP 计数即可。
+      statusSubscribe: { limit: 5, window: "1 h" },
     },
   },
   // 文件上传（Cloudflare R2）。只在 features.upload 开启时生效；SVG、HTML 不在可选类型里。
@@ -192,6 +194,31 @@ const config = defineConfig({
     // 公开模式的代价：拿到 URL 的人都能访问，且撤不回（对象仍可枚举）；签名模式多一次跳转，
     // 但用户上传的文件不该默认公开。真要做公开图床再打开，并把 R2_PUBLIC_URL 填成公开域名。
     public: false,
+  },
+  // 系统状态页（/status）：公开告诉访客「现在系统怎么样」，以及过去 N 天的 incident。
+  // manual：管理员在 /admin/status 手动开/关 incident。auto：页面渲染时同时探测 healthUrl，
+  // 同一个组件连续两次探测失败自动记为 degraded，探测恢复后自动解决（需要 features.observability）。
+  // components 的 key 是存进 status_events.component 的内部 id，label 是访客看到的展示名。
+  statusPage: {
+    // 演示站点开着；模板出厂的 schema 默认是 false，改成 false 即可整块下线。
+    enabled: true,
+    mode: "manual",
+    components: {
+      api: {
+        label: "API",
+        description: "REST endpoints and webhook delivery.",
+      },
+      database: {
+        label: "Database",
+        description: "Sign-in, billing and credit records.",
+      },
+      ai: {
+        label: "AI providers",
+        description: "Model requests from the playground.",
+      },
+    },
+    // 状态页上展示最近多少天的 uptime 和 incident。
+    historyDays: 30,
   },
   // 可观测性（features.observability 开启时生效）。开启后生产环境日志是单行 JSON，带 traceId。
   // 获客能力按模块开启：渠道归因与邮箱留资见 README 的「渠道归因」「邮箱留资」两节。

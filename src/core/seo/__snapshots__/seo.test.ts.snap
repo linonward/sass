@@ -59,6 +59,26 @@ exports[`sitemap > 营销路由 × 语言，带 hreflang 1`] = `
   {
     "alternates": {
       "languages": {
+        "de": "https://<domain>/de/status",
+        "en": "https://<domain>/status",
+        "x-default": "https://<domain>/status",
+      },
+    },
+    "url": "https://<domain>/status",
+  },
+  {
+    "alternates": {
+      "languages": {
+        "de": "https://<domain>/de/status",
+        "en": "https://<domain>/status",
+        "x-default": "https://<domain>/status",
+      },
+    },
+    "url": "https://<domain>/de/status",
+  },
+  {
+    "alternates": {
+      "languages": {
         "de": "https://<domain>/de/privacy",
         "en": "https://<domain>/privacy",
         "x-default": "https://<domain>/privacy",

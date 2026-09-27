@@ -171,6 +171,21 @@ describe("renderEmail", () => {
         topUpUrl: "https://example.com/pricing",
       },
     ],
+    [
+      "status-incident",
+      {
+        component: "API",
+        status: "degraded",
+        message: "Elevated error rates on the REST API.",
+        resolvedAt: null,
+        url: "https://example.com/status",
+        withdrawUrl: "https://example.com/status/unsubscribe",
+      },
+    ],
+    [
+      "status-subscription",
+      { confirmUrl: "https://example.com/status/confirm?token=abc" },
+    ],
   ] as const)("%s 模板渲染快照", async (template, props) => {
     const email = await renderEmail({ to: "a@b.co", template, props } as never);
     expect(email.html).toMatchSnapshot("html");
@@ -219,6 +234,60 @@ describe("账单邮件模板", () => {
     });
     expect(email.text).toContain("couldn't process your latest payment");
     expect(email.text).not.toContain("Amount");
+  });
+});
+
+describe("状态邮件模板", () => {
+  const props = {
+    component: "API",
+    status: "degraded",
+    message: "Elevated error rates on the REST API.",
+    resolvedAt: null,
+    url: "https://example.com/status",
+    withdrawUrl: "https://example.com/status/unsubscribe?email=a%40b.co&sig=x",
+  } as const;
+
+  test("进行中与已恢复的标题、主题各不相同", async () => {
+    const open = await renderEmail({
+      to: "a@b.co",
+      template: "status-incident",
+      props,
+    });
+    expect(open.subject).toBe("API is having issues");
+    expect(open.text).toContain("Elevated error rates");
+
+    const resolved = await renderEmail({
+      to: "a@b.co",
+      template: "status-incident",
+      props: { ...props, resolvedAt: "2026-09-27T12:00:00.000Z" },
+    });
+    expect(resolved.subject).toBe("API has recovered");
+    expect(resolved.subject).not.toBe(open.subject);
+    // 恢复通知仍带着事发时的级别，别让「已恢复」吃掉「刚才坏成什么样」。
+    expect(resolved.text).toContain("Degraded");
+  });
+
+  test("通知邮件一定带退订链接", async () => {
+    const email = await renderEmail({
+      to: "a@b.co",
+      template: "status-incident",
+      props,
+    });
+    expect(email.html).toContain(props.withdrawUrl.replace(/&/g, "&amp;"));
+  });
+
+  test("确认邮件带令牌链接", async () => {
+    const email = await renderEmail({
+      to: "a@b.co",
+      template: "status-subscription",
+      props: { confirmUrl: "https://example.com/status/confirm?token=abc" },
+    });
+    expect(email.subject).toBe(
+      `Confirm your ${brand.name} status subscription`,
+    );
+    expect(email.text).toContain(
+      "https://example.com/status/confirm?token=abc",
+    );
   });
 });
 

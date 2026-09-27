@@ -8,7 +8,7 @@ import { SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 import { TooltipProvider } from "../ui/tooltip";
 import { AppSidebar } from "./app-sidebar";
 import { initials } from "./user-menu";
-import { dashboardNav, isActiveNav, suiteNav } from "./nav";
+import { adminNav, dashboardNav, isActiveNav, suiteNav } from "./nav";
 
 import siteConfig from "../../../site.config";
 
@@ -134,6 +134,28 @@ describe("dashboardNav", () => {
       "/billing",
       "/settings",
     ]);
+  });
+});
+
+describe("adminNav", () => {
+  const withStatusPage = (enabled: boolean) => {
+    const base = configWithProjects();
+    return adminNav({
+      ...base,
+      statusPage: { ...base.statusPage, enabled },
+    });
+  };
+
+  test("statusPage 开启时菜单末尾多一个 Status page", () => {
+    const nav = withStatusPage(true);
+    expect(nav.map((i) => i.href)).toContain("/admin/status");
+    expect(nav.at(-1)?.href).toBe("/admin/status");
+  });
+
+  test("statusPage 关闭时没有 Status page 入口（页面 404，留个点进去就 404 的入口只会让人以为坏了）", () => {
+    expect(withStatusPage(false).map((i) => i.href)).not.toContain(
+      "/admin/status",
+    );
   });
 });
 

@@ -35,16 +35,26 @@ const acquisitionNav: DashboardNavItem = {
   icon: "sparkles",
 };
 
+// 只在状态页开启时出现的后台项。
+const statusNav: DashboardNavItem = {
+  key: "adminStatus",
+  href: "/admin/status",
+  icon: "layers",
+};
+
 /**
- * /admin 里的菜单。获客报表只在归因开启时出现 —— 关闭时那个页面 404，
+ * /admin 里的菜单。可选模块的后台页只在它开启时出现 —— 关闭时那个页面 404，
  * 菜单里留一个点进去就 404 的入口只会让人以为坏了。
  */
 export function adminNav(
-  config: Pick<SiteConfig, "acquisition">,
+  config: Pick<SiteConfig, "acquisition" | "statusPage">,
 ): readonly DashboardNavItem[] {
-  return config.acquisition.attribution.enabled
-    ? [adminNavBase[0]!, acquisitionNav, ...adminNavBase.slice(1)]
-    : adminNavBase;
+  return [
+    adminNavBase[0]!,
+    ...(config.acquisition.attribution.enabled ? [acquisitionNav] : []),
+    ...adminNavBase.slice(1),
+    ...(config.statusPage.enabled ? [statusNav] : []),
+  ];
 }
 
 // 只在对应模块开启时显示的套件项，排在 Dashboard 之后。
