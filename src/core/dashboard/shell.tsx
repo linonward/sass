@@ -1,8 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
 
+import { isAdmin } from "@/core/admin/roles";
 import { signOut } from "@/core/auth/actions";
 import type { Session } from "@/core/auth/server";
+import { FlagsProvider } from "@/core/flags/components";
+import { resolveFlags } from "@/core/flags/evaluate";
 import { routing } from "@/core/i18n/routing";
 import { cn } from "@/core/lib/utils";
 import { IdentifyUser } from "@/core/observability/identify-user";
@@ -38,6 +41,11 @@ export async function DashboardShell({
   // 侧边栏的展开状态由 SidebarProvider 写进 cookie，服务端据此渲染，刷新时不闪。
   const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
   const { name, email, image } = session.user;
+  // 这次请求的 feature flag 快照，交给下面的客户端组件（见 src/core/flags/）。
+  const flags = resolveFlags({
+    userId: session.user.id,
+    isAdmin: isAdmin(session.user),
+  });
 
   return (
     <TooltipProvider>
@@ -68,7 +76,8 @@ export async function DashboardShell({
               width === "wide" ? "max-w-6xl" : "max-w-5xl",
             )}
           >
-            {children}
+            {/* 登录后的页面才有 flag 快照：公开页面拿不到身份，也就分不了桶。 */}
+            <FlagsProvider values={flags}>{children}</FlagsProvider>
           </div>
         </SidebarInset>
       </SidebarProvider>

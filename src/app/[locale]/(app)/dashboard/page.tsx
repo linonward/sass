@@ -2,6 +2,8 @@ import { LayoutDashboardIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { getSession } from "@/core/auth/session";
+import { flagsEnabled } from "@/core/flags/evaluate";
+import { FlagExample } from "@/core/flags/flag-example";
 import { Link } from "@/core/i18n/navigation";
 import { buildMetadata } from "@/core/seo/metadata";
 import { buttonVariants } from "@/core/ui/button";
@@ -61,6 +63,8 @@ export default async function DashboardPage({
       {siteConfig.features.upload && (
         <UploadExample accept={siteConfig.upload.allowedMimeTypes} />
       )}
+      {/* 总开关关着时整段不渲染（和 upload 示例同一写法）。 */}
+      {flagsEnabled() && <FlagExample />}
     </div>
   );
 }
