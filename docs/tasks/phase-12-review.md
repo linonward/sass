@@ -182,7 +182,7 @@
 - **`/icon` 必须加进 `src/proxy.ts` 的 matcher 排除集**（落地时实测发现）：注入的地址不带语言前缀，next-intl 会把它改写成 `/<locale>/icon` → 404，标签页依旧空白 —— 和当初 `/opengraph-image` 踩的是同一个坑。锚成 `icon$` 而不是裸 `icon`，免得把 `/icons` 这类普通页面一起排除掉（实测：`/icon` 返回 PNG，`/icons` 仍走本地化 404）。
 - `sentry.test.ts` 读 matcher 的正则放宽到容忍折行：这行本来就贴着 `printWidth`，加一个路径就会被 prettier 折行，旧正则 `/matcher: "(.+)"/` 只认单行（本次改动第一次跑 `pnpm test` 就是被它拦下的）。
 - README「改成自己的站点」步骤补一条：favicon 也要换。
-- e2e 断言首页 `<link rel="icon">` 存在且 `/icon` 能取到 PNG（防回归到空白图标）。
+- e2e 断言首页有 `<link rel="icon">`，并拿它 DOM 里的 href 请求一次（200 + `image/*`）—— 不写死 `/icon` 与 PNG，买家按 README 换成自己的图标（地址会变成 `/icon.svg` 之类）后这条用例仍成立；防的是回归到空白图标。
 
 **不做**：PWA manifest / apple-touch 全套餐（除非顺手且零成本）。
 

@@ -94,7 +94,7 @@ pnpm dev                 # http://localhost:3000
   - `email`：发件人名称和地址（域名要在 Resend 验证）
   - `ai.models`：开启 AI 时的模型和每次调用的积分成本
 - `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`public/`：你自己的 logo 图与 Hero 图（Hero 图要配 `landing.hero.image` 才用得上）。
-- 标签页图标：出厂的内置标记跟上面的 `brand.primaryColor` 走，在构建期生成（几何和顶栏的内置标记共用一份，见 `src/core/seo/favicon.tsx`），换主色就跟着变，不用管。想换成自己的图标：把 `icon.svg`（或 `icon.png`）放进 `src/app/`，并**删掉 `src/app/icon.tsx`** —— 两个同名的 icon 文件会各生成一个 `<link rel="icon">`，浏览器挑哪个不保证。
+- 标签页图标：出厂的内置标记跟上面的 `brand.primaryColor` 走，在构建期生成（几何和顶栏的内置标记共用一份，见 `src/core/seo/favicon.tsx`），换主色就跟着变，不用管。想换成自己的图标：把 `icon.svg`（或 `icon.png`）放进 `src/app/`，并**删掉 `src/app/icon.tsx`** —— 换完就按你自己的文件来：地址变成那个文件的路径（`/icon.svg`），也不再跟主色走，颜色得画在文件里。两个同名的 icon 文件会各生成一个 `<link rel="icon">`，浏览器挑哪个不保证。
 - 示例业务模块 `src/features/example/`（一个扣积分的宣传语生成器）演示了业务代码怎么调用 `runAI`、`deductCredits`，以及怎么在 `dashboard.nav` 里加菜单。看完后删掉：`src/features/example/`、`src/app/[locale]/(app)/example/`、`e2e/example.spec.ts`，以及 `site.config.ts` 里 `dashboard.nav` 的那一项。
 - 改完运行 `pnpm test` 和 `pnpm build` 确认没漏改。测试直接读 `site.config.ts` 和 `messages/*.json`，改域名、主色和文案都不用 `-u` 更新快照。
 

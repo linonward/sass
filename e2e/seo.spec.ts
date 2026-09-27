@@ -46,17 +46,20 @@ test("OG 图可以访问", async ({ request }) => {
   expect(response.headers()["content-type"]).toBe("image/png");
 });
 
-test("标签页图标（favicon）有 link 且能取到 PNG", async ({ page, request }) => {
+test("标签页图标（favicon）有 link 且能取到图片", async ({ page, request }) => {
   await page.goto("/");
-  // Next 按 icon 文件约定注入；href 带构建期的哈希查询串，所以只断言前缀。
-  const icon = page.locator('head link[rel="icon"]');
-  await expect(icon).toHaveAttribute("href", /^\/icon/);
-  await expect(icon).toHaveAttribute("type", "image/png");
+  // 只锁「有图标、且图标取得到」：href 由实现决定（内置生成的是 /icon，
+  // 买家按 README 换成自己的 icon.svg / icon.png 后就变成那个文件），所以从 DOM 里读。
+  const href = await page
+    .locator('head link[rel="icon"]')
+    .first()
+    .getAttribute("href");
+  expect(href).toBeTruthy();
 
-  // 图标在构建期生成，取不到时浏览器标签页就是空白 —— 不是 404 才算数。
-  const response = await request.get("/icon");
+  // 取不到时浏览器标签页就是空白 —— 不是 404、且响应确实是张图才算数。
+  const response = await request.get(href!);
   expect(response.status()).toBe(200);
-  expect(response.headers()["content-type"]).toBe("image/png");
+  expect(response.headers()["content-type"]).toMatch(/^image\//);
 });
 
 test("sitemap.xml 列出首页", async ({ request }) => {
