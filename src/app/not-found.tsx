@@ -19,7 +19,7 @@ import "./globals.css";
 // 框架内置的默认 404 页（品牌色、主题、本地化、「回首页」全丢）。把文件放在 app 根
 // 下，它才是那个 layout 的父级边界。
 //
-// 实测要点（详见 docs/tasks/phase-9-boundaries.md 与 PR 说明）：
+// 实测要点（404 的两种形态与状态码约定见 README 的「错误与权限的边界」一节）：
 // 1. 这条路径不需要 experimental.globalNotFound —— 根级 not-found.tsx 就够了，
 //    且它渲染进的是框架给的 <html id="__next_error__"> 文档，不能再套 <html>。
 // 2. 这个文件会被预渲染进**每个页面**的 RSC payload（客户端 notFound 要用），

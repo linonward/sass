@@ -1,4 +1,4 @@
-# 每周检查依赖更新并开 PR。模板是买家项目的上游，依赖升级走 PR 才能被审阅（见 docs/workflow.md）。
+# 每周检查依赖更新并开 PR。模板是买家项目的上游，依赖升级走 PR 才能被审阅。
 # 配置项说明：https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 

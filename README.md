@@ -325,8 +325,10 @@ CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test →
 
 ```bash
 find src -name "loading.tsx" | wc -l   # 0
-grep -rn "Suspense" src/ | wc -l       # 0
+grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提到 Suspense 不算）
 ```
+
+`src/` 里唯一提到 Suspense 的就是上面那条注释：`src/core/ai/playground-tabs.tsx` 用 `next/dynamic` + `loading` 给每个标签做客户端懒加载，所以上面的 grep 数的是手写的 JSX 标签。这条边界只跟 `/playground` 自己有关（它自己的 `notFound()` 在 `aiEnabled` 为 false 时抛，`src/app/[locale]/(app)/playground/page.tsx:40`，在渲染这个组件之前）；本节说的 `/does-not-exist` 路径上没有 `<Suspense>`。
 
 在 `notFound()` 调用点的**上方**加 `loading.tsx` 或 `<Suspense>`，那条路径的 404 就变成 **200 软 404**：响应头已经发出去了，状态码改不了。文档（`.../file-conventions/loading.md`）：「The response body starts streaming when a Suspense fallback renders (for example, a `loading.tsx`) or when a Server Component suspends under a `Suspense` boundary. Place `notFound()` before those boundaries and before any `await` that may suspend.」之后只剩 Next 注入的 `<meta name="robots" content="noindex">` 兜底，爬虫会把它记成 soft 404。
 
@@ -398,19 +400,19 @@ grep -rn "Suspense" src/ | wc -l       # 0
 
 ### 4. 按已开启的模块准备外部账号
 
-| 模块                                   | 外部服务                    | 什么时候需要             |
-| -------------------------------------- | --------------------------- | ------------------------ |
-| 数据库                                 | Neon Postgres               | 登录功能上线时（阶段 2） |
-| 邮件                                   | Resend（并配置 SPF / DKIM） | 登录功能上线时（阶段 2） |
-| 登录                                   | Google Cloud OAuth 客户端   | 登录功能上线时（阶段 2） |
-| 支付                                   | Creem                       | 开始收款时（阶段 3）     |
-| `features.rateLimit` / `ai` / `upload` | Upstash Redis               | 生产环境开启任一模块时   |
-| `features.ai`                          | AI 模型服务商               | 开启 AI 时               |
-| `features.upload`                      | Cloudflare R2               | 开启上传时               |
-| `features.admin`                       | 无（只需 `ADMIN_EMAILS`）   | 开启后台时               |
-| `observability.sentry`                 | Sentry                      | 开启错误追踪时           |
+| 模块                                   | 外部服务                    | 什么时候需要           |
+| -------------------------------------- | --------------------------- | ---------------------- |
+| 数据库                                 | Neon Postgres               | 登录功能上线时         |
+| 邮件                                   | Resend（并配置 SPF / DKIM） | 登录功能上线时         |
+| 登录                                   | Google Cloud OAuth 客户端   | 登录功能上线时         |
+| 支付                                   | Creem                       | 开始收款时             |
+| `features.rateLimit` / `ai` / `upload` | Upstash Redis               | 生产环境开启任一模块时 |
+| `features.ai`                          | AI 模型服务商               | 开启 AI 时             |
+| `features.upload`                      | Cloudflare R2               | 开启上传时             |
+| `features.admin`                       | 无（只需 `ADMIN_EMAILS`）   | 开启后台时             |
+| `observability.sentry`                 | Sentry                      | 开启错误追踪时         |
 
-具体变量名由对应模块的任务补充到本节。
+各模块的变量名和申请步骤见下面各分节。
 
 #### 数据库（Neon）
 
@@ -564,7 +566,7 @@ Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-
 
 反代前面挂了 Cloudflare 之类的 CDN 时，Nginx 侧用 `real_ip` 模块恢复真实 IP（`set_real_ip_from <CDN 回源段>` + `real_ip_header CF-Connecting-IP`），再把恢复后的 `$remote_addr` 写进 XFF。
 
-### 渠道归因（T1301）
+### 渠道归因
 
 `site.config.ts` 的 `acquisition.attribution.enabled` 默认 `false`。先运行 `pnpm db:migrate`，再开启并重新构建部署；无需新增 env 或外部服务。控件通过配置派生的内部构建常量裁剪，默认关闭时不会下发其客户端脚本。留资见下节；`acquisition.referrals` 仍为后续任务预留开关，邀请配置要求 `features.credits`。
 
@@ -577,11 +579,11 @@ Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-
 - 归因写入失败记录 `acquisition.freeze_failed`，不阻断注册；签发 24 小时的 `acquisition_registration` 重试 Cookie，后续页面在登录身份匹配时幂等重试。超过 24 小时、Cookie 被清除或用户不再回来则可能保留 unknown；不会从新的访问来源猜测补填。日志不包含来源载荷。
 - 拒绝/撤回使用 `source_preference=declined` 必要偏好 Cookie（30 天，不含来源）阻止注册时恢复已确认线索来源；再次接受会清除该偏好。撤回会清理两个获客 Cookie；已登录时同时清空账户来源，保留无来源的撤回标记，防止迟到重试恢复数据。未登录时只能清理该浏览器；跨设备需要登录原账户后再撤回。写库失败时匿名 Cookie 仍被清除，页面提示重试账户清理。删除账户通过外键级联删除记录并清理当前浏览器的来源 Cookie。
 - 来源快照在数据库中保留到用户撤回或删除账户；localStorage 只记拒绝偏好、不存来源。停用模块会停止捕获并隐藏入口，数据库记录保留，运营者仍可按用户请求执行数据清理。
-- Vercel Analytics 是独立开关，这个偏好控件不控制它；渠道报表由 T1302 实现。
+- Vercel Analytics 是独立开关，这个偏好控件不控制它；模板不含渠道报表页，来源按用户存在 `user_attribution` 表，需要报表时自行查询。
 
 验证：`pnpm test` 覆盖上下文校验、签名/过期、接口、重试和数据库并发；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本启用归因，覆盖桌面及 375px 的接受 → 注册 → 撤回和拒绝路径，不改模板默认配置。普通 e2e 同时锁定关闭时没有控件、Cookie 或获客请求。Google 两种方式的真实账号端到端登录需在配置了 OAuth origin/回调的环境人工验证。
 
-### 邮箱留资（T1303）
+### 邮箱留资
 
 运行 `pnpm db:migrate` 后，在 `site.config.ts` 设置 `acquisition.leads.enabled: true` 并重新构建。默认关闭时 `/waitlist`、确认/撤回页和 `/api/acquisition/leads` 返回 404，表单脚本不下发；关闭不会自动删除旧数据，清理命令与账户删除仍清理旧数据。
 
