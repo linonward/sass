@@ -5,6 +5,7 @@ import sitemap from "@/app/sitemap";
 import type { SiteConfig } from "@/core/config/schema";
 
 import siteConfig from "../../../site.config";
+import { withoutSiteDomain } from "../config/testing";
 import { footerNav } from "../layout/footer-nav";
 import {
   changelogPath,
@@ -173,7 +174,8 @@ describe("RSS", () => {
 
   test("RSS 2.0：channel 和 item 的必填字段齐全", () => {
     const xml = feed();
-    expect(xml).toMatchSnapshot();
+    // 快照只锁结构和路径：域名换成占位，买家改 `domain` 时不用重跑 `-u`（同 blog.test.ts）。
+    expect(withoutSiteDomain(xml)).toMatchSnapshot();
 
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
     expect(xml).toContain('<rss version="2.0"');
