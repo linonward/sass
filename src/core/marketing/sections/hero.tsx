@@ -65,6 +65,19 @@ export function Hero({
               {t("secondaryCta")}
               <ArrowRightIcon aria-hidden />
             </Link>
+            <Link
+              href="/demo"
+              className={cn(
+                buttonVariants({
+                  size: "marketing",
+                  variant: "outline",
+                  tone: "primary",
+                }),
+                "bg-background hover:bg-background/90",
+              )}
+            >
+              View demo
+            </Link>
             <a
               href="https://vercel.com/new/clone?repository-url=https://github.com/linonward/sass"
               target="_blank"
