@@ -7,7 +7,7 @@ import { useActionState, useEffect, useState } from "react";
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { Badge } from "@/core/ui/badge";
-import { Button } from "@/core/ui/button";
+import { Button, buttonVariants } from "@/core/ui/button";
 import {
   Card,
   CardContent,
@@ -146,33 +146,35 @@ export function OnboardingChecklist({
                       {t("manual")}
                     </label>
                   )}
+                  {/* 这两个是链接不是按钮，用 buttonVariants 套样式、不走 Base UI 的
+                      Button：它的 nativeButton 默认 true，render 成 <a> 会在 dev
+                      控制台报警；声明 nativeButton={false} 能消警，但会往 <a> 上盖
+                      role="button"，把「点了会跳转」从无障碍树里抹掉。 */}
                   {link &&
                     (link.external ? (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto px-0"
-                        render={
-                          <a
-                            href={link.href}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                          />
-                        }
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className={cn(
+                          buttonVariants({ variant: "link", size: "sm" }),
+                          "h-auto px-0",
+                        )}
                       >
                         {t("open")}
                         <ArrowUpRightIcon />
-                      </Button>
+                      </a>
                     ) : (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto px-0"
-                        render={<Link href={link.href} />}
+                      <Link
+                        href={link.href}
+                        className={cn(
+                          buttonVariants({ variant: "link", size: "sm" }),
+                          "h-auto px-0",
+                        )}
                       >
                         {t("open")}
                         <ArrowUpRightIcon />
-                      </Button>
+                      </Link>
                     ))}
                 </div>
               </li>

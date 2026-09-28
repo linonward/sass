@@ -4,11 +4,11 @@
 
 ## 依赖
 
-T1704（CI dep audit）后环境干净。任务间无强依赖，可并行。
+T1704（CI dep audit）后环境干净。T1901–T1903 之间无依赖可并行；T1904 收尾 T1901 的组件，在 T1901 之后。
 
 ```
-T1901 ─┐
-T1902 ─┤  全部可并行
+T1901 ─┬─ T1904
+T1902 ─┤  前三条可并行
 T1903 ─┘
 ```
 
@@ -51,6 +51,18 @@ T1903 ─┘
   - 如果要做视频：录一个无声 5 分钟 walkthrough（Loom 或 OBS），链接放 README
   - README 顶部加 "🚀 10 分钟上线" 快速入口（链接到 checklist）
 - **验证**: 跟着 checklist 走一遍，确认一个不熟悉项目的的人能在 30 分钟内完成
+
+### T1904: 引导清单的链接按钮换掉 Base UI Button
+
+- **topic**: `onboarding-button`
+- **分支**: `fix/onboarding-button`
+- **依赖**: T1901
+- **范围**: `src/core/onboarding/checklist.tsx` + `e2e/onboarding.spec.ts` 一条断言
+- **做什么**:
+  - T1901 的清单里两个 `Button` 用 `render` 渲染成 `<a>` / `<Link>`，Base UI 的 `Button` 把 `nativeButton` 默认成 `true`，渲染结果不是原生 `<button>` 时会在 dev 控制台打一条「expected a native `<button>`」告警（实测每处代码位一条，共 2 条；全站仅此两处）
+  - 消警的直觉做法是声明 `nativeButton={false}`，但读 Base UI 的 `useButton` 实现可看到：这条路径会给元素挂上 `role="button"`，把「点了会跳转」从无障碍树里抹掉（实测三个链接的角色从 link 变成 button）。所以改成仓库既有写法 —— 链接用 `buttonVariants({ variant: "link", size: "sm" })` 套样式（全站约 30 处，最近的先例是 `playground.tsx` 的「买点数」），不经过 Base UI 的 `Button`
+  - e2e 补一条断言把角色锁住：三个「打开」必须是 link
+- **验证**: 改前 dev 控制台 2 条告警、改后 0 条（Playwright 探针实测，三处写法 A/B 对比）；`pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm format:check` 与 `e2e/ui-shell.spec.ts`、`e2e/landing.spec.ts`、`e2e/onboarding.spec.ts` 全绿
 
 ## 完成后
 

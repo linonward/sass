@@ -63,6 +63,11 @@ test("新用户注册后自动落到清单，标完成写进用户记录", async
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(o.title);
 
   await expect(page.getByTestId("onboarding-step")).toHaveCount(5);
+  // 三个可跳转的步骤各挂一个「打开」链接。锁的是角色：它得是链接（会跳转），
+  // 不是按钮 —— 见 checklist.tsx 里为什么这两个不走 Base UI 的 Button。
+  await expect(
+    page.getByTestId("onboarding-step").getByRole("link"),
+  ).toHaveCount(3);
   // 品牌色没有环境变量可覆盖：出厂值还在时这一步就该是 todo，并把没改的值列出来。
   await expect(step(page, "brandColor")).toHaveAttribute("data-status", "todo");
   await expect(step(page, "brandColor")).toContainText("#0f766e");
