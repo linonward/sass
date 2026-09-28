@@ -1,7 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+} from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { legalPages } from "@/core/legal/pages";
@@ -40,6 +46,11 @@ type Props = {
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// 「已水合」没有外部事件源 —— 水合是 React 自己的一次性切换，订阅函数返回空退订即可。
+const subscribeHydration = () => () => {};
+const hydratedSnapshot = () => true;
+const serverSnapshot = () => false;
 
 function GoogleIcon() {
   return (
@@ -82,6 +93,18 @@ export function SignInForm({
   const [error, setError] = useState<string | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+
+  // 水合完成前 onSubmit 还没挂上，这时提交走的是浏览器的原生表单 GET：地址栏会被整个换成
+  // `/sign-in?email=…`，callbackURL 随之丢失，从受保护页面或邀请链接过来的用户登录后会落到
+  // 引导页、而不是原目标页（慢网与移动端才会碰到，本地 dev 能稳定复现）。禁用提交按钮可以
+  // 同时挡掉点击和回车（表单的隐式提交）两条路径，水合完成后恢复可用。
+  // 取法同 src/core/hooks/use-mobile.ts：服务端快照 false、客户端快照 true，SSR 与首帧一致
+  // 不会失配，也不必在 effect 里同步 setState（eslint 的 set-state-in-effect 会拦）。
+  const hydrated = useSyncExternalStore(
+    subscribeHydration,
+    hydratedSnapshot,
+    serverSnapshot,
+  );
 
   const secondsLeft = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
 
@@ -258,7 +281,12 @@ export function SignInForm({
             required
             autoFocus
           />
-          <Button type="submit" size="lg" className="w-full" disabled={pending}>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={!hydrated || pending}
+          >
             {pending ? t("sending") : t("sendCode")}
           </Button>
         </form>
@@ -295,7 +323,7 @@ export function SignInForm({
             type="submit"
             size="lg"
             className="w-full"
-            disabled={pending || code.length !== otp.length}
+            disabled={!hydrated || pending || code.length !== otp.length}
           >
             {pending ? t("verifying") : t("verify")}
           </Button>

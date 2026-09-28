@@ -158,6 +158,29 @@ test("站外的 callbackURL 被忽略", async ({ page }) => {
   await expect(page).toHaveURL("/dashboard");
 });
 
+// 关 JS = 「永远没水合」的极端情形。onSubmit 还没挂上时提交，走的是浏览器的原生表单 GET：
+// 地址栏会被整个换成 `/sign-in?email=…`，callbackURL 随之丢失，从受保护页面或邀请链接过来的
+// 用户登录后落到引导页而不是原目标页。真机上是慢网 / 移动端才会碰到，本地 dev 能稳定复现。
+test.describe("水合完成前登录表单不可提交（关 JS）", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("提交邮箱不会冲掉 callbackURL", async ({ page }) => {
+    await page.goto(
+      `/sign-in?callbackURL=${encodeURIComponent("/dashboard?from=e2e")}`,
+    );
+    await expect(
+      page.getByRole("button", { name: t.signIn.sendCode }),
+    ).toBeDisabled();
+
+    // 回车是原生提交的另一条路径（表单的隐式提交），禁用提交按钮同样挡得住。
+    const email = page.getByLabel(t.signIn.emailLabel);
+    await email.fill("hydration@example.com");
+    await email.press("Enter");
+
+    await expect(page).toHaveURL(/callbackURL=/);
+  });
+});
+
 test("从用户菜单退出登录后不能再访问 dashboard", async ({ page, isMobile }) => {
   const { code } = await requestCode(page, uniqueEmail("signout"));
   await enterCode(page, code);

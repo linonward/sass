@@ -61,9 +61,14 @@ export async function requestCode(
   if (!page.url().includes("/sign-in")) await page.goto(signInPath);
   // hydration 完成前填的值会被 React 重置，点击后只会提示邮箱无效（不会发出请求），
   // 所以重复"填写并发送"，直到出现验证码输入框。
+  // 循环里的 click 要有界（理由同 openUserMenu）：提交按钮在水合完成前是禁用的，默认 30s 的
+  // click 会一直等按钮可用，把 toPass 的预算一把耗光 —— 慢水合的环境（i18n 副本、冷启动的
+  // dev server）上就变成失败。单轮快速失败，重试才有机会等到 hydration 完成。
   await expect(async () => {
     await page.getByLabel(copy.Auth.signIn.emailLabel).fill(email);
-    await page.getByRole("button", { name: copy.Auth.signIn.sendCode }).click();
+    await page
+      .getByRole("button", { name: copy.Auth.signIn.sendCode })
+      .click({ timeout: 1000 });
     await expect(page.getByLabel(copy.Auth.signIn.codeLabel)).toBeVisible({
       timeout: 2000,
     });
