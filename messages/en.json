@@ -31,7 +31,8 @@
     "switch": "Change language"
   },
   "Common": {
-    "close": "Close"
+    "close": "Close",
+    "effectiveDate": "Effective date:"
   },
   "NotFound": {
     "title": "Page not found",
@@ -86,6 +87,13 @@
         "checkoutTotal": "Total due today",
         "toastTitle": "Payment received",
         "toastBody": "Subscription active"
+      },
+      "demoCta": "View demo",
+      "deployToVercel": "Deploy to Vercel",
+      "colorSwitcher": {
+        "label": "Brand color",
+        "prompt": "Try a color →",
+        "switchTo": "Switch brand color to __HEX__"
       }
     },
     "features": {
@@ -391,6 +399,68 @@
       "soonOn": "beta-soon is on and rolled out to everyone with an account.",
       "soonOff": "beta-soon is disabled in site.config.ts, so it evaluates to false for everyone."
     }
+  },
+  "Demo": {
+    "metaTitle": "Demo — see what your SaaS looks like inside",
+    "pageTitle": "Your SaaS dashboard",
+    "pageDescription": "This is what your users and admin see. All of it ships with the template — you just change one hex color.",
+    "overview": {
+      "title": "30-day overview",
+      "description": "Same metric cards your admin panel shows. Real numbers once you launch."
+    },
+    "stats": {
+      "newUsers": {
+        "label": "New users",
+        "hint": "Last 30 days"
+      },
+      "netRevenue": {
+        "label": "Net revenue",
+        "hint": "Last 30 days, after refunds"
+      },
+      "creditsIssued": {
+        "label": "Credits issued",
+        "hint": "All time"
+      },
+      "aiCalls": {
+        "label": "AI calls",
+        "hint": "Last 30 days"
+      }
+    },
+    "chartNewUsers": "New users per day",
+    "chartAiCalls": "AI calls per day",
+    "everything": {
+      "title": "Everything included",
+      "description": "All of these ship with the template. No plugins, no separate purchases."
+    },
+    "modules": {
+      "auth": {
+        "title": "Auth & email verification",
+        "desc": "Better Auth with 6-digit email codes. No magic links."
+      },
+      "billing": {
+        "title": "Creem payments (MoR)",
+        "desc": "Accept global payments without a company entity."
+      },
+      "ai": {
+        "title": "AI with usage billing",
+        "desc": "Pre-authorize credits, atomic deduction, refund on failure."
+      },
+      "acquisition": {
+        "title": "Acquisition tools",
+        "desc": "UTM attribution, waitlist, referral rewards — all built in."
+      },
+      "brand": {
+        "title": "One-hex rebrand",
+        "desc": "Change one color in config — the entire site rebrands."
+      },
+      "i18n": {
+        "title": "i18n ready",
+        "desc": "Add a language file and it just works."
+      }
+    },
+    "ctaTitle": "Fork it. Deploy it. Ship it.",
+    "ctaDescription": "One click deploys to Vercel with a Neon Postgres database. Change the config, commit, and your SaaS is live.",
+    "deployButton": "Deploy to Vercel"
   },
   "Account": {
     "metaTitle": "Settings",

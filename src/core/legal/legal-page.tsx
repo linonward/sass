@@ -25,7 +25,13 @@ function formatDate(isoDate: string) {
  * 法律页的排版容器。正文只有英文，因此 lang="en"；
  * 在其他语言路径下访问时，外层 Header / Footer 仍按当前语言显示。
  */
-export function LegalPage({ document }: { document: LegalDocument }) {
+export function LegalPage({
+  document,
+  effectiveDateLabel = "Effective date:",
+}: {
+  document: LegalDocument;
+  effectiveDateLabel?: string;
+}) {
   const { legal, name, domain } = siteConfig;
   const email = (
     <a href={`mailto:${legal.contactEmail}`}>{legal.contactEmail}</a>
@@ -41,7 +47,7 @@ export function LegalPage({ document }: { document: LegalDocument }) {
           {document.title}
         </h1>
         <p className="text-muted-foreground mt-3! text-sm">
-          Effective date:{" "}
+          {effectiveDateLabel}{" "}
           <time dateTime={legal.effectiveDate}>
             {formatDate(legal.effectiveDate)}
           </time>

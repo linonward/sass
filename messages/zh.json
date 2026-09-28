@@ -1,0 +1,1245 @@
+{
+  "Nav": {
+    "features": "功能",
+    "pricing": "定价",
+    "faq": "常见问题",
+    "blog": "博客",
+    "changelog": "更新日志",
+    "product": "产品",
+    "legal": "法律",
+    "privacy": "隐私政策",
+    "terms": "服务条款",
+    "refund": "退款政策"
+  },
+  "Header": {
+    "main": "主导航",
+    "mobile": "移动端",
+    "openMenu": "打开菜单",
+    "cta": "免费开始"
+  },
+  "Footer": {
+    "tagline": "一天上线你的 SaaS。",
+    "copyright": "© {year} {name}"
+  },
+  "Theme": {
+    "toggle": "切换主题",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  },
+  "Locale": {
+    "switch": "切换语言"
+  },
+  "Common": {
+    "close": "关闭",
+    "effectiveDate": "生效日期："
+  },
+  "NotFound": {
+    "title": "页面不存在",
+    "description": "你要找的页面不存在或已被移动。",
+    "back": "回到首页"
+  },
+  "Error": {
+    "title": "出了点问题",
+    "description": "发生了意外错误，请重试。",
+    "id": "错误 ID：{digest}",
+    "retry": "重试"
+  },
+  "Metadata": {
+    "description": "一天上线你的 SaaS。"
+  },
+  "Llms": {
+    "intro": "{name} 的机器可读索引，供 AI 代理和搜索引擎使用。公开页面在前，带一行描述；然后是仅供机器使用的 URL；最后是需要登录的区域。",
+    "howToUse": "如何使用此文件",
+    "howToUseSitemap": "下方列出的 sitemap.xml 是完整的公开 URL 集合，含 hreflang 语言版本。",
+    "howToUseAuth": "以上仅公开页面可被索引；最后一段列出了只返回登录页而非实际内容的路径。",
+    "homeTitle": "首页",
+    "homeNote": "产品功能、特性列表、定价和常见问题",
+    "pricingNote": "套餐方案、价格及各自包含的内容",
+    "blogNote": "文章和产品动态",
+    "machineReadable": "机器可读",
+    "sitemapNote": "所有公开 URL",
+    "robotsNote": "抓取规则；账户和管理区域已排除",
+    "feedNote": "博客 RSS 订阅",
+    "auth": "需要登录",
+    "authNote": "登录方式为邮件一次性验证码。爬虫只能看到登录页，因此这些路径下没有可索引的内容。",
+    "optional": "可选",
+    "tagsNote": "按标签分类的博客文章"
+  },
+  "Landing": {
+    "hero": {
+      "badge": "Next.js SaaS 模板",
+      "title": "这个周末上线你的 SaaS",
+      "subtitle": "认证、支付、积分、AI 和 SEO 都已接好。改配置，写产品，发布。",
+      "primaryCta": "开始使用",
+      "secondaryCta": "查看功能",
+      "demoCta": "查看演示",
+      "deployToVercel": "部署到 Vercel",
+      "imageAlt": "产品仪表盘预览",
+      "colorSwitcher": {
+        "label": "品牌色",
+        "prompt": "换个颜色 →",
+        "switchTo": "将品牌色切换为 __HEX__"
+      },
+      "mock": {
+        "terminalTitle": "终端",
+        "terminalCommand": "cd your-project && pnpm dev",
+        "terminalReady": "收银台就绪",
+        "terminalCredits": "付款后积分已发放",
+        "checkoutTitle": "收银台",
+        "checkoutCustomer": "客户",
+        "checkoutCustomerValue": "王小明",
+        "checkoutCountry": "账单国家",
+        "checkoutCountryValue": "德国",
+        "checkoutTotal": "今日应付",
+        "toastTitle": "已收到付款",
+        "toastBody": "订阅已生效"
+      }
+    },
+    "features": {
+      "title": "发货所需的一切",
+      "subtitle": "无聊的部分都做完了，你只管让你的产品与众不同。",
+      "items": {
+        "auth": {
+          "title": "用户认证",
+          "description": "Google 登录和邮箱验证码，内置会话和角色管理。",
+          "detail": "角色：用户 | 管理员"
+        },
+        "billing": {
+          "title": "支付",
+          "description": "通过支付商无关的计费层支持订阅和一次性购买。",
+          "detail": "subscription.created → 2,000 积分"
+        },
+        "i18n": {
+          "title": "多语言",
+          "description": "本地化路由和文案。加一门语言只需改配置。",
+          "detail": "英文 · 中文 · 日文"
+        },
+        "ai": {
+          "title": "AI 就绪",
+          "description": "通过 Vercel AI SDK 调用任意模型，按请求扣除积分。",
+          "detail": "streamText() → 积分扣减"
+        },
+        "seo": {
+          "title": "SEO 内置",
+          "description": "元数据、站点地图、hreflang 和 Open Graph 图片开箱即用。",
+          "detail": "sitemap.xml · rss.xml · json-ld"
+        },
+        "fast": {
+          "title": "默认飞快",
+          "description": "静态渲染、字体和图片优化，客户端 bundle 极小。",
+          "detail": "静态 · 默认零客户端 JS"
+        }
+      }
+    },
+    "pricing": {
+      "title": "简洁透明的定价",
+      "subtitle": "免费开始，需要更多时升级。",
+      "popular": "最受欢迎",
+      "cta": "选择 {plan}",
+      "interval": {
+        "month": "/ 月",
+        "year": "/ 年",
+        "once": "一次性"
+      },
+      "plans": {
+        "free": {
+          "name": "免费",
+          "description": "适合尝鲜体验。"
+        },
+        "pro": {
+          "name": "专业版",
+          "description": "适合成长中的产品。"
+        },
+        "lifetime": {
+          "name": "终身版",
+          "description": "一次付费，永久使用。"
+        }
+      },
+      "features": {
+        "credits100": "每月 100 积分",
+        "credits2000": "每月 2,000 积分",
+        "coreFeatures": "所有核心功能",
+        "communitySupport": "社区支持",
+        "prioritySupport": "邮件优先支持",
+        "lifetimeUpdates": "终身更新"
+      }
+    },
+    "faq": {
+      "title": "常见问题",
+      "items": {
+        "stack": {
+          "question": "用到了哪些技术？",
+          "answer": "Next.js、TypeScript、Tailwind CSS 和 shadcn/ui，数据库为 Postgres。"
+        },
+        "payments": {
+          "question": "支持哪些支付商？",
+          "answer": "Creem 已内置支持。其他支付商可通过统一的计费接口接入。"
+        },
+        "customize": {
+          "question": "如何自定义？",
+          "answer": "编辑 site.config.ts 修改品牌、板块和套餐，编辑 messages 修改文案。你的产品代码写在 core 文件夹之外。"
+        },
+        "license": {
+          "question": "可以用于商业项目吗？",
+          "answer": "可以。个人和商业用途都覆盖。"
+        }
+      }
+    },
+    "cta": {
+      "title": "准备好了吗？",
+      "subtitle": "从想法到付费用户，只需一天。",
+      "button": "开始构建"
+    }
+  },
+  "Email": {
+    "layout": {
+      "footer": "你收到这封邮件是因为你在 {name} 有账户。",
+      "help": "有问题？直接回复这封邮件即可。"
+    },
+    "signInCode": {
+      "subject": "你的 {name} 登录验证码",
+      "preview": "{code} 是你的 {name} 登录验证码",
+      "heading": "你的登录验证码",
+      "intro": "输入以下验证码登录 {name}：",
+      "expires": "此验证码 {minutes, plural, one {# 分钟后} other {# 分钟后}}过期。",
+      "ignore": "如果你没有尝试登录，请忽略此邮件。"
+    },
+    "welcome": {
+      "subject": "欢迎来到 {name}",
+      "preview": "感谢加入 {name}",
+      "heading": "欢迎来到 {name}",
+      "greeting": "你好 {name}，",
+      "greetingAnonymous": "你好，",
+      "body": "感谢注册。你的账户已就绪，现在就可以开始使用 {site}。",
+      "cta": "开始使用",
+      "signoff": "{site} 团队"
+    },
+    "details": {
+      "plan": "套餐",
+      "amount": "金额",
+      "date": "日期",
+      "renewsOn": "续订日期",
+      "credits": "积分已添加",
+      "creditsValue": "{credits, plural, one {# 积分} other {# 积分}}",
+      "accessUntil": "可使用至",
+      "balance": "当前余额"
+    },
+    "paymentSucceeded": {
+      "subject": "已收到 {plan} 付款 · {name}",
+      "preview": "感谢——你的 {plan} 付款已到账",
+      "heading": "已收到付款",
+      "bodySubscription": "感谢付款。你的 {plan} 订阅已生效。",
+      "bodyOneTime": "感谢购买。{plan} 现已可在你的账户中使用。",
+      "cta": "查看账单",
+      "receipt": "你的收据和发票可在账单页面查看。"
+    },
+    "paymentFailed": {
+      "subject": "付款未成功 · {name}",
+      "preview": "请更新付款方式以保持订阅",
+      "heading": "付款失败",
+      "body": "我们无法处理你的 {plan} 订阅付款。请更新付款方式以保持访问权限。",
+      "bodyGeneric": "我们无法处理你的最近一笔付款。请更新付款方式以保持访问权限。",
+      "cta": "更新付款方式",
+      "note": "我们会自动重试付款。如果持续失败，你的订阅可能会被暂停。"
+    },
+    "subscriptionCanceled": {
+      "subject": "你的订阅已取消 · {name}",
+      "preview": "很遗憾看到你离开",
+      "heading": "订阅已取消",
+      "body": "你的 {plan} 订阅已被取消。",
+      "bodyUntil": "你的 {plan} 订阅已被取消。你可以在 {date} 之前继续使用。",
+      "cta": "重新订阅",
+      "note": "改变主意了？你可以随时在账单页面重新订阅。"
+    },
+    "creditsLow": {
+      "subject": "你的积分即将用尽 · {name}",
+      "preview": "仅剩 {balance} 积分",
+      "heading": "积分即将用尽",
+      "body": "你的余额仅剩 {balance, plural, one {# 积分} other {# 积分}}，低于 {threshold}。请充值或升级套餐以免中断使用。",
+      "cta": "获取更多积分",
+      "note": "此提醒每天最多发送一次。"
+    },
+    "leadConfirmation": {
+      "subject": "确认你的 {name} 请求",
+      "preview": "确认邮箱以完成你的请求。",
+      "heading": "你的请求：{list}",
+      "body": "请点击下方按钮，在网站上完成确认。确认链接 24 小时内有效。如果你已完成确认，无需进一步操作。",
+      "confirm": "审核并确认",
+      "ignore": "如果你没有请求此邮件，可以忽略。这不会创建账户或订阅营销邮件。",
+      "withdraw": "撤回此请求"
+    },
+    "statusIncident": {
+      "subject": "{component} 出现问题",
+      "subjectResolved": "{component} 已恢复",
+      "preview": "{component} 的状态更新",
+      "previewResolved": "{component} 已恢复正常",
+      "heading": "{component} 未完全正常运行",
+      "headingResolved": "{component} 已恢复",
+      "component": "组件",
+      "status": "影响程度",
+      "level": {
+        "operational": "正常运行",
+        "degraded": "性能下降",
+        "outage": "服务中断"
+      },
+      "cta": "查看状态页",
+      "unsubscribe": "你收到此邮件是因为你订阅了状态更新。",
+      "unsubscribeLink": "取消订阅"
+    },
+    "statusSubscription": {
+      "subject": "确认你的 {name} 状态订阅",
+      "preview": "点击即可开始接收状态更新",
+      "heading": "确认你的订阅",
+      "body": "点击下方确认，当组件出现故障时你会收到邮件，恢复时也会再收到一封。",
+      "cta": "确认订阅",
+      "ignore": "如果你没有请求此服务，请忽略此邮件。我们不会向你发送任何内容。"
+    }
+  },
+  "Auth": {
+    "signIn": {
+      "metaTitle": "登录",
+      "title": "登录 {name}",
+      "subtitle": "新用户？输入邮箱即可自动创建账户。",
+      "google": "使用 Google 登录",
+      "or": "或",
+      "emailLabel": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "sendCode": "发送验证码",
+      "sending": "发送中…",
+      "codeSent": "我们已向 {email} 发送了一组 {length} 位验证码，{minutes} 分钟后过期。",
+      "codeLabel": "验证码",
+      "verify": "登录",
+      "verifying": "登录中…",
+      "resend": "重新发送",
+      "resendIn": "{seconds}s 后可重发",
+      "changeEmail": "更换邮箱",
+      "legal": "继续即表示你同意我们的<terms>服务条款</terms>和<privacy>隐私政策</privacy>。"
+    },
+    "errors": {
+      "invalidEmail": "请输入有效的邮箱地址。",
+      "invalidCode": "验证码错误或已过期。请重试或重新获取。",
+      "codeExpired": "验证码已过期，请重新获取。",
+      "tooManyAttempts": "错误尝试次数过多，请重新获取验证码。",
+      "cooldown": "请等待 {seconds}s 后再重新获取验证码。",
+      "sendFailed": "邮件发送失败，请稍后重试。",
+      "sendFailedGoogle": "邮件发送失败。请稍后重试，或使用 Google 登录。",
+      "googleFailed": "Google 登录未完成。请重试，或使用邮箱验证码登录。",
+      "rateLimited": "请求过于频繁，请稍等片刻再试。",
+      "generic": "出了点问题，请重试。",
+      "banned": "此账户已被停用。如果你认为这是误操作，请联系支持。"
+    }
+  },
+  "Dashboard": {
+    "sidebar": "侧边栏",
+    "sidebarDescription": "显示移动端侧边栏。",
+    "suiteNav": "主菜单",
+    "businessNav": "产品",
+    "adminNav": "管理",
+    "toggleSidebar": "切换侧边栏",
+    "nav": {
+      "home": "仪表盘",
+      "settings": "设置",
+      "billing": "账单",
+      "playground": "试验场",
+      "admin": "管理后台",
+      "adminMetrics": "运营数据",
+      "adminFlags": "功能开关",
+      "adminAcquisition": "获客分析",
+      "adminUsers": "用户",
+      "adminOrders": "订单",
+      "adminSubscriptions": "订阅",
+      "adminLeads": "线索",
+      "adminReferrals": "邀请",
+      "example": "标语生成",
+      "referrals": "邀请好友",
+      "adminStatus": "状态页",
+      "apiKeys": "API 密钥",
+      "adminApiKeys": "API 密钥"
+    },
+    "userMenu": {
+      "open": "账户菜单",
+      "settings": "设置",
+      "language": "语言",
+      "signOut": "退出登录"
+    },
+    "home": {
+      "metaTitle": "仪表盘",
+      "title": "仪表盘",
+      "welcome": "当前账号：{email}",
+      "welcomeName": "欢迎回来，{name}",
+      "emptyTitle": "欢迎来到 {name}",
+      "emptyDescription": "这里目前还没有内容。你的产品概览将显示在此页面。",
+      "emptyCta": "前往设置"
+    },
+    "upload": {
+      "title": "上传文件",
+      "description": "文件从你的浏览器直接上传到存储服务。用此功能检查上传是否正常配置。",
+      "choose": "选择文件",
+      "uploading": "上传中…",
+      "done": "已上传：",
+      "errors": {
+        "invalid_type": "不支持此文件类型。",
+        "invalid_size": "此文件为空或无法读取大小。",
+        "too_large": "文件过大。",
+        "rate_limited": "上传过于频繁，请稍后再试。",
+        "upload_not_configured": "上传功能尚未配置。",
+        "put_failed": "上传到存储服务失败。请检查存储桶的 CORS 设置。",
+        "mismatch": "上传的文件与请求不符。",
+        "unknown": "出了点问题，请重试。"
+      }
+    },
+    "flags": {
+      "title": "功能开关",
+      "description": "site.config.ts 中 userFlags 部分的演示开关。删除此部分时一起删除其他示例。",
+      "beta": "测试版",
+      "dashboardOn": "你处于 beta-dashboard 发布范围内，因此看到的是新版布局。",
+      "dashboardOff": "beta-dashboard 正在向一半用户推出；你目前不在其中。",
+      "preview": "beta-preview 仅限管理员，因此只有管理员能看到这一行。",
+      "soonOn": "beta-soon 已开启并向所有已注册用户开放。",
+      "soonOff": "beta-soon 在 site.config.ts 中被禁用，因此对所有人评估为 false。"
+    }
+  },
+  "Demo": {
+    "metaTitle": "演示——看看你的 SaaS 内部长什么样",
+    "pageTitle": "你的 SaaS 仪表盘",
+    "pageDescription": "这就是你的用户和管理员看到的内容。所有这些都随模板一起提供——你只需改一个十六进制颜色。",
+    "overview": {
+      "title": "30 天概览",
+      "description": "与管理后台相同的指标卡片。上线后就是真实数据。"
+    },
+    "stats": {
+      "newUsers": {
+        "label": "新用户",
+        "hint": "最近 30 天"
+      },
+      "netRevenue": {
+        "label": "净收入",
+        "hint": "最近 30 天，退款后"
+      },
+      "creditsIssued": {
+        "label": "已发放积分",
+        "hint": "全部时间"
+      },
+      "aiCalls": {
+        "label": "AI 调用",
+        "hint": "最近 30 天"
+      }
+    },
+    "chartNewUsers": "每日新用户",
+    "chartAiCalls": "每日 AI 调用",
+    "everything": {
+      "title": "全部包含在内",
+      "description": "所有这些都随模板一起提供。无需插件，无需单独购买。"
+    },
+    "modules": {
+      "auth": {
+        "title": "认证与邮箱验证",
+        "desc": "Better Auth，6 位邮箱验证码。不用魔法链接。"
+      },
+      "billing": {
+        "title": "Creem 支付 (MoR)",
+        "desc": "无需公司实体，全球收款。"
+      },
+      "ai": {
+        "title": "AI 用量计费",
+        "desc": "预授权积分，原子扣减，失败退款。"
+      },
+      "acquisition": {
+        "title": "获客工具",
+        "desc": "UTM 归因、等候列表、邀请奖励——全部内置。"
+      },
+      "brand": {
+        "title": "一键换色",
+        "desc": "在配置中改一个颜色——整站重新换装。"
+      },
+      "i18n": {
+        "title": "多语言就绪",
+        "desc": "加一个语言文件，直接生效。"
+      }
+    },
+    "ctaTitle": "Fork。部署。上线。",
+    "ctaDescription": "一键部署到 Vercel，附带 Neon Postgres 数据库。改配置，提交，你的 SaaS 就上线了。",
+    "deployButton": "部署到 Vercel"
+  },
+  "Account": {
+    "metaTitle": "设置",
+    "title": "设置",
+    "description": "管理你的个人资料和账户。",
+    "profile": {
+      "title": "个人资料",
+      "email": "当前账号：{email}"
+    },
+    "name": {
+      "label": "姓名",
+      "save": "保存",
+      "saving": "保存中…"
+    },
+    "locale": {
+      "label": "首选语言",
+      "save": "保存",
+      "saving": "保存中…"
+    },
+    "status": {
+      "saved": "已保存。",
+      "invalid": "请检查输入值后重试。",
+      "mismatch": "你输入的邮箱与账户不匹配。",
+      "hookFailed": "无法完成数据清理，因此你的账户未被删除。请重试或联系支持。",
+      "generic": "出了点问题，请重试。"
+    },
+    "danger": {
+      "title": "删除账户",
+      "description": "永久删除你的账户及其所有数据。此操作不可撤销。"
+    },
+    "delete": {
+      "open": "删除账户",
+      "title": "删除你的账户？",
+      "description": "这将永久删除你的账户、会话和数据。你可以用相同邮箱重新注册，但那将是一个全新的空账户。",
+      "confirmLabel": "输入 <email></email> 以确认",
+      "cancel": "取消",
+      "confirm": "删除账户",
+      "deleting": "删除中…"
+    }
+  },
+  "ApiKeys": {
+    "metaTitle": "API 密钥",
+    "title": "API 密钥",
+    "description": "为脚本或集成创建密钥。完整密钥仅在创建时显示一次——本页只保留名称和前几位字符。",
+    "empty": "暂无密钥",
+    "emptyHint": "当脚本或服务需要以你的身份调用 API 时创建密钥。",
+    "never": "从未",
+    "columns": {
+      "name": "名称",
+      "key": "密钥",
+      "created": "创建时间",
+      "lastUsed": "最后使用",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "status": {
+      "active": "活跃",
+      "revoked": "已吊销",
+      "expired": "已过期"
+    },
+    "usageHint": "以 Authorization: Bearer sk_... 请求头发送密钥。持有密钥者可以以你的身份操作，如泄露请在此吊销。",
+    "create": {
+      "open": "创建密钥",
+      "title": "创建 API 密钥",
+      "description": "取一个你以后能认出来的名字。密钥按账户独立管理；吊销一个不影响其他密钥。",
+      "nameLabel": "名称",
+      "namePlaceholder": "生产环境脚本",
+      "nameHint": "最多 60 个字符，在你的密钥中名称唯一。",
+      "submit": "创建",
+      "creating": "创建中…",
+      "cancel": "取消",
+      "createdTitle": "立即复制你的密钥",
+      "createdDescription": "这是唯一一次显示完整密钥。请妥善保存——你无法再次查看。",
+      "createdName": "密钥 {name} 已就绪。",
+      "copy": "复制",
+      "copied": "已复制",
+      "copyManual": "复制失败。密钥已选中——按 Ctrl/Cmd + C。",
+      "done": "完成",
+      "errors": {
+        "invalid_name": "请输入最多 60 个字符的名称。",
+        "duplicate": "你已有一个同名的密钥。",
+        "unavailable": "此站点未开放 API 密钥功能。"
+      }
+    },
+    "revoke": {
+      "open": "吊销",
+      "title": "吊销 {name}？",
+      "description": "此操作不可撤销。使用此密钥的任何服务将立即失败。如需新密钥请重新创建。",
+      "confirm": "吊销密钥",
+      "revoking": "吊销中…",
+      "cancel": "取消",
+      "errors": {
+        "invalid": "找不到该密钥。",
+        "unavailable": "此站点未开放 API 密钥功能。"
+      }
+    }
+  },
+  "Billing": {
+    "pricing": {
+      "metaTitle": "定价",
+      "metaDescription": "简洁透明的定价。免费开始，需要更多时升级。"
+    },
+    "actions": {
+      "manage": "管理订阅",
+      "purchased": "已购买",
+      "redirecting": "正在跳转到收银台…"
+    },
+    "errors": {
+      "billing_not_configured": "支付功能暂不可用，请稍后重试。",
+      "plan_not_configured": "此套餐尚未配置。",
+      "invalid_plan": "此套餐不存在。",
+      "no_customer": "你还没有任何账单记录。",
+      "generic": "出了点问题，请重试。"
+    },
+    "success": {
+      "metaTitle": "付款",
+      "processingTitle": "正在处理你的付款…",
+      "processingDescription": "通常只需几秒钟。你可以保持此页面开启。",
+      "completeTitle": "付款成功",
+      "completeDescription": "你的 {plan} 套餐现已生效。",
+      "credits": "你的积分余额现在为 {balance, number}。",
+      "failedTitle": "付款失败",
+      "failedDescription": "你的付款未能完成。你可以重试或更新付款方式。",
+      "timeoutTitle": "此操作比预期更久",
+      "timeoutDescription": "你的付款仍在确认中。如果几分钟后仍未显示，请联系我们：<link>{email}</link>。",
+      "missingTitle": "找不到此付款记录",
+      "missingDescription": "请检查你的账单页面，或联系我们：<link>{email}</link>。",
+      "toBilling": "前往账单",
+      "toDashboard": "前往仪表盘"
+    },
+    "page": {
+      "metaTitle": "账单",
+      "title": "账单",
+      "description": "你的套餐、购买记录和积分。",
+      "planTitle": "套餐",
+      "freePlan": "你当前使用免费套餐。",
+      "viewPlans": "查看套餐",
+      "status": {
+        "active": "生效中",
+        "past_due": "付款逾期",
+        "canceled": "已取消",
+        "expired": "已过期"
+      },
+      "renewsOn": "于 {date} 续订",
+      "endsOn": "于 {date} 到期",
+      "purchasesTitle": "一次性购买",
+      "manage": "管理订阅",
+      "creditsTitle": "积分",
+      "balance": "{balance, number} 积分",
+      "transactionsTitle": "最近动态",
+      "noTransactions": "暂无积分活动。",
+      "type": {
+        "grant": "添加",
+        "deduct": "使用",
+        "refund": "退款",
+        "adjust": "调整"
+      }
+    }
+  },
+  "Playground": {
+    "metaTitle": "试验场",
+    "title": "试验场",
+    "description": "试用本站配置的 AI 模型。对话不会保存；生成的图片和视频会保留在最近列表中。",
+    "model": "模型",
+    "cost": "每条消息 {cost, plural, one {# 积分} other {# 积分}}",
+    "free": "免费",
+    "empty": "发送消息开始对话。",
+    "you": "你",
+    "assistant": "助手",
+    "thinking": "思考中…",
+    "placeholder": "随便问…",
+    "send": "发送",
+    "stop": "停止",
+    "buyCredits": "获取更多积分",
+    "errors": {
+      "insufficient_credits": "你没有足够的积分使用此模型。",
+      "rate_limited": "你发送消息太快了，请稍等片刻。",
+      "unavailable": "服务暂时不可用，请稍后重试。",
+      "model_unavailable": "此模型当前不可用。",
+      "invalid_model": "此模型不存在。",
+      "too_large": "对话过长。请刷新页面重新开始。",
+      "unauthorized": "你的会话已过期，请重新登录。",
+      "model_error": "模型运行出错，你的积分已退还。",
+      "generic": "出了点问题，请重试。",
+      "storage_unavailable": "文件存储未配置，图片无法保存。",
+      "invalid_prompt": "请输入最多 2,000 个字符的提示词。",
+      "invalid_aspect_ratio": "不支持此宽高比。",
+      "invalid_image": "请选择或上传一张图片作为首帧。"
+    },
+    "tabs": {
+      "chat": "对话",
+      "image": "图片",
+      "video": "视频"
+    },
+    "image": {
+      "model": "模型",
+      "aspectRatio": "宽高比",
+      "cost": "每张图片 {cost, plural, one {# 积分} other {# 积分}}",
+      "free": "免费",
+      "placeholder": "描述你想要的图片…",
+      "generate": "生成",
+      "generating": "生成中…",
+      "wait": "通常需要 10-40 秒。",
+      "recent": "最近",
+      "empty": "你生成的图片将显示在此处。",
+      "buyCredits": "获取更多积分"
+    },
+    "video": {
+      "model": "模型",
+      "fromText": "从文本",
+      "fromImage": "从图片",
+      "aspectRatio": "宽高比",
+      "summary": "{duration}s · {cost, plural, =0 {免费} one {# 积分} other {# 积分}} 每个视频",
+      "firstFrame": "首帧",
+      "useImage": "使用图片：{prompt}",
+      "uploaded": "已上传图片",
+      "upload": "上传",
+      "placeholder": "描述动作和场景…",
+      "generate": "生成视频",
+      "generating": "生成中…",
+      "wait": "通常需要 1-5 分钟。你可以离开此页面。",
+      "recent": "最近视频",
+      "empty": "你生成的视频将显示在此处。",
+      "buyCredits": "获取更多积分",
+      "errors": {
+        "video_failed": "视频生成失败，你的积分已退还。",
+        "upload_failed": "图片上传失败。请试用 PNG、JPEG 或 WebP 格式。"
+      }
+    }
+  },
+  "Blog": {
+    "title": "博客",
+    "description": "产品更新、指南和团队故事。",
+    "feedTitle": "{name} 博客",
+    "rss": "RSS 订阅",
+    "empty": "暂无文章，敬请期待。",
+    "draft": "草稿",
+    "back": "所有文章",
+    "tags": "标签",
+    "tagTitle": "标记为 “{tag}” 的文章",
+    "tagDescription": "{name} 博客上所有标记为 “{tag}” 的文章。",
+    "pageTitle": "{title}（第 {page} 页）",
+    "pagination": "分页",
+    "newer": "较新文章",
+    "older": "较旧文章",
+    "pageOf": "第 {page} 页，共 {total} 页"
+  },
+  "Changelog": {
+    "title": "更新日志",
+    "description": "新功能、改进和修复，由新到旧排列。",
+    "feedTitle": "{name} 更新日志",
+    "rss": "RSS 订阅",
+    "empty": "暂无更新，敬请期待。",
+    "categories": {
+      "feature": "新功能",
+      "improvement": "改进",
+      "fix": "修复"
+    }
+  },
+  "Admin": {
+    "metaTitle": "管理后台",
+    "flags": {
+      "title": "功能开关",
+      "description": "每个开关来自 site.config.ts 的 userFlags 部分，本页为只读：开关是构建时配置，修改意味着编辑文件并重新部署。",
+      "list": {
+        "title": "定义",
+        "description": "管理员无论发布范围都能看到所有开启的开关；其他用户按用户 ID 分桶。"
+      },
+      "columns": {
+        "name": "开关",
+        "description": "用途",
+        "status": "状态",
+        "rollout": "发布范围",
+        "access": "可见范围"
+      },
+      "status": {
+        "on": "开",
+        "off": "关"
+      },
+      "access": {
+        "everyone": "所有人",
+        "admins": "仅管理员"
+      },
+      "rollout": "{percent}%",
+      "empty": "尚未定义功能开关。在 site.config.ts 的 userFlags 部分添加。",
+      "configHint": "要修改功能开关，编辑 site.config.ts 中的 userFlags 并重新部署。运行时编辑开关需要数据库中的开关表，本模板刻意未包含此功能。"
+    },
+    "acquisition": {
+      "title": "获客分析",
+      "description": "过去 {days} 天内的注册和付费用户（UTC），按注册时冻结的来源渠道分组。",
+      "channels": {
+        "title": "渠道"
+      },
+      "sourcesHint": "来源在注册时冻结。“无归因”表示没有可用的来源：访问未被记录、被拒绝、已过期或发生在其他设备上。“直接”表示访客无广告参数到达，例如手动输入地址。utm_source=unknown 的字面广告参数会作为单独一行显示。",
+      "pendingHint": "净收入以当前退款情况调整，因此过去时段会随退款而变化。金额尚未确定的订单——通常是退款先于付款记录到达——不计入收入或付费用户；其退款列在“待核对”下。0 表示尚未退款，而非订单已结算。",
+      "empty": "此时间段内没有渠道数据。归因仅在开启后才记录访问，因此更早的注册会显示在“无归因”下。",
+      "unknown": "无归因",
+      "direct": "直接访问",
+      "columns": {
+        "source": "来源",
+        "registrations": "注册",
+        "payingUsers": "付费用户",
+        "revenue": "净收入",
+        "pending": "待核对",
+        "confirmedLeads": "已确认线索",
+        "conversionRate": "转化率"
+      },
+      "leadsHint": "线索被撤回或删除时，已确认线索数和转化率会随之变化。仅已确认的线索计入转化率；未确认的线索不包含在内。",
+      "filters": {
+        "source": "来源",
+        "medium": "媒介",
+        "campaign": "广告活动",
+        "allSources": "全部来源",
+        "allMediums": "全部媒介",
+        "allCampaigns": "全部活动",
+        "apply": "应用"
+      }
+    },
+    "metrics": {
+      "title": "运营数据",
+      "description": "过去 {days} 天的注册、收入、积分和 AI 用量（UTC）。",
+      "chart": {
+        "showData": "显示数据",
+        "day": "日期",
+        "value": "数值"
+      },
+      "users": {
+        "title": "用户",
+        "new": "新注册",
+        "total": "总用户数",
+        "banned": "已停用",
+        "daily": "每日注册"
+      },
+      "revenue": {
+        "title": "收入",
+        "description": "已扣除退款，来自此时间段内创建的订单。MRR 和订阅数为当前数据。",
+        "net": "净收入",
+        "mrr": "MRR",
+        "mrrHint": "按标价计算的活跃订阅；年付 ÷ 12",
+        "unpriced": "{count, plural, one {# 个订阅} other {# 个订阅}}的套餐已不在 site.config.ts 中，未计入",
+        "activeSubscriptions": "活跃订阅",
+        "payingUsers": "付费用户",
+        "daily": "每日净收入（{currency}）"
+      },
+      "credits": {
+        "title": "积分",
+        "granted": "已发放",
+        "consumed": "已消耗",
+        "refunded": "已退款"
+      },
+      "ai": {
+        "title": "AI",
+        "description": "失败率为已完成调用中的失败比例；仍在运行的调用不计入。",
+        "calls": "调用次数",
+        "failureRate": "失败率",
+        "empty": "此时间段内无 AI 调用。",
+        "columns": {
+          "kind": "类型",
+          "model": "模型",
+          "calls": "调用",
+          "failed": "失败",
+          "failureRate": "失败率"
+        },
+        "kind": {
+          "text": "对话",
+          "image": "图片",
+          "video": "视频"
+        }
+      }
+    },
+    "users": {
+      "title": "用户",
+      "description": "搜索账户，查看积分和账单，停用滥用账户。",
+      "search": "按邮箱或姓名搜索",
+      "searchButton": "搜索",
+      "empty": "未找到用户。",
+      "columns": {
+        "user": "用户",
+        "role": "角色",
+        "status": "状态",
+        "credits": "积分",
+        "joined": "注册时间"
+      }
+    },
+    "roles": {
+      "admin": "管理员",
+      "user": "用户"
+    },
+    "status": {
+      "active": "活跃",
+      "banned": "已停用"
+    },
+    "user": {
+      "back": "所有用户",
+      "metaTitle": "用户",
+      "noName": "未设置姓名",
+      "profileTitle": "个人资料",
+      "email": "邮箱",
+      "emailVerified": "已验证",
+      "emailUnverified": "未验证",
+      "role": "角色",
+      "joined": "注册时间",
+      "id": "用户 ID",
+      "banTitle": "账户访问",
+      "banDescription": "停用将使用户在所有设备上登出，并在你解除之前阻止新登录。",
+      "bannedNotice": "此账户已被停用。",
+      "bannedReason": "原因：{reason}",
+      "banReason": "原因（可选）",
+      "ban": "停用账户",
+      "unban": "解除停用",
+      "creditsTitle": "积分",
+      "balance": "{balance, number} 积分",
+      "amount": "数量",
+      "amountHint": "使用负数移除积分。",
+      "reason": "原因",
+      "reasonPlaceholder": "显示在账本中，例如“5 月 3 日宕机退款”",
+      "adjust": "调整积分",
+      "adjusted": "积分已调整。",
+      "duplicate": "此调整已应用过。",
+      "transactionsTitle": "最近动态",
+      "noTransactions": "暂无积分活动。",
+      "by": "由 {email}",
+      "deletedActor": "由已删除的管理员",
+      "subscriptionsTitle": "订阅",
+      "noSubscriptions": "暂无订阅。",
+      "ordersTitle": "订单",
+      "noOrders": "暂无订单。"
+    },
+    "leads": {
+      "title": "线索",
+      "description": "等候列表注册及其确认状态。可导出为 CSV 导入 CRM。",
+      "empty": "未找到线索。",
+      "searchEmail": "按邮箱搜索",
+      "searchButton": "搜索",
+      "exportCsv": "导出 CSV",
+      "unknownSource": "未知",
+      "columns": {
+        "email": "邮箱",
+        "status": "状态",
+        "list": "列表",
+        "source": "来源",
+        "created": "注册时间",
+        "confirmed": "确认时间",
+        "user": "已注册用户"
+      },
+      "status": {
+        "pending": "待确认",
+        "confirmed": "已确认",
+        "withdrawn": "已撤回"
+      }
+    },
+    "orders": {
+      "title": "订单",
+      "description": "来自一次性购买和订阅的付款记录。",
+      "empty": "暂无订单。",
+      "columns": {
+        "date": "日期",
+        "user": "用户",
+        "plan": "套餐",
+        "amount": "金额",
+        "status": "状态",
+        "reference": "参考号"
+      },
+      "refunded": "已退款 {amount}"
+    },
+    "subscriptions": {
+      "title": "订阅",
+      "description": "所有订阅及其当前状态。",
+      "empty": "暂无订阅。",
+      "columns": {
+        "created": "开始时间",
+        "user": "用户",
+        "plan": "套餐",
+        "status": "状态",
+        "periodEnd": "当前周期截至",
+        "reference": "参考号"
+      }
+    },
+    "orderStatus": {
+      "failed": "失败",
+      "paid": "已付款",
+      "partially_refunded": "部分退款",
+      "refunded": "已退款"
+    },
+    "filter": {
+      "label": "按状态筛选",
+      "all": "全部",
+      "range": {
+        "label": "时间范围",
+        "days": "{days} 天"
+      }
+    },
+    "pagination": {
+      "label": "分页",
+      "previous": "上一页",
+      "next": "下一页",
+      "summary": "第 {page} 页，共 {totalPages} 页 · 共 {total, number} 条"
+    },
+    "errors": {
+      "forbidden": "你没有权限执行此操作。",
+      "invalidAmount": "请输入非零整数。",
+      "reasonRequired": "请输入此调整的原因。",
+      "insufficient": "余额不能低于 0。",
+      "cannotBanSelf": "你不能停用你自己的账户。",
+      "generic": "出了点问题，请重试。"
+    },
+    "referrals": {
+      "title": "邀请",
+      "description": "邀请关系及其奖励状态。",
+      "empty": "未找到关系记录。",
+      "columns": {
+        "invitee": "受邀者",
+        "inviter": "邀请者",
+        "code": "邀请码",
+        "status": "状态",
+        "created": "创建时间"
+      },
+      "status": {
+        "awaiting_payment": "等待付款",
+        "rewarded": "已发放",
+        "revoked": "已撤销",
+        "pending_review": "审核中"
+      }
+    },
+    "statusPage": {
+      "title": "状态页",
+      "description": "开启、更新和解决事件，查看谁订阅了通知。",
+      "auto": "自动",
+      "ongoing": "进行中",
+      "create": {
+        "title": "开启事件",
+        "hint": "选择受影响的组件和严重程度。订阅者将收到一封邮件，5 分钟内的后续更新会合并到同一封邮件中。使用“正常运行”可发布无影响的公告。",
+        "component": "组件",
+        "status": "影响程度",
+        "message": "发生了什么",
+        "messagePlaceholder": "REST API 错误率上升。",
+        "submit": "开启事件",
+        "created": "事件已开启。"
+      },
+      "open": {
+        "title": "进行中",
+        "empty": "目前一切正常。",
+        "status": "影响程度",
+        "message": "消息",
+        "update": "更新",
+        "updated": "事件已更新。",
+        "resolve": "标记为已解决",
+        "resolved": "事件已解决。"
+      },
+      "history": {
+        "title": "历史记录",
+        "description": "过去 {days} 天内的事件。",
+        "empty": "暂无事件记录。"
+      },
+      "columns": {
+        "component": "组件",
+        "status": "影响程度",
+        "createdAt": "开启时间",
+        "message": "消息",
+        "resolvedAt": "解决时间"
+      },
+      "subscribers": {
+        "title": "订阅者",
+        "description": "{count} 个邮箱地址，含已确认和待确认。",
+        "empty": "暂无订阅者。",
+        "email": "邮箱",
+        "state": "状态",
+        "createdAt": "提交时间",
+        "confirmed": "已确认",
+        "pending": "待确认"
+      },
+      "errors": {
+        "forbidden": "你无权访问此页面。",
+        "unknownComponent": "请从列表中选择组件。",
+        "invalidStatus": "请从列表中选择影响程度。",
+        "messageRequired": "请输入简短描述。",
+        "notFound": "该事件已解决。",
+        "generic": "出了点问题，请重试。"
+      }
+    },
+    "apiKeys": {
+      "title": "API 密钥",
+      "description": "谁创建了密钥以及最后使用时间。明文和哈希值不会离开数据库。",
+      "columns": {
+        "user": "用户",
+        "keys": "密钥数",
+        "active": "活跃数",
+        "lastUsed": "最后使用"
+      },
+      "empty": "暂无用户创建密钥。",
+      "never": "从未",
+      "hint": "密钥数统计所有创建过的密钥；活跃数统计仍然可用的密钥。"
+    }
+  },
+  "Example": {
+    "title": "标语生成器",
+    "description": "示例功能：描述你的产品，生成三条标语。每次生成消耗积分。",
+    "cardTitle": "你的产品",
+    "balance": "你有 {balance, number} 积分。",
+    "creditsDisabled": "开启 features.credits 以使用此示例。",
+    "productLabel": "你的产品是做什么的？",
+    "productPlaceholder": "一款面向自由职业者的发票应用",
+    "quick": "快速（{cost, plural, one {# 积分} other {# 积分}}）",
+    "ai": "AI 增强（{cost, plural, one {# 积分} other {# 积分}}）",
+    "results": "标语",
+    "errors": {
+      "invalid": "请用 3 到 200 个字符描述你的产品。",
+      "unauthorized": "你的会话已过期。请重新登录。",
+      "insufficient_credits": "积分不足。请在账单页面购买更多积分。",
+      "rate_limited": "请求过于频繁。请稍等片刻再试。",
+      "ai_unavailable": "AI 当前不可用。",
+      "failed": "出了点问题。你的积分未被消耗。"
+    }
+  },
+  "Acquisition": {
+    "title": "来源偏好",
+    "description": "我们可以记住你发现本站的方式 30 天吗？我们会保存广告参数、引荐网站和落地页路径。如果你注册，此来源将关联到你的账户，直到你主动删除或注销账户。你的选择不影响访问权限。",
+    "enabled": "此浏览器已开启来源记录。",
+    "disabled": "此浏览器已关闭来源记录。移除后也会清除你已登录账户中关联的来源数据。",
+    "accept": "允许来源记录",
+    "reject": "拒绝并移除",
+    "withdraw": "撤回并移除",
+    "close": "关闭",
+    "preferences": "来源偏好",
+    "saved": "来源偏好已保存。",
+    "removed": "来源数据已移除。",
+    "error": "无法完成请求。请重试；账户数据移除可能仍在处理中。"
+  },
+  "Leads": {
+    "title": "保持关注",
+    "description": "加入等候列表，我们准备好了会通知你。",
+    "email": "邮箱地址",
+    "submit": "加入等候列表",
+    "resend": "重新发送确认",
+    "sending": "发送中…",
+    "sent": "如果你的请求可以处理，确认邮件将很快到达。请稍等一分钟再试。",
+    "limited": "请求过于频繁。请稍后重试。",
+    "retry": "无法完成你的请求。请重试。",
+    "expired": "此链接无效或已过期。请从等候列表页面重新获取邮件。",
+    "back": "返回等候列表",
+    "lists": {
+      "waitlist": {
+        "title": "加入等候列表",
+        "description": "留下邮箱表达兴趣。不会创建账户。",
+        "consent": "我同意将我的邮箱存储在此等候列表中，并接收关于我的请求的消息。这不等于订阅营销邮件。"
+      }
+    },
+    "confirm": {
+      "title": "确认你的邮箱",
+      "description": "点击按钮确认你的请求。仅打开此页面不会完成确认。",
+      "button": "确认我的请求",
+      "done": "你的邮箱已确认。感谢你的关注。"
+    },
+    "withdraw": {
+      "title": "撤回你的请求",
+      "description": "从此等候列表中移除你的邮箱、来源信息和同意记录。",
+      "button": "撤回我的请求",
+      "done": "你的请求已撤回。"
+    }
+  },
+  "Referrals": {
+    "metaTitle": "邀请好友",
+    "title": "邀请好友",
+    "description": "分享你的邀请链接。打开链接的人会先阅读邀请说明再决定。",
+    "linkTitle": "你的邀请链接",
+    "linkDescription": "链接携带你的个人邀请码，不包含你的账户详情。",
+    "linkLabel": "邀请链接",
+    "code": "邀请码",
+    "copy": "复制链接",
+    "copied": "链接已复制",
+    "copyManual": "复制失败。链接已选中——按 Ctrl/Cmd + C。",
+    "rewardsOff": "此站点未启用邀请奖励。接受邀请仅记录邀请关系，无其他。",
+    "invitedTitle": "你发出的邀请",
+    "invitedCount": "{count, plural, =0 {暂无} one {# 人已接受邀请} other {# 人已接受邀请}}",
+    "invitedShown": "列表显示最近 {shown} 条。",
+    "invitedEmpty": "还没有人通过你的链接注册。",
+    "invitedEmptyHint": "在任何地方分享你的链接——对方无需事先接受。",
+    "acceptedAt": "于 {date} 接受",
+    "status": {
+      "awaiting_payment": "等待其首次付款",
+      "rewarded": "奖励已发放",
+      "revoked": "奖励已撤销",
+      "pending_review": "审核中"
+    },
+    "rewardsTitle": "奖励",
+    "rewardsEmpty": "暂无奖励事件。",
+    "rewardsTypeGranted": "已发放",
+    "rewardsTypeRevoked": "已撤销",
+    "rewardsInviterCredits": "+{credits} 积分（你邀请了对方）",
+    "rewardsInviteeCredits": "+{credits} 积分（你是受邀者）",
+    "debtTitle": "未偿债务",
+    "debtEmpty": "暂无未偿债务。",
+    "debtAmount": "欠 {amount, plural, one {# 积分} other {# 积分}}",
+    "invitedByTitle": "你是受邀者",
+    "invitedByDescription": "你的账户关联了来自另一用户的邀请。状态：{status}。",
+    "notInvitedTitle": "你是自行注册的",
+    "notInvitedDescription": "你的账户未关联任何邀请。你仍可以使用上面的链接邀请其他人。",
+    "invite": {
+      "metaTitle": "邀请",
+      "description": "有人邀请你加入。阅读详情后决定是否接受。",
+      "fromTitle": "{name} 邀请了你",
+      "genericTitle": "你收到了一份邀请",
+      "body": "接受后，邀请信息将在浏览器中保存 30 天。如果你在此期间创建账户，邀请你的人将被记录在你的账户上。",
+      "termsTitle": "接受意味着什么",
+      "termsVoluntary": "接受是可选的。你可以拒绝，也可稍后在此页面清除邀请。拒绝不影响你的账户。",
+      "termsIdentity": "我们只存储链接本身。我们不会向邀请者显示你的邮箱地址。",
+      "rewardsOff": "此站点未启用邀请奖励，因此接受不承诺积分、额度或任何其他内容。",
+      "accept": "接受邀请",
+      "decline": "拒绝",
+      "acceptedTitle": "邀请已接受",
+      "acceptedBody": "此邀请在你于 30 天内在浏览器中创建新账户时生效。",
+      "acceptedCta": "创建账户",
+      "declined": "邀请已拒绝。未存储任何内容。",
+      "cleared": "先前的邀请已清除。现在未存储任何内容，你可以接受此邀请。",
+      "otherTitle": "你已接受了其他邀请",
+      "otherBody": "你首次接受的邀请仍然有效。如果你想改用此邀请，请先清除当前邀请。",
+      "clear": "清除已接受的邀请",
+      "signedInTitle": "你已登录",
+      "signedInBody": "邀请仅在新账户创建时记录，因此无法将此邀请添加到你的现有账户。",
+      "selfTitle": "这是你自己的邀请链接",
+      "selfBody": "请将它分享给还没有账户的人。",
+      "boundTitle": "你的账户已有邀请记录",
+      "boundBody": "每个账户只能关联一个邀请，且关联不可更改。",
+      "invalidTitle": "此邀请链接无效",
+      "invalidBody": "链接可能不完整或有误，或者此邀请已不再可用。",
+      "error": "无法完成你的请求。请重试。",
+      "rateLimited": "此浏览器尝试次数过多。请稍等片刻再试。",
+      "back": "回到首页"
+    }
+  },
+  "Status": {
+    "title": "系统状态",
+    "description": "所有组件的实时状态、各项 30 天在线率及事件历史。",
+    "metaTitle": "状态",
+    "metaDescription": "{name} 系统状态：组件实时状态、在线率和事件历史。",
+    "refresh": "刷新",
+    "overall": {
+      "operational": "所有系统正常运行",
+      "degraded": "部分系统性能下降",
+      "outage": "重大服务中断"
+    },
+    "overallHint": {
+      "operational": "一切运行正常。如有变化，我们会在此发布。",
+      "degraded": "部分组件响应变慢或部分不可用。我们正在处理。",
+      "outage": "核心组件宕机。我们正在抢修，将在此更新进展。"
+    },
+    "statusLabel": {
+      "operational": "正常运行",
+      "degraded": "性能下降",
+      "outage": "服务中断"
+    },
+    "componentsTitle": "组件",
+    "uptime": "过去 {days} 天在线率 {value}%",
+    "since": "自 {date} 起",
+    "incidentsTitle": "事件历史",
+    "noIncidents": "过去 {days} 天内无事件。",
+    "resolvedAt": "于 {date} 解决",
+    "ongoing": "仍在进行中",
+    "source": {
+      "auto": "自动检测"
+    },
+    "notice": {
+      "subscribed": "你已订阅。我们会在出现故障时邮件通知你。",
+      "unsubscribed": "你已取消订阅，将不会收到状态邮件。",
+      "expired": "该确认链接已过期。请重新订阅以获取新链接。"
+    },
+    "subscribe": {
+      "title": "通过邮件获取状态更新",
+      "description": "我们只在组件故障和恢复时各发送一封邮件。无新闻简报，无营销推广。",
+      "label": "邮箱地址",
+      "placeholder": "you@example.com",
+      "cta": "订阅",
+      "done": "请查看收件箱中的确认链接。",
+      "errors": {
+        "invalidEmail": "请输入有效的邮箱地址。",
+        "rateLimited": "尝试次数过多。请稍后再试。",
+        "unavailable": "订阅功能暂不可用。",
+        "generic": "出了点问题。请稍后重试。"
+      }
+    }
+  }
+}

@@ -10,7 +10,7 @@
  *
  * 改语言时改这里。`site.config.ts` 从这里读取再交给 schema 校验，所以这里仍是唯一来源。
  */
-export const locales = ["en"];
+export const locales = ["en", "zh"];
 
 /** 默认语言，必须出现在上面的 `locales` 里（schema 会校验这条）。 */
 export const defaultLocale = "en";

@@ -132,8 +132,25 @@ function applyBrand(root: HTMLElement, primaryColor: string) {
  *
  * 放在 hero 区，不抢视觉层级：小圆点、ring 指示 active、hover 放大。
  */
-export function ColorSwitcher({ current }: { current: string }) {
+export function ColorSwitcher({
+  current,
+  label,
+  prompt,
+  switchToLabel,
+}: {
+  current: string;
+  /** aria-label for the radiogroup */
+  label: string;
+  /** Visible hint text */
+  prompt: string;
+  /** aria-label template for each color button, __HEX__ is replaced */
+  switchToLabel: string;
+}) {
   const [active, setActive] = useState(current);
+  const ariaLabel = useCallback(
+    (hex: string) => switchToLabel.replace("__HEX__", hex),
+    [switchToLabel],
+  );
   const handleClick = useCallback((hex: string) => {
     setActive(hex);
     applyBrand(document.documentElement, hex);
@@ -145,16 +162,16 @@ export function ColorSwitcher({ current }: { current: string }) {
     <div
       className="mt-5 flex items-center gap-2"
       role="radiogroup"
-      aria-label={`Brand color`}
+      aria-label={label}
     >
-      <span className="text-muted-foreground mr-1 text-xs">Try a color →</span>
+      <span className="text-muted-foreground mr-1 text-xs">{prompt}</span>
       {PRESETS.map((hex) => (
         <button
           key={hex}
           type="button"
           role="radio"
           aria-checked={active === hex}
-          aria-label={`Switch brand color to ${hex}`}
+          aria-label={ariaLabel(hex)}
           onClick={() => handleClick(hex)}
           className={cn(
             size,
