@@ -143,7 +143,7 @@
 | T1905                       | starter-doc-drift       | `docs/starter-doc-drift`       | T1901, T1903                  | done |
 | **阶段 20：审查收口（二）** |                         |                                |                               |      |
 | T2001                       | signin-hydration        | `fix/signin-hydration`         | —                             | done |
-| T2002                       | e2e-env-docs            | `docs/e2e-env`                 | T2001                         | todo |
+| T2002                       | e2e-env-docs            | `docs/e2e-env`                 | T2001                         | done |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
