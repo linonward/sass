@@ -9,53 +9,51 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# 所有 job 共用的环境变量。GitHub Actions 不支持 YAML anchor，共享变量只能提到这一层，
+# 否则拆成多个 job 之后要在每个 job 里各抄一遍，改一个变量得改五处。
+# `static` 那条也会拿到 DATABASE_URL（指向一个没起 postgres 的端口），无害：
+# 那条腿跑的全是只读文件的检查，没有任何一步会连库。
+env:
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+  DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/postgres
+  # 生产构建默认用 Resend 发信并要求 RESEND_API_KEY；CI 改为写文件，e2e 从 .tmp/emails/ 读取。
+  # e2e 跑在生产构建上（next start，NODE_ENV=production），生产运行时默认只允许 resend，
+  # 这里显式放行 console / file。
+  EMAIL_TRANSPORT: file
+  ALLOW_NON_RESEND_EMAIL: "1"
+  # 仅供 CI 使用的固定值；生产环境在 Vercel 上单独设置。
+  BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production
+  # 站点身份：出厂是占位值，生产构建会被占位哨兵拦下（src/core/config/sentinels.ts），
+  # CI 用一组明显的假值放行；生产环境在 Vercel 上设置真实值。
+  SITE_NAME: CI Site
+  SITE_DOMAIN: ci.example.test
+  SITE_LEGAL_NAME: CI Legal Entity
+  SITE_EMAIL_FROM: noreply@ci.example.test
+  # e2e 用站内的 fake 支付服务商模拟结账和 webhook（Vercel 上会被 env 校验拒绝）。
+  BILLING_PROVIDER: fake
+  # site.config.ts 的付费套餐出厂是占位产品 ID，结账会被 plan_not_configured 挡下；
+  # CI 用一组非占位的假 ID 让结账流程能跑通。生产环境在 Vercel 上设置真实 ID。
+  CREEM_PRODUCT_ID_PRO: prod_ci_fake_pro
+  CREEM_PRODUCT_ID_LIFETIME: prod_ci_fake_lifetime
+  # 成功页等待 webhook 的时长，调短以便测试超时提示。
+  BILLING_SUCCESS_TIMEOUT_MS: 8000
+  # e2e 的管理员账号（每个 Playwright project 一个，含 acquisition / status / flags 套件的 project）。
+  ADMIN_EMAILS: e2e-admin-desktop@example.com,e2e-admin-mobile@example.com,e2e-admin-acquisition-desktop@example.com,e2e-admin-acquisition-mobile@example.com,e2e-admin-status-desktop@example.com,e2e-admin-status-mobile@example.com,e2e-admin-flags-desktop@example.com,e2e-admin-flags-mobile@example.com
+  # e2e 跑在生产构建上（next start，NODE_ENV=production），fake 服务商必须显式放行才可用。
+  ALLOW_FAKE_BILLING: "1"
+  # CI 没有 Upstash（也没有 VERCEL_ENV，看起来就是自托管生产）：限流那一层默认在漏配时
+  # 拒绝 AI / 上传 / 结账的请求，这里显式放行成「跳过限流」，和本地开发一致。
+  ALLOW_UNRATELIMITED: "1"
+
+# 为什么拆成多个 job：原来是一个 job 串行跑完，墙钟约 10 分钟，其中 e2e 四套合计占了 6 分钟
+# 左右，而它们彼此完全独立 —— 各自的端口、各自的临时副本、各自独立的 postgres 容器。
+# 拆开之后墙钟由最长的那条腿决定，约 4.7 分钟。
+# 仓库是公开的，Actions 分钟数不计费，所以这里只算墙钟账，不为省 runner 时间做取舍。
 jobs:
-  ci:
+  # 只读文件的静态检查。不连数据库，所以不需要 postgres service。
+  static:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
-      DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/postgres
-      # 生产构建默认用 Resend 发信并要求 RESEND_API_KEY；CI 改为写文件，e2e 从 .tmp/emails/ 读取。
-      # e2e 跑在生产构建上（next start，NODE_ENV=production），生产运行时默认只允许 resend，
-      # 这里显式放行 console / file。
-      EMAIL_TRANSPORT: file
-      ALLOW_NON_RESEND_EMAIL: "1"
-      # 仅供 CI 使用的固定值；生产环境在 Vercel 上单独设置。
-      BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production
-      # 站点身份：出厂是占位值，生产构建会被占位哨兵拦下（src/core/config/sentinels.ts），
-      # CI 用一组明显的假值放行；生产环境在 Vercel 上设置真实值。
-      SITE_NAME: CI Site
-      SITE_DOMAIN: ci.example.test
-      SITE_LEGAL_NAME: CI Legal Entity
-      SITE_EMAIL_FROM: noreply@ci.example.test
-      # e2e 用站内的 fake 支付服务商模拟结账和 webhook（Vercel 上会被 env 校验拒绝）。
-      BILLING_PROVIDER: fake
-      # site.config.ts 的付费套餐出厂是占位产品 ID，结账会被 plan_not_configured 挡下；
-      # CI 用一组非占位的假 ID 让结账流程能跑通。生产环境在 Vercel 上设置真实 ID。
-      CREEM_PRODUCT_ID_PRO: prod_ci_fake_pro
-      CREEM_PRODUCT_ID_LIFETIME: prod_ci_fake_lifetime
-      # 成功页等待 webhook 的时长，调短以便测试超时提示。
-      BILLING_SUCCESS_TIMEOUT_MS: 8000
-      # e2e 的管理员账号（每个 Playwright project 一个，含 acquisition / status / flags 套件的 project）。
-      ADMIN_EMAILS: e2e-admin-desktop@example.com,e2e-admin-mobile@example.com,e2e-admin-acquisition-desktop@example.com,e2e-admin-acquisition-mobile@example.com,e2e-admin-status-desktop@example.com,e2e-admin-status-mobile@example.com,e2e-admin-flags-desktop@example.com,e2e-admin-flags-mobile@example.com
-      # e2e 跑在生产构建上（next start，NODE_ENV=production），fake 服务商必须显式放行才可用。
-      ALLOW_FAKE_BILLING: "1"
-      # CI 没有 Upstash（也没有 VERCEL_ENV，看起来就是自托管生产）：限流那一层默认在漏配时
-      # 拒绝 AI / 上传 / 结账的请求，这里显式放行成「跳过限流」，和本地开发一致。
-      ALLOW_UNRATELIMITED: "1"
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -97,6 +95,37 @@ jobs:
       # 这一步挡住的是「仓库文件层面」的不自洽，成本约一次 JSON 解析。
       - run: pnpm migrations:check
 
+  # 单元测试。要一个空库来执行迁移，所以带上 postgres service。
+  #
+  # db:migrate 现在每条碰库的腿各跑一次（这里 + 下面四条 e2e 腿）。原来只在整条流水线里
+  # 跑一次、四条 e2e 共用那一个库；拆开后每条腿有自己的 postgres 容器，各迁各的。
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
       # 在空库上执行迁移，验证迁移文件可用。
       - run: pnpm db:migrate
 
@@ -105,23 +134,99 @@ jobs:
       # 会把 flag 变成无关参数，覆盖率静默不采集、阈值全部形同虚设（实测：跑完没有覆盖率表）。
       - run: pnpm test --coverage
 
-      - run: pnpm build
+  # e2e：四条腿并行，各跑一套。
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    strategy:
+      # 一条腿挂了不要掐掉其他腿：失败时最需要的是其余套件的诊断信息。
+      fail-fast: false
+      matrix:
+        # build=1 只有主套件需要。另外三套的 serve.ts 会把仓库拷到临时目录、打补丁改
+        # site.config.ts，然后自己 `pnpm build`（见 e2e/<suite>/serve.ts 里 `if (process.env.CI)`
+        # 那两行），根部的 .next 它们根本不读 —— 给它们跑一遍根部构建纯属浪费约 45s，
+        # 还会往被拷贝的目录里塞一份用不上的 .next。
+        # artifact 按腿区分：主套件用 html reporter（playwright-report/），三个子套件用的是
+        # `reporter: "list"`，没有 html 报告，失败时的 trace 落在各自的 test-results/<suite>/。
+        include:
+          - suite: main
+            script: pnpm test:e2e
+            build: "1"
+            artifact: playwright-report
+          - suite: acquisition
+            script: pnpm test:e2e:acquisition
+            build: ""
+            artifact: test-results/acquisition
+          - suite: flags
+            script: pnpm test:e2e:flags
+            build: ""
+            artifact: test-results/flags
+          - suite: invoices
+            script: pnpm test:e2e:invoices
+            build: ""
+            artifact: test-results/invoices
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # 主套件的 webServer 是 `pnpm start`，跑的就是这份构建产物。
+      - if: matrix.build == '1'
+        run: pnpm build
+
+      - run: pnpm db:migrate
 
       - run: pnpm exec playwright install --with-deps chromium
 
-      - run: pnpm test:e2e
+      - run: ${{ matrix.script }}
 
-      - run: pnpm test:e2e:acquisition
-
-      - run: pnpm test:e2e:flags
-
-      # 示例业务模块（发票）关掉之后必须干净：页面 404、侧边栏没有死链。
-      # 和 flags 子套件同款：另起一份打了补丁的副本，CI 里在副本里再跑一次生产构建。
-      - run: pnpm test:e2e:invoices
-
+      # 子套件的 trace 原来从来没上传过（旧版只传根部的 playwright-report/，而那三套
+      # 根本不产 html 报告），失败时等于没有现场。这里按腿传各自的产物目录补上。
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: playwright-${{ matrix.suite }}
+          path: ${{ matrix.artifact }}
           retention-days: 7
+
+  # 汇总闸门。拆成多个 job 之后，PR 上需要一个统一的绿/红信号，而不是逐个看六条。
+  # 名字必须保持 `ci`：README 的「### 5. GitHub」与 docs/workflow.md 都让买家把它配成
+  # main 的必需检查，改了名字，照文档配置的 PR 会被永久卡在一个再也不会出现的检查上。
+  #
+  # 用 `always()` 让它在任何情况下都跑起来、在 step 里失败，而不是用 `if:` 让 job 被 skip：
+  # 被 skip 的必需检查会挡住 PR。
+  ci:
+    if: always()
+    needs: [static, unit, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 汇总上游结果
+        run: |
+          echo "static=${{ needs.static.result }}"
+          echo "unit=${{ needs.unit.result }}"
+          echo "e2e=${{ needs.e2e.result }}"
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] ||
+             [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "有上游 job 失败或被取消。" >&2
+            exit 1
+          fi

@@ -294,7 +294,7 @@ ALLOW_DB_SEED=1 pnpm db:seed   # 幂等，重复执行不会重复插入
 - 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验，但只在非生产运行时生效：`next build` / `next start` / Docker 里 `NODE_ENV` 是 production，一律强制校验（否则一个环境变量就能跳过必填项和各模块的生产闸门）。
   - `pnpm typecheck` 与 `pnpm auth:generate` 是例外：它们在脚本里显式用 `NODE_ENV=development` 跑，所以没有 `.env.local` 也能过。原因是 Next 的 CLI 会把没设过的 `NODE_ENV` 补成该命令的默认值（`next typegen` 是 production），只带 `SKIP_ENV_VALIDATION=1` 会被生产闸门拦下 —— 见 `src/core/create-env.ts` 的注释。
 
-CI（`.github/workflows/ci.yml`）按 lint → format → typecheck → test → build → e2e 顺序执行。
+CI（`.github/workflows/ci.yml`）拆成四条并行：`static`（audit → lint → format → notices → 发行物自检 → typecheck → 迁移元数据自检，只读文件）、`unit`（迁移 + 带覆盖率的单元测试）、`e2e`（四套 Playwright 各一条腿，matrix 并行 —— 主套件跑在生产构建上，另外三套的 `serve.ts` 会拷一份补丁副本自己构建），以及末尾的 `ci` 汇总闸门。闸门本身不做检查，只汇总上游结果，任一上游失败或被取消它就失败 —— PR 上看这一个 `ci` 就够了。
 
 ### 收入口径
 
