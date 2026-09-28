@@ -134,7 +134,7 @@
 | **阶段 18：支付商扩展**     |                         |                                |                               |      |
 | T1801                       | stripe                  | `feat/stripe`                  | T1704                         | done |
 | T1802                       | lemonsqueezy            | `feat/lemonsqueezy`            | T1704                         | done |
-| T1803                       | billing-docs            | `docs/billing`                 | T1801, T1802                  | todo |
+| T1803                       | billing-docs            | `docs/billing`                 | T1801, T1802                  | done |
 | **阶段 19：模板体验打磨**   |                         |                                |                               |      |
 | T1901                       | onboarding              | `feat/onboarding`              | —                             | done |
 | T1902                       | example-invoices        | `feat/example-invoices`        | —                             | done |

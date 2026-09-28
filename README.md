@@ -6,7 +6,7 @@ v1 包含：邮箱验证码和 Google 登录、Creem / Stripe / Lemon Squeezy �
 
 - 🚀 10 分钟上线：[从零到上线 checklist](docs/starter-guide.md#10-分钟从零到上线)（克隆 → 本地跑通 → 登录看到仪表盘）
 - 合并模板更新：[UPGRADING.md](UPGRADING.md)
-- 设计系统：[docs/design.md](docs/design.md) · 多语言：[docs/i18n.md](docs/i18n.md)
+- 设计系统：[docs/design.md](docs/design.md) · 多语言：[docs/i18n.md](docs/i18n.md) · 支付服务商（选型 / 切换）：[docs/billing.md](docs/billing.md)
 - 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`docs/go-to-market.md`、`docs/competitive-landscape.md`、`AGENTS.md`、`CLAUDE.md` —— 走 GitHub「Use this template」拿到仓库的话，按[第 1 步](#1-用模板建仓库)的清单删掉
 
 ## 授权
@@ -29,7 +29,7 @@ v1 包含：邮箱验证码和 Google 登录、Creem / Stripe / Lemon Squeezy �
 **包含**
 
 - 全部源码与配置：`src/`、`content/`、`messages/`、`e2e/`、`drizzle/`（数据库迁移）、`scripts/`、`site.config.ts`、`package.json` + `pnpm-lock.yaml`
-- 上手与运维文档：`README.md`（本文）、`docs/starter-guide.md`（模板使用指南）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`
+- 上手与运维文档：`README.md`（本文）、`docs/starter-guide.md`（模板使用指南）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`、`docs/billing.md`
 - 授权与依赖许可：`LICENSE`、`THIRD-PARTY-NOTICES.md`
 - 环境变量样例 `.env.example`、CI 与 git 钩子：`.github/`、`.husky/`
 
@@ -90,7 +90,7 @@ git commit -m "chore: remove template author's internal docs"
 补充两点：
 
 - 如果在 Claude Code 里跑 `pnpm dev`，Next.js 会**重新生成** `AGENTS.md` 和 `CLAUDE.md`，里面只有它自己那段「This is NOT the Next.js you know」的 Next.js 版本提示（由 `next dev` 写入，与模板作者无关）。看到它们回来是正常的，留着或再删都可以。
-- `docs/design.md`（视觉系统）和 `docs/i18n.md`（多语言）是**面向买家**的，两条交付路径里都有，不要删。
+- `docs/design.md`（视觉系统）、`docs/i18n.md`（多语言）和 `docs/billing.md`（支付服务商）是**面向买家**的，两条交付路径里都有，不要删。
 
 ### 2. 本地跑起来
 

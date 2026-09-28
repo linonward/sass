@@ -175,3 +175,4 @@ Vercel 的界面偶尔改版，找不到某个按钮时按名字找，流程不�
 | 写业务功能放哪、怎么调用套件                 | [UPGRADING.md 的目录边界](../UPGRADING.md#目录边界) |
 | 新增一门语言                                 | [docs/i18n.md](i18n.md)                             |
 | 改界面样式、加组件                           | [docs/design.md](design.md)                         |
+| 换支付商、加第四个支付商                     | [docs/billing.md](billing.md)                       |
