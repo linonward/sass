@@ -130,6 +130,7 @@
 | T1702                       | instrumentation-tests   | `fix/instrumentation-tests`    | —                             | done |
 | T1703                       | session-invalidation    | `feat/session-invalidation`    | —                             | done |
 | T1704                       | ci-dep-audit            | `chore/ci-dep-audit`           | —                             | done |
+| T1705                       | locale-decode           | `fix/locale-decode`            | —                             | done |
 | **阶段 18：支付商扩展**     |                         |                                |                               |      |
 | T1801                       | stripe                  | `feat/stripe`                  | T1704                         | todo |
 | T1802                       | lemonsqueezy            | `feat/lemonsqueezy`            | T1704                         | todo |
@@ -220,7 +221,7 @@
 
 阶段 16  T1600 → T1601 → T1602；T1603 T1604 T1605（T1602 在 T1601 之后，其余可并行）
 
-阶段 17  T1701 T1702 T1703 T1704（全部可并行，无相互依赖）
+阶段 17  T1701 T1702 T1703 T1704 T1705（全部可并行，无相互依赖）
 
 阶段 18  T1704 → T1801 T1802 → T1803
 
@@ -241,7 +242,7 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 
 阶段 16：T1605 可随时做（修的是已合入的回归，顺带给 CI 加闸）；T1601 与 T1602 先后做（同改 `report.ts`），T1603 / T1604 独立并行。
 
-阶段 17：T1701 T1702 T1703 T1704（全部可并行，无相互依赖）。
+阶段 17：T1701 T1702 T1703 T1704 T1705（全部可并行，无相互依赖）。
 
 阶段 18：T1704 → T1801 T1802 → T1803。
 
