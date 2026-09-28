@@ -41,9 +41,6 @@ export const NO_SOURCE_BUCKET = "(none)";
 
 /**
  * 冻结来源（快照里的 source）。direct 是确实没有来源，和 NO_SOURCE_BUCKET 是两行。
- *
- * 注意：schema 里的 `user_attribution_source_idx` 用的是旧口径（`unknown`），与这里的
- * 表达式不再一致，报表的筛选查询用不到它（写入侧仍在维护）。
  */
 const sourceOf = sql<string>`coalesce(${userAttribution.snapshot}->>'source', ${NO_SOURCE_BUCKET})`;
 const mediumOf = sql<string | null>`${userAttribution.snapshot}->>'utm_medium'`;
@@ -285,8 +282,14 @@ export type FilterOptions = {
  * 筛选框里的取值：表格里会出现的来源都要选得到。注册那一列来自用户（含没有归因行
  * 的合成桶），已确认线索那一列来自线索快照，只从 user_attribution 取会漏掉前两者。
  * medium / campaign 只在快照里出现过的取值里选。
+ *
+ * 取值变化很慢（只在有新注册或线索状态变更时变），用 60s 模块级 TTL 避免默认视图
+ * 每次渲染都跑 4 条全表查询。模块级缓存在所有部署环境都工作，不依赖特定框架 API。
  */
-export async function getFilterOptions(db: Database): Promise<FilterOptions> {
+const _FILTER_OPTIONS_TTL_MS = 60_000;
+let _filterOptionsCache: { data: FilterOptions; ts: number } | null = null;
+
+async function _getFilterOptions(db: Database): Promise<FilterOptions> {
   const [sources, leadSources, mediums, campaigns] = await Promise.all([
     // select distinct，不用 group by：合成桶是绑定参数，同一个表达式在 select 和
     // group by 里会渲染成两个不同的位置参数，Postgres 不认它们相等（42803）。
@@ -318,4 +321,18 @@ export async function getFilterOptions(db: Database): Promise<FilterOptions> {
     mediums: unique(mediums),
     campaigns: unique(campaigns),
   };
+}
+
+/** 带 60s TTL 的模块级缓存，避免默认视图每次渲染都跑 4 条全表查询。 */
+export async function getFilterOptions(db: Database): Promise<FilterOptions> {
+  if (process.env.NODE_ENV === "test") return _getFilterOptions(db);
+  if (
+    _filterOptionsCache &&
+    Date.now() - _filterOptionsCache.ts < _FILTER_OPTIONS_TTL_MS
+  ) {
+    return _filterOptionsCache.data;
+  }
+  const data = await _getFilterOptions(db);
+  _filterOptionsCache = { data, ts: Date.now() };
+  return data;
 }
