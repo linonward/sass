@@ -92,7 +92,7 @@ jobs:
       # 在空库上执行迁移，验证迁移文件可用。
       - run: pnpm db:migrate
 
-      - run: pnpm test
+      - run: pnpm test -- --coverage
 
       - run: pnpm build
 

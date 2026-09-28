@@ -13,7 +13,7 @@ import { localizedPath } from "@/core/seo/urls";
 const intl = createMiddleware(routing);
 
 /** 拆出路径里的语言前缀；没有前缀时是默认语言。 */
-function splitLocale(pathname: string) {
+export function splitLocale(pathname: string) {
   const [, first = "", ...rest] = pathname.split("/");
   if ((routing.locales as readonly string[]).includes(first)) {
     return { locale: first, path: `/${rest.join("/")}` };

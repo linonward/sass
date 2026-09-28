@@ -29,5 +29,24 @@ export default defineConfig({
     ),
     // next-intl 引用 `next/navigation`（无扩展名），需经 Vite 处理才能解析。
     server: { deps: { inline: ["next-intl"] } },
+    coverage: {
+      provider: "v8",
+      include: ["src/**"],
+      exclude: [
+        "src/**/*.test.{ts,tsx}",
+        "src/**/testing.{ts,tsx}",
+        "src/**/test-utils.{ts,tsx}",
+        "src/**/testing/**",
+      ],
+      thresholds: {
+        // 设在下限略低于当前基准线（~40%），挡住退步但不阻塞新代码。
+        // 这些值随覆盖率提升逐步上调。当前实际值见 coverage 报告。
+        lines: 35,
+        branches: 30,
+        functions: 35,
+        statements: 35,
+      },
+      reporter: ["text", "lcov"],
+    },
   },
 });
