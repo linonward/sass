@@ -1,0 +1,1 @@
+DROP INDEX "user_attribution_source_idx";
