@@ -57,10 +57,11 @@ check() {
 }
 
 # 必须存在的东西：剔多了会打出空壳包，这里挡住。
-# src / e2e / site.config.ts / UPGRADING.md 同时也是下面「内部任务编号」检查要扫的路径，
-# 缺了那条检查会退化成假绿（grep 报错被 `|| true` 吞掉），所以一并要求存在。
+# src / e2e / site.config.ts / README.md / UPGRADING.md / docs/starter-guide.md 同时也是
+# 下面「内部任务编号」检查要扫的路径，缺了那条检查会退化成假绿（grep 报错被 `|| true` 吞掉），
+# 所以一并要求存在。
 for required in README.md LICENSE package.json .env.example pnpm-lock.yaml \
-  src e2e site.config.ts UPGRADING.md; do
+  src e2e site.config.ts UPGRADING.md docs/starter-guide.md; do
   if [ ! -e "$pkg/$required" ]; then
     printf '✗ 缺少 %s\n' "$required"
     fail=1
@@ -91,7 +92,8 @@ check "没有卖家域名或邮箱" \
 # 字面量，注释里也只用 `T###` 指代，这样脚本自己的源码不会成为一处命中（同上）。
 check "没有内部任务编号（T###）" \
   grep -rInE "T[0-9]{3}" "$pkg/src" "$pkg/e2e" \
-  "$pkg/site.config.ts" "$pkg/README.md" "$pkg/UPGRADING.md"
+  "$pkg/site.config.ts" "$pkg/README.md" "$pkg/UPGRADING.md" \
+  "$pkg/docs/starter-guide.md"
 
 upstream="$(grep -rIoE "github\.com/linonward/sass" "$pkg" | wc -l | tr -d ' ')"
 
