@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import messages from "../messages/en.json";
+import { placeholderIssues } from "../src/core/config/sentinels";
+import siteConfig from "../site.config";
 import {
   clearResendCooldown,
   openUserMenu,
@@ -13,6 +15,15 @@ import {
 
 const o = messages.Onboarding;
 const d = messages.Dashboard;
+
+/**
+ * 出厂占位值是不是都还在。
+ *
+ * CI 用 SITE_NAME / CREEM_PRODUCT_ID_* 把站名和套餐产品 ID 覆盖成品牌化过的值
+ * （见 .github/workflows/ci.yml，为的是让 `pnpm build` 的占位守卫过关），本地 dev
+ * 保留出厂值。清单的判定跟着配置走，断言也跟着分叉 —— 两边都要能跑。
+ */
+const placeholdersGone = placeholderIssues(siteConfig).length === 0;
 
 test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
@@ -51,14 +62,22 @@ test("新用户注册后自动落到清单，标完成写进用户记录", async
   await expect(page).toHaveURL("/onboarding");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(o.title);
 
-  // 出厂配置：品牌色、站点标识、套餐产品 ID 都还没改。
   await expect(page.getByTestId("onboarding-step")).toHaveCount(5);
-  for (const id of ["brandColor", "siteName", "pricing"]) {
-    await expect(step(page, id)).toHaveAttribute("data-status", "todo");
+  // 品牌色没有环境变量可覆盖：出厂值还在时这一步就该是 todo，并把没改的值列出来。
+  await expect(step(page, "brandColor")).toHaveAttribute("data-status", "todo");
+  await expect(step(page, "brandColor")).toContainText("#0f766e");
+  // 站名和套餐产品 ID 的判定取决于环境（见 placeholdersGone）。
+  for (const id of ["siteName", "pricing"]) {
+    await expect(step(page, id)).toHaveAttribute(
+      "data-status",
+      placeholdersGone ? "done" : "todo",
+    );
   }
-  // 未改的出厂值原样列出来，买家知道该改哪儿。
-  await expect(step(page, "siteName")).toContainText('name = "Acme"');
-  await expect(step(page, "pricing")).toContainText("prod_placeholder_pro");
+  if (!placeholdersGone) {
+    // 未改的出厂值原样列出来，买家知道该改哪儿。
+    await expect(step(page, "siteName")).toContainText('name = "Acme"');
+    await expect(step(page, "pricing")).toContainText("prod_placeholder_pro");
+  }
 
   // 勾选手动项只改当前页面：用户记录上还是「没完成」。
   await tickManualSteps(page);
