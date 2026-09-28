@@ -4,6 +4,7 @@
 
 v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性购买）、积分账本、AI（文字、图片、视频，按次扣积分）、文件上传（R2）、多语言、SEO、法律页、MDX 博客、后台。
 
+- 🚀 10 分钟上线：[从零到上线 checklist](docs/starter-guide.md#10-分钟从零到上线)（克隆 → 本地跑通 → 登录看到仪表盘）
 - 合并模板更新：[UPGRADING.md](UPGRADING.md)
 - 设计系统：[docs/design.md](docs/design.md) · 多语言：[docs/i18n.md](docs/i18n.md)
 - 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`docs/go-to-market.md`、`docs/competitive-landscape.md`、`AGENTS.md`、`CLAUDE.md` —— 走 GitHub「Use this template」拿到仓库的话，按[第 1 步](#1-用模板建仓库)的清单删掉
@@ -28,7 +29,7 @@ v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性
 **包含**
 
 - 全部源码与配置：`src/`、`content/`、`messages/`、`e2e/`、`drizzle/`（数据库迁移）、`scripts/`、`site.config.ts`、`package.json` + `pnpm-lock.yaml`
-- 上手与运维文档：`README.md`（本文）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`
+- 上手与运维文档：`README.md`（本文）、`docs/starter-guide.md`（模板使用指南）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`
 - 授权与依赖许可：`LICENSE`、`THIRD-PARTY-NOTICES.md`
 - 环境变量样例 `.env.example`、CI 与 git 钩子：`.github/`、`.husky/`
 
@@ -48,12 +49,12 @@ scripts/release-package.sh v1.0.0   # 打某个 tag
 
 ## 快速开始：从 fork 到上线
 
-按顺序做，每一步都能单独验证。预计耗时是熟悉流程后的参考值，第一次做可以在"实际"一栏记下来，卡住的地方补进本文档。
+按顺序做，每一步都能单独验证。预计耗时是熟悉流程后的参考值，第一次做可以在"实际"一栏记下来。第 1–2 步就是[模板使用指南的「10 分钟从零到上线」](docs/starter-guide.md#10-分钟从零到上线) —— 那里的每一步都写了命令和验证方式，时间也按那里估；卡住的地方补进那份指南。
 
 | #   | 步骤                                                          | 预计     | 实际 |
 | --- | ------------------------------------------------------------- | -------- | ---- |
-| 1   | [用模板建仓库](#1-用模板建仓库)                               | 5 分钟   |      |
-| 2   | [本地跑起来](#2-本地跑起来)                                   | 15 分钟  |      |
+| 1   | [用模板建仓库](#1-用模板建仓库)                               | 3 分钟   |      |
+| 2   | [本地跑起来](#2-本地跑起来)                                   | 7 分钟   |      |
 | 3   | [改成自己的站点](#3-改成自己的站点)                           | 1 小时   |      |
 | 4   | [准备外部账号](#4-准备外部账号)                               | 1–2 小时 |      |
 | 5   | [部署到 Vercel](#5-部署到-vercel)                             | 30 分钟  |      |
@@ -61,10 +62,9 @@ scripts/release-package.sh v1.0.0   # 打某个 tag
 
 ### 1. 用模板建仓库
 
-在 GitHub 上点 **Use this template → Create a new repository**，然后克隆到本地，并添加模板为 `upstream`，以后用它合并模板更新（见 [UPGRADING.md](UPGRADING.md)）：
+在自己的 GitHub 上建一个仓库并克隆到本地（点哪个按钮、会看到什么见指南的[建仓库并克隆](docs/starter-guide.md#建仓库并克隆)；购买后收到 zip 的话不用这一步），然后添加模板为 `upstream`，以后用它合并模板更新（见 [UPGRADING.md](UPGRADING.md)）：
 
 ```bash
-git clone https://github.com/<you>/<project>.git && cd <project>
 git remote add upstream https://github.com/linonward/sass.git
 ```
 
@@ -94,18 +94,9 @@ git commit -m "chore: remove template author's internal docs"
 
 ### 2. 本地跑起来
 
-需要 Node 24（`.nvmrc`）、pnpm（版本见 `package.json` 的 `packageManager`）和 Docker。
+需要 Node 24（`.nvmrc`）、pnpm（版本见 `package.json` 的 `packageManager`）和 Docker。命令级的步骤在 [10 分钟从零到上线](docs/starter-guide.md#10-分钟从零到上线)：起一个本地 Postgres、把 `.env.example` 复制成 `.env.local`、`pnpm install`、`pnpm db:migrate`、`pnpm dev`，最后用 `/sign-in` 登录看到 `/dashboard`。
 
-```bash
-docker run -d --name <project>-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:18
-cp .env.example .env.local
-# 编辑 .env.local：DATABASE_URL 用上面的地址，BETTER_AUTH_SECRET 填 `openssl rand -base64 32` 的输出
-pnpm install
-pnpm db:migrate
-pnpm dev                 # http://localhost:3000
-```
-
-本地不需要任何外部账号：邮件打印在终端（验证码从这里看），支付、限流、上传、AI 没配 key 时各自返回 503 或跳过。打开 `/sign-in` 用任意邮箱登录，能进入 `/dashboard` 就说明跑通了。
+**本地不需要任何外部账号**，那一步不用注册任何服务 —— 理由和每步的验证方式见同一节。
 
 ### 3. 改成自己的站点
 
