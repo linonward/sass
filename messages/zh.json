@@ -312,7 +312,7 @@
       "verify": "登录",
       "verifying": "登录中…",
       "resend": "重新发送",
-      "resendIn": "{seconds}s 后可重发",
+      "resendIn": "{seconds} 秒后可重发",
       "changeEmail": "更换邮箱",
       "legal": "继续即表示你同意我们的<terms>服务条款</terms>和<privacy>隐私政策</privacy>。"
     },
@@ -321,7 +321,7 @@
       "invalidCode": "验证码错误或已过期。请重试或重新获取。",
       "codeExpired": "验证码已过期，请重新获取。",
       "tooManyAttempts": "错误尝试次数过多，请重新获取验证码。",
-      "cooldown": "请等待 {seconds}s 后再重新获取验证码。",
+      "cooldown": "请等待 {seconds} 秒后再重新获取验证码。",
       "sendFailed": "邮件发送失败，请稍后重试。",
       "sendFailedGoogle": "邮件发送失败。请稍后重试，或使用 Google 登录。",
       "googleFailed": "Google 登录未完成。请重试，或使用邮箱验证码登录。",

@@ -15,6 +15,10 @@ export default async function RefundPage({
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Common" });
   return (
-    <LegalPage document={document} effectiveDateLabel={t("effectiveDate")} />
+    <LegalPage
+      document={document}
+      effectiveDateLabel={t("effectiveDate")}
+      locale={locale}
+    />
   );
 }
