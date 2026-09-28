@@ -16,7 +16,8 @@ export function InviteActions({ code, mode }: { code: string; mode: Mode }) {
   const t = useTranslations("Referrals.invite");
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [declined, setDeclined] = useState(false);
+  // 清掉的是哪一份邀请：清除前一处上下文和拒绝本次邀请不是同一件事，文案要说对。
+  const [done, setDone] = useState<"declined" | "cleared" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(action: "accept" | "decline") {
@@ -34,10 +35,17 @@ export function InviteActions({ code, mode }: { code: string; mode: Mode }) {
         const body = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
-        setError(body?.error === "invalid" ? t("invalidTitle") : t("error"));
+        setError(
+          response.status === 429
+            ? t("rateLimited")
+            : body?.error === "invalid"
+              ? t("invalidTitle")
+              : t("error"),
+        );
         return;
       }
-      if (action === "decline") setDeclined(true);
+      if (action === "decline")
+        setDone(mode === "clear" ? "cleared" : "declined");
       router.refresh();
     } catch {
       setError(t("error"));
@@ -49,7 +57,8 @@ export function InviteActions({ code, mode }: { code: string; mode: Mode }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {mode !== "accepted" && (
+        {/* 已有上下文时接受不了这一份（服务端保持第一个邀请不动），不给会静默失败的按钮。 */}
+        {mode === "offer" && (
           <Button
             type="button"
             size="marketing"
@@ -60,7 +69,7 @@ export function InviteActions({ code, mode }: { code: string; mode: Mode }) {
             {t("accept")}
           </Button>
         )}
-        {!declined && (
+        {!done && (
           <Button
             type="button"
             size="marketing"
@@ -73,10 +82,10 @@ export function InviteActions({ code, mode }: { code: string; mode: Mode }) {
           </Button>
         )}
       </div>
-      {/* 拒绝后说清楚发生了什么：页面回到未接受的状态，别让人以为点了没反应。 */}
-      {declined && (
+      {/* 清除或拒绝后说清楚发生了什么：页面回到未接受的状态，别让人以为点了没反应。 */}
+      {done && (
         <p role="status" className="text-muted-foreground text-sm">
-          {t("declined")}
+          {done === "cleared" ? t("cleared") : t("declined")}
         </p>
       )}
       {error && (

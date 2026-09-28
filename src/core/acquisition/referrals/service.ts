@@ -129,17 +129,27 @@ export function createReferralService(db: Database) {
         .where(eq(referralRelationships.inviteeUserId, inviteeUserId));
       return row ?? null;
     },
-    /** 邀请记录只回状态与时间：邀请人看不到受邀人的邮箱或身份。 */
+    /**
+     * 邀请记录只回状态与时间：邀请人看不到受邀人的邮箱或身份。
+     * `total` 是真实总数，`rows` 只取最近 `limit` 条 —— 页面上的数字不能因为分页而说谎。
+     */
     async listInvited(inviterUserId: string, limit = 50) {
-      return db
-        .select({
-          status: referralRelationships.status,
-          createdAt: referralRelationships.createdAt,
-        })
-        .from(referralRelationships)
-        .where(eq(referralRelationships.inviterUserId, inviterUserId))
-        .orderBy(desc(referralRelationships.createdAt))
-        .limit(limit);
+      const [rows, [counted]] = await Promise.all([
+        db
+          .select({
+            status: referralRelationships.status,
+            createdAt: referralRelationships.createdAt,
+          })
+          .from(referralRelationships)
+          .where(eq(referralRelationships.inviterUserId, inviterUserId))
+          .orderBy(desc(referralRelationships.createdAt))
+          .limit(limit),
+        db
+          .select({ total: count() })
+          .from(referralRelationships)
+          .where(eq(referralRelationships.inviterUserId, inviterUserId)),
+      ]);
+      return { rows, total: counted?.total ?? 0 };
     },
     /** 查看用户的奖励事件（作为邀请人或受邀人）。 */
     async listRewards(userId: string, limit = 20): Promise<RewardView[]> {

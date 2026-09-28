@@ -2,7 +2,11 @@ import { getSessionCookie } from "better-auth/cookies";
 import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isProtectedPath, SIGN_IN_PATH } from "@/core/auth/routes";
+import {
+  isDisabledPath,
+  isProtectedPath,
+  SIGN_IN_PATH,
+} from "@/core/auth/routes";
 import { routing } from "@/core/i18n/routing";
 import { localizedPath } from "@/core/seo/urls";
 
@@ -20,6 +24,11 @@ function splitLocale(pathname: string) {
 export default function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const { locale, path } = splitLocale(pathname);
+
+  // 模块关闭后整块下线的页面在这里就 404：(app) 的 layout 比 page 先渲染完，
+  // 留给页面 notFound() 的话未登录访客会先被送去登录页 —— 同一个地址两种身份两个结果。
+  // 判定在渲染之前，未登录和已登录拿到同一个 404。
+  if (isDisabledPath(path)) return new NextResponse(null, { status: 404 });
 
   // 快速判断：没有 session cookie 就直接去登录页。cookie 是否有效由 (app) 的 layout 校验。
   if (isProtectedPath(path) && !getSessionCookie(request)) {

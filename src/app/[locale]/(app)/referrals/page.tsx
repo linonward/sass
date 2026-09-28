@@ -229,11 +229,11 @@ export default async function ReferralsPage({
         <CardHeader>
           <CardTitle>{t("invitedTitle")}</CardTitle>
           <CardDescription>
-            {t("invitedCount", { count: invited.length })}
+            {t("invitedCount", { count: invited.total })}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {invited.length === 0 ? (
+          {invited.rows.length === 0 ? (
             <EmptyState
               size="sm"
               icon={<UserPlusIcon />}
@@ -241,22 +241,30 @@ export default async function ReferralsPage({
               description={t("invitedEmptyHint")}
             />
           ) : (
-            // 只展示状态和时间：受邀人的身份不出现在邀请人的界面上。
-            <ul className="divide-y text-sm" data-testid="referral-invited">
-              {invited.map((row, index) => (
-                <li
-                  key={`${row.createdAt.toISOString()}#${index}`}
-                  className="flex items-center justify-between gap-4 py-2"
-                >
-                  <span data-testid="referral-invited-status">
-                    {t(`status.${row.status}`)}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {format.dateTime(row.createdAt, { dateStyle: "medium" })}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-col gap-2">
+              {/* 列表只取最近一批，说清楚这个数字和列表的关系。 */}
+              {invited.total > invited.rows.length && (
+                <p className="text-muted-foreground text-sm">
+                  {t("invitedShown", { shown: invited.rows.length })}
+                </p>
+              )}
+              {/* 只展示状态和时间：受邀人的身份不出现在邀请人的界面上。 */}
+              <ul className="divide-y text-sm" data-testid="referral-invited">
+                {invited.rows.map((row, index) => (
+                  <li
+                    key={`${row.createdAt.toISOString()}#${index}`}
+                    className="flex items-center justify-between gap-4 py-2"
+                  >
+                    <span data-testid="referral-invited-status">
+                      {t(`status.${row.status}`)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {format.dateTime(row.createdAt, { dateStyle: "medium" })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </CardContent>
       </Card>

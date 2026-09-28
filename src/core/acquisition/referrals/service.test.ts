@@ -171,13 +171,32 @@ describe.skipIf(!url)("referral persistence", () => {
     const invitee = await account();
     const code = await service.ensureCode(inviter.id);
     await service.bind({ inviteeUserId: invitee.id, code });
-    const rows = await service.listInvited(inviter.id);
-    expect(rows).toHaveLength(1);
-    expect(Object.keys(rows[0]!).sort()).toEqual(["createdAt", "status"]);
-    expect(rows[0]!.status).toBe("awaiting_payment");
+    const invited = await service.listInvited(inviter.id);
+    expect(invited.total).toBe(1);
+    expect(invited.rows).toHaveLength(1);
+    expect(Object.keys(invited.rows[0]!).sort()).toEqual([
+      "createdAt",
+      "status",
+    ]);
+    expect(invited.rows[0]!.status).toBe("awaiting_payment");
     expect(await service.relationshipFor(invitee.id)).toMatchObject({
       status: "awaiting_payment",
     });
     expect(await service.relationshipFor(inviter.id)).toBeNull();
+  });
+
+  test("列表截断时 total 仍是真实条数（页面据此说明只显示最近 N 条）", async () => {
+    const inviter = await account();
+    const code = await service.ensureCode(inviter.id);
+    for (const _ of [1, 2, 3])
+      await service.bind({ inviteeUserId: (await account()).id, code });
+    const page = await service.listInvited(inviter.id, 2);
+    expect(page.rows).toHaveLength(2);
+    expect(page.total).toBe(3);
+    // 截断掉的永远是最早的那些：limit 扩大后前两条不变。
+    const all = await service.listInvited(inviter.id, 10);
+    expect(all.rows).toHaveLength(3);
+    expect(all.total).toBe(3);
+    expect(all.rows.slice(0, 2)).toEqual(page.rows);
   });
 });

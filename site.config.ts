@@ -186,6 +186,8 @@ const config = defineConfig({
       checkout: { limit: 5, window: "1 m" },
       // 状态页的邮件订阅：每次提交都可能发一封确认信，按 IP 计数即可。
       statusSubscribe: { limit: 5, window: "1 h" },
+      // 邀请链接的接受接口（未登录可访问）：每次只做一次按码的查询，按 IP 计数即可。
+      referralAccept: { limit: 30, window: "1 h" },
     },
   },
   // 用户 API Key（src/core/api-keys/）：用户在 dashboard 里生成、命名、撤销自己的 key，
