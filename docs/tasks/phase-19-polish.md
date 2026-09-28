@@ -4,12 +4,12 @@
 
 ## 依赖
 
-T1704（CI dep audit）后环境干净。T1901–T1903 之间无依赖可并行；T1904 收尾 T1901 的组件，在 T1901 之后。
+T1704（CI dep audit）后环境干净。T1901–T1903 之间无依赖可并行；T1904 收尾 T1901 的组件，在 T1901 之后；T1905 是照着 T1903 的 checklist 走查时发现的文档漂移，T1901 与 T1903 都合入后才能看出。
 
 ```
 T1901 ─┬─ T1904
 T1902 ─┤  前三条可并行
-T1903 ─┘
+T1903 ─┴─ T1905（依赖 T1901 与 T1903）
 ```
 
 ## 任务
@@ -63,6 +63,18 @@ T1903 ─┘
   - 消警的直觉做法是声明 `nativeButton={false}`，但读 Base UI 的 `useButton` 实现可看到：这条路径会给元素挂上 `role="button"`，把「点了会跳转」从无障碍树里抹掉（实测三个链接的角色从 link 变成 button）。所以改成仓库既有写法 —— 链接用 `buttonVariants({ variant: "link", size: "sm" })` 套样式（全站约 30 处，最近的先例是 `playground.tsx` 的「买点数」），不经过 Base UI 的 `Button`
   - e2e 补一条断言把角色锁住：三个「打开」必须是 link
 - **验证**: 改前 dev 控制台 2 条告警、改后 0 条（Playwright 探针实测，三处写法 A/B 对比）；`pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm format:check` 与 `e2e/ui-shell.spec.ts`、`e2e/landing.spec.ts`、`e2e/onboarding.spec.ts` 全绿
+
+### T1905: 文档里的登录落点漂移
+
+- **topic**: `starter-doc-drift`
+- **分支**: `docs/starter-doc-drift`
+- **依赖**: T1901, T1903
+- **范围**: `docs/starter-guide.md` 第 6 步 + `README.md` 快速开始两处
+- **做什么**:
+  - T1901 之后第一次登录先落到 `/onboarding` 清单，点 **Mark as done** 才进 `/dashboard`。指南第 6 步和 README「本地跑起来」还写着「登录看到 `/dashboard`」—— T1901 与 T1903 并行落地，两份文档当时各自都对，合到一起才漂
+  - 指南第 6 步的侧边栏括号写的是 `Dashboard / Settings / Taglines 示例`，实际是 **Main**（Dashboard / Playground / Invoices / Billing / Settings）和 **Product**（Getting started / Taglines）两组
+  - README 快速开始的标题「从 fork 到上线」与两条交付路径（GitHub `Use this template` / 购买后的 zip）都对不上：fork 出来的是公开仓库，而模板是按份售卖的专有许可
+- **验证**: `pnpm format:check`、`pnpm lint`；`scripts/release-package.sh` 自检仍全绿 —— 改的正是它要扫的 `README.md` 与 `docs/starter-guide.md`，不得引入 `T###` 编号或卖家域名
 
 ## 完成后
 

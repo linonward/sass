@@ -82,7 +82,7 @@
 
   同一个终端里还会多一段占位值警告，列出 4 个字段 —— **dev 只是警告，生产构建会直接失败**，见[最容易踩的坑](#最容易踩的坑)。缺必需变量时则相反：启动就报 `Invalid environment variables:` 并逐条列出变量名。
 
-- [ ] **6. 登录，看到仪表盘（约 2 分钟）**
+- [ ] **6. 登录，走一遍上手清单（约 2 分钟）**
 
   打开 `http://localhost:3000/sign-in`，填任意邮箱（`me@example.com` 就行，不需要真实存在），点 **Send code**。**验证码不会发到邮箱，而是打印在跑着 `pnpm dev` 的那个终端里**，形如：
 
@@ -94,7 +94,9 @@
   420041
   ```
 
-  把 6 位数字填进 **Verification code**，点 **Sign in**。落到 `/dashboard`、页头显示 `Signed in as <你的邮箱>` 就算本地跑通了。页面上是空状态（侧边栏有 Dashboard / Settings / Taglines 示例），**空的是正常的** —— 模板出厂的 dashboard 本来就是空的。
+  把 6 位数字填进 **Verification code**，点 **Sign in**。**第一次登录会先落到 `/onboarding`**：一页 Getting started 上手清单（出厂配置下五步），每一步的判定读的是你仓库里的配置 —— 品牌色、站点名、定价这三条会列出还没改的出厂值，发文章和部署没有可靠信号、自己勾。点 **Mark as done** 进 `/dashboard`，页头显示 `Signed in as <你的邮箱>` 就算本地跑通了；以后登录不再经过清单页，想回来从侧边栏的 **Product** 组进。
+
+  dashboard 上是空状态（侧边栏分两组：**Main** 是 Dashboard / Playground / Invoices / Billing / Settings，**Product** 是 Getting started 和 Taglines 示例），**空的是正常的** —— 模板出厂的 dashboard 本来就是空的。
 
   想看有数据的样子：README 的[先看看有数据长什么样](../README.md#先看看有数据长什么样)（一条命令灌演示数据）。
 
