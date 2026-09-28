@@ -17,7 +17,8 @@ import { defaultLocale, locales } from "./src/core/i18n/locales";
  * `legal.companyName`（`SITE_LEGAL_NAME`）、两个套餐的 `providerProductId`
  * （变量名随生效的服务商走，见下面的 effectiveBillingProvider：creem 是
  * `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`，stripe 是
- * `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`）。
+ * `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`，lemonsqueezy 是
+ * `LEMONSQUEEZY_VARIANT_ID_PRO` / `LEMONSQUEEZY_VARIANT_ID_LIFETIME`）。
  * 模板里只留占位值，真实域名、名称和产品 ID 放在部署环境里；不设这些变量时就是占位配置。
  * 没有对应变量的字段（颜色、文案）只能改这个文件。
  */
@@ -36,7 +37,8 @@ const billingProvider: BillingProviderName = "creem";
 
 /**
  * 生效的服务商：这里的 provider 可以被运行时的 `BILLING_PROVIDER` 覆盖，
- * 判断和 src/core/billing/env.ts 一致（fake 不是真实服务商，不参与；只有 stripe / creem 会覆盖）。
+ * 判断和 src/core/billing/env.ts 一致（fake 不是真实服务商，不参与；
+ * 只有 creem / stripe / lemonsqueezy 会覆盖）。
  */
 const effectiveBillingProvider: BillingProviderName =
   billingProviderNames.find((name) => name === process.env.BILLING_PROVIDER) ??
@@ -44,11 +46,13 @@ const effectiveBillingProvider: BillingProviderName =
 
 /**
  * 套餐产品 ID 的环境变量前缀，随生效的服务商走：换服务商时产品 ID 的变量名一起换，
- * 不用同时记住两套。creem 的 prod_* 和 stripe 的 price_* 在各自后台里是不同的对象。
+ * 不用同时记住两套。creem 的 prod_*、stripe 的 price_* 和 Lemon Squeezy 的变体（variant）
+ * 在各自后台里是不同的对象 —— LS 下 `providerProductId` 填的就是**变体** ID。
  */
 const productIdEnvPrefix: Record<BillingProviderName, string> = {
   creem: "CREEM_PRODUCT_ID",
   stripe: "STRIPE_PRICE_ID",
+  lemonsqueezy: "LEMONSQUEEZY_VARIANT_ID",
 };
 
 /**
@@ -145,6 +149,7 @@ const config = defineConfig({
     faq: ["stack", "payments", "customize", "license"],
   },
   billing: {
+    // 支付服务商。改这里之前先看 README 的「上线清单 → 支付」：各家需要的环境变量不同。
     provider: billingProvider,
     currency: "USD",
     plans: [
@@ -161,7 +166,7 @@ const config = defineConfig({
         interval: "month",
         features: ["credits2000", "coreFeatures", "prioritySupport"],
         highlighted: true,
-        // 服务商那边的产品 ID（见上面的 productIdEnvPrefix）。
+        // 服务商那边的产品 ID（见上面的 productIdEnvPrefix；Lemon Squeezy 下是变体 ID）。
         // 占位值不允许结账（见 src/core/billing/checkout.ts）；换成自己的产品 ID，
         // 或用上面 billingProvider 对应的变量覆盖。测试模式和生产模式的产品 ID 不同，
         // 切换模式时一起换（见 README 上线清单）。

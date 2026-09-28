@@ -10,7 +10,11 @@ export const creemModes = ["test", "live"] as const;
 export type CreemMode = (typeof creemModes)[number];
 
 /** 可选的支付服务商。`site.config.ts` 的 `billing.provider` 从这里取值，实现见 ./providers/。 */
-export const billingProviderNames = ["creem", "stripe"] as const;
+export const billingProviderNames = [
+  "creem",
+  "stripe",
+  "lemonsqueezy",
+] as const;
 export type BillingProviderName = (typeof billingProviderNames)[number];
 
 /** `BILLING_PROVIDER` 的合法取值：真实服务商 + 测试用的 fake。 */
@@ -49,6 +53,11 @@ function isLiveStripeKey(runtimeEnv: RuntimeEnv) {
  *   自托管生产默认拒绝（收紧前这一条缺失：自托管的 `next start` 会静默放行 fake）。
  *   `NODE_ENV` 没设置时按生产处理，避免自建服务忘了设置就默认放行。
  *
+ * Lemon Squeezy **没有**对应的硬锁：它没有 test / live 这个环境变量（测试模式与真实收款是
+ * 店铺上的一个开关），API key 也没有可识别的模式标记（两种模式下前缀完全一样），
+ * `LEMONSQUEEZY_STORE_ID` 同样不区分。造不出可靠判据，就不写假判据 —— 与其按猜测拦，
+ * 不如让第一条（不在 Vercel 上）和第四条（生产运行时默认拒绝）继续生效。
+ *
  * 显式设置 `ALLOW_FAKE_BILLING=1` 只放开第四条：CI 的 e2e 跑在生产构建上（`next start`）必须靠它，
  * 自托管部署只有明确要用模拟支付时才设。前三条是硬锁，设了它也不会放开。
  */
@@ -63,11 +72,14 @@ export function fakeBillingAllowed(runtimeEnv: RuntimeEnv) {
  * 收款模块的变量。
  * - 生效的服务商由 `BILLING_PROVIDER` 决定，默认值是 `site.config.ts` 的 `billing.provider`
  *   （参数 `provider`）；只有**生效**的那家服务商的密钥在生产环境必填。
- * - `CREEM_API_KEY`、`CREEM_WEBHOOK_SECRET` / `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`：
+ * - `CREEM_API_KEY`、`CREEM_WEBHOOK_SECRET` / `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET` /
+ *   `LEMONSQUEEZY_API_KEY`、`LEMONSQUEEZY_WEBHOOK_SECRET`、`LEMONSQUEEZY_STORE_ID`：
  *   站点有付费套餐、在 Vercel 生产环境且服务商选到它时必填；否则可以不填，
- *   此时结账和 webhook 接口返回 503，其他功能不受影响。
+ *   此时结账和 webhook 接口返回 503，其他功能不受影响。Lemon Squeezy 的 STORE_ID 也要填：
+ *   建结账会话必须带上 store 关系。
  * - `CREEM_MODE`：默认 test。切到真实收款必须显式设为 live，并换成生产模式的 key、secret 和产品 ID。
- * - `BILLING_PROVIDER`：默认 creem；fake 只在本地和 CI 可用（见 fakeBillingAllowed）。
+ * - `BILLING_PROVIDER`：默认取 `site.config.ts` 的 billing.provider（见下面的 provider 参数）；
+ *   fake 只在本地和 CI 可用（见 fakeBillingAllowed）。
  * - `ALLOW_FAKE_BILLING`：可选，默认关闭。显式设为 1 / true 时允许 fake（CI 的 e2e 需要，
  *   因为 e2e 跑在生产构建上）；Vercel、CREEM_MODE=live 和 live 的 Stripe 密钥下设置也不会放行。
  * - `BILLING_SUCCESS_TIMEOUT_MS`：成功页等待 webhook 的时长，默认 60 秒。
@@ -88,6 +100,19 @@ export function billingServerEnv(
   return {
     CREEM_API_KEY: requiredWhen(requiredFor("creem"), z.string().min(1)),
     CREEM_WEBHOOK_SECRET: requiredWhen(requiredFor("creem"), z.string().min(1)),
+    // Lemon Squeezy 的三个变量：建结账会话要带 store 关系，所以 STORE_ID 和两个密钥一样必填。
+    LEMONSQUEEZY_API_KEY: requiredWhen(
+      requiredFor("lemonsqueezy"),
+      z.string().min(1),
+    ),
+    LEMONSQUEEZY_WEBHOOK_SECRET: requiredWhen(
+      requiredFor("lemonsqueezy"),
+      z.string().min(1),
+    ),
+    LEMONSQUEEZY_STORE_ID: requiredWhen(
+      requiredFor("lemonsqueezy"),
+      z.string().min(1),
+    ),
     CREEM_MODE: z.enum(creemModes).default("test"),
     // Stripe 的密钥是 sk_/rk_ 开头（测试模式 sk_test_，真实扣款 sk_live_），
     // secret 是 `stripe webhook` 或控制台给的 whsec_，和 Creem 的不通用。
@@ -104,7 +129,7 @@ export function billingServerEnv(
       .default(provider)
       .refine((value) => value !== "fake" || fakeBillingAllowed(runtimeEnv), {
         message:
-          'must be "creem" or "stripe" in a production runtime, on Vercel, when CREEM_MODE=live, or with a live Stripe secret key (set ALLOW_FAKE_BILLING=1 to override the production check)',
+          'must be "creem", "stripe" or "lemonsqueezy" in a production runtime, on Vercel, when CREEM_MODE=live, or with a live Stripe secret key (set ALLOW_FAKE_BILLING=1 to override the production check)',
       }),
     // 显式放行 fake（可选，默认关闭）。只接受 1 / true / 0 / false：写错时启动即报错，不静默当成关闭。
     ALLOW_FAKE_BILLING: z.enum(fakeBillingOptInValues).optional(),
