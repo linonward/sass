@@ -1,0 +1,1292 @@
+{
+  "$comment": [
+    "Lemon Squeezy webhook 请求体样本。抓取日期 2026-09-28。",
+    "order_created / subscription_created / subscription_cancelled / subscription_paused 四个逐字来自官方示例页 https://docs.lemonsqueezy.com/help/webhooks/example-payloads （meta 里只有 event_name，官方示例就是如此；真实投递还会带 test_mode / webhook_id / custom_data，测试里按需注入）。",
+    "其余事件官方没有示例页，按对象页的字段表构造，只改与本仓库映射相关的字段（status / refunded / refunded_at / refunded_amount / renews_at / ends_at）：https://docs.lemonsqueezy.com/api/subscriptions 、https://docs.lemonsqueezy.com/api/subscription-invoices 、https://docs.lemonsqueezy.com/api/orders 。",
+    "注意 order_created 官方样本的 total 是小数 1859.76，而字段文档写的是「整数分」——两者矛盾，见 providers/lemonsqueezy.ts 的 toMinorUnits。",
+    "测试不应依赖其中的具体 ID；文档更新后可以重新抓取。"
+  ],
+  "order_created": {
+    "meta": {
+      "event_name": "order_created"
+    },
+    "data": {
+      "type": "orders",
+      "id": "1",
+      "attributes": {
+        "store_id": 1,
+        "customer_id": 1,
+        "identifier": "89b36d62-4f5c-4353-853f-0c769d0535c8",
+        "order_number": 1,
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "currency": "EUR",
+        "currency_rate": "1.08405",
+        "subtotal": 1499.985,
+        "discount_total": 0,
+        "tax": 359.775,
+        "total": 1859.76,
+        "subtotal_usd": 1626,
+        "discount_total_usd": 0,
+        "tax_usd": 390,
+        "total_usd": 2016,
+        "tax_name": "ALV",
+        "tax_rate": "24.00",
+        "status": "paid",
+        "status_formatted": "Paid",
+        "refunded": null,
+        "refunded_at": null,
+        "subtotal_formatted": "€14.99",
+        "discount_total_formatted": "€0.00",
+        "tax_formatted": "€3.59",
+        "total_formatted": "€18.59",
+        "first_order_item": {
+          "order_id": 1,
+          "product_id": 1,
+          "variant_id": 1,
+          "product_name": "Product One",
+          "variant_name": "Default",
+          "price": 1500,
+          "created_at": "2023-01-17T12:26:23.000000Z",
+          "updated_at": "2023-01-17T12:26:23.000000Z",
+          "test_mode": false
+        },
+        "urls": {
+          "receipt": "https://app.lemonsqueezy.com/my-orders/89b36d62-4f5c-4353-853f-0c769d0535c8?signature=8847fff02e1bfb0c7c43ff1cdf1b1657a8eed2029413692663b86859208c9f42"
+        },
+        "created_at": "2023-01-17T12:26:23.000000Z",
+        "updated_at": "2023-01-17T12:26:23.000000Z",
+        "test_mode": false
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/store",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/customer",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/customer"
+          }
+        },
+        "order-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/order-items",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/order-items"
+          }
+        },
+        "subscriptions": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/subscriptions",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/subscriptions"
+          }
+        },
+        "license-keys": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/license-keys",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/license-keys"
+          }
+        },
+        "discount-redemptions": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/discount-redemptions",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/discount-redemptions"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/orders/1"
+      }
+    }
+  },
+  "order_refunded": {
+    "meta": {
+      "event_name": "order_refunded"
+    },
+    "data": {
+      "type": "orders",
+      "id": 2,
+      "attributes": {
+        "store_id": 1,
+        "customer_id": 1,
+        "identifier": "89b36d62-4f5c-4353-853f-0c769d0535c8",
+        "order_number": 1,
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "currency": "EUR",
+        "currency_rate": "1.08405",
+        "subtotal": 1499.985,
+        "discount_total": 0,
+        "tax": 359.775,
+        "total": 1859.76,
+        "subtotal_usd": 1626,
+        "discount_total_usd": 0,
+        "tax_usd": 390,
+        "total_usd": 2016,
+        "tax_name": "ALV",
+        "tax_rate": "24.00",
+        "status": "refunded",
+        "status_formatted": "Paid",
+        "refunded": true,
+        "refunded_at": "2023-02-01T10:00:00.000000Z",
+        "subtotal_formatted": "€14.99",
+        "discount_total_formatted": "€0.00",
+        "tax_formatted": "€3.59",
+        "total_formatted": "€18.59",
+        "first_order_item": {
+          "order_id": 1,
+          "product_id": 1,
+          "variant_id": 1,
+          "product_name": "Product One",
+          "variant_name": "Default",
+          "price": 1500,
+          "created_at": "2023-01-17T12:26:23.000000Z",
+          "updated_at": "2023-01-17T12:26:23.000000Z",
+          "test_mode": false
+        },
+        "urls": {
+          "receipt": "https://app.lemonsqueezy.com/my-orders/89b36d62-4f5c-4353-853f-0c769d0535c8?signature=8847fff02e1bfb0c7c43ff1cdf1b1657a8eed2029413692663b86859208c9f42"
+        },
+        "created_at": "2023-01-17T12:26:23.000000Z",
+        "updated_at": "2023-02-01T10:00:00.000000Z",
+        "test_mode": false,
+        "refunded_amount": 1859.76,
+        "refunded_amount_usd": 1859.76,
+        "refunded_amount_formatted": "€18.60"
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/store",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/customer",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/customer"
+          }
+        },
+        "order-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/order-items",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/order-items"
+          }
+        },
+        "subscriptions": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/subscriptions",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/subscriptions"
+          }
+        },
+        "license-keys": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/license-keys",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/license-keys"
+          }
+        },
+        "discount-redemptions": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/discount-redemptions",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/discount-redemptions"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/orders/1"
+      }
+    }
+  },
+  "order_partially_refunded": {
+    "meta": {
+      "event_name": "order_refunded"
+    },
+    "data": {
+      "type": "orders",
+      "id": 3,
+      "attributes": {
+        "store_id": 1,
+        "customer_id": 1,
+        "identifier": "89b36d62-4f5c-4353-853f-0c769d0535c8",
+        "order_number": 1,
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "currency": "EUR",
+        "currency_rate": "1.08405",
+        "subtotal": 1499.985,
+        "discount_total": 0,
+        "tax": 359.775,
+        "total": 1859.76,
+        "subtotal_usd": 1626,
+        "discount_total_usd": 0,
+        "tax_usd": 390,
+        "total_usd": 2016,
+        "tax_name": "ALV",
+        "tax_rate": "24.00",
+        "status": "paid",
+        "status_formatted": "Paid",
+        "refunded": true,
+        "refunded_at": "2023-02-01T10:00:00.000000Z",
+        "subtotal_formatted": "€14.99",
+        "discount_total_formatted": "€0.00",
+        "tax_formatted": "€3.59",
+        "total_formatted": "€18.59",
+        "first_order_item": {
+          "order_id": 1,
+          "product_id": 1,
+          "variant_id": 1,
+          "product_name": "Product One",
+          "variant_name": "Default",
+          "price": 1500,
+          "created_at": "2023-01-17T12:26:23.000000Z",
+          "updated_at": "2023-01-17T12:26:23.000000Z",
+          "test_mode": false
+        },
+        "urls": {
+          "receipt": "https://app.lemonsqueezy.com/my-orders/89b36d62-4f5c-4353-853f-0c769d0535c8?signature=8847fff02e1bfb0c7c43ff1cdf1b1657a8eed2029413692663b86859208c9f42"
+        },
+        "created_at": "2023-01-17T12:26:23.000000Z",
+        "updated_at": "2023-02-01T10:00:00.000000Z",
+        "test_mode": false,
+        "refunded_amount": 500,
+        "refunded_amount_usd": 500,
+        "refunded_amount_formatted": "€5.00"
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/store",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/customer",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/customer"
+          }
+        },
+        "order-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/order-items",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/order-items"
+          }
+        },
+        "subscriptions": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/subscriptions",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/subscriptions"
+          }
+        },
+        "license-keys": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/license-keys",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/license-keys"
+          }
+        },
+        "discount-redemptions": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/orders/1/discount-redemptions",
+            "self": "https://api.lemonsqueezy.com/v1/orders/1/relationships/discount-redemptions"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/orders/1"
+      }
+    }
+  },
+  "subscription_created": {
+    "meta": {
+      "event_name": "subscription_created"
+    },
+    "data": {
+      "type": "subscriptions",
+      "id": "1",
+      "attributes": {
+        "store_id": 2,
+        "customer_id": 2,
+        "order_id": 2,
+        "order_item_id": 2,
+        "product_id": 2,
+        "variant_id": 2,
+        "product_name": "Subscription One",
+        "variant_name": "Default",
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "status": "on_trial",
+        "status_formatted": "On_trial",
+        "card_brand": "visa",
+        "card_last_four": "42424",
+        "payment_processor": "stripe",
+        "pause": null,
+        "cancelled": false,
+        "trial_ends_at": "2023-01-24T12:43:48.000000Z",
+        "billing_anchor": 24,
+        "first_subscription_item": {
+          "id": 1,
+          "subscription_id": 1,
+          "price_id": 1,
+          "quantity": 5,
+          "created_at": "2023-01-17T12:43:51.000000Z",
+          "updated_at": "2023-01-17T12:43:51.000000Z"
+        },
+        "urls": {
+          "update_payment_method": "https://my-store.lemonsqueezy.com/subscription/1/payment-details?expires=1674045831&signature=31cf3c83983a03a6cf92e4ec3b469fc044eace0a13183dcb1d7bc0da3bad6f31",
+          "customer_portal": "https://my-store.lemonsqueezy.com/billing?expires=1674045831&signature=82ae290ceac8edd4190c82825dd73a8743346d894a8ddbc4898b97eb96d105a5"
+        },
+        "renews_at": "2023-01-24T12:43:48.000000Z",
+        "ends_at": null,
+        "created_at": "2023-01-17T12:43:50.000000Z",
+        "updated_at": "2023-01-17T12:43:51.000000Z",
+        "test_mode": false
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/store",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/customer",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/customer"
+          }
+        },
+        "order": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order"
+          }
+        },
+        "order-item": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order-item",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order-item"
+          }
+        },
+        "product": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/product",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/product"
+          }
+        },
+        "variant": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/variant",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/variant"
+          }
+        },
+        "subscription-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-items",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-items"
+          }
+        },
+        "subscription-invoices": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-invoices",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-invoices"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/subscriptions/1"
+      }
+    }
+  },
+  "subscription_updated": {
+    "meta": {
+      "event_name": "subscription_updated"
+    },
+    "data": {
+      "type": "subscriptions",
+      "id": "1",
+      "attributes": {
+        "store_id": 2,
+        "customer_id": 2,
+        "order_id": 2,
+        "order_item_id": 2,
+        "product_id": 2,
+        "variant_id": 2,
+        "product_name": "Subscription One",
+        "variant_name": "Default",
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "status": "active",
+        "status_formatted": "On_trial",
+        "card_brand": "visa",
+        "card_last_four": "42424",
+        "payment_processor": "stripe",
+        "pause": null,
+        "cancelled": false,
+        "trial_ends_at": "2023-01-24T12:43:48.000000Z",
+        "billing_anchor": 24,
+        "first_subscription_item": {
+          "id": 1,
+          "subscription_id": 1,
+          "price_id": 1,
+          "quantity": 5,
+          "created_at": "2023-01-17T12:43:51.000000Z",
+          "updated_at": "2023-01-17T12:43:51.000000Z"
+        },
+        "urls": {
+          "update_payment_method": "https://my-store.lemonsqueezy.com/subscription/1/payment-details?expires=1674045831&signature=31cf3c83983a03a6cf92e4ec3b469fc044eace0a13183dcb1d7bc0da3bad6f31",
+          "customer_portal": "https://my-store.lemonsqueezy.com/billing?expires=1674045831&signature=82ae290ceac8edd4190c82825dd73a8743346d894a8ddbc4898b97eb96d105a5"
+        },
+        "renews_at": "2023-01-24T12:43:48.000000Z",
+        "ends_at": null,
+        "created_at": "2023-01-17T12:43:50.000000Z",
+        "updated_at": "2023-02-17T12:43:51.000000Z",
+        "test_mode": false
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/store",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/customer",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/customer"
+          }
+        },
+        "order": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order"
+          }
+        },
+        "order-item": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order-item",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order-item"
+          }
+        },
+        "product": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/product",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/product"
+          }
+        },
+        "variant": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/variant",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/variant"
+          }
+        },
+        "subscription-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-items",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-items"
+          }
+        },
+        "subscription-invoices": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-invoices",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-invoices"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/subscriptions/1"
+      }
+    }
+  },
+  "subscription_resumed": {
+    "meta": {
+      "event_name": "subscription_resumed"
+    },
+    "data": {
+      "type": "subscriptions",
+      "id": "1",
+      "attributes": {
+        "store_id": 2,
+        "customer_id": 2,
+        "order_id": 2,
+        "order_item_id": 2,
+        "product_id": 2,
+        "variant_id": 2,
+        "product_name": "Subscription One",
+        "variant_name": "Default",
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "status": "active",
+        "status_formatted": "On_trial",
+        "card_brand": "visa",
+        "card_last_four": "42424",
+        "payment_processor": "stripe",
+        "pause": null,
+        "cancelled": false,
+        "trial_ends_at": "2023-01-24T12:43:48.000000Z",
+        "billing_anchor": 24,
+        "first_subscription_item": {
+          "id": 1,
+          "subscription_id": 1,
+          "price_id": 1,
+          "quantity": 5,
+          "created_at": "2023-01-17T12:43:51.000000Z",
+          "updated_at": "2023-01-17T12:43:51.000000Z"
+        },
+        "urls": {
+          "update_payment_method": "https://my-store.lemonsqueezy.com/subscription/1/payment-details?expires=1674045831&signature=31cf3c83983a03a6cf92e4ec3b469fc044eace0a13183dcb1d7bc0da3bad6f31",
+          "customer_portal": "https://my-store.lemonsqueezy.com/billing?expires=1674045831&signature=82ae290ceac8edd4190c82825dd73a8743346d894a8ddbc4898b97eb96d105a5"
+        },
+        "renews_at": "2023-01-24T12:43:48.000000Z",
+        "ends_at": null,
+        "created_at": "2023-01-17T12:43:50.000000Z",
+        "updated_at": "2023-02-17T12:43:51.000000Z",
+        "test_mode": false
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/store",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/customer",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/customer"
+          }
+        },
+        "order": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order"
+          }
+        },
+        "order-item": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order-item",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order-item"
+          }
+        },
+        "product": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/product",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/product"
+          }
+        },
+        "variant": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/variant",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/variant"
+          }
+        },
+        "subscription-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-items",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-items"
+          }
+        },
+        "subscription-invoices": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-invoices",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-invoices"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/subscriptions/1"
+      }
+    }
+  },
+  "subscription_unpaused": {
+    "meta": {
+      "event_name": "subscription_unpaused"
+    },
+    "data": {
+      "type": "subscriptions",
+      "id": "1",
+      "attributes": {
+        "store_id": 2,
+        "customer_id": 2,
+        "order_id": 2,
+        "order_item_id": 2,
+        "product_id": 2,
+        "variant_id": 2,
+        "product_name": "Subscription One",
+        "variant_name": "Default",
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "status": "active",
+        "status_formatted": "On_trial",
+        "card_brand": "visa",
+        "card_last_four": "42424",
+        "payment_processor": "stripe",
+        "pause": null,
+        "cancelled": false,
+        "trial_ends_at": "2023-01-24T12:43:48.000000Z",
+        "billing_anchor": 24,
+        "first_subscription_item": {
+          "id": 1,
+          "subscription_id": 1,
+          "price_id": 1,
+          "quantity": 5,
+          "created_at": "2023-01-17T12:43:51.000000Z",
+          "updated_at": "2023-01-17T12:43:51.000000Z"
+        },
+        "urls": {
+          "update_payment_method": "https://my-store.lemonsqueezy.com/subscription/1/payment-details?expires=1674045831&signature=31cf3c83983a03a6cf92e4ec3b469fc044eace0a13183dcb1d7bc0da3bad6f31",
+          "customer_portal": "https://my-store.lemonsqueezy.com/billing?expires=1674045831&signature=82ae290ceac8edd4190c82825dd73a8743346d894a8ddbc4898b97eb96d105a5"
+        },
+        "renews_at": "2023-01-24T12:43:48.000000Z",
+        "ends_at": null,
+        "created_at": "2023-01-17T12:43:50.000000Z",
+        "updated_at": "2023-02-17T12:43:51.000000Z",
+        "test_mode": false
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/store",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/customer",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/customer"
+          }
+        },
+        "order": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order"
+          }
+        },
+        "order-item": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order-item",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order-item"
+          }
+        },
+        "product": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/product",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/product"
+          }
+        },
+        "variant": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/variant",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/variant"
+          }
+        },
+        "subscription-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-items",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-items"
+          }
+        },
+        "subscription-invoices": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-invoices",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-invoices"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/subscriptions/1"
+      }
+    }
+  },
+  "subscription_expired": {
+    "meta": {
+      "event_name": "subscription_expired"
+    },
+    "data": {
+      "type": "subscriptions",
+      "id": "1",
+      "attributes": {
+        "store_id": 2,
+        "customer_id": 2,
+        "order_id": 2,
+        "order_item_id": 2,
+        "product_id": 2,
+        "variant_id": 2,
+        "product_name": "Subscription One",
+        "variant_name": "Default",
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "status": "expired",
+        "status_formatted": "On_trial",
+        "card_brand": "visa",
+        "card_last_four": "42424",
+        "payment_processor": "stripe",
+        "pause": null,
+        "cancelled": true,
+        "trial_ends_at": "2023-01-24T12:43:48.000000Z",
+        "billing_anchor": 24,
+        "first_subscription_item": {
+          "id": 1,
+          "subscription_id": 1,
+          "price_id": 1,
+          "quantity": 5,
+          "created_at": "2023-01-17T12:43:51.000000Z",
+          "updated_at": "2023-01-17T12:43:51.000000Z"
+        },
+        "urls": {
+          "update_payment_method": "https://my-store.lemonsqueezy.com/subscription/1/payment-details?expires=1674045831&signature=31cf3c83983a03a6cf92e4ec3b469fc044eace0a13183dcb1d7bc0da3bad6f31",
+          "customer_portal": "https://my-store.lemonsqueezy.com/billing?expires=1674045831&signature=82ae290ceac8edd4190c82825dd73a8743346d894a8ddbc4898b97eb96d105a5"
+        },
+        "renews_at": null,
+        "ends_at": "2023-02-17T14:15:43.000000Z",
+        "created_at": "2023-01-17T12:43:50.000000Z",
+        "updated_at": "2023-02-20T09:00:00.000000Z",
+        "test_mode": false
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/store",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/customer",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/customer"
+          }
+        },
+        "order": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order"
+          }
+        },
+        "order-item": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/order-item",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/order-item"
+          }
+        },
+        "product": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/product",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/product"
+          }
+        },
+        "variant": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/variant",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/variant"
+          }
+        },
+        "subscription-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-items",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-items"
+          }
+        },
+        "subscription-invoices": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/1/subscription-invoices",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/1/relationships/subscription-invoices"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/subscriptions/1"
+      }
+    }
+  },
+  "subscription_cancelled": {
+    "meta": {
+      "event_name": "subscription_cancelled"
+    },
+    "data": {
+      "type": "subscriptions",
+      "id": "3",
+      "attributes": {
+        "store_id": 2,
+        "customer_id": 2,
+        "order_id": 4,
+        "order_item_id": 4,
+        "product_id": 2,
+        "variant_id": 2,
+        "product_name": "Subscription One",
+        "variant_name": "Default",
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "status": "cancelled",
+        "status_formatted": "Cancelled",
+        "pause": null,
+        "cancelled": true,
+        "trial_ends_at": null,
+        "billing_anchor": 17,
+        "first_subscription_item": {
+          "id": 1,
+          "subscription_id": 1,
+          "price_id": 1,
+          "quantity": 5,
+          "created_at": "2023-01-17T14:15:46.000000Z",
+          "updated_at": "2023-01-17T14:15:46.000000Z"
+        },
+        "urls": {
+          "update_payment_method": "https://my-store.lemonsqueezy.com/subscription/3/payment-details?expires=1674065845&signature=193397167637b5ae4e3a36741926c4f073cfb3d242831962b32565637db2bbb0",
+          "customer_portal": "https://my-store.lemonsqueezy.com/billing?expires=1674065845&signature=82ae290ceac8edd4190c82825dd73a8743346d894a8ddbc4898b97eb96d105a5"
+        },
+        "renews_at": "2023-02-17T14:15:43.000000Z",
+        "ends_at": "2023-02-17T14:15:43.000000Z",
+        "created_at": "2023-01-17T14:15:45.000000Z",
+        "updated_at": "2023-01-17T18:17:25.000000Z",
+        "test_mode": false
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/store",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/customer",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/customer"
+          }
+        },
+        "order": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/order",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/order"
+          }
+        },
+        "order-item": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/order-item",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/order-item"
+          }
+        },
+        "product": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/product",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/product"
+          }
+        },
+        "variant": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/variant",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/variant"
+          }
+        },
+        "subscription-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/subscription-items",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/subscription-items"
+          }
+        },
+        "subscription-invoices": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/subscription-invoices",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/subscription-invoices"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/subscriptions/3"
+      }
+    }
+  },
+  "subscription_paused": {
+    "meta": {
+      "event_name": "subscription_paused"
+    },
+    "data": {
+      "type": "subscriptions",
+      "id": "3",
+      "attributes": {
+        "store_id": 2,
+        "customer_id": 2,
+        "order_id": 4,
+        "order_item_id": 4,
+        "product_id": 2,
+        "variant_id": 2,
+        "product_name": "Subscription One",
+        "variant_name": "Default",
+        "user_name": "John Doe",
+        "user_email": "[email protected]",
+        "status": "paused",
+        "status_formatted": "Paused",
+        "pause": {
+          "mode": "void",
+          "resumes_at": null
+        },
+        "cancelled": false,
+        "trial_ends_at": null,
+        "billing_anchor": 17,
+        "first_subscription_item": {
+          "id": 1,
+          "subscription_id": 1,
+          "price_id": 1,
+          "quantity": 5,
+          "created_at": "2023-01-17T14:15:46.000000Z",
+          "updated_at": "2023-01-17T14:15:46.000000Z"
+        },
+        "urls": {
+          "update_payment_method": "https://my-store.lemonsqueezy.com/my-orders/91c29979-dade-458e-bd6d-caa895a5d5c3/subscription/3/update-payment-method?expires=1674221847&signature=b56e4fb5e8d102a0d29c3dcca95797bf6bb059d741c0b402f2893969aad53165"
+        },
+        "renews_at": "2023-02-17T14:15:43.000000Z",
+        "ends_at": null,
+        "created_at": "2023-01-17T14:15:45.000000Z",
+        "updated_at": "2023-01-19T13:37:27.000000Z",
+        "test_mode": false
+      },
+      "relationships": {
+        "store": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/store",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/store"
+          }
+        },
+        "customer": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/customer",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/customer"
+          }
+        },
+        "order": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/order",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/order"
+          }
+        },
+        "order-item": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/order-item",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/order-item"
+          }
+        },
+        "product": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/product",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/product"
+          }
+        },
+        "variant": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/variant",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/variant"
+          }
+        },
+        "subscription-items": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/subscription-items",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/subscription-items"
+          }
+        },
+        "subscription-invoices": {
+          "links": {
+            "related": "https://api.lemonsqueezy.com/v1/subscriptions/3/subscription-invoices",
+            "self": "https://api.lemonsqueezy.com/v1/subscriptions/3/relationships/subscription-invoices"
+          }
+        }
+      },
+      "links": {
+        "self": "https://api.lemonsqueezy.com/v1/subscriptions/3"
+      }
+    }
+  },
+  "subscription_payment_success": {
+    "meta": {
+      "event_name": "subscription_payment_success"
+    },
+    "data": {
+      "type": "subscription-invoices",
+      "id": 1,
+      "attributes": {
+        "store_id": 1,
+        "subscription_id": 1,
+        "customer_id": 2,
+        "user_name": "John Doe",
+        "user_email": "john@example.com",
+        "billing_reason": "initial",
+        "card_brand": "visa",
+        "card_last_four": "4242",
+        "currency": "USD",
+        "currency_rate": "1.000000",
+        "status": "paid",
+        "status_formatted": "Paid",
+        "refunded": false,
+        "refunded_at": null,
+        "subtotal": 1500,
+        "discount_total": 0,
+        "tax": 0,
+        "tax_inclusive": false,
+        "total": 1500,
+        "refunded_amount": 0,
+        "refunded_amount_usd": 0,
+        "refunded_amount_formatted": "$0.00",
+        "subtotal_usd": 1500,
+        "discount_total_usd": 0,
+        "tax_usd": 0,
+        "total_usd": 1500,
+        "subtotal_formatted": "$15.00",
+        "discount_total_formatted": "$0.00",
+        "tax_formatted": "$0.00",
+        "total_formatted": "$15.00",
+        "urls": {
+          "invoice_url": "https://app.lemonsqueezy.com/my-orders/1/invoices/1"
+        },
+        "created_at": "2023-01-17T12:43:51.000000Z",
+        "updated_at": "2023-01-17T12:43:51.000000Z",
+        "test_mode": false
+      }
+    }
+  },
+  "subscription_payment_success_renewal": {
+    "meta": {
+      "event_name": "subscription_payment_success"
+    },
+    "data": {
+      "type": "subscription-invoices",
+      "id": 2,
+      "attributes": {
+        "store_id": 1,
+        "subscription_id": 1,
+        "customer_id": 2,
+        "user_name": "John Doe",
+        "user_email": "john@example.com",
+        "billing_reason": "renewal",
+        "card_brand": "visa",
+        "card_last_four": "4242",
+        "currency": "USD",
+        "currency_rate": "1.000000",
+        "status": "paid",
+        "status_formatted": "Paid",
+        "refunded": false,
+        "refunded_at": null,
+        "subtotal": 1500,
+        "discount_total": 0,
+        "tax": 0,
+        "tax_inclusive": false,
+        "total": 1500,
+        "refunded_amount": 0,
+        "refunded_amount_usd": 0,
+        "refunded_amount_formatted": "$0.00",
+        "subtotal_usd": 1500,
+        "discount_total_usd": 0,
+        "tax_usd": 0,
+        "total_usd": 1500,
+        "subtotal_formatted": "$15.00",
+        "discount_total_formatted": "$0.00",
+        "tax_formatted": "$0.00",
+        "total_formatted": "$15.00",
+        "urls": {
+          "invoice_url": "https://app.lemonsqueezy.com/my-orders/1/invoices/1"
+        },
+        "created_at": "2023-02-17T12:43:51.000000Z",
+        "updated_at": "2023-02-17T12:43:51.000000Z",
+        "test_mode": false
+      }
+    }
+  },
+  "subscription_payment_failed": {
+    "meta": {
+      "event_name": "subscription_payment_failed"
+    },
+    "data": {
+      "type": "subscription-invoices",
+      "id": 2,
+      "attributes": {
+        "store_id": 1,
+        "subscription_id": 1,
+        "customer_id": 2,
+        "user_name": "John Doe",
+        "user_email": "john@example.com",
+        "billing_reason": "renewal",
+        "card_brand": "visa",
+        "card_last_four": "4242",
+        "currency": "USD",
+        "currency_rate": "1.000000",
+        "status": "pending",
+        "status_formatted": "Pending",
+        "refunded": false,
+        "refunded_at": null,
+        "subtotal": 1500,
+        "discount_total": 0,
+        "tax": 0,
+        "tax_inclusive": false,
+        "total": 1500,
+        "refunded_amount": 0,
+        "refunded_amount_usd": 0,
+        "refunded_amount_formatted": "$0.00",
+        "subtotal_usd": 1500,
+        "discount_total_usd": 0,
+        "tax_usd": 0,
+        "total_usd": 1500,
+        "subtotal_formatted": "$15.00",
+        "discount_total_formatted": "$0.00",
+        "tax_formatted": "$0.00",
+        "total_formatted": "$15.00",
+        "urls": {
+          "invoice_url": "https://app.lemonsqueezy.com/my-orders/1/invoices/1"
+        },
+        "created_at": "2023-02-17T12:43:51.000000Z",
+        "updated_at": "2023-02-17T12:43:51.000000Z",
+        "test_mode": false
+      }
+    }
+  },
+  "subscription_payment_recovered": {
+    "meta": {
+      "event_name": "subscription_payment_recovered"
+    },
+    "data": {
+      "type": "subscription-invoices",
+      "id": 2,
+      "attributes": {
+        "store_id": 1,
+        "subscription_id": 1,
+        "customer_id": 2,
+        "user_name": "John Doe",
+        "user_email": "john@example.com",
+        "billing_reason": "renewal",
+        "card_brand": "visa",
+        "card_last_four": "4242",
+        "currency": "USD",
+        "currency_rate": "1.000000",
+        "status": "paid",
+        "status_formatted": "Paid",
+        "refunded": false,
+        "refunded_at": null,
+        "subtotal": 1500,
+        "discount_total": 0,
+        "tax": 0,
+        "tax_inclusive": false,
+        "total": 1500,
+        "refunded_amount": 0,
+        "refunded_amount_usd": 0,
+        "refunded_amount_formatted": "$0.00",
+        "subtotal_usd": 1500,
+        "discount_total_usd": 0,
+        "tax_usd": 0,
+        "total_usd": 1500,
+        "subtotal_formatted": "$15.00",
+        "discount_total_formatted": "$0.00",
+        "tax_formatted": "$0.00",
+        "total_formatted": "$15.00",
+        "urls": {
+          "invoice_url": "https://app.lemonsqueezy.com/my-orders/1/invoices/1"
+        },
+        "created_at": "2023-02-17T12:43:51.000000Z",
+        "updated_at": "2023-02-18T08:00:00.000000Z",
+        "test_mode": false
+      }
+    }
+  },
+  "subscription_payment_refunded": {
+    "meta": {
+      "event_name": "subscription_payment_refunded"
+    },
+    "data": {
+      "type": "subscription-invoices",
+      "id": 2,
+      "attributes": {
+        "store_id": 1,
+        "subscription_id": 1,
+        "customer_id": 2,
+        "user_name": "John Doe",
+        "user_email": "john@example.com",
+        "billing_reason": "renewal",
+        "card_brand": "visa",
+        "card_last_four": "4242",
+        "currency": "USD",
+        "currency_rate": "1.000000",
+        "status": "refunded",
+        "status_formatted": "Refunded",
+        "refunded": true,
+        "refunded_at": "2023-03-01T10:00:00.000000Z",
+        "subtotal": 1500,
+        "discount_total": 0,
+        "tax": 0,
+        "tax_inclusive": false,
+        "total": 1500,
+        "refunded_amount": 1500,
+        "refunded_amount_usd": 1500,
+        "refunded_amount_formatted": "$15.00",
+        "subtotal_usd": 1500,
+        "discount_total_usd": 0,
+        "tax_usd": 0,
+        "total_usd": 1500,
+        "subtotal_formatted": "$15.00",
+        "discount_total_formatted": "$0.00",
+        "tax_formatted": "$0.00",
+        "total_formatted": "$15.00",
+        "urls": {
+          "invoice_url": "https://app.lemonsqueezy.com/my-orders/1/invoices/1"
+        },
+        "created_at": "2023-01-17T12:43:51.000000Z",
+        "updated_at": "2023-03-01T10:00:00.000000Z",
+        "test_mode": false
+      }
+    }
+  },
+  "subscription_payment_partially_refunded": {
+    "meta": {
+      "event_name": "subscription_payment_refunded"
+    },
+    "data": {
+      "type": "subscription-invoices",
+      "id": 2,
+      "attributes": {
+        "store_id": 1,
+        "subscription_id": 1,
+        "customer_id": 2,
+        "user_name": "John Doe",
+        "user_email": "john@example.com",
+        "billing_reason": "renewal",
+        "card_brand": "visa",
+        "card_last_four": "4242",
+        "currency": "USD",
+        "currency_rate": "1.000000",
+        "status": "paid",
+        "status_formatted": "Paid",
+        "refunded": true,
+        "refunded_at": "2023-03-01T10:00:00.000000Z",
+        "subtotal": 1500,
+        "discount_total": 0,
+        "tax": 0,
+        "tax_inclusive": false,
+        "total": 1500,
+        "refunded_amount": 500,
+        "refunded_amount_usd": 500,
+        "refunded_amount_formatted": "$5.00",
+        "subtotal_usd": 1500,
+        "discount_total_usd": 0,
+        "tax_usd": 0,
+        "total_usd": 1500,
+        "subtotal_formatted": "$15.00",
+        "discount_total_formatted": "$0.00",
+        "tax_formatted": "$0.00",
+        "total_formatted": "$15.00",
+        "urls": {
+          "invoice_url": "https://app.lemonsqueezy.com/my-orders/1/invoices/1"
+        },
+        "created_at": "2023-01-17T12:43:51.000000Z",
+        "updated_at": "2023-03-01T10:00:00.000000Z",
+        "test_mode": false
+      }
+    }
+  },
+  "license_key_created": {
+    "meta": {
+      "event_name": "license_key_created"
+    },
+    "data": {
+      "type": "license-keys",
+      "id": 1,
+      "attributes": {
+        "store_id": 1,
+        "order_id": 1,
+        "status": "inactive"
+      }
+    }
+  }
+}

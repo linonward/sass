@@ -4,6 +4,7 @@ import { fakeBillingAllowed } from "../env";
 import type { PaymentProvider } from "../provider";
 import { createCreemProvider } from "./creem";
 import { createFakeBillingProvider } from "./fake";
+import { createLemonSqueezyProvider } from "./lemonsqueezy";
 import { createStripeProvider } from "./stripe";
 
 let cached: PaymentProvider | null | undefined;
@@ -36,6 +37,18 @@ function createProvider(): PaymentProvider | null {
       ? createStripeProvider({
           secretKey: env.STRIPE_SECRET_KEY,
           webhookSecret: env.STRIPE_WEBHOOK_SECRET,
+        })
+      : null;
+  }
+
+  if (env.BILLING_PROVIDER === "lemonsqueezy") {
+    return env.LEMONSQUEEZY_API_KEY &&
+      env.LEMONSQUEEZY_WEBHOOK_SECRET &&
+      env.LEMONSQUEEZY_STORE_ID
+      ? createLemonSqueezyProvider({
+          apiKey: env.LEMONSQUEEZY_API_KEY,
+          webhookSecret: env.LEMONSQUEEZY_WEBHOOK_SECRET,
+          storeId: env.LEMONSQUEEZY_STORE_ID,
         })
       : null;
   }

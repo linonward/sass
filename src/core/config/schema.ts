@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// 会被 next.config.ts 间接加载，那里不解析 `@/` 别名，只能用相对路径。
 import { billingProviderNames } from "../billing/env";
 import { formatIssues } from "./format-issues";
 
@@ -137,7 +138,8 @@ export const landingSchema = z.strictObject({
 // 每个套餐分两段：上面是展示字段（价格、周期、卖点文案），下面从「交易字段」起是结账和发积分用的字段。
 export const billingSchema = z.strictObject({
   // 用来收款的支付服务商。值域在 src/core/billing/env.ts，实现见 src/core/billing/providers/。
-  // 运行时的 BILLING_PROVIDER 变量可以覆盖它（类型校验的默认值就是这里的值）。
+  // 运行时的 BILLING_PROVIDER 变量可以覆盖它（类型校验的默认值就是这里的值）；下面套餐的
+  // providerProductId 怎么解释也跟着它走：creem 填产品 ID，lemonsqueezy 填变体（variant）ID。
   provider: z.enum(billingProviderNames).default("creem"),
   currency: z
     .string()

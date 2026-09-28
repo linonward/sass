@@ -33,13 +33,50 @@ const stripe = {
   STRIPE_WEBHOOK_SECRET: "whsec_x",
 };
 
+const lemonSqueezy = {
+  LEMONSQUEEZY_API_KEY: "ls_test_x",
+  LEMONSQUEEZY_WEBHOOK_SECRET: "ls_whsec_x",
+  LEMONSQUEEZY_STORE_ID: "12345",
+};
+
 describe("billingServerEnv", () => {
   test("Vercel 生产环境且有付费套餐时，缺少 Creem 凭据会报错", () => {
     expect(check({ VERCEL_ENV: "production" })).toThrow("- CREEM_API_KEY: ");
     expect(check({ VERCEL_ENV: "production" })).toThrow(
       "- CREEM_WEBHOOK_SECRET: ",
     );
+    // 只有生效服务商（这里默认取站点配置的 creem）的凭据必填；填了别家的不影响。
     expect(check({ VERCEL_ENV: "production", ...creem })).not.toThrow();
+  });
+
+  test("Vercel 生产环境且有付费套餐时，缺少 Lemon Squeezy 凭据会报错", () => {
+    const lemonsqueezy = { provider: "lemonsqueezy" } as const;
+    expect(check({ VERCEL_ENV: "production" }, lemonsqueezy)).toThrow(
+      "- LEMONSQUEEZY_API_KEY: ",
+    );
+    expect(check({ VERCEL_ENV: "production" }, lemonsqueezy)).toThrow(
+      "- LEMONSQUEEZY_WEBHOOK_SECRET: ",
+    );
+    // 建结账会话需要 store 关系，store ID 和另外两个一样是必填。
+    expect(check({ VERCEL_ENV: "production" }, lemonsqueezy)).toThrow(
+      "- LEMONSQUEEZY_STORE_ID: ",
+    );
+    expect(
+      check({ VERCEL_ENV: "production", ...lemonSqueezy }, lemonsqueezy),
+    ).not.toThrow();
+    // 反过来：站点用 Creem 时不该要求 LS 的凭据 —— 少填一家也能起。
+    expect(check({ VERCEL_ENV: "production", ...creem })).not.toThrow();
+    // BILLING_PROVIDER 覆盖站点配置时按覆盖后的服务商判断。
+    expect(
+      check({ VERCEL_ENV: "production", BILLING_PROVIDER: "lemonsqueezy" }),
+    ).toThrow("- LEMONSQUEEZY_API_KEY: ");
+    expect(
+      check({
+        VERCEL_ENV: "production",
+        BILLING_PROVIDER: "lemonsqueezy",
+        ...lemonSqueezy,
+      }),
+    ).not.toThrow();
   });
 
   test("没有付费套餐时生产环境也不要求", () => {
@@ -98,6 +135,12 @@ describe("billingServerEnv", () => {
   test("BILLING_PROVIDER 默认取配置里的 provider", () => {
     expect(check({})().BILLING_PROVIDER).toBe("creem");
     expect(check({}, { provider: "stripe" })().BILLING_PROVIDER).toBe("stripe");
+    expect(check({}, { provider: "lemonsqueezy" })().BILLING_PROVIDER).toBe(
+      "lemonsqueezy",
+    );
+    expect(check({ BILLING_PROVIDER: "lemonsqueezy" })().BILLING_PROVIDER).toBe(
+      "lemonsqueezy",
+    );
     expect(check({ BILLING_PROVIDER: "fake" })).toThrow("- BILLING_PROVIDER: ");
     expect(
       check({ NODE_ENV: "test", BILLING_PROVIDER: "fake" })().BILLING_PROVIDER,
@@ -331,6 +374,20 @@ const table: Array<{
 ];
 
 describe("fakeBillingAllowed 真值表", () => {
+  test("Lemon Squeezy 的变量不参与判断（没有可用的判据，故意不加硬锁）", () => {
+    // Creem 的同一格靠 CREEM_MODE=live 拦住；Lemon Squeezy 没有模式变量（测试/真实收款是
+    // 店铺上的开关），key 和 store ID 里也看不出模式，所以造不出判据 —— 结论和没带这些
+    // 变量时完全一致，不能凭空拦也不能凭空放。
+    expect(
+      fakeBillingAllowed({
+        NODE_ENV: "production",
+        LEMONSQUEEZY_API_KEY: "ls_some_key",
+        LEMONSQUEEZY_STORE_ID: "12345",
+        ALLOW_FAKE_BILLING: "1",
+      }),
+    ).toBe(true);
+  });
+
   for (const row of table) {
     const { allowed, ...runtimeEnv } = row;
     const label = (Object.keys(runtimeEnv) as Array<keyof typeof runtimeEnv>)

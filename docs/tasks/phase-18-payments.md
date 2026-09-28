@@ -38,12 +38,16 @@ T1801, T1802 → T1803
 - **分支**: `feat/lemonsqueezy`
 - **范围**: `src/core/billing/providers/lemonsqueezy/`
 - **做什么**:
-  - 实现 `PaymentProvider` 接口
-  - 用 `@lemonsqueezy/lemonsqueezy.js` SDK
-  - Webhook handler：`order_created`、`subscription_payment_success`、`subscription_cancelled`
-  - `site.config.ts` 加 `lemonsqueezy` 选项
-  - 环境变量：`LEMONSQUEEZY_API_KEY`、`LEMONSQUEEZY_WEBHOOK_SECRET`、`LEMONSQUEEZY_STORE_ID` 等
-- **验证**: 同 T1801 的 adapter 单测 + e2e 模式
+  - 实现 `PaymentProvider` 接口：`createCheckout`、`getPortalUrl`、`cancelSubscription`、`verifyWebhook`、`parseEvent`
+  - 手写薄 HTTP 客户端对接 JSON:API v1（`POST /v1/checkouts`、`GET /v1/customers/:id`、`GET|DELETE /v1/subscriptions/:id`），**不引 `@lemonsqueezy/lemonsqueezy.js`**：该 SDK 自 2024-11-05 起没有再发版，若干接口长期是坏的，而这里要的只是四个调用；客户端只有几十行、fetch 可注入，顺带不动 `package.json` / `pnpm-lock.yaml` / `THIRD-PARTY-NOTICES.md`
+  - Webhook handler：`/api/webhooks/lemonsqueezy`，验签用原始请求体的 HMAC-SHA256 十六进制（`X-Signature`）；事件映射表写在 `providers/lemonsqueezy.ts` 顶部，订阅类事件按 `attributes.status` 分派（不按事件名），退款只在能证明是**全额**退款时映射
+  - `site.config.ts` 加 `lemonsqueezy` 选项（`billing.provider`）；该服务商下 `providerProductId` 填**变体 ID**，产品 ID 的环境变量前缀是 `LEMONSQUEEZY_VARIANT_ID_*`
+  - 环境变量：`LEMONSQUEEZY_API_KEY`、`LEMONSQUEEZY_WEBHOOK_SECRET`、`LEMONSQUEEZY_STORE_ID`；`BILLING_PROVIDER` 不填时默认取站点配置的 provider
+- **验证**:
+  - adapter 单测：官方示例 payload 当 fixture（`providers/__fixtures__/lemonsqueezy-webhooks.json`）+ 注入的假 fetch，覆盖验签、全部事件映射、`createCheckout` 请求体、门户地址（含 LS 返回 null 的分支）、取消订阅幂等、结构不对的 payload 返回 null
+  - `checkout → webhook → credits` 全链路仍由现成的 fake provider e2e（`BILLING_PROVIDER=fake`）覆盖，不新增服务商专属 e2e 模式
+  - CI 里不引入任何真实密钥、不依赖外网
+  - 真实密钥的端到端（LS test mode 真实下单 + 真实 webhook）**不做**，也不进 CI
 
 ### T1803: 支付商选型文档
 
