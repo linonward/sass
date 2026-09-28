@@ -92,7 +92,10 @@ jobs:
       # 在空库上执行迁移，验证迁移文件可用。
       - run: pnpm db:migrate
 
-      - run: pnpm test -- --coverage
+      # `--coverage` 要直接跟在 `pnpm test` 后面（`pnpm test --coverage`）：写成
+      # `pnpm test -- --coverage` 的话 pnpm 展开成 `vitest run -- --coverage`，那个 `--`
+      # 会把 flag 变成无关参数，覆盖率静默不采集、阈值全部形同虚设（实测：跑完没有覆盖率表）。
+      - run: pnpm test --coverage
 
       - run: pnpm build
 
