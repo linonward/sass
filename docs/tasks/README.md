@@ -125,6 +125,19 @@
 | T1603                       | report-ui               | `fix/report-ui`                | —                             | done |
 | T1604                       | referral-fixes          | `fix/referral-fixes`           | —                             | done |
 | T1605                       | internal-terms-2        | `chore/internal-terms-2`       | —                             | done |
+| **阶段 17：审计收尾**       |                         |                                |                               |      |
+| T1701                       | auth-tests              | `fix/auth-tests`               | —                             | todo |
+| T1702                       | instrumentation-tests   | `fix/instrumentation-tests`    | —                             | todo |
+| T1703                       | session-invalidation    | `feat/session-invalidation`    | —                             | todo |
+| T1704                       | ci-dep-audit            | `chore/ci-dep-audit`           | —                             | todo |
+| **阶段 18：支付商扩展**     |                         |                                |                               |      |
+| T1801                       | stripe                  | `feat/stripe`                  | T1704                         | todo |
+| T1802                       | lemonsqueezy            | `feat/lemonsqueezy`            | T1704                         | todo |
+| T1803                       | billing-docs            | `docs/billing`                 | T1801, T1802                  | todo |
+| **阶段 19：模板体验打磨**   |                         |                                |                               |      |
+| T1901                       | onboarding              | `feat/onboarding`              | —                             | todo |
+| T1902                       | example-invoices        | `feat/example-invoices`        | —                             | todo |
+| T1903                       | starter-media           | `docs/starter-media`           | —                             | todo |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
@@ -206,6 +219,12 @@
 阶段 15  T1500 → T1501 T1502 T1503 T1504（四条互不重叠，可并行）
 
 阶段 16  T1600 → T1601 → T1602；T1603 T1604 T1605（T1602 在 T1601 之后，其余可并行）
+
+阶段 17  T1701 T1702 T1703 T1704（全部可并行，无相互依赖）
+
+阶段 18  T1704 → T1801 T1802 → T1803
+
+阶段 19  T1901 T1902 T1903（全部可并行，无相互依赖）
 ```
 
 ## 推荐顺序
@@ -222,7 +241,13 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 
 阶段 16：T1605 可随时做（修的是已合入的回归，顺带给 CI 加闸）；T1601 与 T1602 先后做（同改 `report.ts`），T1603 / T1604 独立并行。
 
-可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做；T601 / T604；T602 / T603；阶段 8 批次内全部并行（见 phase-8-sell.md）；阶段 9 的 T902 / T903 / T905；阶段 10 的 T1001 / T1004；阶段 12 批次内除 T1203 外全部（T1203 在 T1201 之后，见 phase-12-review.md）。
+阶段 17：T1701 T1702 T1703 T1704（全部可并行，无相互依赖）。
+
+阶段 18：T1704 → T1801 T1802 → T1803。
+
+阶段 19：T1901 T1902 T1903（全部可并行，无相互依赖）。
+
+可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做；T601 / T604；T602 / T603；阶段 8 批次内全部并行（见 phase-8-sell.md）；阶段 9 的 T902 / T903 / T905；阶段 10 的 T1001 / T1004；阶段 12 批次内除 T1203 外全部（T1203 在 T1201 之后，见 phase-12-review.md）；阶段 17 全部可并行；阶段 19 全部可并行；阶段 18 的 T1801/T1802 可并行。
 
 ## 任务详情
 
@@ -242,3 +267,6 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 - [阶段 14：审查后续小项](phase-14-followups.md)
 - [阶段 15：差异化补齐](phase-15-differentiation.md)
 - [阶段 16：合入后审查收口](phase-16-postmerge.md)
+- [阶段 17：审计收尾](phase-17-hardening.md)
+- [阶段 18：支付商扩展](phase-18-payments.md)
+- [阶段 19：模板体验打磨](phase-19-polish.md)
