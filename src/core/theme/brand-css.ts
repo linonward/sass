@@ -109,7 +109,7 @@ export function oklchToHex(color: Oklch): string {
  * 把 chroma 收窄到 sRGB 色域内（二分）。
  * 不收窄的话 `oklchToHex` 会静默钳制到边界，推导出的 edge/text 会跟预期的色相偏掉。
  */
-function fitChroma(L: number, C: number, H: number): number {
+export function fitChroma(L: number, C: number, H: number): number {
   let low = 0;
   let high = C;
   for (let i = 0; i < 24; i += 1) {

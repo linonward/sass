@@ -9,7 +9,7 @@ import { Features } from "./sections/features";
 import { Hero } from "./sections/hero";
 import { Pricing } from "./sections/pricing";
 
-type Config = Pick<SiteConfig, "landing" | "billing">;
+type Config = Pick<SiteConfig, "landing" | "billing" | "brand">;
 
 type SectionRenderer = (
   config: Config,
@@ -30,6 +30,7 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
       waveFrom={waveFrom}
       plan={highlightPlan(config)}
       currency={config.billing.currency}
+      primaryColor={config.brand.primaryColor}
     />
   ),
   features: (config, waveFrom) => (

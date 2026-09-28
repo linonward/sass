@@ -7,18 +7,21 @@ import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { buttonVariants } from "@/core/ui/button";
 
-import { HeroCanvas } from "./hero-canvas";
 import { bands, type Band } from "./band";
+import { ColorSwitcher } from "./color-switcher";
+import { HeroCanvas } from "./hero-canvas";
 import { Section } from "./section";
 
 export function Hero({
   image,
   plan,
   currency,
+  primaryColor,
   waveFrom,
 }: LandingConfig["hero"] & {
   plan?: Plan;
   currency: string;
+  primaryColor: string;
   waveFrom?: Band;
 }) {
   const t = useTranslations("Landing.hero");
@@ -31,6 +34,7 @@ export function Hero({
           <p className="bg-background sticker inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
             {t("badge")}
           </p>
+          <ColorSwitcher current={primaryColor} />
           {/* h1 必须是单一文本节点：e2e 断言它的可访问名精确等于 hero.title。
               拆成多个 span 逐词上色会改变可访问名，所以这里不做。 */}
           <h1 className="heading-display mt-6 text-[clamp(2.25rem,7vw,4.25rem)]">
@@ -61,6 +65,21 @@ export function Hero({
               {t("secondaryCta")}
               <ArrowRightIcon aria-hidden />
             </Link>
+            <a
+              href="https://vercel.com/new/clone?repository-url=https://github.com/linonward/sass"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                buttonVariants({
+                  size: "marketing",
+                  variant: "outline",
+                  tone: "primary",
+                }),
+                "bg-background hover:bg-background/90",
+              )}
+            >
+              Deploy to Vercel
+            </a>
           </div>
         </div>
 
