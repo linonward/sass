@@ -74,3 +74,11 @@ test("同一路径不会既需要登录又直接 404", () => {
     expect(isDisabledPath(prefix)).toBe(false);
   }
 });
+
+test("/invoices 的拦截跟随示例模块的开关：开着要登录，关着直接 404", () => {
+  const on = siteConfig.features.examples.invoices;
+  expect(isProtectedPath("/invoices")).toBe(on);
+  expect(isDisabledPath("/invoices")).toBe(!on);
+  expect(isDisabledPath("/invoices/42")).toBe(!on);
+  expect(isDisabledPath("/invoices-other")).toBe(false);
+});

@@ -9,6 +9,13 @@ const localeSchema = z
     'must be a BCP 47 locale such as "en" or "zh-CN"',
   );
 
+// 示例业务模块（src/features/example/、src/features/invoices/）的开关。
+// 出货默认开着：模板的价值一半在「能跑起来看」；不做示例的买家按文件末尾的清单删掉。
+const examplesSchema = z.strictObject({
+  // 发票 CRUD 示例。关掉后 /invoices 404、侧边栏没有入口、action 也拒绝写入。
+  invoices: z.boolean().default(true),
+});
+
 export const featuresSchema = z.strictObject({
   credits: z.boolean().default(false),
   ai: z.boolean().default(false),
@@ -18,6 +25,7 @@ export const featuresSchema = z.strictObject({
   rateLimit: z.boolean().default(false),
   // 可观测性总开关；细项在 observability 字段。
   observability: z.boolean().default(false),
+  examples: examplesSchema.default(examplesSchema.parse({})),
 });
 
 // 文案 key，对应 messages/<locale>.json 里 Nav 下的字段。
@@ -239,6 +247,7 @@ export const dashboardIcons = [
   "creditCard",
   "key",
   "flag",
+  "receipt",
 ] as const;
 
 // 业务的侧边栏菜单项；套件自带的（Dashboard、Settings）写在 src/core/dashboard 里。

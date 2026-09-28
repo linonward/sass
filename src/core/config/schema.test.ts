@@ -40,7 +40,7 @@ const valid: SiteConfigInput = {
 };
 
 describe("defineConfig", () => {
-  test("合法配置通过校验，未填写的 feature 默认关闭", () => {
+  test("合法配置通过校验，未填写的 feature 默认关闭（示例模块例外）", () => {
     const config = defineConfig(valid);
     expect(config.features).toEqual({
       credits: false,
@@ -50,12 +50,16 @@ describe("defineConfig", () => {
       admin: false,
       rateLimit: false,
       observability: false,
+      // 示例业务模块出货默认开着：模板要能跑起来看。关掉写 examples: { invoices: false }。
+      examples: { invoices: true },
     });
   });
 
-  test("省略 features 时全部关闭", () => {
+  test("省略 features 时全部关闭，只剩示例模块", () => {
     const config = defineConfig({ ...valid, features: undefined });
-    expect(Object.values(config.features)).not.toContain(true);
+    const { examples, ...rest } = config.features;
+    expect(Object.values(rest)).not.toContain(true);
+    expect(examples).toEqual({ invoices: true });
   });
 
   test.each([
@@ -68,6 +72,10 @@ describe("defineConfig", () => {
     ["locales.1", { locales: ["en", "English"] }],
     ["defaultLocale", { defaultLocale: "fr" }],
     ["features.ai", { features: { ai: "yes" } }],
+    [
+      "features.examples.invoices",
+      { features: { examples: { invoices: "yes" } } },
+    ],
   ])("非法字段 %s 出现在报错中", (path, patch) => {
     expect(() =>
       defineConfig({ ...valid, ...patch } as SiteConfigInput),

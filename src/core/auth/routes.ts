@@ -19,6 +19,9 @@ const moduleGatedPages: ReadonlyArray<{ href: string; enabled: boolean }> = [
   // 邀请页：关闭时页面自身也会 notFound()，但 (app) 的 layout 会把未登录访客
   // 先送去登录页（layout 先渲染），所以真正的判定必须在 proxy 里做。
   { href: "/referrals", enabled: siteConfig.acquisition.referrals.enabled },
+  // 示例业务模块（发票，src/features/invoices/）：关掉时 /invoices 整块下线，
+  // 开着时和其他 (app) 页面一样要登录 —— 登录后带 callbackURL 回到原页面。
+  { href: "/invoices", enabled: siteConfig.features.examples.invoices },
 ];
 
 /**

@@ -6,6 +6,7 @@ import {
   HouseIcon,
   KeyRoundIcon,
   LayersIcon,
+  ReceiptIcon,
   SettingsIcon,
   SparklesIcon,
   UsersIcon,
@@ -25,4 +26,5 @@ export const dashboardIconComponents: Record<DashboardIcon, LucideIcon> = {
   creditCard: CreditCardIcon,
   key: KeyRoundIcon,
   flag: FlagIcon,
+  receipt: ReceiptIcon,
 };

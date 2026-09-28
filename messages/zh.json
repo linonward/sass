@@ -365,6 +365,7 @@
       "adminLeads": "线索",
       "adminReferrals": "邀请",
       "example": "标语生成",
+      "invoices": "发票",
       "referrals": "邀请好友",
       "adminStatus": "状态页",
       "apiKeys": "API 密钥",
@@ -1130,6 +1131,85 @@
         "description": "导入仓库、填好环境变量，让生产构建替你检查一遍配置。",
         "target": "vercel.com/new"
       }
+    }
+  },
+  "Invoices": {
+    "metaTitle": "发票",
+    "title": "发票",
+    "description": "示例功能：一份可以新建、编辑、搜索和删除的发票列表。查询始终限定在你自己的账户内。",
+    "hint": "这是示例模块（src/features/invoices/）。做自己的产品时把它连同路由、菜单项和迁移一起删掉 —— 清单在 src/features/invoices/schema.ts 末尾。",
+    "search": "按客户名搜索",
+    "searchButton": "搜索",
+    "empty": "还没有发票",
+    "noResults": "没有匹配的发票",
+    "columns": {
+      "customer": "客户",
+      "amount": "金额",
+      "status": "状态",
+      "created": "创建时间",
+      "actions": "操作"
+    },
+    "status": {
+      "draft": "草稿",
+      "sent": "已发出",
+      "paid": "已收款",
+      "void": "已作废"
+    },
+    "pagination": {
+      "label": "分页",
+      "summary": "第 {page} 页，共 {totalPages} 页 · 共 {total, number} 条",
+      "previous": "上一页",
+      "next": "下一页"
+    },
+    "create": {
+      "open": "新建发票",
+      "title": "新建发票",
+      "description": "发票归属你的账户。",
+      "createdTitle": "发票已创建",
+      "createdDescription": "它已经出现在下面的列表里。",
+      "cancel": "取消",
+      "submit": "新建",
+      "creating": "新建中…",
+      "done": "完成"
+    },
+    "edit": {
+      "open": "编辑",
+      "title": "编辑 {name}",
+      "description": "改动只作用于这一张发票。",
+      "savedTitle": "发票已更新",
+      "savedDescription": "下面的列表已是新内容。",
+      "cancel": "取消",
+      "submit": "保存",
+      "saving": "保存中…",
+      "done": "完成"
+    },
+    "delete": {
+      "open": "删除",
+      "title": "删除 {name}？",
+      "description": "删除后无法恢复。",
+      "cancel": "取消",
+      "confirm": "删除",
+      "deleting": "删除中…"
+    },
+    "form": {
+      "customerLabel": "客户",
+      "customerPlaceholder": "某某公司",
+      "amountLabel": "金额",
+      "amountPlaceholder": "1250.00",
+      "amountHint": "以 {currency} 计，最多两位小数。",
+      "statusLabel": "状态",
+      "status": {
+        "draft": "草稿",
+        "sent": "已发出",
+        "paid": "已收款",
+        "void": "已作废"
+      }
+    },
+    "errors": {
+      "invalid": "请检查客户名和金额。",
+      "unauthorized": "你的会话已过期。请重新登录。",
+      "not_found": "这张发票已经不在了。",
+      "unavailable": "此示例已在 site.config.ts 中关闭。"
     }
   },
   "Acquisition": {

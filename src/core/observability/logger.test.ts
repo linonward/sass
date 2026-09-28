@@ -287,6 +287,7 @@ describe("loggerOptionsFromConfig", () => {
       admin: false,
       rateLimit: false,
       observability: enabled,
+      examples: { invoices: false },
     },
     observability,
   });

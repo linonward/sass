@@ -17,6 +17,7 @@ export const clientNamespaces = [
   "Error",
   "Example",
   "Header",
+  "Invoices",
   "Locale",
   "Leads",
   "Onboarding",
