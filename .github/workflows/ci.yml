@@ -52,7 +52,7 @@ env:
 jobs:
   # 只读文件的静态检查。不连数据库，所以不需要 postgres service。
   static:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -100,7 +100,7 @@ jobs:
   # db:migrate 现在每条碰库的腿各跑一次（这里 + 下面四条 e2e 腿）。原来只在整条流水线里
   # 跑一次、四条 e2e 共用那一个库；拆开后每条腿有自己的 postgres 容器，各迁各的。
   unit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     services:
       postgres:
@@ -141,7 +141,7 @@ jobs:
   # 只影响显示，needs 引用的是 job id（`e2e`），不受这行影响。
   e2e:
     name: e2e (${{ matrix.suite }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     services:
       postgres:
@@ -222,7 +222,7 @@ jobs:
   ci:
     if: always()
     needs: [static, unit, e2e]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: 汇总上游结果
