@@ -205,6 +205,19 @@
       "expires": "此验证码 {minutes, plural, one {# 分钟后} other {# 分钟后}}过期。",
       "ignore": "如果你没有尝试登录，请忽略此邮件。"
     },
+    "changeEmailCode": {
+      "subjectCurrent": "确认 {name} 的邮箱变更",
+      "subjectNew": "确认 {name} 的新邮箱地址",
+      "previewCurrent": "{code} 是确认邮箱变更的验证码",
+      "previewNew": "{code} 是确认新邮箱地址的验证码",
+      "headingCurrent": "确认邮箱变更",
+      "headingNew": "确认你的新邮箱地址",
+      "introCurrent": "有人请求修改你的 {name} 账户邮箱。输入以下验证码确认是你本人操作：",
+      "introNew": "输入以下验证码，之后就可以用这个邮箱地址登录 {name}：",
+      "expires": "此验证码 {minutes, plural, one {# 分钟后} other {# 分钟后}}过期。",
+      "ignoreCurrent": "如果不是你发起的，请不要输入验证码。你的登录状态可能已被他人使用，请登录检查账户。",
+      "ignoreNew": "如果不是你发起的，请忽略此邮件。"
+    },
     "welcome": {
       "subject": "欢迎来到 {name}",
       "preview": "感谢加入 {name}",

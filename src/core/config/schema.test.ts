@@ -35,6 +35,7 @@ const valid: SiteConfigInput = {
       allowedAttempts: 3,
       resendCooldown: 60,
     },
+    changeEmail: { enabled: true, verifyCurrentEmail: true },
   },
 };
 
@@ -173,7 +174,10 @@ describe("auth", () => {
     expect(() =>
       defineConfig({
         ...valid,
-        auth: { emailOtp: { ...valid.auth.emailOtp, ...patch } },
+        auth: {
+          ...valid.auth,
+          emailOtp: { ...valid.auth.emailOtp, ...patch },
+        },
       }),
     ).toThrow(`- ${path}: `);
   });
@@ -182,6 +186,16 @@ describe("auth", () => {
     const rest: Partial<SiteConfigInput> = { ...valid };
     delete rest.auth;
     expect(() => defineConfig(rest as SiteConfigInput)).toThrow("- auth: ");
+  });
+
+  // 改邮箱的两个开关都必须显式写出（不给默认值），漏了就在启动时报错。
+  test("缺少 changeEmail 时报错", () => {
+    expect(() =>
+      defineConfig({
+        ...valid,
+        auth: { emailOtp: valid.auth.emailOtp },
+      } as SiteConfigInput),
+    ).toThrow("- auth.changeEmail: ");
   });
 });
 

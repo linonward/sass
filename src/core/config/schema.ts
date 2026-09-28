@@ -219,6 +219,12 @@ export const authSchema = z.strictObject({
     // 同一邮箱两次发送之间的最短间隔（秒）。
     resendCooldown: z.number().int().nonnegative(),
   }),
+  // 改邮箱（`/email-otp/change-email`）。enabled 关掉后端点直接报错，不会静默改成功。
+  changeEmail: z.strictObject({
+    enabled: z.boolean(),
+    // 是否要求同时验证当前邮箱。关掉后只偷到 session cookie 就能把邮箱改成攻击者的。
+    verifyCurrentEmail: z.boolean(),
+  }),
 });
 
 // 登录后侧边栏的图标，限定在一小组 lucide 图标内。
