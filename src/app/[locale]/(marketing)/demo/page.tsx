@@ -49,7 +49,7 @@ export default async function DemoPage({
   const aiCalls = mockDailyPoints(14, 240);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="container-marketing flex flex-col gap-8 py-14 sm:py-20">
       <PageHeader
         title="Your SaaS dashboard"
         description="This is what your users and admin see. All of it ships with the template — you just change one hex color."
