@@ -30,7 +30,7 @@ test("验证码登录后落到引导页，dashboard 显示欢迎信息，首次�
   const { code } = await requestCode(page, email);
   await enterCode(page, code);
 
-  // 新用户注册后的第一落点是引导页（T1901，细节由 onboarding.spec.ts 覆盖）。
+  // 新用户注册后的第一落点是引导页（细节由 onboarding.spec.ts 覆盖）。
   await expect(page).toHaveURL("/onboarding");
   await page.goto("/dashboard");
   await expect(page.getByTestId("signed-in-as")).toHaveText(

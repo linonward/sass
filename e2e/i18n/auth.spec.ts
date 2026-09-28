@@ -67,7 +67,7 @@ test("设置偏好语言后界面切换到该语言，并保存到用户资料",
   const email = uniqueEmail("pref");
   const { code } = await requestCode(page, email, { outboxDir });
   await enterCode(page, code);
-  // 新用户先落到引导页（T1901），这一例测的是偏好语言，直接去设置页。
+  // 新用户先落到引导页，这一例测的是偏好语言，直接去设置页。
   await expect(page).toHaveURL("/onboarding");
   await page.goto("/settings");
   const form = page.getByRole("form", { name: en.Account.locale.label });
