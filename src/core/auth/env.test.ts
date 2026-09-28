@@ -39,6 +39,17 @@ describe("authServerEnv", () => {
       check({ BETTER_AUTH_SECRET: secret, VERCEL_ENV: "production" }),
     ).toThrow("- GOOGLE_CLIENT_ID: ");
   });
+
+  test("边界：空字符串的 BETTER_AUTH_SECRET 也算没设置", () => {
+    expect(check({ BETTER_AUTH_SECRET: "" })).toThrow("- BETTER_AUTH_SECRET: ");
+  });
+
+  test("边界：刚好 32 字符的 secret 通过，31 字符不通过", () => {
+    expect(check({ BETTER_AUTH_SECRET: "x".repeat(31) })).toThrow(
+      "- BETTER_AUTH_SECRET: ",
+    );
+    expect(check({ BETTER_AUTH_SECRET: "x".repeat(32) })).not.toThrow();
+  });
 });
 
 describe("googleCredentials", () => {
@@ -57,6 +68,15 @@ describe("googleCredentials", () => {
     expect(
       googleCredentials({ GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "s" }),
     ).toEqual({ clientId: "id", clientSecret: "s" });
+  });
+
+  test("边界：空字符串按没设置处理（.env 里的空变量不算凭据）", () => {
+    expect(
+      googleCredentials({ GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_SECRET: "" }),
+    ).toBeUndefined();
+    expect(
+      googleCredentials({ GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "" }),
+    ).toBeUndefined();
   });
 });
 
@@ -134,6 +154,60 @@ describe("resolveAuthBaseURL", () => {
     expect(resolveAuthBaseURL({}, "example.com")).toEqual({
       allowedHosts: ["localhost:*", "127.0.0.1:*"],
       protocol: "http",
+    });
+  });
+
+  test("边界：空的 BETTER_AUTH_URL 按没设置处理，走动态判断", () => {
+    expect(
+      resolveAuthBaseURL(
+        { BETTER_AUTH_URL: "", VERCEL_ENV: "production" },
+        "example.com",
+      ),
+    ).toEqual({
+      allowedHosts: ["example.com"],
+      protocol: "https",
+      fallback: "https://example.com",
+    });
+  });
+
+  test("边界：生产部署缺 VERCEL_URL 时只剩生产域名，不放开 vercel.app", () => {
+    const baseURL = resolveAuthBaseURL(
+      {
+        VERCEL_ENV: "production",
+        VERCEL_PROJECT_PRODUCTION_URL: "example.com",
+      },
+      "example.com",
+    );
+    expect(baseURL).toEqual({
+      allowedHosts: ["example.com"],
+      protocol: "https",
+      fallback: "https://example.com",
+    });
+  });
+
+  test("边界：域名与 VERCEL_URL 相同时去重", () => {
+    expect(
+      resolveAuthBaseURL(
+        {
+          VERCEL_ENV: "production",
+          VERCEL_PROJECT_PRODUCTION_URL: "example.com",
+          VERCEL_URL: "example.com",
+        },
+        "example.com",
+      ),
+    ).toMatchObject({ allowedHosts: ["example.com"] });
+  });
+
+  test("边界：预览部署缺 BRANCH_URL 时兜底用 VERCEL_URL", () => {
+    expect(
+      resolveAuthBaseURL(
+        { VERCEL_ENV: "preview", VERCEL_URL: "app-abc123-team.vercel.app" },
+        "example.com",
+      ),
+    ).toEqual({
+      allowedHosts: ["example.com", "app-abc123-team.vercel.app"],
+      protocol: "https",
+      fallback: "https://app-abc123-team.vercel.app",
     });
   });
 });
