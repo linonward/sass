@@ -50,6 +50,9 @@ const config = defineConfig({
     rateLimit: true,
     // 结构化日志、追踪和分析，细项见下面的 observability。
     observability: true,
+    // 示例业务模块：发票 CRUD（src/features/invoices/）。关掉后 /invoices 404、
+    // 侧边栏也没有入口；删除整个示例的清单见 src/features/invoices/schema.ts 末尾。
+    examples: { invoices: true },
   },
   nav: {
     header: [

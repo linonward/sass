@@ -365,6 +365,7 @@
       "adminLeads": "Leads",
       "adminReferrals": "Referrals",
       "example": "Taglines",
+      "invoices": "Invoices",
       "referrals": "Referrals",
       "adminStatus": "Status page",
       "apiKeys": "API keys",
@@ -1130,6 +1131,85 @@
         "description": "Import the repo, set the environment variables, and let the production build check your config.",
         "target": "vercel.com/new"
       }
+    }
+  },
+  "Invoices": {
+    "metaTitle": "Invoices",
+    "title": "Invoices",
+    "description": "An example feature: an invoice list you can create, edit, search and delete. Every query stays inside your own account.",
+    "hint": "This is an example module (src/features/invoices/). Delete it together with its route, nav entry and migration when you start your own product — the checklist is at the end of src/features/invoices/schema.ts.",
+    "search": "Search by customer",
+    "searchButton": "Search",
+    "empty": "No invoices yet",
+    "noResults": "No invoices match your search",
+    "columns": {
+      "customer": "Customer",
+      "amount": "Amount",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "paid": "Paid",
+      "void": "Void"
+    },
+    "pagination": {
+      "label": "Pagination",
+      "summary": "Page {page} of {totalPages} · {total, number} total",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "create": {
+      "open": "New invoice",
+      "title": "New invoice",
+      "description": "The invoice belongs to your account.",
+      "createdTitle": "Invoice created",
+      "createdDescription": "It's in the list below now.",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "creating": "Creating…",
+      "done": "Done"
+    },
+    "edit": {
+      "open": "Edit",
+      "title": "Edit {name}",
+      "description": "Changes apply to this invoice only.",
+      "savedTitle": "Invoice updated",
+      "savedDescription": "The list below shows the new values.",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "saving": "Saving…",
+      "done": "Done"
+    },
+    "delete": {
+      "open": "Delete",
+      "title": "Delete {name}?",
+      "description": "This can't be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting…"
+    },
+    "form": {
+      "customerLabel": "Customer",
+      "customerPlaceholder": "Acme Inc.",
+      "amountLabel": "Amount",
+      "amountPlaceholder": "1250.00",
+      "amountHint": "In {currency}, up to two decimals.",
+      "statusLabel": "Status",
+      "status": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "paid": "Paid",
+        "void": "Void"
+      }
+    },
+    "errors": {
+      "invalid": "Check the customer name and the amount.",
+      "unauthorized": "Your session has expired. Sign in again.",
+      "not_found": "That invoice doesn't exist any more.",
+      "unavailable": "This example is turned off in site.config.ts."
     }
   },
   "Acquisition": {

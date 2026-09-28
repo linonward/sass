@@ -35,13 +35,17 @@ beforeEach(() => {
 });
 
 /**
- * 模拟业务项目在 site.config.ts 里加了一项 dashboard.nav。AI 与 API Key 固定关闭，
- * 不受演示站点的开关影响（下面各自有专门用例覆盖开启后的样子）。
+ * 模拟业务项目在 site.config.ts 里加了一项 dashboard.nav。AI、示例模块与 API Key
+ * 固定关闭，不受演示站点的开关影响（下面各自有专门用例覆盖开启后的样子）。
  */
 function configWithProjects() {
   return defineConfig({
     ...(siteConfig as SiteConfigInput),
-    features: { ...siteConfig.features, ai: false },
+    features: {
+      ...siteConfig.features,
+      ai: false,
+      examples: { invoices: false },
+    },
     apiKeys: { enabled: false },
     dashboard: {
       nav: [{ key: "projects", href: "/projects", icon: "layers" }],
@@ -99,6 +103,41 @@ describe("dashboardNav", () => {
     ["/settings", "/dashboard", false],
   ])("isActiveNav(%s, %s) = %s", (path, href, expected) => {
     expect(isActiveNav(path, href)).toBe(expected);
+  });
+
+  test("features.examples.invoices 关闭时没有 Invoices 入口", () => {
+    const config = configWithProjects();
+    expect(config.features.examples.invoices).toBe(false);
+    expect(dashboardNav(config).suite.map((i) => i.href)).not.toContain(
+      "/invoices",
+    );
+  });
+
+  test("features.examples.invoices 开启时，Playground 之后多一个 Invoices", () => {
+    const base = configWithProjects();
+    const invoicesOn = {
+      ...base,
+      features: { ...base.features, examples: { invoices: true } },
+    };
+    expect(dashboardNav(invoicesOn).suite.map((i) => i.href)).toEqual([
+      "/dashboard",
+      "/invoices",
+      "/billing",
+      "/settings",
+    ]);
+    // 与 Playground 同时开启时，Invoices 排在它后面。
+    expect(
+      dashboardNav({
+        ...invoicesOn,
+        features: { ...invoicesOn.features, ai: true },
+      }).suite.map((i) => i.href),
+    ).toEqual([
+      "/dashboard",
+      "/playground",
+      "/invoices",
+      "/billing",
+      "/settings",
+    ]);
   });
 
   test("acquisition.referrals 关闭时没有 Referrals 入口（出厂默认）", () => {
@@ -300,6 +339,19 @@ describe("AppSidebar", () => {
     expect(
       screen.getByRole("link", { name: messages.Dashboard.nav.referrals }),
     ).toHaveProperty("href", expect.stringMatching(/\/referrals$/));
+  });
+
+  test("示例模块开启时侧边栏出现 Invoices 入口", () => {
+    const base = configWithProjects();
+    renderSidebar(
+      defineConfig({
+        ...(base as SiteConfigInput),
+        features: { ...base.features, examples: { invoices: true } },
+      }),
+    );
+    expect(
+      screen.getByRole("link", { name: messages.Dashboard.nav.invoices }),
+    ).toHaveProperty("href", expect.stringMatching(/\/invoices$/));
   });
 
   test("当前页的菜单项高亮", () => {

@@ -99,6 +99,12 @@ const playgroundNav: DashboardNavItem = {
   href: "/playground",
   icon: "sparkles",
 };
+// 示例业务模块（发票 CRUD）的入口。开关在 site.config.ts 的 features.examples。
+const invoicesNav: DashboardNavItem = {
+  key: "invoices",
+  href: "/invoices",
+  icon: "receipt",
+};
 const referralsNav: DashboardNavItem = {
   key: "referrals",
   href: "/referrals",
@@ -119,6 +125,7 @@ export function dashboardNav(
 ): DashboardNav {
   const optional = [
     ...(config.features.ai ? [playgroundNav] : []),
+    ...(config.features.examples.invoices ? [invoicesNav] : []),
     ...(config.acquisition.referrals.enabled ? [referralsNav] : []),
     ...(config.apiKeys.enabled ? [apiKeysNav] : []),
   ];
