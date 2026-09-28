@@ -3,15 +3,22 @@
 import { describe, expect, test } from "vitest";
 
 import { createAppEnv } from "../create-env";
-import { billingServerEnv, fakeBillingAllowed } from "./env";
+import {
+  billingServerEnv,
+  fakeBillingAllowed,
+  type BillingProviderName,
+} from "./env";
 
 function check(
   runtimeEnv: Record<string, string | undefined>,
-  hasPaidPlans = true,
+  {
+    hasPaidPlans = true,
+    provider = "creem",
+  }: { hasPaidPlans?: boolean; provider?: BillingProviderName } = {},
 ) {
   return () =>
     createAppEnv({
-      server: billingServerEnv(runtimeEnv, { hasPaidPlans }),
+      server: billingServerEnv(runtimeEnv, { hasPaidPlans, provider }),
       runtimeEnv,
     });
 }
@@ -19,6 +26,11 @@ function check(
 const creem = {
   CREEM_API_KEY: "creem_test_x",
   CREEM_WEBHOOK_SECRET: "whsec_x",
+};
+
+const stripe = {
+  STRIPE_SECRET_KEY: "sk_test_x",
+  STRIPE_WEBHOOK_SECRET: "whsec_x",
 };
 
 describe("billingServerEnv", () => {
@@ -31,7 +43,68 @@ describe("billingServerEnv", () => {
   });
 
   test("没有付费套餐时生产环境也不要求", () => {
-    expect(check({ VERCEL_ENV: "production" }, false)).not.toThrow();
+    expect(
+      check({ VERCEL_ENV: "production" }, { hasPaidPlans: false }),
+    ).not.toThrow();
+  });
+
+  test("只有生效服务商的密钥是必填的", () => {
+    // 生效服务商是 creem（site.config.ts 的默认值）：配了 Stripe 的密钥也不要求 Creem 之外的，
+    // 反过来同理 —— 用 Creem 的站点不该被迫填 Stripe 的密钥，否则部署直接起不来。
+    expect(check({ VERCEL_ENV: "production" }, { provider: "stripe" })).toThrow(
+      "- STRIPE_SECRET_KEY: ",
+    );
+    expect(check({ VERCEL_ENV: "production" }, { provider: "stripe" })).toThrow(
+      "- STRIPE_WEBHOOK_SECRET: ",
+    );
+    expect(
+      check({ VERCEL_ENV: "production", ...stripe }, { provider: "stripe" }),
+    ).not.toThrow();
+    expect(
+      check({ VERCEL_ENV: "production", ...stripe }, { provider: "stripe" }),
+    ).not.toThrow();
+    // Creem 的密钥填不填都不影响 Stripe 站点。
+    expect(
+      check(
+        { VERCEL_ENV: "production", ...stripe, ...creem },
+        { provider: "stripe" },
+      ),
+    ).not.toThrow();
+    expect(
+      check({ VERCEL_ENV: "production", ...creem }, { provider: "creem" }),
+    ).not.toThrow();
+    expect(check({ VERCEL_ENV: "production", ...stripe })).toThrow(
+      "- CREEM_API_KEY: ",
+    );
+  });
+
+  test("BILLING_PROVIDER 覆盖生效服务商时按它判断必填", () => {
+    // 站点配置的是 creem，但运行时切到了 stripe：这时要的是 Stripe 的密钥。
+    expect(
+      check({ VERCEL_ENV: "production", BILLING_PROVIDER: "stripe" }),
+    ).toThrow("- STRIPE_SECRET_KEY: ");
+    expect(
+      check({
+        VERCEL_ENV: "production",
+        BILLING_PROVIDER: "stripe",
+        ...stripe,
+      }),
+    ).not.toThrow();
+    expect(
+      check({ VERCEL_ENV: "production", BILLING_PROVIDER: "creem" }),
+    ).toThrow("- CREEM_API_KEY: ");
+  });
+
+  test("BILLING_PROVIDER 默认取配置里的 provider", () => {
+    expect(check({})().BILLING_PROVIDER).toBe("creem");
+    expect(check({}, { provider: "stripe" })().BILLING_PROVIDER).toBe("stripe");
+    expect(check({ BILLING_PROVIDER: "fake" })).toThrow("- BILLING_PROVIDER: ");
+    expect(
+      check({ NODE_ENV: "test", BILLING_PROVIDER: "fake" })().BILLING_PROVIDER,
+    ).toBe("fake");
+    expect(check({ BILLING_PROVIDER: "paddle" })).toThrow(
+      "- BILLING_PROVIDER: ",
+    );
   });
 
   test("本地、CI 和预览不要求", () => {
@@ -140,12 +213,14 @@ describe("billingServerEnv", () => {
   });
 });
 
-// fakeBillingAllowed 的真值表。列：NODE_ENV、VERCEL_ENV、CREEM_MODE、ALLOW_FAKE_BILLING → 期望。
+// fakeBillingAllowed 的真值表。列：NODE_ENV、VERCEL_ENV、CREEM_MODE、STRIPE_SECRET_KEY、
+// ALLOW_FAKE_BILLING → 期望。
 // 「不填」表示变量未设置（CREEM_MODE 不填等同 test，「不填」的 NODE_ENV 按生产处理）。
 const table: Array<{
   NODE_ENV?: string;
   VERCEL_ENV?: string;
   CREEM_MODE?: string;
+  STRIPE_SECRET_KEY?: string;
   ALLOW_FAKE_BILLING?: string;
   allowed: boolean;
 }> = [
@@ -234,6 +309,25 @@ const table: Array<{
     CREEM_MODE: "live",
     allowed: false,
   },
+  // 硬锁三：Stripe 的 live 密钥（换了服务商也一样锁死）——开关也无效
+  {
+    NODE_ENV: "development",
+    STRIPE_SECRET_KEY: "sk_live_x",
+    allowed: false,
+  },
+  { NODE_ENV: "test", STRIPE_SECRET_KEY: "sk_live_x", allowed: false },
+  {
+    NODE_ENV: "development",
+    STRIPE_SECRET_KEY: "sk_live_x",
+    ALLOW_FAKE_BILLING: "1",
+    allowed: false,
+  },
+  // 受限密钥（rk_live_）同样是真实扣款
+  { NODE_ENV: "development", STRIPE_SECRET_KEY: "rk_live_x", allowed: false },
+  // 测试模式的密钥只影响 Stripe 自己，不锁 fake
+  { NODE_ENV: "development", STRIPE_SECRET_KEY: "sk_test_x", allowed: true },
+  { NODE_ENV: "test", STRIPE_SECRET_KEY: "rk_test_x", allowed: true },
+  { NODE_ENV: "production", STRIPE_SECRET_KEY: "sk_test_x", allowed: false },
 ];
 
 describe("fakeBillingAllowed 真值表", () => {
@@ -248,33 +342,47 @@ describe("fakeBillingAllowed 真值表", () => {
     });
   }
 
-  test("全组合扫描（NODE_ENV × VERCEL_ENV × CREEM_MODE × ALLOW_FAKE_BILLING）", () => {
+  test("全组合扫描（NODE_ENV × VERCEL_ENV × CREEM_MODE × STRIPE_SECRET_KEY × ALLOW_FAKE_BILLING）", () => {
     const nodeEnvs = ["development", "test", "production", undefined];
     const vercelEnvs = [undefined, "development", "preview", "production"];
     const creemModes = [undefined, "test", "live"];
+    const stripeKeys = [
+      undefined,
+      "sk_test_x",
+      "sk_live_x",
+      "rk_live_x",
+      "rk_test_x",
+    ];
     const optIns = [undefined, "1", "true", "0", "false"];
 
     for (const NODE_ENV of nodeEnvs) {
       for (const VERCEL_ENV of vercelEnvs) {
         for (const CREEM_MODE of creemModes) {
-          for (const ALLOW_FAKE_BILLING of optIns) {
-            const runtimeEnv = {
-              NODE_ENV,
-              VERCEL_ENV,
-              CREEM_MODE,
-              ALLOW_FAKE_BILLING,
-            };
-            const actual = fakeBillingAllowed(runtimeEnv);
-            const optIn =
-              ALLOW_FAKE_BILLING === "1" || ALLOW_FAKE_BILLING === "true";
-            const expected =
-              !VERCEL_ENV &&
-              CREEM_MODE !== "live" &&
-              (optIn || NODE_ENV === "development" || NODE_ENV === "test");
-            expect({ ...runtimeEnv, allowed: actual }).toEqual({
-              ...runtimeEnv,
-              allowed: expected,
-            });
+          for (const STRIPE_SECRET_KEY of stripeKeys) {
+            for (const ALLOW_FAKE_BILLING of optIns) {
+              const runtimeEnv = {
+                NODE_ENV,
+                VERCEL_ENV,
+                CREEM_MODE,
+                STRIPE_SECRET_KEY,
+                ALLOW_FAKE_BILLING,
+              };
+              const actual = fakeBillingAllowed(runtimeEnv);
+              const optIn =
+                ALLOW_FAKE_BILLING === "1" || ALLOW_FAKE_BILLING === "true";
+              const liveStripeKey = /^(sk|rk)_live_/.test(
+                STRIPE_SECRET_KEY ?? "",
+              );
+              const expected =
+                !VERCEL_ENV &&
+                CREEM_MODE !== "live" &&
+                !liveStripeKey &&
+                (optIn || NODE_ENV === "development" || NODE_ENV === "test");
+              expect({ ...runtimeEnv, allowed: actual }).toEqual({
+                ...runtimeEnv,
+                allowed: expected,
+              });
+            }
           }
         }
       }

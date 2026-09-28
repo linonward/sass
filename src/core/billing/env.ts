@@ -9,8 +9,12 @@ type RuntimeEnv = Record<string, string | undefined>;
 export const creemModes = ["test", "live"] as const;
 export type CreemMode = (typeof creemModes)[number];
 
-export const billingProviders = ["creem", "fake"] as const;
-export type BillingProviderName = (typeof billingProviders)[number];
+/** 可选的支付服务商。`site.config.ts` 的 `billing.provider` 从这里取值，实现见 ./providers/。 */
+export const billingProviderNames = ["creem", "stripe"] as const;
+export type BillingProviderName = (typeof billingProviderNames)[number];
+
+/** `BILLING_PROVIDER` 的合法取值：真实服务商 + 测试用的 fake。 */
+export const billingProviders = [...billingProviderNames, "fake"] as const;
 
 /** `ALLOW_FAKE_BILLING` 的合法取值，其他值由 env 校验拒绝（0 / false 与不填等价）。 */
 export const fakeBillingOptInValues = ["1", "true", "0", "false"] as const;
@@ -29,52 +33,78 @@ function isNonProductionRuntime(runtimeEnv: RuntimeEnv) {
   return nonProductionNodeEnvs.some((value) => value === runtimeEnv.NODE_ENV);
 }
 
+/** 真实扣款的 Stripe 密钥（`sk_live_` 是标准密钥，`rk_live_` 是受限密钥）。 */
+function isLiveStripeKey(runtimeEnv: RuntimeEnv) {
+  return /^(sk|rk)_live_/.test(runtimeEnv.STRIPE_SECRET_KEY ?? "");
+}
+
 /**
  * 是否允许使用测试用的 fake 支付服务商。fake 的结账页和 webhook 都是站内路由，
  * 一旦在真实部署里可用，任何人都能走假结账白拿套餐和积分，所以默认只在本地（`next dev`）允许，
- * 三层判断缺一不可：
+ * 四层判断缺一不可：
  * - 不在 Vercel 上（任何 VERCEL_ENV）——硬锁，部署到 Vercel 的站点一律用真实服务商；
  * - `CREEM_MODE !== "live"` ——硬锁，真实扣款模式绝不能落在假支付上；
+ * - `STRIPE_SECRET_KEY` 不是 live 密钥 ——硬锁，同上，换了服务商也一样；
  * - `NODE_ENV` 是 development / test —— `next build`、`next start`、Docker 里都是 production，
  *   自托管生产默认拒绝（收紧前这一条缺失：自托管的 `next start` 会静默放行 fake）。
  *   `NODE_ENV` 没设置时按生产处理，避免自建服务忘了设置就默认放行。
  *
- * 显式设置 `ALLOW_FAKE_BILLING=1` 只放开第三条：CI 的 e2e 跑在生产构建上（`next start`）必须靠它，
- * 自托管部署只有明确要用模拟支付时才设。前两条是硬锁，设了它也不会放开。
+ * 显式设置 `ALLOW_FAKE_BILLING=1` 只放开第四条：CI 的 e2e 跑在生产构建上（`next start`）必须靠它，
+ * 自托管部署只有明确要用模拟支付时才设。前三条是硬锁，设了它也不会放开。
  */
 export function fakeBillingAllowed(runtimeEnv: RuntimeEnv) {
   if (runtimeEnv.VERCEL_ENV) return false;
   if (runtimeEnv.CREEM_MODE === "live") return false;
+  if (isLiveStripeKey(runtimeEnv)) return false;
   return fakeBillingOptIn(runtimeEnv) || isNonProductionRuntime(runtimeEnv);
 }
 
 /**
  * 收款模块的变量。
- * - `CREEM_API_KEY`、`CREEM_WEBHOOK_SECRET`：站点有付费套餐时，在 Vercel 生产环境必填；
- *   本地、CI 和预览可以不填，此时结账和 webhook 接口返回 503，其他功能不受影响。
+ * - 生效的服务商由 `BILLING_PROVIDER` 决定，默认值是 `site.config.ts` 的 `billing.provider`
+ *   （参数 `provider`）；只有**生效**的那家服务商的密钥在生产环境必填。
+ * - `CREEM_API_KEY`、`CREEM_WEBHOOK_SECRET` / `STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`：
+ *   站点有付费套餐、在 Vercel 生产环境且服务商选到它时必填；否则可以不填，
+ *   此时结账和 webhook 接口返回 503，其他功能不受影响。
  * - `CREEM_MODE`：默认 test。切到真实收款必须显式设为 live，并换成生产模式的 key、secret 和产品 ID。
  * - `BILLING_PROVIDER`：默认 creem；fake 只在本地和 CI 可用（见 fakeBillingAllowed）。
  * - `ALLOW_FAKE_BILLING`：可选，默认关闭。显式设为 1 / true 时允许 fake（CI 的 e2e 需要，
- *   因为 e2e 跑在生产构建上）；Vercel 和 CREEM_MODE=live 下设置也不会放行。
+ *   因为 e2e 跑在生产构建上）；Vercel、CREEM_MODE=live 和 live 的 Stripe 密钥下设置也不会放行。
  * - `BILLING_SUCCESS_TIMEOUT_MS`：成功页等待 webhook 的时长，默认 60 秒。
  */
 export function billingServerEnv(
   runtimeEnv: RuntimeEnv,
-  { hasPaidPlans }: { hasPaidPlans: boolean },
+  {
+    hasPaidPlans,
+    provider,
+  }: { hasPaidPlans: boolean; provider: BillingProviderName },
 ) {
   const required = runtimeEnv.VERCEL_ENV === "production" && hasPaidPlans;
+  // 必填的密钥按**实际生效**的服务商判断：BILLING_PROVIDER 显式设置时以它为准（默认值是 provider）。
+  // 不按选中的服务商区分的话，用 Creem 的站点会被要求填 Stripe 的密钥，部署直接起不来。
+  const selected = runtimeEnv.BILLING_PROVIDER ?? provider;
+  const requiredFor = (name: BillingProviderName) =>
+    required && selected === name;
   return {
-    CREEM_API_KEY: requiredWhen(required, z.string().min(1)),
-    CREEM_WEBHOOK_SECRET: requiredWhen(required, z.string().min(1)),
+    CREEM_API_KEY: requiredWhen(requiredFor("creem"), z.string().min(1)),
+    CREEM_WEBHOOK_SECRET: requiredWhen(requiredFor("creem"), z.string().min(1)),
     CREEM_MODE: z.enum(creemModes).default("test"),
+    // Stripe 的密钥是 sk_/rk_ 开头（测试模式 sk_test_，真实扣款 sk_live_），
+    // secret 是 `stripe webhook` 或控制台给的 whsec_，和 Creem 的不通用。
+    STRIPE_SECRET_KEY: requiredWhen(requiredFor("stripe"), z.string().min(1)),
+    STRIPE_WEBHOOK_SECRET: requiredWhen(
+      requiredFor("stripe"),
+      z.string().min(1),
+    ),
     // fake 只用于 e2e 和本地：结账页和 webhook 都由站内的测试路由模拟。
-    // 不允许的环境里（生产构建、Vercel、CREEM_MODE=live）设成 fake 会启动失败，见 fakeBillingAllowed。
+    // 不允许的环境里（生产构建、Vercel、CREEM_MODE=live、live 的 Stripe 密钥）设成 fake 会启动失败，
+    // 见 fakeBillingAllowed。
     BILLING_PROVIDER: z
       .enum(billingProviders)
-      .default("creem")
+      .default(provider)
       .refine((value) => value !== "fake" || fakeBillingAllowed(runtimeEnv), {
         message:
-          'must be "creem" in a production runtime or on Vercel or when CREEM_MODE=live (set ALLOW_FAKE_BILLING=1 to override the production check)',
+          'must be "creem" or "stripe" in a production runtime, on Vercel, when CREEM_MODE=live, or with a live Stripe secret key (set ALLOW_FAKE_BILLING=1 to override the production check)',
       }),
     // 显式放行 fake（可选，默认关闭）。只接受 1 / true / 0 / false：写错时启动即报错，不静默当成关闭。
     ALLOW_FAKE_BILLING: z.enum(fakeBillingOptInValues).optional(),

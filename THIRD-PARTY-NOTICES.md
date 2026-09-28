@@ -3,7 +3,8 @@
 本文件列出模板用到的第三方组件及其许可。模板**自身的代码**不在这里，按根目录 [LICENSE](LICENSE) 的专有 EULA 授权。
 
 - 统计时间：2026-09-27。本版在基线 `3c59e36` 上重跑同一套命令：两张分布表的数字与上一版（基线 `358d00d`）**没有变化**，变的是「直接依赖明细」里 react / react-dom / `@types/react` / `@types/react-dom` / typescript 五行 —— dependabot 在本文件上次更新之后把它们升上去了，原来那五行写的是升级前的版本。上一版生产依赖树数字比更早的版本小，主要是 `shadcn` 那条链移进 `devDependencies` 所致。
-- 2026-09-28：「直接依赖明细」新增一行 `@vitest/coverage-v8`（5.0.2，dev，MIT）—— vitest 的覆盖率提供者，随 CI 覆盖率阈值一起加进来。两张分布表未重跑（本次只增多一个直接依赖，其传递依赖都已在树里）。
+- 2026-09-28：「直接依赖明细」新增一行 `@vitest/coverage-v8`（5.0.2，dev，MIT）—— vitest 的覆盖率提供者，随 CI 覆盖率阈值一起加进来。当时写的是「其传递依赖都已在树里」，**这条不成立**：它的 `@bcoe/v8-coverage`、`ast-v8-to-istanbul`、`@vitest/istanbul-lib-coverage` / `@vitest/istanbul-lib-report` 等确实是新装进来的包，下面那条一并修正了数字。
+- 2026-09-28：「直接依赖明细」新增一行 `stripe`（22.6.2，prod，MIT）—— Stripe 官方 Node SDK，Stripe 收款用（Creem 之外新增的服务商，见 README 的「支付（Creem / Stripe）」）。它没有传递依赖。两张分布表这次按同一台 macOS 重跑并更新：生产树只多这 1 个 MIT 包（540 → 541 条），全量树多 8 个 MIT 包（+1 是 stripe，其余 7 个是上面那条漏算的 `@vitest/coverage-v8` 的传递依赖），其余各行的包数没变。
 - 统计方式：`pnpm licenses list`（全量）与 `pnpm licenses list --prod`（仅生产依赖），读的是仓库已安装的依赖和 `pnpm-lock.yaml` 锁定的版本。
 - 依赖升级后数字会变，本文件不会自动跟着变 —— 改依赖时重跑上面的命令并按需更新。**「直接依赖明细」那一节已经不用靠人记**：`pnpm notices:check`（`scripts/check-notices.mjs`）会拿 `pnpm-lock.yaml` 逐条比对版本和依赖类型，CI 每个 PR 都跑，对不上就失败。
 - 本文件是情况说明，**不是法律意见**；正式售卖前建议由律师过目（见 README 的「授权」一节）。
@@ -14,7 +15,7 @@
 
 | 许可（SPDX）              | 包数 |
 | ------------------------- | ---- |
-| MIT                       | 835  |
+| MIT                       | 843  |
 | Apache-2.0                | 89   |
 | ISC                       | 35   |
 | BSD-2-Clause              | 16   |
@@ -32,19 +33,19 @@
 | FSL-1.1-Apache-2.0        | 1    |
 | 0BSD                      | 1    |
 | (MIT OR CC0-1.0)          | 1    |
-| **合计**                  | 1010 |
+| **合计**                  | 1018 |
 
-口径：1010 是「包名 × 许可」的条目数，落盘的是 1115 个「包名@版本」（同一个包有多个版本时会各占一行版本），去重到包名是 1006 个。
+口径：1018 是「包名 × 许可」的条目数，落盘的是 1122 个「包名@版本」（同一个包有多个版本时会各占一行版本），去重到包名是 1014 个。
 
 **没有 GPL、AGPL、SSPL 这类强 copyleft 许可。** 有 copyleft 性质的一共 4 个包：1 个 LGPL-3.0-or-later、3 个 MPL-2.0，逐个说明见下一节。其余全是宽松许可（MIT / Apache-2.0 / ISC / BSD / MIT-0 / 0BSD / BlueOak / Unlicense / CC0 / Python-2.0 / 二选一的双许可）。
 
 ## 生产依赖树
 
-`pnpm licenses list --prod`：540 条，538 个包名。
+`pnpm licenses list --prod`：541 条，539 个包名。
 
 | 许可（SPDX）              | 包数 |
 | ------------------------- | ---- |
-| MIT                       | 434  |
+| MIT                       | 435  |
 | Apache-2.0                | 60   |
 | ISC                       | 18   |
 | BSD-3-Clause              | 7    |
@@ -59,7 +60,7 @@
 | FSL-1.1-Apache-2.0        | 1    |
 | 0BSD                      | 1    |
 | (MIT OR CC0-1.0)          | 1    |
-| **合计**                  | 540  |
+| **合计**                  | 541  |
 
 两点要注意：
 
@@ -106,9 +107,9 @@
 
 ## 直接依赖明细
 
-`package.json` 里 44 个 `dependencies` + 32 个 `devDependencies`，共 76 个。版本是本次统计时锁定的版本。
+`package.json` 里 45 个 `dependencies` + 32 个 `devDependencies`，共 77 个。版本是本次统计时锁定的版本。
 
-### MIT（53）
+### MIT（54）
 
 | 包                                | 版本    | 依赖类型 |
 | --------------------------------- | ------- | -------- |
@@ -160,6 +161,7 @@
 | `resend`                          | 6.30.0  | prod     |
 | `shadcn`                          | 4.21.0  | dev      |
 | `sonner`                          | 2.0.8   | prod     |
+| `stripe`                          | 22.6.2  | prod     |
 | `tailwindcss`                     | 4.3.3   | dev      |
 | `tw-animate-css`                  | 1.4.0   | prod     |
 | `vitest`                          | 5.0.1   | dev      |

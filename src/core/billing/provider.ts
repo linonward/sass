@@ -12,8 +12,9 @@ export type CreateCheckoutInput = {
 export type Checkout = { checkoutId: string; url: string };
 
 /**
- * 支付服务商的统一接口。当前只实现 Creem；换服务商时实现这个接口即可，
- * 账单表、事件处理和积分都不需要改。
+ * 支付服务商的统一接口。实现见 ./providers/（creem、stripe，以及测试用的 fake），
+ * 由 `BILLING_PROVIDER` 分派（见 ./providers/index.ts）。
+ * 账单表、事件处理和积分都不需要改，加服务商只要实现这个接口并在注册表里加一条。
  */
 export interface PaymentProvider {
   /** 服务商 ID，写入各张账单表的 provider 列。 */

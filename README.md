@@ -1,8 +1,8 @@
 # sass
 
-可复用的出海 SaaS 模板：改配置即可得到登录、支付（Creem）、积分、AI、多语言、SEO 等基础设施，只需编写业务功能。
+可复用的出海 SaaS 模板：改配置即可得到登录、支付（Creem / Stripe）、积分、AI、多语言、SEO 等基础设施，只需编写业务功能。
 
-v1 包含：邮箱验证码和 Google 登录、Creem 收款（订阅和一次性购买）、积分账本、AI（文字、图片、视频，按次扣积分）、文件上传（R2）、多语言、SEO、法律页、MDX 博客、后台。
+v1 包含：邮箱验证码和 Google 登录、Creem / Stripe 收款（订阅和一次性购买）、积分账本、AI（文字、图片、视频，按次扣积分）、文件上传（R2）、多语言、SEO、法律页、MDX 博客、后台。
 
 - 🚀 10 分钟上线：[从零到上线 checklist](docs/starter-guide.md#10-分钟从零到上线)（克隆 → 本地跑通 → 登录看到仪表盘）
 - 合并模板更新：[UPGRADING.md](UPGRADING.md)
@@ -105,7 +105,7 @@ git commit -m "chore: remove template author's internal docs"
   - `brand.primaryColor`：**一个 hex 推导整站配色** —— 按钮、色带、链接文字、顶栏的内置 logo 标记、标签页图标（favicon）、图表第一档都跟着它变，不用改任何 SVG 文件。想用自己的 logo：把文件放进 `public/`，再在 `brand` 里加 `logo: "/your-logo.svg"`（顶栏、侧边栏和结构化数据都会用它）；不配就一直是内置标记。
   - `features`：用不到的模块关掉，对应的环境变量就不再要求
   - `legal`：公司或个人名称、联系邮箱、适用法域、生效日期
-  - `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分。`providerProductId` 还是占位值时该套餐不能结账（接口返回 `plan_not_configured`），在 Creem 建好产品后替换成真实 ID
+  - `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分。`providerProductId` 还是占位值时该套餐不能结账（接口返回 `plan_not_configured`），在收款服务商后台建好产品后替换成真实 ID（Creem 是 `prod_*`，Stripe 是 Price 的 `price_*`）
   - `email`：发件人名称和地址（域名要在 Resend 验证）
   - `ai.models`：开启 AI 时的模型和每次调用的积分成本
 - `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`content/changelog/`：更新日志条目（`changelog.enabled` 开启时）；`public/`：你自己的 logo 图与 Hero 图（Hero 图要配 `landing.hero.image` 才用得上）。
@@ -117,7 +117,7 @@ git commit -m "chore: remove template author's internal docs"
 
 ### 4. 准备外部账号
 
-按[上线清单](#上线清单)第 4 节，只准备已开启模块需要的服务：Neon（数据库）、Resend（邮件，配好 SPF / DKIM）、Google OAuth（登录）、Creem（收款，先在测试模式建好产品，把产品 ID 填进 `billing.plans`）；开启 AI、上传时还有 Upstash、R2 和模型服务商。
+按[上线清单](#上线清单)第 4 节，只准备已开启模块需要的服务：Neon（数据库）、Resend（邮件，配好 SPF / DKIM）、Google OAuth（登录）、收款服务商（Creem 或 Stripe，先在测试模式建好产品，把产品 ID 填进 `billing.plans`）；开启 AI、上传时还有 Upstash、R2 和模型服务商。
 
 ### 5. 部署到 Vercel
 
@@ -129,9 +129,9 @@ git commit -m "chore: remove template author's internal docs"
 
 1. 首页、`/pricing`、法律页、`/sitemap.xml`、`/robots.txt` 能打开，证书有效。
 2. 用邮箱验证码和 Google 各登录一次，收到欢迎邮件。
-3. 在 Creem 测试模式买一次付费套餐：成功页显示完成，`/billing` 里套餐和积分正确，收到付款邮件。
+3. 用收款服务商的测试模式买一次付费套餐：成功页显示完成，`/billing` 里套餐和积分正确，收到付款邮件。
 4. 用 `ADMIN_EMAILS` 里的邮箱登录，打开 `/admin` 能看到这笔订单。
-5. 一切正常后，在 Creem 切到生产模式：换成生产环境的 API key、webhook secret 和产品 ID，设置 `CREEM_MODE=live`，重新部署。
+5. 一切正常后切到生产模式（真实收款）：换生产的 API key、webhook secret 和产品 ID，Creem 还要设 `CREEM_MODE=live`，重新部署。
 
 ## 本地开发
 
@@ -220,15 +220,15 @@ ALLOW_DB_SEED=1 pnpm db:seed   # 幂等，重复执行不会重复插入
 ## 配置
 
 - `site.config.ts`：站点名称、域名、品牌色、语言、功能开关（`features`）。由 `defineConfig()` 校验，写错时 `dev` / `build` 直接失败，并指出出错字段。
-  - 直接改文件里的字面量就行。另有 6 个环境变量可以覆盖其中 6 个字段（`SITE_NAME`、`SITE_DOMAIN`、`SITE_LEGAL_NAME`、`SITE_EMAIL_FROM`、`CREEM_PRODUCT_ID_PRO`、`CREEM_PRODUCT_ID_LIFETIME`，见 `.env.example`），给「一套代码、多个环境」用 —— 演示站就是靠它们保持真值、又不必把真实名称写进仓库。不设置时以文件里的字面量为准。
+  - 直接改文件里的字面量就行。另有 8 个环境变量可以覆盖其中 6 个字段（`SITE_NAME`、`SITE_DOMAIN`、`SITE_LEGAL_NAME`、`SITE_EMAIL_FROM`，以及两个套餐的产品 ID：Creem 用 `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`，Stripe 用 `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`，见 `.env.example`），给「一套代码、多个环境」用 —— 演示站就是靠它们保持真值、又不必把真实名称写进仓库。不设置时以文件里的字面量为准；产品 ID 只读**生效服务商**那一组（`BILLING_PROVIDER` 覆盖 `billing.provider`，见下），选 Creem 时 `STRIPE_PRICE_ID_*` 会被忽略，反之亦然。
   - **占位哨兵**：`name`、`domain`、`legal.companyName`、`email.fromAddress` 还是出厂占位值时，开发环境启动会打一行警告，**生产构建直接失败**。买家忘了改就上线，站上挂着的是 Acme 和 example.com。
   - `brand.primaryColor` 生成 shadcn 主题的 `--primary` 等变量，亮色、暗色共用；按钮、链接悬停色随之变化。
   - `nav.header` / `nav.footer` 决定营销页 Header 导航和 Footer 链接，`key` 对应 `messages/*.json` 中 `Nav` 下的文案。
   - `landing` 决定首页区块及顺序（`sections`）、Hero 图片、特性与 FAQ 条目；`billing.plans` 是定价区块展示的套餐。文案在 `messages/*.json` 的 `Landing` 下。
-- 收款核心（`src/core/billing/`）：`PaymentProvider` 接口屏蔽具体服务商；webhook 路由调用 `processWebhook(provider, request)`，由 `handleBillingEvent` 在一个事务里完成幂等检查、更新 `subscriptions` / `orders`、触发 `onBillingEvent` 钩子。`billing.plans` 的交易字段：`providerProductId`（付费套餐必填、免费套餐不填）、`credits`（每次购买或每个计费周期发放的积分），`type` 按 `interval` 推导。钩子在 `src/core/billing/hooks.ts` 汇总注册。
+- 收款核心（`src/core/billing/`）：`PaymentProvider` 接口屏蔽具体服务商，实现有 Creem、Stripe 和测试用的 fake（`src/core/billing/providers/`），由 `BILLING_PROVIDER` 分派（注册表在 `providers/index.ts`）；webhook 路由调用 `processWebhook(provider, request)`，由 `handleBillingEvent` 在一个事务里完成幂等检查、更新 `subscriptions` / `orders`、触发 `onBillingEvent` 钩子。`billing.plans` 的交易字段：`providerProductId`（付费套餐必填、免费套餐不填）、`credits`（每次购买或每个计费周期发放的积分），`type` 按 `interval` 推导。钩子在 `src/core/billing/hooks.ts` 汇总注册。
 - 购买流程：落地页的定价区块和 `/pricing` 共用购买按钮，未登录时先登录，登录后回到 `/pricing?plan=<id>` 自动继续结账；已订阅显示"管理订阅"（客户门户）。结账回跳 `/billing/success`，按回跳附带的订阅或订单 ID 轮询 `/api/billing/status`，webhook 未到时显示"处理中"，超过 `BILLING_SUCCESS_TIMEOUT_MS`（默认 60 秒）提示联系支持。账单页 `/billing` 显示当前套餐、续费日期、积分余额和最近 20 条流水。
-- 退款回收积分（`src/core/billing/reclaim-credits.ts`，`features.credits` 关闭时不生效）：`refund.created` 以及付款完成后的补偿钩子按**已退金额占订单金额的比例**回收该订单实际发放过的积分，比例用累计口径（`floor(发放积分 × 累计已退 / 订单金额) − 已回收`），所以分几次部分退款加起来正好等于一次全额退款，不会因为逐次取整漏积分。回收走 `reclaimCredits`：余额不够时扣到 0，应扣未扣的差额记在服务端日志（流水 `amount` 有非零约束，且扣不动时根本没有流水可写）。流水是 `deduct` 类型、来源 `billing-refund`（`refund` 这个来源另有所指：退还一笔扣减），后台用户详情里能看到带原因的记录；重复推送由 `(source, sourceId)`（`provider:order:<订单>:refund:<退款>`，付款补偿使用稳定的 `provider:order:<订单>:payment`）挡住。
-- e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。fake 是测试替身，生产运行时（`next build` / `next start` / Docker）、Vercel 上（任何环境）和 `CREEM_MODE=live` 时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404；CI 的 e2e 跑在生产构建上，靠 `ALLOW_FAKE_BILLING=1` 显式放行。
+- 退款回收积分（`src/core/billing/reclaim-credits.ts`，`features.credits` 关闭时不生效）：`refund.created` 以及付款完成后的补偿钩子按**已退金额占订单金额的比例**回收该订单实际发放过的积分，比例用累计口径（`floor(发放积分 × 累计已退 / 订单金额) − 已回收`），所以分几次部分退款加起来正好等于一次全额退款，不会因为逐次取整漏积分。回收走 `reclaimCredits`：余额不够时扣到 0，应扣未扣的差额记在服务端日志（流水 `amount` 有非零约束，且扣不动时根本没有流水可写）。流水是 `deduct` 类型、来源 `billing-refund`（`refund` 这个来源另有所指：退还一笔扣减），后台用户详情里能看到带原因的记录；重复推送由 `(source, sourceId)`（`provider:order:<订单>:refund:<退款>`，付款补偿使用稳定的 `provider:order:<订单>:payment`）挡住。**Stripe 退款不走这条路**：Stripe 的退款对象上没有发票字段，无法把它对应回订单，v1 直接忽略退款事件（细节见「支付（Creem / Stripe）」一节）。
+- e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。fake 是测试替身，生产运行时（`next build` / `next start` / Docker）、Vercel 上（任何环境）、`CREEM_MODE=live` 或配了 live 的 Stripe 密钥（`sk_live_` / `rk_live_`）时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404；CI 的 e2e 跑在生产构建上，靠 `ALLOW_FAKE_BILLING=1` 显式放行。
 - 接口限流（`src/core/ratelimit/`）：`checkRateLimit(policy, { userId, ip })` 按 `site.config.ts` 的 `rateLimit.policies` 做滑动窗口计数，用户和 IP 各计一次，任一超限即拒绝；被拒绝时 `return rateLimitResponse(result)`（超限 429、Redis 不可用 503，都带 `Retry-After`）。IP 用 `getClientIp(request.headers)` 取。本地没配 Upstash 时跳过限流并警告一次；Redis 出错或超时（1 秒）时按 `rateLimit.failMode` 处理：`open`（默认）放行并记录错误，`closed` 返回 503。登录限流由 Better Auth 负责，不走这里。
 - API Key（`src/core/api-keys/`，`apiKeys.enabled` 控制）：给脚本和第三方服务用的机器身份。用户在 `/api-keys` 新建、命名、撤销 key；明文只在创建时的弹层里出现一次，库里存的是 SHA-256（`hashedKey`）和一个用来辨认的前缀（`sk_` + 明文的头 8 位），所以**明文连管理员都看不到**，丢了就撤销重建。同一用户名下不能重名（唯一约束 `(userId, name)`）。
   - 鉴权：`createApiKeyMiddleware({ enabled, findKeyByHash, touchLastUsed, checkRateLimit })` 解析 `Authorization: Bearer sk_...` → 按 `hashedKey` 查库 → 校验未撤销、未过期 → 返回 `{ userId, keyId, name, prefix }`。路由里用 `withApiKey(middleware, handler)` 挂上，处理函数读 `request.apiKey.userId`；中间件不会自动作用到套件的任何路由，要保护哪个接口就包哪个。失败一律 401（缺失、不是 Bearer、格式不对、查不到、已撤销、已过期都不区分），`apiKeys.enabled: false` 时一律 404 且不查库，响应带 `Cache-Control: no-store`。示例路由 `GET /api/api-keys/me` 返回 `{ userId, keyId, name, prefix }`，新接口照抄它的接线。
@@ -411,29 +411,30 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 
 在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
 
-| 变量                                                                                        | 说明                                                                                                                                 |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`                                                                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                                               |
-| `RESEND_API_KEY`                                                                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                                              |
-| `EMAIL_TRANSPORT`                                                                           | 通常不填，生产环境默认 `resend`。生产运行时（Vercel 或 `NODE_ENV=production`）设成 `console` / `file` 会启动失败。                   |
-| `ALLOW_NON_RESEND_EMAIL`                                                                    | 可选，默认关闭。设为 `1` / `true` 时放行生产运行时的 `console` / `file`（CI 的 e2e 需要）。                                          |
-| `BETTER_AUTH_SECRET`                                                                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                                                |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                                 | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                                            |
-| `BETTER_AUTH_URL`                                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                                        |
-| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                                    | 有付费套餐时 Production 必填（见下文"支付（Creem）"）。Preview 可以不填，此时结账返回 503。                                          |
-| `CREEM_MODE`                                                                                | `test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                                         |
-| `BILLING_PROVIDER`                                                                          | 不填（默认 `creem`）。`fake` 只用于本地和 CI 的 e2e；生产运行时、Vercel 或 `CREEM_MODE=live` 下设置会启动失败。                      |
-| `ALLOW_FAKE_BILLING`                                                                        | 可选，默认关闭。设为 `1` / `true` 时放行 fake（CI 的 e2e 需要）；Vercel 和 `CREEM_MODE=live` 下无效。                                |
-| `BILLING_SUCCESS_TIMEOUT_MS`                                                                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                                      |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`                                       | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。                  |
-| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET`                 | 开启 `features.upload` 时 Production 必填（见下文"文件上传（Cloudflare R2）"）。Preview 不填时上传接口返回 503。                     |
-| `R2_PUBLIC_URL`                                                                             | bucket 的公开域名（`https://files.example.com`），只在 `upload.public` 为 true 时需要。                                              |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `ALIBABA_API_KEY` | 开启 `features.ai` 时，Production 必须填上 `ai.models` 用到的每家服务商的 key（见下文"AI 服务商"）。Preview 不填时对应模型返回 503。 |
-| `ADMIN_EMAILS`                                                                              | 开启 `features.admin` 时 Production 必填：逗号分隔的邮箱，用这些邮箱登录即成为管理员（见"配置"里的后台）。Preview 可以不填。         |
-| `ALIBABA_BASE_URL`                                                                          | 可选。百炼 key 所在地域的地址，不填是国际站；北京地域填 `https://dashscope.aliyuncs.com/compatible-mode/v1`。                        |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                               | 可选。开启 `observability.otel` 且不用 Vercel 的 trace 集成时，trace 导出到这个 OTLP 地址（见下文"日志与追踪"）。                    |
-| `NEXT_PUBLIC_SENTRY_DSN`                                                                    | 开启 `observability.sentry` 时必填（Production 和 Preview 都要）：Sentry 项目的 DSN（见下文"错误追踪（Sentry）"）。                  |
-| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT`                                       | 可选。三项都填时构建会上传 source map，Sentry 里的堆栈显示源码位置；上传后从产物里删掉。                                             |
+| 变量                                                                                        | 说明                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                                                                                                                           |
+| `RESEND_API_KEY`                                                                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                                                                                                                          |
+| `EMAIL_TRANSPORT`                                                                           | 通常不填，生产环境默认 `resend`。生产运行时（Vercel 或 `NODE_ENV=production`）设成 `console` / `file` 会启动失败。                                                                                               |
+| `ALLOW_NON_RESEND_EMAIL`                                                                    | 可选，默认关闭。设为 `1` / `true` 时放行生产运行时的 `console` / `file`（CI 的 e2e 需要）。                                                                                                                      |
+| `BETTER_AUTH_SECRET`                                                                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                                                                                                                            |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                                 | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                                                                                                                        |
+| `BETTER_AUTH_URL`                                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                                                                                                                    |
+| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                                    | 生效服务商是 Creem 且站点有付费套餐时 Production 必填（见下文"支付"）。Preview 可以不填，此时结账返回 503。                                                                                                      |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                                               | 生效服务商是 Stripe 且有付费套餐时 Production 必填（见下文"支付"）。两组密钥只填**生效服务商**那一组。                                                                                                           |
+| `CREEM_MODE`                                                                                | 只在用 Creem 时有意义：`test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                                                                                              |
+| `BILLING_PROVIDER`                                                                          | 不填时用 `site.config.ts` 的 `billing.provider`（出厂 `creem`）。可选 `creem` / `stripe` / `fake`；`fake` 只用于本地和 CI 的 e2e，生产运行时、Vercel、`CREEM_MODE=live` 或 live 的 Stripe 密钥下设置会启动失败。 |
+| `ALLOW_FAKE_BILLING`                                                                        | 可选，默认关闭。设为 `1` / `true` 时放行 fake（CI 的 e2e 需要）；Vercel、`CREEM_MODE=live` 和 live 的 Stripe 密钥下无效。                                                                                        |
+| `BILLING_SUCCESS_TIMEOUT_MS`                                                                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                                                                                                                  |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`                                       | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。                                                                                              |
+| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET`                 | 开启 `features.upload` 时 Production 必填（见下文"文件上传（Cloudflare R2）"）。Preview 不填时上传接口返回 503。                                                                                                 |
+| `R2_PUBLIC_URL`                                                                             | bucket 的公开域名（`https://files.example.com`），只在 `upload.public` 为 true 时需要。                                                                                                                          |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `ALIBABA_API_KEY` | 开启 `features.ai` 时，Production 必须填上 `ai.models` 用到的每家服务商的 key（见下文"AI 服务商"）。Preview 不填时对应模型返回 503。                                                                             |
+| `ADMIN_EMAILS`                                                                              | 开启 `features.admin` 时 Production 必填：逗号分隔的邮箱，用这些邮箱登录即成为管理员（见"配置"里的后台）。Preview 可以不填。                                                                                     |
+| `ALIBABA_BASE_URL`                                                                          | 可选。百炼 key 所在地域的地址，不填是国际站；北京地域填 `https://dashscope.aliyuncs.com/compatible-mode/v1`。                                                                                                    |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                               | 可选。开启 `observability.otel` 且不用 Vercel 的 trace 集成时，trace 导出到这个 OTLP 地址（见下文"日志与追踪"）。                                                                                                |
+| `NEXT_PUBLIC_SENTRY_DSN`                                                                    | 开启 `observability.sentry` 时必填（Production 和 Preview 都要）：Sentry 项目的 DSN（见下文"错误追踪（Sentry）"）。                                                                                              |
+| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT`                                       | 可选。三项都填时构建会上传 source map，Sentry 里的堆栈显示源码位置；上传后从产物里删掉。                                                                                                                         |
 
 > 少数变量在**构建期**读取：`next.config.ts` 的 `headers()` 用 `GOOGLE_CLIENT_ID` 和 `R2_PUBLIC_URL` 生成 CSP 白名单。Vercel 上构建和运行用同一套变量，不用管；自托管或 Docker 若只在运行时注入这两项，会出现「页面有按钮、脚本却被 CSP 静默拦掉」。
 
@@ -444,7 +445,7 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 | 数据库                                 | Neon Postgres               | 登录功能上线时         |
 | 邮件                                   | Resend（并配置 SPF / DKIM） | 登录功能上线时         |
 | 登录                                   | Google Cloud OAuth 客户端   | 登录功能上线时         |
-| 支付                                   | Creem                       | 开始收款时             |
+| 支付                                   | Creem 或 Stripe             | 开始收款时             |
 | `features.rateLimit` / `ai` / `upload` | Upstash Redis               | 生产环境开启任一模块时 |
 | `features.ai`                          | AI 模型服务商               | 开启 AI 时             |
 | `features.upload`                      | Cloudflare R2               | 开启上传时             |
@@ -484,7 +485,19 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 3. 预览部署的地址每次都不同，既无法登记为回调地址，也无法登记为 JavaScript origin，所以预览只提供邮箱验证码登录。以后需要时可以接入 Better Auth 的 `oauth-proxy` 插件。
 4. 账户关联：同一邮箱先用验证码注册、再用 Google 登录，会进入同一个账户（`google` 是可信 provider）。
 
-#### 支付（Creem）
+#### 支付（Creem / Stripe）
+
+两个服务商二选一。生效的是 `site.config.ts` 的 `billing.provider`（出厂 `creem`），运行时可以用 `BILLING_PROVIDER` 覆盖 —— 改这个字段而不是只设环境变量：套餐产品 ID 的环境变量前缀跟着生效的服务商走（Creem `CREEM_PRODUCT_ID_*`、Stripe `STRIPE_PRICE_ID_*`），`site.config.ts` 里没配产品 ID 时读的是对应前缀的变量。
+
+两边共通的：
+
+- 一次付款对应一个订单：一次性付款用支付意图 / 结账会话当订单号，订阅的首期由第一张发票记，结账会话本身不记；订阅每期都用发票 ID 当订单号，重试成功会和失败事件合并成同一单。订单表、积分账本和后台统计都不区分服务商。
+- 两条 webhook 路由都在（`/api/webhooks/creem`、`/api/webhooks/stripe`），只处理**生效服务商**的那条，另一条返回 503（`{"error":"billing_not_configured"}`）。
+- 客户门户：账单页的"管理订阅"跳服务商托管的门户，在那边换卡、看发票、取消订阅。
+- 删除账户时先取消仍在计费的订阅；取消失败时删除中止。
+- 自托管（Docker / `next start`，没有 `VERCEL_ENV`）时同样的闸门按 `NODE_ENV` 生效：生产运行时把 `BILLING_PROVIDER` 设成 `fake` 会启动失败，fake 的结账页、客户门户和 webhook 路由也一律 404。只有显式设 `ALLOW_FAKE_BILLING=1` 才放行，它只用于本地/CI 的 e2e 或明确的模拟支付环境 —— 开了之后任何人都能走假结账免费拿到套餐和积分，别在对外环境开。
+
+##### Creem
 
 1. 在 Creem 后台用左下角的开关切到 **Test Mode**，创建产品：订阅套餐选 recurring（每月或每年，与 `site.config.ts` 的 `interval` 一致），一次性套餐选 one-time。把产品 ID（`prod_...`）填进 `site.config.ts` 对应套餐的 `providerProductId`。占位值 `prod_placeholder_*` 不允许结账。
 2. Developers 里拿 API key 和 webhook secret，填到 Vercel Production 的 `CREEM_API_KEY`、`CREEM_WEBHOOK_SECRET`；`CREEM_MODE` 不填（默认 `test`）。
@@ -496,8 +509,19 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
    - Creem 后台关掉 Test Mode，重新创建同样的产品，把生产模式的产品 ID 换进 `site.config.ts`。
    - 换成生产模式的 `CREEM_API_KEY` 和 `CREEM_WEBHOOK_SECRET`，并把 `CREEM_MODE` 设为 `live`。
    - 在生产模式的 Developers → Webhooks 重新添加同一个 webhook 地址。
-6. 删除账户时会先在 Creem 取消该用户仍在计费的订阅；取消失败时删除中止。退款会按已退金额的比例回收集分（`refund.created` 钩子，见下），回收不走 Creem 的退款接口 —— 服务商的退款操作仍然只在 Creem 后台做。
-7. 自托管（Docker / `next start`，没有 `VERCEL_ENV`）时同样的闸门按 `NODE_ENV` 生效：生产运行时把 `BILLING_PROVIDER` 设成 `fake` 会启动失败，fake 的结账页、客户门户和 webhook 路由也一律 404。只有显式设 `ALLOW_FAKE_BILLING=1` 才放行，它只用于本地/CI 的 e2e 或明确的模拟支付环境 —— 开了之后任何人都能走假结账免费拿到套餐和积分，别在对外环境开。
+6. 退款会按已退金额的比例回收集分（`refund.created` 钩子，见"配置"一节），回收不走 Creem 的退款接口 —— 退款操作仍然只在 Creem 后台做。
+
+##### Stripe
+
+1. Stripe 后台先切到 **Test mode**，Products 里创建产品，每个套餐加一个价格：订阅套餐用按月循环（recurring）的价格，买断套餐用一次性（one-time）的价格。填进 `site.config.ts` 的是 **Price ID（`price_...`）**，不是 Product ID（`prod_...`）；也可以用 `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME` 覆盖。占位值 `prod_placeholder_*` 不允许结账。
+2. Developers → API keys 拿 `sk_test_...` 填到 Vercel Production 的 `STRIPE_SECRET_KEY`；受限密钥（`rk_...`，只能改指定资源）同样可用。
+3. Developers → Webhooks 添加端点 `https://<domain>/api/webhooks/stripe`，订阅 `checkout.session.completed`、`invoice.paid`、`invoice.payment_failed`、`customer.subscription.updated`、`customer.subscription.deleted` 这几类事件（其余事件收到也忽略，不影响记账），把签名密钥（`whsec_...`）填到 `STRIPE_WEBHOOK_SECRET`。它和 Creem 的 webhook secret 不通用。
+   - 本地调试：`stripe listen --forward-to localhost:3000/api/webhooks/stripe`，CLI 会打印一个临时的 `whsec_...`，用 `stripe trigger checkout.session.completed` 之类的命令发测试事件。
+   - webhook 地址和 Cloudflare / Deployment Protection 的注意事项和 Creem 那节一样：指向生产域名，别指向预览地址。
+4. 测试卡 `4242 4242 4242 4242`（任意未来日期和 CVV）走一次订阅和一次一次性付款，检查 `subscriptions`、`orders`、`credit_transactions` 表。
+5. 切到生产（真实收款）：关掉 Test mode，重新建产品和价格（测试模式的价格不能用于 live），把 live 的价格 ID 换进 `site.config.ts`，换成 `sk_live_...` 和 live 端点的 `whsec_...`，并在 live 模式重新添加 webhook 端点。配了 live 密钥（`sk_live_` / `rk_live_`）后 `BILLING_PROVIDER=fake` 一律被拒。
+6. 客户门户（Billing Portal）用的是 Stripe 的默认配置：如果创建门户会话时报 "default configuration has not been created"，去 Settings → Billing → Customer portal 保存一次配置。
+7. **退款不回收积分**：Stripe 的退款对象（`Refund`）上没有发票字段，`Charge` / `PaymentIntent` 也不再暴露 `invoice`，想把退款对应回订单只能靠自定义 metadata，或者 Invoice Payment API（`invoice_payment.payment.payment_intent`，只对 2019-03-15 之后 finalize 的发票可用）—— 那条路会把 Stripe 特有的结构漏进订单表和后台营收统计。所以 v1 直接忽略退款事件：退款仍然在 Stripe 后台做，但已发放的积分不会自动回收，需要人工处理。
 
 #### AI 服务商
 

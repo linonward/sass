@@ -4,6 +4,7 @@ import { fakeBillingAllowed } from "../env";
 import type { PaymentProvider } from "../provider";
 import { createCreemProvider } from "./creem";
 import { createFakeBillingProvider } from "./fake";
+import { createStripeProvider } from "./stripe";
 
 let cached: PaymentProvider | null | undefined;
 
@@ -16,22 +17,34 @@ export function fakeBillingActive() {
 }
 
 /**
- * 当前配置的支付服务商（v1 只有 Creem；e2e 可切到 fake）。没配 key 时返回 null：
- * 结账和 webhook 接口返回 503，其他功能照常。生产环境有付费套餐时 env 校验会要求 key，不会走到 null。
+ * 当前配置的支付服务商，按 `BILLING_PROVIDER` 分派（默认值来自 site.config.ts 的 billing.provider）。
+ * 没配 key 时返回 null：结账和 webhook 接口返回 503，其他功能照常。
+ * 生产环境有付费套餐时 env 校验会要求**生效**服务商的 key，不会走到 null。
+ * 加服务商时改这里和 env.ts 的 billingProviderNames，其他代码不用动。
  */
 export function getBillingProvider(): PaymentProvider | null {
   if (cached !== undefined) return cached;
-  if (fakeBillingActive()) {
-    cached = createFakeBillingProvider();
-    return cached;
-  }
-  cached =
-    env.CREEM_API_KEY && env.CREEM_WEBHOOK_SECRET
-      ? createCreemProvider({
-          apiKey: env.CREEM_API_KEY,
-          webhookSecret: env.CREEM_WEBHOOK_SECRET,
-          mode: env.CREEM_MODE,
+  cached = createProvider();
+  return cached;
+}
+
+function createProvider(): PaymentProvider | null {
+  if (fakeBillingActive()) return createFakeBillingProvider();
+
+  if (env.BILLING_PROVIDER === "stripe") {
+    return env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET
+      ? createStripeProvider({
+          secretKey: env.STRIPE_SECRET_KEY,
+          webhookSecret: env.STRIPE_WEBHOOK_SECRET,
         })
       : null;
-  return cached;
+  }
+
+  return env.CREEM_API_KEY && env.CREEM_WEBHOOK_SECRET
+    ? createCreemProvider({
+        apiKey: env.CREEM_API_KEY,
+        webhookSecret: env.CREEM_WEBHOOK_SECRET,
+        mode: env.CREEM_MODE,
+      })
+    : null;
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { billingProviderNames } from "../billing/env";
 import { formatIssues } from "./format-issues";
 
 const localeSchema = z
@@ -135,6 +136,9 @@ export const landingSchema = z.strictObject({
 
 // 每个套餐分两段：上面是展示字段（价格、周期、卖点文案），下面从「交易字段」起是结账和发积分用的字段。
 export const billingSchema = z.strictObject({
+  // 用来收款的支付服务商。值域在 src/core/billing/env.ts，实现见 src/core/billing/providers/。
+  // 运行时的 BILLING_PROVIDER 变量可以覆盖它（类型校验的默认值就是这里的值）。
+  provider: z.enum(billingProviderNames).default("creem"),
   currency: z
     .string()
     .regex(/^[A-Z]{3}$/, 'must be an ISO 4217 code such as "USD"')
@@ -154,7 +158,8 @@ export const billingSchema = z.strictObject({
           // —— 交易字段 ——
           // 省略时按 interval 推导：once → one_time，month / year → subscription。
           type: z.enum(["subscription", "one_time"]).optional(),
-          // 支付服务商的产品 ID。免费套餐（price 为 0）不能填，付费套餐必填。
+          // 支付服务商那边的产品 ID：creem 是 prod_*，stripe 是 Price 的 price_*。
+          // 免费套餐（price 为 0）不能填，付费套餐必填。
           providerProductId: z.string().trim().min(1).optional(),
           // 购买（一次性）或每个计费周期（订阅）发放的积分。免费套餐的积分何时发放由业务决定，
           // billing 只处理付费事件。
