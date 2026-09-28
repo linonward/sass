@@ -135,7 +135,12 @@ jobs:
       - run: pnpm test --coverage
 
   # e2e：四条腿并行，各跑一套。
+  #
+  # name 不写的话，GitHub 会把 matrix 的每个字段都拼进 check 名
+  # （`e2e (main, pnpm test:e2e, 1, playwright-report)`），PR 上很吵。
+  # 只影响显示，needs 引用的是 job id（`e2e`），不受这行影响。
   e2e:
+    name: e2e (${{ matrix.suite }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
