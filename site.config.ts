@@ -28,7 +28,7 @@ const config = defineConfig({
   domain: envOverride("SITE_DOMAIN") ?? "example.com",
   description: "Ship your SaaS in a day.",
   brand: {
-    primaryColor: "#4f46e5",
+    primaryColor: "#0f766e",
     logo: "/logo.svg",
   },
   // 语言清单的**值**在 src/core/i18n/locales.ts（那边不经过 zod，见该文件注释）；
