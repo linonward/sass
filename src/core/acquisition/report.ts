@@ -325,7 +325,7 @@ async function _getFilterOptions(db: Database): Promise<FilterOptions> {
 
 /** 带 60s TTL 的模块级缓存，避免默认视图每次渲染都跑 4 条全表查询。 */
 export async function getFilterOptions(db: Database): Promise<FilterOptions> {
-  if (process.env.NODE_ENV === "test") return _getFilterOptions(db);
+  if (process.env.NODE_ENV === "test" || process.env.CI) return _getFilterOptions(db);
   if (
     _filterOptionsCache &&
     Date.now() - _filterOptionsCache.ts < _FILTER_OPTIONS_TTL_MS
