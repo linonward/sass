@@ -47,7 +47,7 @@ scripts/release-package.sh v1.0.0   # 打某个 tag
 
 解压后 `pnpm install && pnpm test` 应当直接跑通（没配 `.env.local` 时数据库相关的用例会跳过，`pnpm test` 的输出里会写明）。
 
-## 快速开始：从 fork 到上线
+## 快速开始：从拿到模板到上线
 
 按顺序做，每一步都能单独验证。预计耗时是熟悉流程后的参考值，第一次做可以在"实际"一栏记下来。第 1–2 步就是[模板使用指南的「10 分钟从零到上线」](docs/starter-guide.md#10-分钟从零到上线) —— 那里的每一步都写了命令和验证方式，时间也按那里估；卡住的地方补进那份指南。
 
@@ -94,7 +94,7 @@ git commit -m "chore: remove template author's internal docs"
 
 ### 2. 本地跑起来
 
-需要 Node 24（`.nvmrc`）、pnpm（版本见 `package.json` 的 `packageManager`）和 Docker。命令级的步骤在 [10 分钟从零到上线](docs/starter-guide.md#10-分钟从零到上线)：起一个本地 Postgres、把 `.env.example` 复制成 `.env.local`、`pnpm install`、`pnpm db:migrate`、`pnpm dev`，最后用 `/sign-in` 登录看到 `/dashboard`。
+需要 Node 24（`.nvmrc`）、pnpm（版本见 `package.json` 的 `packageManager`）和 Docker。命令级的步骤在 [10 分钟从零到上线](docs/starter-guide.md#10-分钟从零到上线)：起一个本地 Postgres、把 `.env.example` 复制成 `.env.local`、`pnpm install`、`pnpm db:migrate`、`pnpm dev`，最后用 `/sign-in` 登录：第一次登录先落到 `/onboarding` 的上手清单，点 **Mark as done** 进 `/dashboard`。
 
 **本地不需要任何外部账号**，那一步不用注册任何服务 —— 理由和每步的验证方式见同一节。
 
