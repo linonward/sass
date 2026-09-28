@@ -1,4 +1,4 @@
-import { getFormatter } from "next-intl/server";
+import { getFormatter, getTranslations } from "next-intl/server";
 
 import { buildMetadata } from "@/core/seo/metadata";
 import { PageHeader } from "@/core/ui/page-header";
@@ -16,10 +16,11 @@ export async function generateMetadata({
   params,
 }: PageProps<"/[locale]/demo">) {
   const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Demo" });
   return buildMetadata({
     locale,
     path: "/demo",
-    title: "Demo — see what your SaaS looks like inside",
+    title: t("metaTitle"),
     noIndex: true,
   });
 }
@@ -43,55 +44,62 @@ export default async function DemoPage({
   params,
 }: PageProps<"/[locale]/demo">) {
   const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Demo" });
   const format = await getFormatter({ locale });
 
   const newUsers = mockDailyPoints(14, 12);
   const aiCalls = mockDailyPoints(14, 240);
 
+  const modules = [
+    { key: "auth" as const },
+    { key: "billing" as const },
+    { key: "ai" as const },
+    { key: "acquisition" as const },
+    { key: "brand" as const },
+    { key: "i18n" as const },
+  ];
+
   return (
     <div className="container-marketing flex flex-col gap-8 py-14 sm:py-20">
-      <PageHeader
-        title="Your SaaS dashboard"
-        description="This is what your users and admin see. All of it ships with the template — you just change one hex color."
-      />
+      <PageHeader title={t("pageTitle")} description={t("pageDescription")} />
 
       <MetricSection
-        title="30-day overview"
-        description="Same metric cards your admin panel shows. Real numbers once you launch."
+        title={t("overview.title")}
+        description={t("overview.description")}
       >
         <StatGrid>
           <StatTile
-            label="New users"
+            label={t("stats.newUsers.label")}
             value={format.number(1247)}
-            hint="Last 30 days"
+            hint={t("stats.newUsers.hint")}
           />
           <StatTile
-            label="Net revenue"
+            label={t("stats.netRevenue.label")}
             value={`$${format.number(4580)}`}
-            hint="Last 30 days, after refunds"
+            hint={t("stats.netRevenue.hint")}
           />
           <StatTile
-            label="Credits issued"
+            label={t("stats.creditsIssued.label")}
             value={format.number(89200)}
-            hint="All time"
+            hint={t("stats.creditsIssued.hint")}
           />
           <StatTile
-            label="AI calls"
+            label={t("stats.aiCalls.label")}
             value={format.number(6842)}
-            hint="Last 30 days"
+            hint={t("stats.aiCalls.hint")}
           />
         </StatGrid>
       </MetricSection>
 
       <ChartGrid>
         <DailyColumns
-          title="New users per day"
+          title={t("chartNewUsers")}
           points={newUsers}
           formatValue={(v) => format.number(v)}
           formatDay={(d) => d.slice(5)}
         />
         <DailyColumns
-          title="AI calls per day"
+          title={t("chartAiCalls")}
           points={aiCalls}
           formatValue={(v) => format.number(v)}
           formatDay={(d) => d.slice(5)}
@@ -99,57 +107,27 @@ export default async function DemoPage({
       </ChartGrid>
 
       <MetricSection
-        title="Everything included"
-        description="All of these ship with the template. No plugins, no separate purchases."
+        title={t("everything.title")}
+        description={t("everything.description")}
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            {
-              key: "auth",
-              title: "Auth & email verification",
-              desc: "Better Auth with 6-digit email codes. No magic links.",
-            },
-            {
-              key: "billing",
-              title: "Creem payments (MoR)",
-              desc: "Accept global payments without a company entity.",
-            },
-            {
-              key: "ai",
-              title: "AI with usage billing",
-              desc: "Pre-authorize credits, atomic deduction, refund on failure.",
-            },
-            {
-              key: "acquisition",
-              title: "Acquisition tools",
-              desc: "UTM attribution, waitlist, referral rewards — all built in.",
-            },
-            {
-              key: "brand",
-              title: "One-hex rebrand",
-              desc: "Change one color in config — the entire site rebrands.",
-            },
-            {
-              key: "i18n",
-              title: "i18n ready",
-              desc: "Add a language file and it just works.",
-            },
-          ].map((mod) => (
+          {modules.map((mod) => (
             <div key={mod.key} className="panel flex flex-col gap-2 p-4">
-              <h3 className="heading-display text-sm">{mod.title}</h3>
-              <p className="text-muted-foreground text-xs">{mod.desc}</p>
+              <h3 className="heading-display text-sm">
+                {t(`modules.${mod.key}.title` as never)}
+              </h3>
+              <p className="text-muted-foreground text-xs">
+                {t(`modules.${mod.key}.desc` as never)}
+              </p>
             </div>
           ))}
         </div>
       </MetricSection>
 
       <div className="bg-primary-band sticker flex flex-col items-center gap-4 rounded-xl px-6 py-10 text-center">
-        <h2 className="heading-display text-2xl">
-          Fork it. Deploy it. Ship it.
-        </h2>
+        <h2 className="heading-display text-2xl">{t("ctaTitle")}</h2>
         <p className="text-muted-foreground max-w-prose text-sm">
-          One click deploys to Vercel with a Neon Postgres database. Change the
-          config, commit, and your SaaS is live.
+          {t("ctaDescription")}
         </p>
         <a
           href="https://vercel.com/new/clone?repository-url=https://github.com/linonward/sass"
@@ -157,7 +135,7 @@ export default async function DemoPage({
           rel="noopener noreferrer"
           className={cn(buttonVariants({ size: "marketing", tone: "primary" }))}
         >
-          Deploy to Vercel
+          {t("deployButton")}
         </a>
       </div>
     </div>

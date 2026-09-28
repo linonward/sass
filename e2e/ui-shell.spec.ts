@@ -74,19 +74,28 @@ test.describe("375px 宽度", () => {
   });
 });
 
-test.describe("只有一门语言时", () => {
-  test("不显示语言切换器", async ({ page }) => {
+test.describe("有两门语言时", () => {
+  test("显示语言切换器并可切换到中文", async ({ page }) => {
     await page.goto("/");
     await expect(
       page.getByRole("button", { name: "Toggle theme" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: messages.Locale.switch }),
-    ).toHaveCount(0);
+    ).toBeVisible();
+
+    // 切换到中文
+    await page.getByRole("button", { name: messages.Locale.switch }).click();
+    const zhName = new Intl.DisplayNames(["zh"], { type: "language" }).of(
+      "zh",
+    )!;
+    await page.getByRole("menuitemradio", { name: zhName }).click();
+    await expect(page).toHaveURL("/zh");
+    await expect(page.locator("html")).toHaveAttribute("lang", "zh");
   });
 
   test("未启用的语言前缀返回 404", async ({ page }) => {
-    const response = await page.goto("/zh");
+    const response = await page.goto("/de");
     expect(response?.status()).toBe(404);
     // 这条走 [locale]（proxy 把 /zh 当成无前缀路径重写），由 [locale]/not-found.tsx 接住。
     // 只断状态码会漏掉「退化成框架默认页」这种回归 —— 文案是客户端渲染的，curl 也看不到。
@@ -133,7 +142,7 @@ test.describe("只有一门语言时", () => {
 test.describe("404 的元数据（关 JS）", () => {
   test.use({ javaScriptEnabled: false });
 
-  for (const path of ["/does-not-exist", "/zh"]) {
+  for (const path of ["/does-not-exist", "/de"]) {
     test(`${path} 的静态 HTML 带本地化标题和 noindex，且不继承首页的 canonical`, async ({
       page,
     }) => {

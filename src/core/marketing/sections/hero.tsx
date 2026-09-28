@@ -34,7 +34,12 @@ export function Hero({
           <p className="bg-background sticker inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
             {t("badge")}
           </p>
-          <ColorSwitcher current={primaryColor} />
+          <ColorSwitcher
+            current={primaryColor}
+            label={t("colorSwitcher.label")}
+            prompt={t("colorSwitcher.prompt")}
+            switchToLabel={t("colorSwitcher.switchTo")}
+          />
           {/* h1 必须是单一文本节点：e2e 断言它的可访问名精确等于 hero.title。
               拆成多个 span 逐词上色会改变可访问名，所以这里不做。 */}
           <h1 className="heading-display mt-6 text-[clamp(2.25rem,7vw,4.25rem)]">
@@ -76,7 +81,7 @@ export function Hero({
                 "bg-background hover:bg-background/90",
               )}
             >
-              View demo
+              {t("demoCta")}
             </Link>
             <a
               href="https://vercel.com/new/clone?repository-url=https://github.com/linonward/sass"
@@ -91,7 +96,7 @@ export function Hero({
                 "bg-background hover:bg-background/90",
               )}
             >
-              Deploy to Vercel
+              {t("deployToVercel")}
             </a>
           </div>
         </div>
