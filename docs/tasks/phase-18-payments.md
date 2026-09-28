@@ -15,6 +15,7 @@ T1801, T1802 → T1803
 ## 任务
 
 ### T1801: Stripe adapter
+
 - **topic**: `stripe`
 - **分支**: `feat/stripe`
 - **范围**: `src/core/billing/providers/stripe/`
@@ -31,6 +32,7 @@ T1801, T1802 → T1803
   - CI env: `BILLING_PROVIDER=stripe` + Stripe test keys → 全链路
 
 ### T1802: LemonSqueezy adapter
+
 - **topic**: `lemonsqueezy`
 - **分支**: `feat/lemonsqueezy`
 - **范围**: `src/core/billing/providers/lemonsqueezy/`
@@ -43,6 +45,7 @@ T1801, T1802 → T1803
 - **验证**: 同 T1801 的 adapter 单测 + e2e 模式
 
 ### T1803: 支付商选型文档
+
 - **topic**: `billing-docs`
 - **分支**: `docs/billing`
 - **范围**: `docs/billing.md`（新建）

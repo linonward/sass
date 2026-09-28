@@ -16,6 +16,7 @@ T1704 ─┘
 ## 任务
 
 ### T1701: auth server + OTP 单测
+
 - **topic**: `auth-tests`
 - **分支**: `fix/auth-tests`
 - **范围**: `src/core/auth/server.ts` + `src/core/auth/errors.ts`
@@ -24,9 +25,10 @@ T1704 ─┘
   - 给 `sendVerificationOTP` 回调写单测：cooldown-reset-on-failure 逻辑（`server.ts:207-210`）
   - 给 `session.create.after` / `user.create.after` hook 写单测：admin promotion、lead linking、referral binding
   - 给 `src/core/auth/` 下已有的纯函数（routes、cooldown、locale）补齐边界用例
-- **验证**: `pnpm test -- --coverage`，auth 模块覆盖率从当前提升
+- **验证**: `pnpm test --coverage`，auth 模块覆盖率从当前提升
 
 ### T1702: instrumentation + 启动逻辑单测
+
 - **topic**: `instrumentation-tests`
 - **分支**: `fix/instrumentation-tests`
 - **范围**: `src/instrumentation.ts` + `src/instrumentation-client.ts` + `src/core/ratelimit/startup.ts`
@@ -35,9 +37,10 @@ T1704 ─┘
   - 给 `onRequestError` 的 Sentry 转换写单测
   - 给 `src/core/ratelimit/startup.ts` 的启动检查写单测：「生产环境缺 Redis → loud error log」
   - Mock `@sentry/nextjs`、`@opentelemetry/*` 避免真连外部服务
-- **验证**: `pnpm test -- --coverage`，启动路径覆盖率不为零
+- **验证**: `pnpm test --coverage`，启动路径覆盖率不为零
 
 ### T1703: 安全敏感操作触发 session 失效
+
 - **topic**: `session-invalidation`
 - **分支**: `feat/session-invalidation`
 - **范围**: `src/core/auth/server.ts` + `src/core/account/`
@@ -48,6 +51,7 @@ T1704 ─┘
 - **验证**: e2e：改邮箱后旧 session 不能再访问 `/dashboard`
 
 ### T1704: CI 依赖审计
+
 - **topic**: `ci-dep-audit`
 - **分支**: `chore/ci-dep-audit`
 - **范围**: `.github/workflows/ci.yml`

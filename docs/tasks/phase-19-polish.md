@@ -15,6 +15,7 @@ T1903 ─┘
 ## 任务
 
 ### T1901: 首次运行体验
+
 - **topic**: `onboarding`
 - **分支**: `feat/onboarding`
 - **范围**: `src/core/onboarding/`（新建）+ `src/app/[locale]/(app)/onboarding/`
@@ -27,6 +28,7 @@ T1903 ─┘
 - **验证**: e2e：注册 → onboarding 自动弹出 → 逐条完成 → 标记完成 → 不再出现
 
 ### T1902: 第二个示例模块
+
 - **topic**: `example-invoices`
 - **分支**: `feat/example-invoices`
 - **范围**: `src/features/invoices/`（新建，参考 `src/features/example/`）
@@ -39,6 +41,7 @@ T1903 ─┘
 - **验证**: e2e：创建发票 → 列表出现 → 编辑 → 删除；关掉开关后 404
 
 ### T1903: 模板使用视频 / 图文指南
+
 - **topic**: `starter-media`
 - **分支**: `docs/starter-media`
 - **范围**: `docs/starter-guide.md` 扩展 + 可选视频
