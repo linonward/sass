@@ -1,0 +1,507 @@
+{
+  "checkout.session.completed.payment": {
+    "id": "evt_1MtwBwLkdIwHu7ixrBB4xk2L",
+    "object": "event",
+    "api_version": "2026-08-26.dahlia",
+    "created": 1679600215,
+    "type": "checkout.session.completed",
+    "livemode": false,
+    "pending_webhooks": 1,
+    "request": {
+      "id": "req_Q2kYcXcTfBGZ8M",
+      "idempotency_key": null
+    },
+    "data": {
+      "object": {
+        "id": "cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u",
+        "object": "checkout.session",
+        "amount_subtotal": 19900,
+        "amount_total": 19900,
+        "cancel_url": "https://example.com/#pricing",
+        "client_reference_id": "user_1",
+        "created": 1679600215,
+        "currency": "usd",
+        "customer": "cus_NeZwdNtLEOXuvB",
+        "customer_creation": "if_required",
+        "customer_email": "jennyrosen@example.com",
+        "expires_at": 1679686615,
+        "livemode": false,
+        "metadata": {
+          "planId": "lifetime",
+          "userId": "user_1"
+        },
+        "mode": "payment",
+        "payment_intent": "pi_3MtwBwLkdIwHu7ix28a3tqPa",
+        "payment_method_types": ["card"],
+        "payment_status": "paid",
+        "status": "complete",
+        "submit_type": "pay",
+        "subscription": null,
+        "success_url": "https://example.com/dashboard?checkout=success",
+        "ui_mode": "hosted_page",
+        "url": "https://checkout.stripe.com/c/pay/cs_test_a11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S22u"
+      }
+    }
+  },
+  "checkout.session.completed.subscription": {
+    "id": "evt_1MtwBxLkdIwHu7ixrBB4xk2M",
+    "object": "event",
+    "api_version": "2026-08-26.dahlia",
+    "created": 1679609767,
+    "type": "checkout.session.completed",
+    "livemode": false,
+    "pending_webhooks": 1,
+    "request": {
+      "id": "req_Q2kYdYdUgCHa9N",
+      "idempotency_key": null
+    },
+    "data": {
+      "object": {
+        "id": "cs_test_b11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S23v",
+        "object": "checkout.session",
+        "amount_subtotal": 1900,
+        "amount_total": 1900,
+        "cancel_url": "https://example.com/#pricing",
+        "client_reference_id": "user_1",
+        "created": 1679609767,
+        "currency": "usd",
+        "customer": "cus_Na6dX7aXxi11N4",
+        "customer_creation": "always",
+        "customer_email": "jennyrosen@example.com",
+        "expires_at": 1679696167,
+        "livemode": false,
+        "metadata": {
+          "planId": "pro",
+          "userId": "user_1"
+        },
+        "mode": "subscription",
+        "payment_intent": "pi_3MtwBwLkdIwHu7ix28a3tqPb",
+        "payment_method_types": ["card"],
+        "payment_status": "paid",
+        "status": "complete",
+        "submit_type": "subscribe",
+        "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+        "success_url": "https://example.com/dashboard?checkout=success",
+        "ui_mode": "hosted_page",
+        "url": "https://checkout.stripe.com/c/pay/cs_test_b11YYufWQzNY63zpQ6QSNRQhkUpVph4WRmzW0zWJO2znZKdVujZ0N0S23v"
+      }
+    }
+  },
+  "invoice.paid": {
+    "id": "evt_1MtwBwLkdIwHu7ixuzkSPfKd",
+    "object": "event",
+    "api_version": "2026-08-26.dahlia",
+    "created": 1679609770,
+    "type": "invoice.paid",
+    "livemode": false,
+    "pending_webhooks": 1,
+    "request": {
+      "id": null,
+      "idempotency_key": null
+    },
+    "data": {
+      "object": {
+        "id": "in_1MowQWLkdIwHu7ixuzkSPfKd",
+        "object": "invoice",
+        "amount_due": 1900,
+        "amount_paid": 1900,
+        "amount_remaining": 0,
+        "amount_shipping": 0,
+        "attempt_count": 1,
+        "attempted": true,
+        "billing_reason": "subscription_create",
+        "collection_method": "charge_automatically",
+        "created": 1679609768,
+        "currency": "usd",
+        "customer": "cus_Na6dX7aXxi11N4",
+        "customer_email": "jennyrosen@example.com",
+        "customer_name": "Jenny Rosen",
+        "default_payment_method": "pm_1MowQVLkdIwHu7ix7QK2eR4f",
+        "livemode": false,
+        "metadata": {},
+        "number": "EE2A4E0E-0001",
+        "parent": {
+          "invoice_item_details": null,
+          "quote_details": null,
+          "subscription_details": {
+            "metadata": {
+              "planId": "pro",
+              "userId": "user_1"
+            },
+            "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs"
+          },
+          "type": "subscription_details"
+        },
+        "period_end": 1682288167,
+        "period_start": 1679609767,
+        "status": "paid",
+        "status_transitions": {
+          "finalized_at": 1679609768,
+          "paid_at": 1679609770,
+          "voided_at": null,
+          "marked_uncollectible_at": null
+        },
+        "subtotal": 1900,
+        "total": 1900,
+        "lines": {
+          "object": "list",
+          "data": [
+            {
+              "id": "il_1MowQWLkdIwHu7ixl4OzzPMv",
+              "object": "line_item",
+              "amount": 1900,
+              "currency": "usd",
+              "description": "1 × Pro (at $19.00 / month)",
+              "discountable": true,
+              "discount_amounts": [],
+              "discounts": [],
+              "invoice": "in_1MowQWLkdIwHu7ixuzkSPfKd",
+              "livemode": false,
+              "metadata": {},
+              "parent": {
+                "invoice_item_details": null,
+                "subscription_item_details": {
+                  "invoice_item": null,
+                  "proration": false,
+                  "proration_details": {
+                    "credited_items": null
+                  },
+                  "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+                  "subscription_item": "si_Na6dzxczY5fwHx"
+                },
+                "type": "subscription_item_details"
+              },
+              "period": {
+                "end": 1682288167,
+                "start": 1679609767
+              },
+              "pretax_credit_amounts": [],
+              "pricing": {
+                "price_details": {
+                  "price": "price_1MowQULkdIwHu7ixraBm864M",
+                  "product": "prod_Na6dGcTsmU0I4R"
+                },
+                "type": "price_details",
+                "unit_amount_decimal": "1900"
+              },
+              "quantity": 1,
+              "quantity_decimal": "1",
+              "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+              "subtotal": 1900,
+              "taxes": []
+            }
+          ],
+          "has_more": false,
+          "total_count": 1,
+          "url": "/v1/invoices/in_1MowQWLkdIwHu7ixuzkSPfKd/lines"
+        }
+      }
+    }
+  },
+  "invoice.payment_failed": {
+    "id": "evt_1MtwByLkdIwHu7ixuzkSPfKe",
+    "object": "event",
+    "api_version": "2026-08-26.dahlia",
+    "created": 1682288170,
+    "type": "invoice.payment_failed",
+    "livemode": false,
+    "pending_webhooks": 1,
+    "request": {
+      "id": null,
+      "idempotency_key": null
+    },
+    "data": {
+      "object": {
+        "id": "in_1MowQWLkdIwHu7ixuzkSPfKd",
+        "object": "invoice",
+        "amount_due": 1900,
+        "amount_paid": 0,
+        "amount_remaining": 1900,
+        "attempt_count": 1,
+        "attempted": true,
+        "billing_reason": "subscription_cycle",
+        "collection_method": "charge_automatically",
+        "created": 1682288168,
+        "currency": "usd",
+        "customer": "cus_Na6dX7aXxi11N4",
+        "livemode": false,
+        "metadata": {},
+        "next_payment_attempt": 1682374568,
+        "parent": {
+          "invoice_item_details": null,
+          "quote_details": null,
+          "subscription_details": {
+            "metadata": {
+              "planId": "pro",
+              "userId": "user_1"
+            },
+            "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs"
+          },
+          "type": "subscription_details"
+        },
+        "period_end": 1684966567,
+        "period_start": 1682288167,
+        "status": "open",
+        "subtotal": 1900,
+        "total": 1900,
+        "lines": {
+          "object": "list",
+          "data": [
+            {
+              "id": "il_1MowQWLkdIwHu7ixl4OzzPMw",
+              "object": "line_item",
+              "amount": 1900,
+              "currency": "usd",
+              "description": "1 × Pro (at $19.00 / month)",
+              "discountable": true,
+              "discount_amounts": [],
+              "discounts": [],
+              "invoice": "in_1MowQWLkdIwHu7ixuzkSPfKd",
+              "livemode": false,
+              "metadata": {},
+              "parent": {
+                "invoice_item_details": null,
+                "subscription_item_details": {
+                  "invoice_item": null,
+                  "proration": false,
+                  "proration_details": {
+                    "credited_items": null
+                  },
+                  "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+                  "subscription_item": "si_Na6dzxczY5fwHx"
+                },
+                "type": "subscription_item_details"
+              },
+              "period": {
+                "end": 1684966567,
+                "start": 1682288167
+              },
+              "pretax_credit_amounts": [],
+              "pricing": {
+                "price_details": {
+                  "price": "price_1MowQULkdIwHu7ixraBm864M",
+                  "product": "prod_Na6dGcTsmU0I4R"
+                },
+                "type": "price_details",
+                "unit_amount_decimal": "1900"
+              },
+              "quantity": 1,
+              "quantity_decimal": "1",
+              "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+              "subtotal": 1900,
+              "taxes": []
+            }
+          ],
+          "has_more": false,
+          "total_count": 1,
+          "url": "/v1/invoices/in_1MowQWLkdIwHu7ixuzkSPfKd/lines"
+        }
+      }
+    }
+  },
+  "customer.subscription.updated": {
+    "id": "evt_1MtwBzLkdIwHu7ixDfPvaq9R",
+    "object": "event",
+    "api_version": "2026-08-26.dahlia",
+    "created": 1679609775,
+    "type": "customer.subscription.updated",
+    "livemode": false,
+    "pending_webhooks": 1,
+    "request": {
+      "id": null,
+      "idempotency_key": null
+    },
+    "data": {
+      "object": {
+        "id": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+        "object": "subscription",
+        "cancel_at": null,
+        "cancel_at_period_end": false,
+        "canceled_at": null,
+        "collection_method": "charge_automatically",
+        "created": 1679609767,
+        "currency": "usd",
+        "customer": "cus_Na6dX7aXxi11N4",
+        "days_until_due": null,
+        "ended_at": null,
+        "livemode": false,
+        "metadata": {
+          "planId": "pro",
+          "userId": "user_1"
+        },
+        "items": {
+          "object": "list",
+          "data": [
+            {
+              "id": "si_Na6dzxczY5fwHx",
+              "object": "subscription_item",
+              "created": 1679609768,
+              "current_period_end": 1682288167,
+              "current_period_start": 1679609767,
+              "metadata": {},
+              "price": {
+                "id": "price_1MowQULkdIwHu7ixraBm864M",
+                "object": "price",
+                "active": true,
+                "billing_scheme": "per_unit",
+                "created": 1679609766,
+                "currency": "usd",
+                "livemode": false,
+                "lookup_key": null,
+                "metadata": {},
+                "nickname": null,
+                "product": "prod_Na6dGcTsmU0I4R",
+                "recurring": {
+                  "interval": "month",
+                  "interval_count": 1,
+                  "trial_period_days": null,
+                  "usage_type": "licensed"
+                },
+                "tax_behavior": "unspecified",
+                "type": "recurring",
+                "unit_amount": 1900,
+                "unit_amount_decimal": "1900"
+              },
+              "quantity": 1,
+              "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+              "tax_rates": []
+            }
+          ],
+          "has_more": false,
+          "total_count": 1,
+          "url": "/v1/subscription_items?subscription=sub_1MowQVLkdIwHu7ixeRlqHVzs"
+        },
+        "latest_invoice": "in_1MowQWLkdIwHu7ixuzkSPfKd",
+        "start_date": 1679609767,
+        "status": "active",
+        "trial_end": null,
+        "trial_start": null
+      }
+    }
+  },
+  "customer.subscription.deleted": {
+    "id": "evt_1MtwC1LkdIwHu7ixDfPvaq9T",
+    "object": "event",
+    "api_version": "2026-08-26.dahlia",
+    "created": 1682288175,
+    "type": "customer.subscription.deleted",
+    "livemode": false,
+    "pending_webhooks": 1,
+    "request": {
+      "id": null,
+      "idempotency_key": null
+    },
+    "data": {
+      "object": {
+        "id": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+        "object": "subscription",
+        "cancel_at": null,
+        "cancel_at_period_end": false,
+        "canceled_at": 1682288175,
+        "collection_method": "charge_automatically",
+        "created": 1679609767,
+        "currency": "usd",
+        "customer": "cus_Na6dX7aXxi11N4",
+        "days_until_due": null,
+        "ended_at": 1682288175,
+        "livemode": false,
+        "metadata": {
+          "planId": "pro",
+          "userId": "user_1"
+        },
+        "items": {
+          "object": "list",
+          "data": [
+            {
+              "id": "si_Na6dzxczY5fwHx",
+              "object": "subscription_item",
+              "created": 1679609768,
+              "current_period_end": 1682288167,
+              "current_period_start": 1679609767,
+              "metadata": {},
+              "price": {
+                "id": "price_1MowQULkdIwHu7ixraBm864M",
+                "object": "price",
+                "active": true,
+                "billing_scheme": "per_unit",
+                "created": 1679609766,
+                "currency": "usd",
+                "livemode": false,
+                "lookup_key": null,
+                "metadata": {},
+                "nickname": null,
+                "product": "prod_Na6dGcTsmU0I4R",
+                "recurring": {
+                  "interval": "month",
+                  "interval_count": 1,
+                  "trial_period_days": null,
+                  "usage_type": "licensed"
+                },
+                "tax_behavior": "unspecified",
+                "type": "recurring",
+                "unit_amount": 1900,
+                "unit_amount_decimal": "1900"
+              },
+              "quantity": 1,
+              "subscription": "sub_1MowQVLkdIwHu7ixeRlqHVzs",
+              "tax_rates": []
+            }
+          ],
+          "has_more": false,
+          "total_count": 1,
+          "url": "/v1/subscription_items?subscription=sub_1MowQVLkdIwHu7ixeRlqHVzs"
+        },
+        "latest_invoice": "in_1MowQWLkdIwHu7ixuzkSPfKd",
+        "start_date": 1679609767,
+        "status": "canceled",
+        "trial_end": null,
+        "trial_start": null
+      }
+    }
+  },
+  "charge.refunded": {
+    "id": "evt_1MtwC2LkdIwHu7ixDfPvaq9U",
+    "object": "event",
+    "api_version": "2026-08-26.dahlia",
+    "created": 1682288180,
+    "type": "charge.refunded",
+    "livemode": false,
+    "pending_webhooks": 1,
+    "request": {
+      "id": null,
+      "idempotency_key": null
+    },
+    "data": {
+      "object": {
+        "id": "ch_3MtwBwLkdIwHu7ix28a3tqPa",
+        "object": "charge",
+        "amount": 1900,
+        "amount_refunded": 1900,
+        "currency": "usd",
+        "customer": "cus_Na6dX7aXxi11N4",
+        "livemode": false,
+        "metadata": {},
+        "payment_intent": "pi_3MtwBwLkdIwHu7ix28a3tqPa",
+        "refunded": true,
+        "refunds": {
+          "object": "list",
+          "data": [
+            {
+              "id": "re_3MtwBwLkdIwHu7ix0aVZ6xzP",
+              "object": "refund",
+              "amount": 1900,
+              "currency": "usd",
+              "charge": "ch_3MtwBwLkdIwHu7ix28a3tqPa",
+              "payment_intent": "pi_3MtwBwLkdIwHu7ix28a3tqPa",
+              "status": "succeeded"
+            }
+          ],
+          "has_more": false,
+          "total_count": 1,
+          "url": "/v1/refunds?charge=ch_3MtwBwLkdIwHu7ix28a3tqPa"
+        },
+        "status": "succeeded"
+      }
+    }
+  }
+}

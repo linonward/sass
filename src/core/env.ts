@@ -30,6 +30,7 @@ export const env = createAppEnv({
     ...authServerEnv(process.env),
     ...billingServerEnv(process.env, {
       hasPaidPlans: siteConfig.billing.plans.some((plan) => plan.price > 0),
+      provider: siteConfig.billing.provider,
     }),
     ...aiServerEnv(process.env, {
       enabled: siteConfig.features.ai,

@@ -3,6 +3,10 @@ import {
   placeholderIssues,
 } from "./src/core/config/sentinels";
 import { defineConfig } from "./src/core/config/schema";
+import {
+  billingProviderNames,
+  type BillingProviderName,
+} from "./src/core/billing/env";
 import { defaultLocale, locales } from "./src/core/i18n/locales";
 
 /**
@@ -11,7 +15,9 @@ import { defaultLocale, locales } from "./src/core/i18n/locales";
  * 有六个字段可以额外用环境变量覆盖，写法都是「envOverride(变量名) ?? 占位字面量」：
  * `name`（`SITE_NAME`）、`domain`（`SITE_DOMAIN`）、`email.fromAddress`（`SITE_EMAIL_FROM`）、
  * `legal.companyName`（`SITE_LEGAL_NAME`）、两个套餐的 `providerProductId`
- * （`CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`）。
+ * （变量名随生效的服务商走，见下面的 effectiveBillingProvider：creem 是
+ * `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`，stripe 是
+ * `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`）。
  * 模板里只留占位值，真实域名、名称和产品 ID 放在部署环境里；不设这些变量时就是占位配置。
  * 没有对应变量的字段（颜色、文案）只能改这个文件。
  */
@@ -21,6 +27,35 @@ const envOverride = (name: string): string | undefined => {
   const value = process.env[name]?.trim();
   return value === "" ? undefined : value;
 };
+
+/**
+ * 用来收款的支付服务商。只能改这里的字面量（要改的是类型校验时的默认值）；
+ * 运行时可以用 `BILLING_PROVIDER` 覆盖它，环境变量优先。
+ */
+const billingProvider: BillingProviderName = "creem";
+
+/**
+ * 生效的服务商：这里的 provider 可以被运行时的 `BILLING_PROVIDER` 覆盖，
+ * 判断和 src/core/billing/env.ts 一致（fake 不是真实服务商，不参与；只有 stripe / creem 会覆盖）。
+ */
+const effectiveBillingProvider: BillingProviderName =
+  billingProviderNames.find((name) => name === process.env.BILLING_PROVIDER) ??
+  billingProvider;
+
+/**
+ * 套餐产品 ID 的环境变量前缀，随生效的服务商走：换服务商时产品 ID 的变量名一起换，
+ * 不用同时记住两套。creem 的 prod_* 和 stripe 的 price_* 在各自后台里是不同的对象。
+ */
+const productIdEnvPrefix: Record<BillingProviderName, string> = {
+  creem: "CREEM_PRODUCT_ID",
+  stripe: "STRIPE_PRICE_ID",
+};
+
+/**
+ * 没配环境变量时的产品 ID 占位值。它是**与服务商无关的哨兵值**：`prod_placeholder_` 前缀会被
+ * src/core/billing/checkout.ts 拦下，结账直接报错，不会拿假 ID 去调服务商。
+ */
+const placeholderProductId = (plan: string) => `prod_placeholder_${plan}`;
 
 const config = defineConfig({
   name: envOverride("SITE_NAME") ?? "Acme",
@@ -110,6 +145,7 @@ const config = defineConfig({
     faq: ["stack", "payments", "customize", "license"],
   },
   billing: {
+    provider: billingProvider,
     currency: "USD",
     plans: [
       {
@@ -125,11 +161,13 @@ const config = defineConfig({
         interval: "month",
         features: ["credits2000", "coreFeatures", "prioritySupport"],
         highlighted: true,
-        // Creem 的产品 ID。占位值（prod_placeholder_*）不允许结账（见 src/core/billing/checkout.ts）；
-        // 换成自己的产品 ID，或用 CREEM_PRODUCT_ID_PRO 覆盖。
-        // 测试模式和生产模式的产品 ID 不同，切换 CREEM_MODE 时一起换（见 README 上线清单）。
+        // 服务商那边的产品 ID（见上面的 productIdEnvPrefix）。
+        // 占位值不允许结账（见 src/core/billing/checkout.ts）；换成自己的产品 ID，
+        // 或用上面 billingProvider 对应的变量覆盖。测试模式和生产模式的产品 ID 不同，
+        // 切换模式时一起换（见 README 上线清单）。
         providerProductId:
-          envOverride("CREEM_PRODUCT_ID_PRO") ?? "prod_placeholder_pro",
+          envOverride(`${productIdEnvPrefix[effectiveBillingProvider]}_PRO`) ??
+          placeholderProductId("pro"),
         credits: 2000,
       },
       {
@@ -137,10 +175,11 @@ const config = defineConfig({
         price: 199,
         interval: "once",
         features: ["credits2000", "coreFeatures", "lifetimeUpdates"],
-        // 同上：一次性的产品，用 CREEM_PRODUCT_ID_LIFETIME 覆盖。
+        // 同上：一次性的产品，用 `..._LIFETIME` 覆盖。
         providerProductId:
-          envOverride("CREEM_PRODUCT_ID_LIFETIME") ??
-          "prod_placeholder_lifetime",
+          envOverride(
+            `${productIdEnvPrefix[effectiveBillingProvider]}_LIFETIME`,
+          ) ?? placeholderProductId("lifetime"),
         credits: 2000,
       },
     ],

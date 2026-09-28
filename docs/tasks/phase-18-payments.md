@@ -18,18 +18,19 @@ T1801, T1802 → T1803
 
 - **topic**: `stripe`
 - **分支**: `feat/stripe`
-- **范围**: `src/core/billing/providers/stripe/`
+- **范围**: `src/core/billing/providers/stripe.ts`（+ `src/app/api/webhooks/stripe/route.ts`、注册表 `providers/index.ts`、`src/core/billing/env.ts`、`site.config.ts`）
 - **做什么**:
-  - 实现 `PaymentProvider` 接口：`createCheckout`、`createPortal`、`verifyWebhook`、`parseWebhookEvent`
-  - 用 Stripe SDK（`stripe` npm 包）对接 Payment Intents + Customer Portal
-  - Webhook handler：`checkout.session.completed`、`customer.subscription.updated/deleted`、`invoice.paid/payment_failed`
-  - `site.config.ts` 加 `stripe` provider 选项（`billing.provider: "stripe"`）
-  - 环境变量：`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`STRIPE_PRODUCT_ID_PRO` 等
-  - 与现有 Creem fake provider 保持接口一致：测试里 mock Stripe API
+  - 实现 `PaymentProvider` 接口：`createCheckout`、`getPortalUrl`、`cancelSubscription`、`verifyWebhook`、`parseEvent`
+  - 用官方 `stripe` npm SDK 对接 **Checkout Sessions（服务商托管结账页）** + Billing Portal；不用 Payment Intents + Elements（模板不内嵌支付组件，`createCheckout` 仍然只返回 `{ checkoutId, url }`）
+  - 两条 webhook 路由并存，未生效的服务商那条返回 503：`/api/webhooks/stripe` 处理 `checkout.session.completed`、`invoice.paid`、`invoice.payment_failed`、`customer.subscription.updated/deleted`
+  - 支付商注册表（T1802 只需加一个枚举值和一个 `case`）：`billingProviderNames`、`billingServerEnv({ hasPaidPlans, provider })`、`providers/index.ts` 按 `BILLING_PROVIDER` 分派
+  - `site.config.ts` 加 `stripe` provider 选项；产品 ID 的环境变量**按服务商加前缀**：`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`（Creem 的 `CREEM_PRODUCT_ID_*` 不变）
+  - fake 闸门加第三条硬锁：配了 live 的 Stripe 密钥（`sk_live_` / `rk_live_`）时不允许 `BILLING_PROVIDER=fake`
+  - v1 不处理退款（Stripe 的退款对象没有发票字段，细节写在 adapter 顶部注释和 README 里）
 - **验证**:
-  - adapter 单测：checkout 创建、webhook 验签、事件解析
-  - e2e（fakestripe 模式）：checkout → webhook → credits granted 全流程
-  - CI env: `BILLING_PROVIDER=stripe` + Stripe test keys → 全链路
+  - adapter 单测（`src/core/billing/providers/stripe.test.ts`）：用官方文档的示例 payload 当 fixture、注入假的 SDK client；签名校验用真实 SDK 的 `webhooks.generateTestHeaderString` 离线签，**不联网、不需要任何真实 key**
+  - 全链路（checkout → webhook → 发积分）仍由 fake provider 的 e2e 保证：`BILLING_PROVIDER=fake` 跑 `e2e/billing.spec.ts`
+  - CI 不引入 Stripe 真实 key、不依赖网络；**真实 test mode 下单 + 真实 webhook 投递不做**，该路径未验证
 
 ### T1802: LemonSqueezy adapter
 

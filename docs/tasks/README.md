@@ -132,7 +132,7 @@
 | T1704                       | ci-dep-audit            | `chore/ci-dep-audit`           | —                             | done |
 | T1705                       | locale-decode           | `fix/locale-decode`            | —                             | done |
 | **阶段 18：支付商扩展**     |                         |                                |                               |      |
-| T1801                       | stripe                  | `feat/stripe`                  | T1704                         | todo |
+| T1801                       | stripe                  | `feat/stripe`                  | T1704                         | done |
 | T1802                       | lemonsqueezy            | `feat/lemonsqueezy`            | T1704                         | todo |
 | T1803                       | billing-docs            | `docs/billing`                 | T1801, T1802                  | todo |
 | **阶段 19：模板体验打磨**   |                         |                                |                               |      |
