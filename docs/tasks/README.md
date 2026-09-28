@@ -126,7 +126,7 @@
 | T1604                       | referral-fixes          | `fix/referral-fixes`           | —                             | done |
 | T1605                       | internal-terms-2        | `chore/internal-terms-2`       | —                             | done |
 | **阶段 17：审计收尾**       |                         |                                |                               |      |
-| T1701                       | auth-tests              | `fix/auth-tests`               | —                             | todo |
+| T1701                       | auth-tests              | `fix/auth-tests`               | —                             | done |
 | T1702                       | instrumentation-tests   | `fix/instrumentation-tests`    | —                             | done |
 | T1703                       | session-invalidation    | `feat/session-invalidation`    | —                             | done |
 | T1704                       | ci-dep-audit            | `chore/ci-dep-audit`           | —                             | done |
