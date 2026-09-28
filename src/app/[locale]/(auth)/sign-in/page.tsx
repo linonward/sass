@@ -6,6 +6,7 @@ import { AFTER_SIGN_IN_PATH } from "@/core/auth/routes";
 import { getSession } from "@/core/auth/session";
 import { SignInForm } from "@/core/auth/sign-in-form";
 import { redirect } from "@/core/i18n/navigation";
+import { ONBOARDING_PATH } from "@/core/onboarding/landing";
 import { buildMetadata } from "@/core/seo/metadata";
 import { localizedPath } from "@/core/seo/urls";
 
@@ -34,6 +35,12 @@ export default async function SignInPage({
     typeof callbackURL === "string" ? callbackURL : undefined,
     localizedPath(locale, AFTER_SIGN_IN_PATH),
   );
+  // 带了 callbackURL 的登录一律先去目标页（受保护页面的回跳、邀请链接）；
+  // 只有「从登录页直接登录」才会在用户还没走完清单时落到引导页。
+  const onboardingPath =
+    typeof callbackURL === "string" && callbackURL !== ""
+      ? null
+      : localizedPath(locale, ONBOARDING_PATH);
 
   // 已登录时直接进入目标页面。
   if (await getSession()) redirect({ href: target, locale });
@@ -49,6 +56,7 @@ export default async function SignInPage({
       <p className="text-muted-foreground mt-2 mb-6 text-sm">{t("subtitle")}</p>
       <SignInForm
         callbackURL={target}
+        onboardingPath={onboardingPath}
         // client ID 是公开值；没启用 Google 登录时为 null（本地没配凭据、Vercel 预览）。
         googleClientId={googleClientId(process.env) ?? null}
         otp={{

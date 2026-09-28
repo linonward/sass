@@ -368,7 +368,8 @@
       "referrals": "Referrals",
       "adminStatus": "Status page",
       "apiKeys": "API keys",
-      "adminApiKeys": "API keys"
+      "adminApiKeys": "API keys",
+      "onboarding": "Getting started"
     },
     "userMenu": {
       "open": "Account menu",
@@ -1086,6 +1087,49 @@
       "rate_limited": "Too many requests. Wait a minute and try again.",
       "ai_unavailable": "AI isn't available right now.",
       "failed": "Something went wrong. Your credits were not used."
+    }
+  },
+  "Onboarding": {
+    "metaTitle": "Getting started",
+    "title": "Getting started",
+    "description": "Make the template yours. Every step points at the exact file or page, and the checks below read your config — nothing is marked done for you.",
+    "checklist": {
+      "title": "Your checklist"
+    },
+    "progress": "{done} of {total} done",
+    "done": "Done",
+    "manual": "I've done this",
+    "open": "Open",
+    "mark": "Mark as done",
+    "marking": "Saving…",
+    "alreadyDone": "Marked as done",
+    "footer": "Marking the checklist done keeps this page out of your way when you sign in — you can always come back from the sidebar.",
+    "steps": {
+      "brandColor": {
+        "title": "Change the brand color",
+        "description": "Every color on the site — buttons, badges, the marketing bands — is derived from this one value.",
+        "target": "site.config.ts · brand.primaryColor"
+      },
+      "siteName": {
+        "title": "Set your site name",
+        "description": "Name, domain, legal entity and sender address. The factory placeholders fail the production build, so this has to be done before you deploy.",
+        "target": "site.config.ts · name / domain / legal / email"
+      },
+      "pricing": {
+        "title": "Edit your pricing",
+        "description": "Swap the placeholder product IDs for the ones from your payment provider. Checkout is refused while they are still placeholders.",
+        "target": "site.config.ts · billing.plans"
+      },
+      "blogPost": {
+        "title": "Write your first post",
+        "description": "Add an MDX file next to the demo posts — those two can be deleted.",
+        "target": "content/blog/en/*.mdx"
+      },
+      "deploy": {
+        "title": "Deploy to Vercel",
+        "description": "Import the repo, set the environment variables, and let the production build check your config.",
+        "target": "vercel.com/new"
+      }
     }
   },
   "Acquisition": {

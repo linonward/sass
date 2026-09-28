@@ -26,6 +26,7 @@ export const user = pgTable("user", {
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
   locale: text("locale"),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
 });
 
 export const session = pgTable(

@@ -75,6 +75,14 @@ export const auth = betterAuth({
         input: true,
         validator: { input: z.enum(routing.locales as [string, ...string[]]) },
       },
+      // 首次运行引导（/onboarding）是否已完成。只有服务端动作能写（input: false），
+      // 客户端不能自己声明已完成；登录后据此决定要不要自动跳转到 /onboarding。
+      onboardingCompleted: {
+        type: "boolean",
+        required: false,
+        input: false,
+        defaultValue: false,
+      },
     },
   },
   account: {

@@ -135,7 +135,7 @@
 | T1802                       | lemonsqueezy            | `feat/lemonsqueezy`            | T1704                         | todo |
 | T1803                       | billing-docs            | `docs/billing`                 | T1801, T1802                  | todo |
 | **阶段 19：模板体验打磨**   |                         |                                |                               |      |
-| T1901                       | onboarding              | `feat/onboarding`              | —                             | todo |
+| T1901                       | onboarding              | `feat/onboarding`              | —                             | done |
 | T1902                       | example-invoices        | `feat/example-invoices`        | —                             | todo |
 | T1903                       | starter-media           | `docs/starter-media`           | —                             | todo |
 

@@ -155,6 +155,13 @@
       "when": 1790553446025,
       "tag": "0021_married_starjammers",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790583436314,
+      "tag": "0022_next_quentin_quire",
+      "breakpoints": true
     }
   ]
 }
