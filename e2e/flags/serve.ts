@@ -37,7 +37,7 @@ for (const [from] of flags)
   if (!before.includes(from))
     throw new Error(`Expected default flag off in site.config.ts: ${from}`);
 fs.writeFileSync(config, after);
-execFileSync("pnpm", ["install", "--offline", "--frozen-lockfile"], {
+execFileSync("pnpm", ["install", "--prefer-offline", "--frozen-lockfile"], {
   cwd: dest,
   stdio: "inherit",
 });

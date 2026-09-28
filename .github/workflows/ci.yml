@@ -202,6 +202,43 @@ jobs:
 
       - run: pnpm exec playwright install --with-deps chromium
 
+      # 临时诊断（仅探针分支，验完即删）：26.04 上四条 e2e 腿都断在子套件 serve.ts 的
+      # `pnpm install --offline`，报 store 里缺 tarball。但根 install 是
+      # `reused 1124, downloaded 0`，那些包的 tarball 必然已经在 store 里。
+      # 所以要么临时副本查的不是同一个 store，要么它看到的那个是空的。两边打出来对照。
+      - name: 诊断：临时副本看到的 pnpm store
+        if: matrix.suite == 'invoices'
+        run: |
+          echo "===== 环境 ====="
+          echo "PNPM_HOME=${PNPM_HOME:-<unset>}"
+          echo "TMPDIR=${TMPDIR:-<unset>}"
+          echo "npm_config_store_dir=${npm_config_store_dir:-<unset>}"
+          echo "HOME=$HOME"
+          echo
+          echo "===== 工作区 ====="
+          ws_store="$(pnpm store path)"
+          echo "store: $ws_store"
+          echo "store 子目录: $(ls "$ws_store" 2>&1 | tr '\n' ' ')"
+          echo "files 条目数: $(ls "$ws_store/files" 2>/dev/null | wc -l)"
+          echo "index 条目数: $(ls "$ws_store/index" 2>/dev/null | wc -l)"
+          echo
+          echo "===== /tmp 与 store 是否同一文件系统 ====="
+          df -T /tmp "$ws_store" 2>&1 || df /tmp "$ws_store" 2>&1 || true
+          echo
+          echo "===== 照 serve.ts 的方式拷一份到临时目录 ====="
+          dest=/tmp/probe-store
+          rm -rf "$dest"; mkdir -p "$dest"
+          git ls-files --cached --others --exclude-standard -z \
+            | while IFS= read -r -d '' f; do
+                mkdir -p "$dest/$(dirname "$f")"
+                cp -p "$f" "$dest/$f"
+              done
+          cd "$dest"
+          echo "副本里 pnpm store path: $(pnpm store path)"
+          echo
+          echo "===== 副本里复现离线安装 ====="
+          pnpm install --offline --frozen-lockfile 2>&1 | tail -25 || true
+
       - run: ${{ matrix.script }}
 
       # 子套件的 trace 原来从来没上传过（旧版只传根部的 playwright-report/，而那三套

@@ -55,7 +55,7 @@ fs.writeFileSync(
 
 const run = (args: string[]) =>
   execFileSync("pnpm", args, { cwd: dest, stdio: "inherit" });
-run(["install", "--offline", "--frozen-lockfile"]);
+run(["install", "--prefer-offline", "--frozen-lockfile"]);
 
 if (process.env.CI) {
   run(["build"]);

@@ -25,10 +25,12 @@ for (const file of [...new Set([...files, ".env.local"])]) {
   fs.mkdirSync(path.dirname(path.join(dest, file)), { recursive: true });
   fs.copyFileSync(from, path.join(dest, file));
 }
-// 依赖装到这份副本里（--offline 从 pnpm store 硬链接，不下载、不占额外磁盘，几秒钟）。
+// 依赖装到这份副本里（--prefer-offline：store 里有的不下载、额外磁盘只是硬链接，
+// 几秒钟；store 里缺的才走网络。原来是 --offline，2026-09 实测在 ubuntu-26.04 的
+// runner 上会因为 store 查不到而整条腿挂掉）。
 // 试过把 node_modules 软链过来，Turbopack 直接拒绝启动：
 // "Symlink [project]/node_modules is invalid, it points out of the filesystem root"。
-execFileSync("pnpm", ["install", "--offline", "--frozen-lockfile"], {
+execFileSync("pnpm", ["install", "--prefer-offline", "--frozen-lockfile"], {
   cwd: dest,
   stdio: "inherit",
 });

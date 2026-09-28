@@ -69,7 +69,7 @@ export const checkLeadLimit: typeof liveLeadLimit = async () => ({ ok: true, ret
 export const checkLeadActionLimit: typeof liveActionLimit = async () => ({ ok: true, retryAfter: 0 });
 `,
 );
-execFileSync("pnpm", ["install", "--offline", "--frozen-lockfile"], {
+execFileSync("pnpm", ["install", "--prefer-offline", "--frozen-lockfile"], {
   cwd: dest,
   stdio: "inherit",
 });
