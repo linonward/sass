@@ -25,6 +25,13 @@ test.describe("375px 宽度", () => {
     test(`${theme} 模式下 dashboard 不横向溢出`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
       await signIn(page, uniqueEmail("overflow"));
+      // 注册后的第一落点是引导页，同属产品面：清单里的等宽字体线索最容易顶破 375px。
+      await expect(page).toHaveURL("/onboarding");
+      const onboardingOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(onboardingOverflow, "onboarding").toBeLessThanOrEqual(0);
+
       await page.goto("/dashboard");
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
@@ -39,7 +46,9 @@ test("侧边栏在 Dashboard 和设置页之间导航，当前项高亮", async 
   isMobile,
 }) => {
   await signIn(page, uniqueEmail("nav"));
-  await expect(page).toHaveURL("/dashboard");
+  // 新用户先落到引导页，从这里开始测侧边栏导航。
+  await expect(page).toHaveURL("/onboarding");
+  await page.goto("/dashboard");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     d.home.title,
   );
@@ -89,7 +98,7 @@ test("删除账户：二次确认、跳回首页、数据被清除，再次登�
 }) => {
   const email = uniqueEmail("delete");
   await signIn(page, email);
-  await expect(page).toHaveURL("/dashboard");
+  await expect(page).toHaveURL("/onboarding");
   const oldId = await findUserId(email);
   expect(oldId).toBeTruthy();
 
@@ -135,6 +144,8 @@ test("删除账户：二次确认、跳回首页、数据被清除，再次登�
   expect(left).toEqual({ user: 0, session: 0, account: 0, verification: 0 });
 
   // 验证码登录会自动注册：同一邮箱再登录得到的是一个新的空账户。
+  // 这次登录是从 /sign-in?callbackURL=/dashboard 发出的（上一段刚验证过旧会话失效），
+  // 带 callbackURL 的登录尊重深链，所以新账户不会先落引导页（见 onboarding.spec.ts）。
   await useRandomIp(page);
   await signIn(page, email);
   await expect(page).toHaveURL("/dashboard");

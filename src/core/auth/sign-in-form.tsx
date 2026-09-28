@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { legalPages } from "@/core/legal/pages";
+import { resolvePostSignInPath } from "@/core/onboarding/landing";
 import { Button } from "@/core/ui/button";
 import { Input } from "@/core/ui/input";
 import { Label } from "@/core/ui/label";
@@ -28,6 +29,11 @@ type AuthError = {
 type Props = {
   /** 登录成功后跳转的站内地址（已清洗，含语言前缀）。 */
   callbackURL: string;
+  /**
+   * 首次运行引导地址（含语言前缀）。这次登录带了 callbackURL 参数时为 null：
+   * 深链优先，不做引导（规则见 src/core/onboarding/landing.ts）。
+   */
+  onboardingPath: string | null;
   /** Google client ID（公开值）；为 null 表示没启用 Google 登录（本地没配凭据、Vercel 预览）。 */
   googleClientId: string | null;
   otp: OtpSettings;
@@ -58,7 +64,12 @@ function GoogleIcon() {
   );
 }
 
-export function SignInForm({ callbackURL, googleClientId, otp }: Props) {
+export function SignInForm({
+  callbackURL,
+  onboardingPath,
+  googleClientId,
+  otp,
+}: Props) {
   const t = useTranslations("Auth.signIn");
   const te = useTranslations("Auth.errors");
   // 有 client ID 就等于启用了 Google 登录：按钮和 One Tap 提示同源，不会各判一次。
@@ -164,7 +175,7 @@ export function SignInForm({ callbackURL, googleClientId, otp }: Props) {
   async function verify(value: string) {
     setError(null);
     setPending(true);
-    const { error: err } = await authClient.signIn.emailOtp({
+    const { data, error: err } = await authClient.signIn.emailOtp({
       email,
       otp: value,
     });
@@ -174,8 +185,11 @@ export function SignInForm({ callbackURL, googleClientId, otp }: Props) {
       setError(describe(err as AuthError));
       return;
     }
-    // 整页跳转，让服务端组件读到新的 session cookie。
-    window.location.assign(callbackURL);
+    // 整页跳转，让服务端组件读到新的 session cookie。去哪儿由返回值里的用户记录决定：
+    // 没带 callbackURL 的登录里，还没走完首次运行引导的用户先去引导页。
+    window.location.assign(
+      resolvePostSignInPath({ callbackURL, onboardingPath, user: data?.user }),
+    );
   }
 
   function onCodeChange(value: string) {
@@ -190,6 +204,9 @@ export function SignInForm({ callbackURL, googleClientId, otp }: Props) {
     const { error: err } = await authClient.signIn.social({
       provider: "google",
       callbackURL,
+      // Google 这条路径是整页往返，客户端插不上话：新注册的用户只能靠服务端回调目标
+      // 直接送进引导页。已有账号但还没走完清单的不引导 —— 服务端分不出他完成没完成。
+      ...(onboardingPath ? { newUserCallbackURL: onboardingPath } : {}),
     });
     if (err) {
       setPending(false);

@@ -170,8 +170,13 @@ const config = defineConfig({
   // 例如 { key: "projects", href: "/projects", icon: "layers" }；这些路径自动需要登录。
   // 不在侧边栏里的业务页面（放在 (app) 下）也会由 layout 校验登录，只是跳转登录页时不带回跳地址。
   dashboard: {
-    // 示例业务模块（src/features/example/）。删除示例时把这一项一起删掉。
-    nav: [{ key: "example", href: "/example", icon: "sparkles" }],
+    nav: [
+      // 首次运行清单（src/core/onboarding/）：注册后自动落一次，之后从这里随时进。
+      // 是套件页，但入口和其它业务菜单排在一起，侧边栏的顺序就只有一个来源。
+      { key: "onboarding", href: "/onboarding", icon: "fileText" },
+      // 示例业务模块（src/features/example/）。删除示例时把这一项一起删掉。
+      { key: "example", href: "/example", icon: "sparkles" },
+    ],
   },
   credits: {
     // 余额跌破这个值时提醒用户充值（credits-low 邮件）。

@@ -368,7 +368,8 @@
       "referrals": "邀请好友",
       "adminStatus": "状态页",
       "apiKeys": "API 密钥",
-      "adminApiKeys": "API 密钥"
+      "adminApiKeys": "API 密钥",
+      "onboarding": "上手引导"
     },
     "userMenu": {
       "open": "账户菜单",
@@ -1086,6 +1087,49 @@
       "rate_limited": "请求过于频繁。请稍等片刻再试。",
       "ai_unavailable": "AI 当前不可用。",
       "failed": "出了点问题。你的积分未被消耗。"
+    }
+  },
+  "Onboarding": {
+    "metaTitle": "上手引导",
+    "title": "上手引导",
+    "description": "把模板改成你自己的站。每一步都指向具体的文件或页面；下面的判定读的是你的配置，不靠自觉。",
+    "checklist": {
+      "title": "清单"
+    },
+    "progress": "已完成 {done}/{total}",
+    "done": "已完成",
+    "manual": "我做过这一步了",
+    "open": "打开",
+    "mark": "标记为已完成",
+    "marking": "保存中…",
+    "alreadyDone": "已标记完成",
+    "footer": "清单不是门禁：标记完成后登录不会再落回这一页，侧边栏里随时能进。",
+    "steps": {
+      "brandColor": {
+        "title": "改品牌色",
+        "description": "整站的颜色——按钮、徽章、营销面的色带——都由这一个值推导。",
+        "target": "site.config.ts · brand.primaryColor"
+      },
+      "siteName": {
+        "title": "设置站点名称",
+        "description": "名称、域名、法律主体和发件地址。出厂占位值会让生产构建直接失败，上线前必须改掉。",
+        "target": "site.config.ts · name / domain / legal / email"
+      },
+      "pricing": {
+        "title": "编辑 pricing",
+        "description": "把占位产品 ID 换成支付服务商里的真实 ID；还是占位值时结账会被拒绝。",
+        "target": "site.config.ts · billing.plans"
+      },
+      "blogPost": {
+        "title": "写第一篇文章",
+        "description": "在演示文章旁边加一个 MDX 文件——那两篇演示文章可以删掉。",
+        "target": "content/blog/en/*.mdx"
+      },
+      "deploy": {
+        "title": "部署到 Vercel",
+        "description": "导入仓库、填好环境变量，让生产构建替你检查一遍配置。",
+        "target": "vercel.com/new"
+      }
     }
   },
   "Acquisition": {

@@ -54,7 +54,9 @@ test("改邮箱成功后旧 session 立即失效，新邮箱可以重新登录",
   const newEmail = uniqueEmail("email-changed");
 
   await signIn(page, email);
-  await expect(page).toHaveURL("/dashboard");
+  // 新用户注册后的第一落点是引导页；这一例测的是会话失效，先回 dashboard 再往下走。
+  await expect(page).toHaveURL("/onboarding");
+  await page.goto("/dashboard");
   const userId = await findUserId(email);
   expect(userId).toBeTruthy();
 
@@ -119,8 +121,10 @@ test("改邮箱成功后旧 session 立即失效，新邮箱可以重新登录",
   expect(await findUserId(email)).toBeUndefined();
 
   // 新邮箱能登录，而且进的是同一个账户。
+  // 这次登录前浏览器里还留着已经失效的 cookie，/dashboard 会由页面自己送去不带
+  // callbackURL 的 /sign-in（带 cookie 时 proxy 不插手），所以还是先落引导页。
   await useRandomIp(page);
   await signIn(page, newEmail);
-  await expect(page).toHaveURL("/dashboard");
+  await expect(page).toHaveURL("/onboarding");
   expect(await findUserId(newEmail)).toBe(userId);
 });
