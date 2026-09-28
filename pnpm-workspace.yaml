@@ -7,6 +7,14 @@ allowBuilds:
 
 # pnpm 12 不再读取 package.json 里的 pnpm 字段，overrides 必须写在这里。
 overrides:
+  # 开发依赖链 drizzle-kit → @esbuild-kit/esm-loader → @esbuild-kit/core-utils 钉着
+  # esbuild ~0.18.20，而 <= 0.24.2 有已知告警（esbuild 的 dev server 允许任意站点跨域
+  # 发请求并读响应，GHSA-67mh-4wv8-2f99，pnpm audit 报 moderate）。这条链已并入 tsx、
+  # 标记 deprecated，等不到上游修复，只能自己抬。core-utils 只用 esbuild 的 transform /
+  # build，碰不到 dev server，所以告警本身走不到；这里写 ^0.25.0（第一个修好的版本线，
+  # 与 drizzle-kit 自己那条 esbuild ^0.25.4 对齐，取仓库里已有的版本，不引入新下载）。
+  # 越界改版本要有依据：改完实测 pnpm db:generate / db:migrate / notices:check 均正常。
+  "@esbuild-kit/core-utils>esbuild": "^0.25.0"
   toml: ">=4.2.0"
   uuid: ">=11.1.1"
 

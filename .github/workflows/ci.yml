@@ -68,6 +68,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # 依赖漏洞闸门：拿 pnpm-lock.yaml 和 registry 的漏洞库比对，有 >= high 的直接挡下。
+      # 级别停在 high 而不是 moderate：dev 工具链里的 moderate 相当常见，其中一部分描述的
+      # 代码路径（例如 esbuild 的 dev server）本项目根本走不到，逼着修容易诱人写越界的
+      # override 去消音；high / critical 才是必须处理的那条线。开闸时基线是 0 —— 当时唯一
+      # 的 moderate（@esbuild-kit 链上的 esbuild）已用 overrides 修掉，见 pnpm-workspace.yaml。
+      # 不加 --ignore-registry-errors：闸门对 registry 抽风宁可 fail closed，重跑一次就好。
+      - run: pnpm audit --audit-level=high
+
       - run: pnpm lint
 
       - run: pnpm format:check
