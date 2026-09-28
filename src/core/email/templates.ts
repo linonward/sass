@@ -4,6 +4,10 @@ import LeadConfirmationEmail, {
 } from "./templates/lead-confirmation";
 import type { ComponentType } from "react";
 
+import ChangeEmailCodeEmail, {
+  changeEmailCodeSubject,
+  type ChangeEmailCodeProps,
+} from "./templates/change-email-code";
 import CreditsLowEmail, {
   creditsLowSubject,
   type CreditsLowProps,
@@ -53,6 +57,10 @@ export const emailTemplates = {
     Component: SignInCodeEmail,
     subject: signInCodeSubject,
   } satisfies TemplateDefinition<SignInCodeProps>,
+  "change-email-code": {
+    Component: ChangeEmailCodeEmail,
+    subject: changeEmailCodeSubject,
+  } satisfies TemplateDefinition<ChangeEmailCodeProps>,
   welcome: {
     Component: WelcomeEmail,
     subject: welcomeSubject,
@@ -88,6 +96,7 @@ export type EmailTemplateName = keyof typeof emailTemplates;
 export type EmailTemplateProps = {
   "lead-confirmation": LeadConfirmationProps;
   "sign-in-code": SignInCodeProps;
+  "change-email-code": ChangeEmailCodeProps;
   welcome: WelcomeProps;
   "payment-succeeded": PaymentSucceededProps;
   "payment-failed": PaymentFailedProps;

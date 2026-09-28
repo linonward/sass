@@ -128,7 +128,7 @@
 | **阶段 17：审计收尾**       |                         |                                |                               |      |
 | T1701                       | auth-tests              | `fix/auth-tests`               | —                             | todo |
 | T1702                       | instrumentation-tests   | `fix/instrumentation-tests`    | —                             | done |
-| T1703                       | session-invalidation    | `feat/session-invalidation`    | —                             | todo |
+| T1703                       | session-invalidation    | `feat/session-invalidation`    | —                             | done |
 | T1704                       | ci-dep-audit            | `chore/ci-dep-audit`           | —                             | done |
 | **阶段 18：支付商扩展**     |                         |                                |                               |      |
 | T1801                       | stripe                  | `feat/stripe`                  | T1704                         | todo |

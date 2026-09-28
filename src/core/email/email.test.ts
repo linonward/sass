@@ -132,6 +132,10 @@ describe("renderEmail", () => {
 
   test.each([
     ["sign-in-code", signIn.props],
+    [
+      "change-email-code",
+      { code: "482913", expiresInMinutes: 5, forNewEmail: false },
+    ],
     ["welcome", { name: "Ada" }],
     [
       "payment-succeeded",
@@ -190,6 +194,30 @@ describe("renderEmail", () => {
     const email = await renderEmail({ to: "a@b.co", template, props } as never);
     expect(email.html).toMatchSnapshot("html");
     expect(email.text).toMatchSnapshot("text");
+  });
+});
+
+describe("改邮箱验证码", () => {
+  const props = { code: "482913", expiresInMinutes: 5 };
+
+  // 改邮箱要两个验证码：发往当前邮箱的是"确认是你发起的变更"，发往新邮箱的是
+  // "确认这个地址能用"。两封信的措辞不能一样，否则收件人分不清在确认哪一步。
+  test("发往当前邮箱与新邮箱用不同主题和文案", async () => {
+    const current = await renderEmail({
+      to: "a@b.co",
+      template: "change-email-code",
+      props: { ...props, forNewEmail: false },
+    });
+    const next = await renderEmail({
+      to: "a@b.co",
+      template: "change-email-code",
+      props: { ...props, forNewEmail: true },
+    });
+
+    expect(current.subject).not.toBe(next.subject);
+    expect(current.text).not.toBe(next.text);
+    expect(current.text).toContain(props.code);
+    expect(next.text).toContain(props.code);
   });
 });
 

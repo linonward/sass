@@ -36,6 +36,8 @@ import { googleCredentials, resolveAuthBaseURL } from "./env";
 import { EMAIL_SEND_FAILED } from "./errors";
 import { identifySessionUser } from "./identify";
 import { resolveRequestLocale } from "./locale";
+import { otpEmail } from "./otp-email";
+import { revokeSessionsOnEmailChange } from "./session-invalidation";
 
 const otp = siteConfig.auth.emailOtp;
 const google = googleCredentials(process.env);
@@ -193,24 +195,33 @@ export const auth = betterAuth({
       // 按 IP 限制发送频率；按邮箱的重发冷却由 otpResendCooldown 负责。
       rateLimit: { window: 60, max: 5 },
       storeOTP: "hashed",
+      // 改邮箱：两个开关都来自 site.config.ts（见那里的注释）。verifyCurrentEmail 打开后
+      // 这个插件会多出 request-email-change / change-email 两个端点；改成功后由
+      // revokeSessionsOnEmailChange 作废该用户的全部 session。
+      changeEmail: siteConfig.auth.changeEmail,
       async sendVerificationOTP({ email, otp: code, type }, ctx) {
-        if (type !== "sign-in") return;
+        const content = otpEmail({
+          type,
+          code,
+          expiresInMinutes: Math.round(otp.expiresIn / 60),
+        });
+        // 本站只发登录验证码和改邮箱流程的两个验证码，其它类型不发信。
+        if (!content) return;
         try {
           await sendEmail({
             to: email,
-            template: "sign-in-code",
-            props: { code, expiresInMinutes: Math.round(otp.expiresIn / 60) },
+            ...content,
             locale: resolveRequestLocale(ctx?.headers ?? ctx?.request?.headers),
           });
         } catch (error) {
-          logger.error("auth.sign_in_code_failed", error);
+          logger.error("auth.otp_email_failed", { error, type });
           // 没发出去就不计入冷却，让用户可以立即重试。
           await ctx?.context.internalAdapter
             .deleteVerificationByIdentifier(cooldownIdentifier(email))
             .catch(() => {});
           throw new APIError("BAD_GATEWAY", {
             code: EMAIL_SEND_FAILED,
-            message: "Failed to send the sign-in code",
+            message: "Failed to send the code",
           });
         }
       },
@@ -226,6 +237,8 @@ export const auth = betterAuth({
     // clientId 与 socialProviders.google 是同一个值；显式传一遍，让 ID token 验签的
     // audience 只有一个来源。
     ...(google ? [oneTap({ clientId: google.clientId })] : []),
+    // 改邮箱成功后作废该用户的所有 session（放在 emailOTP 之后，只借它的端点路径）。
+    revokeSessionsOnEmailChange(),
     // 必须放在最后：让 Server Action 里调用的 auth 接口也能写 cookie。
     nextCookies(),
   ],

@@ -157,6 +157,14 @@ const config = defineConfig({
       allowedAttempts: 3,
       resendCooldown: 60,
     },
+    // 改邮箱（`/email-otp/change-email` 等接口；设置页暂时没有入口）。verifyCurrentEmail
+    // 会往当前邮箱也发一个验证码，只有两个验证码都拿到才能改 —— 只偷到 session cookie
+    // 的人改不了邮箱，否则等于把账号交出去。改成功后该用户所有 session 立即失效
+    // （见 src/core/auth/session-invalidation.ts）。
+    changeEmail: {
+      enabled: true,
+      verifyCurrentEmail: true,
+    },
   },
   // 登录后侧边栏里业务自己的菜单项，文案在 messages 的 Dashboard.nav.<key>。
   // 例如 { key: "projects", href: "/projects", icon: "layers" }；这些路径自动需要登录。

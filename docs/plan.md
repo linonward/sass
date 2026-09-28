@@ -135,6 +135,28 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 
 实施先做归因与报表，再做线索，最后做邀请奖励；报表依赖 T1202 退款口径修复，奖励依赖 T1202 和 T1204 计费加固。详细数据口径、开关、删除/保留规则、验收和测试以阶段任务卡为准。
 
+### 会话失效（阶段 17）
+
+邮箱是找回账号的凭据，改邮箱、删账户这类操作必须让旧 session 立刻失效，否则改之前拿到 session 的人
+（旧设备、被偷的 cookie）还能继续用旧身份访问。2026-09-28 的结论（T1703）：
+
+- **能靠 Better Auth 自己全量失效。** 1.7.6 的 `internalAdapter.deleteUserSessions(userId)`（HTTP 端点
+  `POST /revoke-sessions`，`auth.api.revokeSessions`）就是"踢掉该用户所有设备"，不需要
+  `secondaryStorage`，也不需要绕过插件。任务卡里猜的 `session.allowedSubset` 不存在这个 API。
+- **改邮箱成功后清全部 session。** 实现是 `src/core/auth/session-invalidation.ts` 里的插件，挂在
+  emailOTP 的 `/email-otp/change-email` 端点之后，只在端点成功（`{ success: true }`）时动手 —— 端点是
+  先更新邮箱再返回，中途失败（验证码错、新邮箱被占用）时 after 钩子照样会跑，所以必须看 `returned`
+  而不能只看"钩子跑了"。当前设备也在被清之列，改完用新邮箱重新登录。
+- **改邮箱要两个验证码。** `changeEmail.enabled` + `verifyCurrentEmail: true`：一个发到当前邮箱、一个
+  发到新邮箱，开关写在 `site.config.ts` 的 `auth.changeEmail`。不要求验证当前邮箱的话，只偷到
+  session cookie 就能把邮箱改成攻击者的地址，等于把账号交出去。两封邮件用同一个模板
+  `change-email-code`（`forNewEmail` 区分收件人），文案在 `messages/*.json` 的 `Email.changeEmailCode`。
+- **删账户本来就清了。** `session.userId` 是外键级联（`src/core/db/schema/auth.ts`），删 user 那一行时
+  数据库把 session 一起删；浏览器里的 cookie 由 `deleteAccount`（`src/core/account/actions.ts`）清。
+  不需要额外逻辑，只在 `delete-user.ts` 补了注释说明。
+- **设置页暂时没有改邮箱入口。** 接口能用（e2e 直接调接口覆盖），UI 属于后续任务；核心插件的链接式
+  `/change-email`（`user.changeEmail.enabled`）在本仓库保持关闭。
+
 ## 风险
 
 - **最脆弱的假设**：业务代码遵守目录边界。一旦大量改动 `src/core`，上游更新就合不回去。缓解：在 T503 加 `UPGRADING.md`，并用 lint 规则标记业务项目对 `src/core` 的改动。

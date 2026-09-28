@@ -205,6 +205,19 @@
       "expires": "This code expires in {minutes, plural, one {# minute} other {# minutes}}.",
       "ignore": "If you didn't try to sign in, you can safely ignore this email."
     },
+    "changeEmailCode": {
+      "subjectCurrent": "Confirm your {name} email change",
+      "subjectNew": "Confirm your new {name} email address",
+      "previewCurrent": "{code} is your code to confirm the email change",
+      "previewNew": "{code} is your code to confirm your new address",
+      "headingCurrent": "Confirm your email change",
+      "headingNew": "Confirm your new email address",
+      "introCurrent": "Someone asked to change the email address on your {name} account. Enter this code to confirm it was you:",
+      "introNew": "Enter this code to start using this address to sign in to {name}:",
+      "expires": "This code expires in {minutes, plural, one {# minute} other {# minutes}}.",
+      "ignoreCurrent": "If you didn't ask for this change, don't enter the code. Someone may have access to your session — sign in and review your account.",
+      "ignoreNew": "If you didn't ask for this change, you can safely ignore this email."
+    },
     "welcome": {
       "subject": "Welcome to {name}",
       "preview": "Thanks for joining {name}",
