@@ -15,7 +15,7 @@ test("非默认语言页面的 canonical 与 hreflang", async ({ page }) => {
     localized,
   );
   const alternates = head.locator('link[rel="alternate"][hreflang]');
-  await expect(alternates).toHaveCount(3);
+  await expect(alternates).toHaveCount(4); // en, zh, de, x-default
   await expect(
     head.locator(`link[rel="alternate"][hreflang="${TEST_LOCALE}"]`),
   ).toHaveAttribute("href", localized);

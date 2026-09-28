@@ -22,9 +22,9 @@ test.describe("375px 宽度", () => {
   for (const theme of ["light", "dark"] as const) {
     test(`${theme} 模式下 404 页不横向溢出`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
-      // /zh 是「未启用的语言前缀」：proxy 把它当无前缀路径重写，同样由 [locale] 的
+      // /de 是「未启用的语言前缀」：proxy 把它当无前缀路径重写，同样由 [locale] 的
       // not-found 接住（两条入口的 locale 不同，覆盖的取值路径不同）。
-      for (const path of ["/does-not-exist", "/zh", "/missing.png"]) {
+      for (const path of ["/does-not-exist", "/de", "/missing.png"]) {
         const response = await page.goto(path);
         expect(response?.status()).toBe(404);
         await expect(

@@ -14,8 +14,8 @@ export function legalMetadata(document: LegalDocument, path: string) {
     });
 }
 
-function formatDate(isoDate: string) {
-  return new Intl.DateTimeFormat("en-US", {
+function formatDate(isoDate: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "long",
     timeZone: "UTC",
   }).format(new Date(`${isoDate}T00:00:00Z`));
@@ -28,9 +28,11 @@ function formatDate(isoDate: string) {
 export function LegalPage({
   document,
   effectiveDateLabel = "Effective date:",
+  locale = "en-US",
 }: {
   document: LegalDocument;
   effectiveDateLabel?: string;
+  locale?: string;
 }) {
   const { legal, name, domain } = siteConfig;
   const email = (
@@ -49,7 +51,7 @@ export function LegalPage({
         <p className="text-muted-foreground mt-3! text-sm">
           {effectiveDateLabel}{" "}
           <time dateTime={legal.effectiveDate}>
-            {formatDate(legal.effectiveDate)}
+            {formatDate(legal.effectiveDate, locale)}
           </time>
         </p>
       </header>
