@@ -1,16 +1,17 @@
 # 阶段 17：审计收尾
 
-审计（2026-09-28 全项目审计）发现的剩余缺口，按优先级挑了 4 个值得修的。
+审计（2026-09-28 全项目审计）发现的剩余缺口，按优先级挑了 4 个值得修的；T1705 是 T1701 实施期间实测到的第 5 个。
 
 ## 依赖
 
-全部独立，无相互依赖。可以并行开 4 个 worktree。
+全部独立，无相互依赖。可以并行开 5 个 worktree。
 
 ```
 T1701 ─┐
-T1702 ─┤  全部可并行
-T1703 ─┤
-T1704 ─┘
+T1702 ─┤
+T1703 ─┤  全部可并行
+T1704 ─┤
+T1705 ─┘
 ```
 
 ## 任务
@@ -60,6 +61,18 @@ T1704 ─┘
   - 当前有已知漏洞则先修再开闸
   - 确认 Dependabot 每周还在跑、PR 自动 merge 策略合理
 - **验证**: CI 通过；`pnpm audit` 不报 high/critical
+
+### T1705: 语言 cookie 解析失败时回退默认语言
+
+- **topic**: `locale-decode`
+- **分支**: `fix/locale-decode`
+- **范围**: `src/core/auth/locale.ts`
+- **来由**: T1701 写 `resolveRequestLocale` 边界用例时实测到的（2026-09-28）。
+- **做什么**:
+  - `resolveRequestLocale` 对 `NEXT_LOCALE` cookie 的原值直接 `decodeURIComponent`，残缺的百分号编码（`%E0`、`%`、`%zz`、`%E4%B8`）会抛 `URIError`
+  - 两条调用路径代价不同：`sendVerificationOTP` 里的调用在 try 内（被误报成「发信失败」），而 `user.create.after` 里的调用在 try 之外 —— cookie 坏掉的访客**注册会直接失败**
+  - 修法：解码失败当作没写这条 cookie，走默认语言；补上这几种输入的回归用例
+- **验证**: `pnpm test`；坏 cookie 不再抛错、`x-locale` 与合法 cookie 的行为不变
 
 ## 完成后
 

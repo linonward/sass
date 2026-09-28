@@ -14,7 +14,13 @@ export function withLocaleHeader(context: { headers: Headers }) {
   }
 }
 
-/** 从请求头推断收件人的语言：先看 x-locale，再看 next-intl 的语言 cookie，最后用默认语言。 */
+/**
+ * 从请求头推断收件人的语言：先看 x-locale，再看 next-intl 的语言 cookie，最后用默认语言。
+ *
+ * cookie 的值可能被截断或被手工改坏，而 `decodeURIComponent` 遇到残缺的百分号编码会抛
+ * URIError。解不出来就当作没写这条 cookie：调用方里有 `user.create.after` 这种不在 try
+ * 里的路径，为一条坏 cookie 把整个注册弄失败不划算。
+ */
 export function resolveRequestLocale(headers: Headers | undefined): string {
   const locales: readonly string[] = routing.locales;
   const fromHeader = headers?.get(LOCALE_HEADER);
@@ -22,8 +28,17 @@ export function resolveRequestLocale(headers: Headers | undefined): string {
   const cookie = headers?.get("cookie") ?? "";
   const encoded = /(?:^|;\s*)NEXT_LOCALE=([^;]+)/.exec(cookie)?.[1];
   if (encoded) {
-    const fromCookie = decodeURIComponent(encoded);
-    if (locales.includes(fromCookie)) return fromCookie;
+    const fromCookie = decodeLocaleCookie(encoded);
+    if (fromCookie && locales.includes(fromCookie)) return fromCookie;
   }
   return routing.defaultLocale;
+}
+
+/** 解出 cookie 里的语言；编码残缺时返回 undefined，不抛错。 */
+function decodeLocaleCookie(value: string): string | undefined {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return undefined;
+  }
 }

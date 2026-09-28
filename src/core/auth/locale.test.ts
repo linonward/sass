@@ -70,6 +70,25 @@ describe("resolveRequestLocale", () => {
   test("边界：没有 cookie 头时也不崩", () => {
     expect(resolveRequestLocale(new Headers({ accept: "*/*" }))).toBe("en");
   });
+
+  test("cookie 编码残缺时不抛错，回退默认语言", () => {
+    // 这几个都是 decodeURIComponent 会抛 URIError 的输入：截断的多字节序列、
+    // 落单的百分号、非十六进制的转义、只有一半的多字节序列。
+    // 抛出去会顺着 user.create.after 冒到注册请求上（见 locale.ts 的注释）。
+    for (const broken of ["%E0", "%", "%zz", "%E4%B8"]) {
+      expect(
+        resolveRequestLocale(new Headers({ cookie: `NEXT_LOCALE=${broken}` })),
+      ).toBe("en");
+    }
+  });
+
+  test("坏 cookie 不影响已经带对的 x-locale", () => {
+    const headers = new Headers({
+      "x-locale": "de",
+      cookie: "NEXT_LOCALE=%E0",
+    });
+    expect(resolveRequestLocale(headers)).toBe("de");
+  });
 });
 
 describe("withLocaleHeader", () => {
