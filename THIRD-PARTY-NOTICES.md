@@ -138,7 +138,7 @@
 | `@vercel/otel`                    | 2.1.3   | prod     |
 | `@vitejs/plugin-react`            | 6.1.1   | dev      |
 | `@vitest/coverage-v8`             | 5.0.2   | dev      |
-| `@waffo/waffo-node`               | 3.1.0   | prod     |
+| `@waffo/pancake-ts`               | 0.25.0  | prod     |
 | `auth`                            | 1.7.6   | dev      |
 | `better-auth`                     | 1.7.6   | prod     |
 | `cn`                              | 0.4.0   | prod     |

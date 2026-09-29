@@ -322,15 +322,15 @@ const table: Array<{
     ALLOW_FAKE_BILLING: "1",
     allowed: false,
   },
-  // 硬锁：WAFFO_MODE=production（真实扣款）——开关也无效；sandbox 不影响
-  { NODE_ENV: "development", WAFFO_MODE: "production", allowed: false },
+  // 硬锁：WAFFO_MODE=prod（真实收款）——开关也无效；test 不影响
+  { NODE_ENV: "development", WAFFO_MODE: "prod", allowed: false },
   {
     NODE_ENV: "development",
-    WAFFO_MODE: "production",
+    WAFFO_MODE: "prod",
     ALLOW_FAKE_BILLING: "1",
     allowed: false,
   },
-  { NODE_ENV: "development", WAFFO_MODE: "sandbox", allowed: true },
+  { NODE_ENV: "development", WAFFO_MODE: "test", allowed: true },
   // 硬锁二：在 Vercel 上（含 vercel dev 的 development）——开关也无效
   { NODE_ENV: "development", VERCEL_ENV: "development", allowed: false },
   { NODE_ENV: "production", VERCEL_ENV: "preview", allowed: false },

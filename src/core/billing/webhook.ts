@@ -30,14 +30,8 @@ export async function processWebhook(
     throw error;
   }
 
-  // 服务商对回复有特定要求（签名、固定格式）时由它生成；否则用下面的默认 JSON。
-  const reply = (body: unknown, init?: ResponseInit) =>
-    provider.webhookResponse
-      ? provider.webhookResponse((init?.status ?? 200) < 400)
-      : Response.json(body, init);
-
   const event = provider.parseEvent(payload);
-  if (!event) return reply({ status: "ignored" });
+  if (!event) return Response.json({ status: "ignored" });
 
   const fields = {
     provider: event.provider,
@@ -57,11 +51,11 @@ export async function processWebhook(
         // duplicate：同一事件重复推送，没有重复处理。
         span.setAttribute("billing.result", result.status);
         logger.info("billing.webhook", { ...fields, result: result.status });
-        return reply(result);
+        return Response.json(result);
       } catch (error) {
         recordSpanError(span, error);
         logger.error("billing.webhook_failed", { ...fields, error });
-        return reply({ error: "processing_failed" }, { status: 500 });
+        return Response.json({ error: "processing_failed" }, { status: 500 });
       }
     },
   );

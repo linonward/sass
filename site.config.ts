@@ -53,8 +53,7 @@ const productIdEnvPrefix: Record<BillingProviderName, string> = {
   creem: "CREEM_PRODUCT_ID",
   stripe: "STRIPE_PRICE_ID",
   lemonsqueezy: "LEMONSQUEEZY_VARIANT_ID",
-  // Waffo 没有产品目录：金额每次下单时直接取套餐的 price 和 billing.currency，
-  // 产品 ID 不会被用到（占位值也不会挡住结账）。留这一项只是让每个服务商都有前缀。
+  // Waffo Pancake 的产品 ID（`PROD_…`），test / prod 两套。
   waffo: "WAFFO_PRODUCT_ID",
 };
 

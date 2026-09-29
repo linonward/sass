@@ -3,9 +3,8 @@ import { WAFFO_PROVIDER_ID } from "@/core/billing/providers/waffo";
 import { processWebhook } from "@/core/billing/webhook";
 
 /**
- * Waffo webhook：校验签名后交给 handleBillingEvent，回复由 adapter 签名（Waffo 要求）。
- * 地址由结账时的 notifyUrl 带给 Waffo（https://<domain>/api/webhooks/waffo）；
- * 退款通知在 Waffo Portal 里把全局通知地址也配成这个。
+ * Waffo Pancake webhook：校验签名（按 WAFFO_MODE 的环境）后交给 handleBillingEvent。
+ * 在 Pancake 后台的 Webhooks 里配置为 https://<domain>/api/webhooks/waffo。
  */
 export async function POST(request: Request) {
   const provider = getBillingProvider();

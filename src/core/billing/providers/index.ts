@@ -55,15 +55,10 @@ function createProvider(): PaymentProvider | null {
   }
 
   if (env.BILLING_PROVIDER === "waffo") {
-    return env.WAFFO_API_KEY &&
-      env.WAFFO_PRIVATE_KEY &&
-      env.WAFFO_PUBLIC_KEY &&
-      env.WAFFO_MERCHANT_ID
+    return env.WAFFO_MERCHANT_ID && env.WAFFO_PRIVATE_KEY
       ? createWaffoProvider({
-          apiKey: env.WAFFO_API_KEY,
-          privateKey: env.WAFFO_PRIVATE_KEY,
-          publicKey: env.WAFFO_PUBLIC_KEY,
           merchantId: env.WAFFO_MERCHANT_ID,
+          privateKey: env.WAFFO_PRIVATE_KEY,
           mode: env.WAFFO_MODE,
         })
       : null;

@@ -1,551 +1,417 @@
-import {
-  RsaUtils,
-  type HttpRequest,
-  type HttpResponse,
-  type HttpTransport,
-} from "@waffo/waffo-node";
+import { createSign, generateKeyPairSync } from "node:crypto";
+
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { WebhookVerificationError } from "../provider";
 import { processWebhook } from "../webhook";
 import {
   createWaffoProvider,
-  WAFFO_MAX_PLAN_ID_LENGTH,
-  waffoAmount,
+  WAFFO_PORTAL_URL,
   waffoMinorUnits,
 } from "./waffo";
 
-// 真实的官方 SDK + 离线生成的两对 RSA 密钥（我方 / 模拟的 Waffo），HTTP 层换成假的：
-// 请求签名、响应验签、webhook 验签、回复签名都是真跑的，不联网、不需要任何真实密钥。
-//
-// webhook 的 fixture 按 Waffo 文档的约定构造：`{ eventType, result }`，`result` 与对应查询接口
-// （order / subscription / refund inquiry）的 `data` 同构，字段名取自官方 OpenAPI 规范；
-// 文档没有给完整的示例 body，所以这里没有逐字节照抄的 payload。时间是 ISO 8601，金额是小数字符串。
+// 真实的官方 SDK（@waffo/pancake-ts）+ 注入的假 fetch：请求签名由 SDK 真跑，不联网。
+// webhook 用本地生成的 RSA 密钥按 Pancake 的格式签（X-Waffo-Signature: t=<毫秒>,v1=<base64>，
+// 签名输入是 `${t}.${body}`），通过 `webhookPublicKey` 注入给验签 —— 生产环境用 SDK 内置的公钥。
+// 事件结构取自 SDK 自带的 docs/webhook-guide.md（WebhookEvent / WebhookEventData）。
 
-// 站点配置里的套餐：pro（月付 19）、lifetime（一次性 199）。再加一个年付的，覆盖 MONTHLY × 12。
+// 套餐的产品 ID 要符合 Pancake 的格式（PROD_ + 22 位）。
 vi.mock("../plans", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../plans")>();
-  const yearly = {
-    id: "annual",
-    price: 190,
-    interval: "year",
-    type: "subscription",
-    credits: 24000,
-    features: [],
+  const products: Record<string, string> = {
+    pro: "PROD_000000000000000000pro1",
+    lifetime: "PROD_00000000000000000life1",
   };
   return {
     ...actual,
-    getPlan: (id: string) =>
-      id === "annual" ? (yearly as never) : actual.getPlan(id),
+    getPlan: (id: string) => {
+      const plan = actual.getPlan(id);
+      return plan && products[id]
+        ? { ...plan, providerProductId: products[id] }
+        : plan;
+    },
   };
 });
 
-const merchant = RsaUtils.generateKeyPair();
-const waffoKeys = RsaUtils.generateKeyPair();
-const NOW = new Date("2026-09-29T08:00:00.000Z");
+const MERCHANT_ID = "MER_0000000000000000000abc";
+const merchant = generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  publicKeyEncoding: { type: "spki", format: "pem" },
+});
+const waffo = generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  publicKeyEncoding: { type: "spki", format: "pem" },
+});
 
-type Reply = {
-  code?: string;
-  msg?: string;
-  data?: unknown;
-  badSignature?: boolean;
-};
+type Call = { path: string; body: Record<string, unknown>; headers: Headers };
 
-function fakeTransport() {
-  const requests: {
-    path: string;
-    body: Record<string, unknown>;
-    request: HttpRequest;
-  }[] = [];
-  const replies = new Map<string, Reply[]>();
-  const transport: HttpTransport = {
-    async send(request: HttpRequest): Promise<HttpResponse> {
-      const path = new URL(request.url).pathname;
-      requests.push({ path, body: JSON.parse(request.body ?? "{}"), request });
-      const reply = replies.get(path)?.shift() ?? { code: "0", data: {} };
-      const body = JSON.stringify({
-        code: reply.code ?? "0",
-        msg: reply.msg ?? "success",
-        data: reply.data,
+function fakeFetch() {
+  const calls: Call[] = [];
+  const replies = new Map<string, unknown[]>();
+  const fetchImpl = vi.fn(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      calls.push({
+        path: url.pathname,
+        body: JSON.parse(String(init?.body ?? "{}")),
+        headers: new Headers(init?.headers),
       });
-      return {
-        statusCode: 200,
-        headers: {
-          "x-signature": RsaUtils.sign(
-            reply.badSignature ? `${body} ` : body,
-            waffoKeys.privateKey,
-          ),
-        },
-        body,
-      };
+      const reply = replies.get(url.pathname)?.shift() ?? { data: {} };
+      return new Response(JSON.stringify(reply), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     },
-  };
+  );
   return {
-    transport,
-    requests,
-    reply(path: string, reply: Reply) {
-      replies.set(path, [...(replies.get(path) ?? []), reply]);
+    fetch: fetchImpl as unknown as typeof fetch,
+    calls,
+    reply(path: string, body: unknown) {
+      replies.set(path, [...(replies.get(path) ?? []), body]);
     },
   };
 }
 
-function setup() {
-  const http = fakeTransport();
+function setup(mode: "test" | "prod" = "test") {
+  const http = fakeFetch();
   const provider = createWaffoProvider({
-    apiKey: "api-key",
+    merchantId: MERCHANT_ID,
     privateKey: merchant.privateKey,
-    publicKey: waffoKeys.publicKey,
-    merchantId: "M001",
-    mode: "sandbox",
-    httpTransport: http.transport,
-    now: () => NOW,
+    mode,
+    fetch: http.fetch,
+    webhookPublicKey: waffo.publicKey,
   });
   return { provider, http };
 }
 
-/** 模拟 Waffo 推来的 webhook：body 用 Waffo 的私钥签名。 */
-function webhookRequest(payload: unknown, { sign = true } = {}) {
-  const body = JSON.stringify(payload);
+function signed(body: string, key = waffo.privateKey, t = Date.now()) {
+  const signer = createSign("RSA-SHA256");
+  signer.update(`${t}.${body}`);
+  return `t=${t},v1=${signer.sign(key, "base64")}`;
+}
+
+function webhookRequest(event: unknown, signature?: string | null) {
+  const body = JSON.stringify(event);
   return new Request("https://acme.test/api/webhooks/waffo", {
     method: "POST",
-    headers: sign
-      ? { "x-signature": RsaUtils.sign(body, waffoKeys.privateKey) }
-      : {},
+    headers:
+      signature === null
+        ? {}
+        : { "x-waffo-signature": signature ?? signed(body) },
     body,
   });
 }
 
-const checkout = {
-  userId: "user_1",
-  customerEmail: "ada@example.com",
-  successUrl: "https://acme.test/en/billing/success",
-  cancelUrl: "https://acme.test/en#pricing",
+const ORDER = "ORD_0000000000000000000001";
+const SUB = "ORD_0000000000000000000sub";
+
+function event(
+  eventType: string,
+  data: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    id: `dlv-${eventType}`,
+    timestamp: "2026-09-29T08:01:00.000Z",
+    eventType,
+    eventId: `evt-${eventType}`,
+    storeId: "STO_0000000000000000000001",
+    storeName: "OnwardKit",
+    mode: "test",
+    data: {
+      orderId: ORDER,
+      buyerEmail: "ada@example.com",
+      merchantProvidedBuyerIdentity: "user_1",
+      orderMetadata: { userId: "user_1", planId: "lifetime" },
+      currency: "USD",
+      amount: "199.00",
+      taxAmount: "0.00",
+      productName: "Lifetime",
+      ...data,
+    },
+    ...extra,
+  };
+}
+
+const subscriptionData = {
+  orderId: SUB,
+  orderMetadata: { userId: "user_1", planId: "pro" },
+  amount: "19.00",
+  currentPeriodStart: "2026-09-29T08:00:00.000Z",
+  currentPeriodEnd: "2026-10-29T08:00:00.000Z",
 };
 
-describe("Waffo adapter", () => {
+describe("Waffo Pancake adapter", () => {
   let s: ReturnType<typeof setup>;
   beforeEach(() => {
     s = setup();
   });
 
-  test("金额直接传：声明 inlinePricing；按币种精度格式化、按 ISO 最小单位解析", () => {
-    expect(s.provider.inlinePricing).toBe(true);
-    expect(waffoAmount(19, "USD")).toBe("19.00");
-    expect(waffoAmount(9.99, "EUR")).toBe("9.99");
-    expect(waffoAmount(1000, "JPY")).toBe("1000");
-    expect(waffoAmount(150000, "IDR")).toBe("150000");
-    expect(waffoMinorUnits("19.00", "USD")).toBe(1900);
-    expect(waffoMinorUnits("9.99", "EUR")).toBe(999);
+  test("金额：展示格式 → ISO 最小单位", () => {
+    expect(waffoMinorUnits("29.00", "USD")).toBe(2900);
+    expect(waffoMinorUnits("1,299.50", "USD")).toBe(129950);
     expect(waffoMinorUnits("1000", "JPY")).toBe(1000);
-    // IDR 按 ISO 有 2 位小数：Waffo 同币种下单给整数，存成最小单位要 × 100。
     expect(waffoMinorUnits("150000", "IDR")).toBe(15000000);
+    expect(waffoMinorUnits("1.234", "KWD")).toBe(1234);
     expect(waffoMinorUnits(undefined, "USD")).toBeUndefined();
-    expect(waffoMinorUnits("abc", "USD")).toBeUndefined();
+    expect(waffoMinorUnits("n/a", "USD")).toBeUndefined();
   });
 
-  describe("createCheckout", () => {
-    test("一次性购买：order/create，请求带签名，金额取套餐价格，跳转收银台", async () => {
-      s.http.reply("/api/v1/order/create", {
-        data: {
-          acquiringOrderId: "ACQ1",
-          orderStatus: "PAY_IN_PROGRESS",
-          orderAction: JSON.stringify({
-            actionType: "WEB",
-            webUrl: "https://checkout-sandbox.waffo.com/pay/abc",
-          }),
-        },
-      });
-      const result = await s.provider.createCheckout({
-        ...checkout,
-        planId: "lifetime",
-      });
-
-      const [call] = s.http.requests;
-      expect(call!.path).toBe("/api/v1/order/create");
-      expect(call!.request.url).toMatch(/^https:\/\/api-sandbox\.waffo\.com\//);
-      // 请求体用我方私钥签名，Waffo 用我们上传的公钥验。
-      expect(
-        RsaUtils.verify(
-          call!.request.body!,
-          call!.request.headers["X-SIGNATURE"] ??
-            call!.request.headers["x-signature"]!,
-          merchant.publicKey,
-        ),
-      ).toBe(true);
-      expect(call!.body).toMatchObject({
-        orderCurrency: "USD",
-        orderAmount: "199.00",
-        notifyUrl: "https://acme.test/api/webhooks/waffo",
-        userInfo: {
-          userId: "user_1",
-          userEmail: "ada@example.com",
-          userTerminal: "WEB",
-        },
-        goodsInfo: {
-          goodsId: "lifetime",
-          goodsUrl: "https://acme.test/pricing",
-        },
-        paymentInfo: { productName: "ONE_TIME_PAYMENT" },
-        successRedirectUrl: checkout.successUrl,
-        cancelRedirectUrl: checkout.cancelUrl,
-        orderRequestedAt: NOW.toISOString(),
-        merchantInfo: { merchantId: "M001" },
-      });
-      expect(call!.body.paymentRequestId).toMatch(/^[0-9a-f]{32}$/);
-      expect(call!.body.merchantOrderId).toMatch(/^lifetime-[0-9a-f]{32}$/);
-      expect(result).toEqual({
-        checkoutId: call!.body.paymentRequestId,
-        url: "https://checkout-sandbox.waffo.com/pay/abc",
-      });
+  test("结账：authenticated checkout，产品 ID 取套餐配置，buyerIdentity 是用户 ID，metadata 带回用户和套餐", async () => {
+    s.http.reply("/v1/actions/auth/issue-session-token", {
+      data: { token: "jwt-token", expiresAt: "2026-09-29T09:00:00Z" },
+    });
+    s.http.reply("/v1/actions/checkout/create-session", {
+      data: {
+        sessionId: "CKS_0000000000000000000001",
+        checkoutUrl: "https://pancake.waffo.ai/store/onwardkit/checkout/CKS_1",
+        expiresAt: "2026-09-29T08:45:00Z",
+      },
+    });
+    const result = await s.provider.createCheckout({
+      userId: "user_1",
+      planId: "pro",
+      customerEmail: "ada@example.com",
+      successUrl: "https://acme.test/en/billing/success",
+      cancelUrl: "https://acme.test/en#pricing",
     });
 
-    test("月付订阅：subscription/create，MONTHLY × 1；请求号带回套餐且不超过 32 字符", async () => {
-      s.http.reply("/api/v1/subscription/create", {
-        data: {
-          subscriptionId: "SUB1",
-          subscriptionStatus: "AUTHORIZATION_REQUIRED",
-          subscriptionAction: JSON.stringify({
-            webUrl: "https://checkout-sandbox.waffo.com/sub/1",
-          }),
-        },
-      });
-      const result = await s.provider.createCheckout({
-        ...checkout,
-        planId: "pro",
-      });
-      const [call] = s.http.requests;
-      expect(call!.path).toBe("/api/v1/subscription/create");
-      expect(call!.body).toMatchObject({
-        merchantSubscriptionId: "pro",
-        currency: "USD",
-        amount: "19.00",
-        productInfo: { periodType: "MONTHLY", periodInterval: "1" },
-        paymentInfo: { productName: "SUBSCRIPTION" },
-        subscriptionManagementUrl: "https://acme.test/billing",
-        notifyUrl: "https://acme.test/api/webhooks/waffo",
-      });
-      const request = String(call!.body.subscriptionRequest);
-      expect(request).toMatch(/^pro-[0-9a-f]+$/);
-      expect(request).toHaveLength(32);
-      expect(result).toEqual({
-        checkoutId: request,
-        url: "https://checkout-sandbox.waffo.com/sub/1",
-      });
+    expect(result).toEqual({
+      checkoutId: "CKS_0000000000000000000001",
+      url: "https://pancake.waffo.ai/store/onwardkit/checkout/CKS_1#token=jwt-token",
     });
-
-    test("年付：Waffo 没有 YEARLY，按 MONTHLY × 12", async () => {
-      s.http.reply("/api/v1/subscription/create", {
-        data: {
-          subscriptionAction: JSON.stringify({ webUrl: "https://x.test/s" }),
-        },
-      });
-      await s.provider.createCheckout({ ...checkout, planId: "annual" });
-      expect(s.http.requests[0]!.body).toMatchObject({
-        amount: "190.00",
-        productInfo: { periodType: "MONTHLY", periodInterval: "12" },
-      });
+    const token = s.http.calls.find((c) =>
+      c.path.endsWith("issue-session-token"),
+    )!;
+    expect(token.body).toEqual({
+      productId: "PROD_000000000000000000pro1",
+      buyerIdentity: "user_1",
     });
-
-    test("没有邮箱时用 Waffo 文档给的兜底格式", async () => {
-      s.http.reply("/api/v1/order/create", {
-        data: { orderAction: JSON.stringify({ webUrl: "https://x.test/p" }) },
-      });
-      await s.provider.createCheckout({
-        ...checkout,
-        customerEmail: undefined,
-        planId: "lifetime",
-      });
-      expect(s.http.requests[0]!.body).toMatchObject({
-        userInfo: { userEmail: "user_1@examples.com" },
-      });
+    const session = s.http.calls.find((c) =>
+      c.path.endsWith("create-session"),
+    )!;
+    expect(session.body).toMatchObject({
+      productId: "PROD_000000000000000000pro1",
+      currency: "USD",
+      buyerEmail: "ada@example.com",
+      successUrl: "https://acme.test/en/billing/success",
+      metadata: { userId: "user_1", planId: "pro" },
+      orderMerchantExternalId: "user_1:pro",
     });
-
-    test("失败：业务错误码、响应签名不对、没有收银台地址、免费 / 不存在的套餐都抛错", async () => {
-      s.http.reply("/api/v1/order/create", {
-        code: "A0003",
-        msg: "amount precision",
-      });
-      await expect(
-        s.provider.createCheckout({ ...checkout, planId: "lifetime" }),
-      ).rejects.toThrow(/A0003/);
-
-      s.http.reply("/api/v1/order/create", {
-        data: { orderAction: JSON.stringify({ webUrl: "https://x.test" }) },
-        badSignature: true,
-      });
-      await expect(
-        s.provider.createCheckout({ ...checkout, planId: "lifetime" }),
-      ).rejects.toThrow();
-
-      s.http.reply("/api/v1/order/create", {
-        data: { orderStatus: "PAY_IN_PROGRESS" },
-      });
-      await expect(
-        s.provider.createCheckout({ ...checkout, planId: "lifetime" }),
-      ).rejects.toThrow(/no checkout URL/);
-
-      await expect(
-        s.provider.createCheckout({ ...checkout, planId: "free" }),
-      ).rejects.toThrow(/not a paid plan/);
-      await expect(
-        s.provider.createCheckout({ ...checkout, planId: "nope" }),
-      ).rejects.toThrow(/not a paid plan/);
-      expect(WAFFO_MAX_PLAN_ID_LENGTH).toBe(15);
-    });
+    // 请求由 SDK 用商户私钥签名，带商户 ID 和环境。
+    expect(session.headers.get("x-merchant-id")).toBe(MERCHANT_ID);
+    expect(session.headers.get("x-signature")).toBeTruthy();
   });
 
-  describe("webhook", () => {
-    test("验签：Waffo 私钥签的 body 通过；没签名、签名不对都抛 WebhookVerificationError", async () => {
-      const payload = {
-        eventType: "PAYMENT_NOTIFICATION",
-        result: { acquiringOrderId: "A" },
-      };
+  test("结账：套餐没配产品 ID 时抛错（不拿空 ID 去调服务商）", async () => {
+    await expect(
+      s.provider.createCheckout({
+        userId: "user_1",
+        planId: "free",
+        successUrl: "https://acme.test/s",
+        cancelUrl: "https://acme.test/c",
+      }),
+    ).rejects.toThrow(/providerProductId/);
+    expect(s.http.calls).toHaveLength(0);
+  });
+
+  describe("webhook 验签", () => {
+    test("Waffo 私钥签的事件通过", async () => {
+      const payload = event("order.completed");
       await expect(
         s.provider.verifyWebhook(webhookRequest(payload)),
       ).resolves.toEqual(payload);
-      await expect(
-        s.provider.verifyWebhook(webhookRequest(payload, { sign: false })),
-      ).rejects.toBeInstanceOf(WebhookVerificationError);
+    });
 
+    test("没签名、签名不对、签错内容、时间戳过期都抛 WebhookVerificationError", async () => {
+      const payload = event("order.completed");
       const body = JSON.stringify(payload);
-      const forged = new Request("https://acme.test/api/webhooks/waffo", {
-        method: "POST",
-        // 用错的私钥（我方的）签：Waffo 公钥验不过。
-        headers: { "x-signature": RsaUtils.sign(body, merchant.privateKey) },
-        body,
-      });
-      await expect(s.provider.verifyWebhook(forged)).rejects.toBeInstanceOf(
-        WebhookVerificationError,
-      );
+      for (const request of [
+        webhookRequest(payload, null),
+        webhookRequest(payload, signed(body, merchant.privateKey)),
+        webhookRequest(payload, signed(`${body} `)),
+        webhookRequest(
+          payload,
+          signed(body, waffo.privateKey, Date.now() - 60 * 60 * 1000),
+        ),
+        webhookRequest(payload, "garbage"),
+      ]) {
+        await expect(s.provider.verifyWebhook(request)).rejects.toBeInstanceOf(
+          WebhookVerificationError,
+        );
+      }
     });
 
-    test("回复：成功是带签名的 {message: success}，失败是 500 + {message: failed}", async () => {
-      const ok = s.provider.webhookResponse!(true);
-      const okBody = await ok.text();
-      expect(ok.status).toBe(200);
-      expect(JSON.parse(okBody)).toEqual({ message: "success" });
-      expect(
-        RsaUtils.verify(
-          okBody,
-          ok.headers.get("x-signature")!,
-          merchant.publicKey,
+    test("环境不符：生产站点拒收测试环境的事件（免费测试卡不能在生产发积分）", async () => {
+      const prod = setup("prod");
+      await expect(
+        prod.provider.verifyWebhook(webhookRequest(event("order.completed"))),
+      ).rejects.toBeInstanceOf(WebhookVerificationError);
+      await expect(
+        prod.provider.verifyWebhook(
+          webhookRequest(event("order.completed", {}, { mode: "prod" })),
         ),
-      ).toBe(true);
-
-      const failed = s.provider.webhookResponse!(false);
-      const failedBody = await failed.text();
-      expect(failed.status).toBe(500);
-      expect(JSON.parse(failedBody)).toEqual({ message: "failed" });
-      expect(
-        RsaUtils.verify(
-          failedBody,
-          failed.headers.get("x-signature")!,
-          merchant.publicKey,
-        ),
-      ).toBe(true);
+      ).resolves.toMatchObject({ mode: "prod" });
     });
 
-    test("processWebhook：未签名 401；不关心的事件也用签名的 success 回复（否则 Waffo 会重推）", async () => {
+    test("processWebhook：未签名 401；不关心的事件 200 ignored", async () => {
       const unsigned = await processWebhook(
         s.provider,
-        webhookRequest(
-          { eventType: "PAYMENT_NOTIFICATION", result: {} },
-          { sign: false },
-        ),
+        webhookRequest(event("order.completed"), null),
       );
       expect(unsigned.status).toBe(401);
-
       const ignored = await processWebhook(
         s.provider,
-        webhookRequest({
-          eventType: "CHARGEBACK_NOTIFICATION",
-          result: { id: "x" },
-        }),
-      );
-      const body = await ignored.text();
-      expect(ignored.status).toBe(200);
-      expect(JSON.parse(body)).toEqual({ message: "success" });
-      expect(
-        RsaUtils.verify(
-          body,
-          ignored.headers.get("x-signature")!,
-          merchant.publicKey,
+        webhookRequest(
+          event("subscription.plan_change_scheduled", subscriptionData),
         ),
-      ).toBe(true);
+      );
+      expect(ignored.status).toBe(200);
+      expect(await ignored.json()).toEqual({ status: "ignored" });
     });
   });
 
   describe("parseEvent", () => {
-    const payment = (result: Record<string, unknown>) => ({
-      eventType: "PAYMENT_NOTIFICATION",
-      result: {
-        paymentRequestId: "req1",
-        merchantOrderId: "lifetime-0123456789abcdef0123456789abcdef",
-        acquiringOrderId: "ACQ1",
-        orderStatus: "PAY_SUCCESS",
-        orderCurrency: "USD",
-        orderAmount: "199.00",
-        userInfo: { userId: "user_1", userEmail: "ada@example.com" },
-        orderUpdatedAt: "2026-09-29T08:01:00.000Z",
-        orderCompletedAt: "2026-09-29T08:01:00.000Z",
-        ...result,
-      },
-    });
-    const subscriptionPayment = (period: string, orderStatus = "PAY_SUCCESS") =>
-      payment({
-        merchantOrderId: undefined,
-        acquiringOrderId: `ACQ-${period}`,
-        orderStatus,
-        orderAmount: "19.00",
-        subscriptionInfo: {
-          subscriptionRequest: "pro-0123456789abcdef0123456789ab",
-          subscriptionId: "SUB1",
-          period,
-        },
-      });
-    const status = (
-      subscriptionStatus: string,
-      extra: Record<string, unknown> = {},
-    ) => ({
-      eventType: "SUBSCRIPTION_STATUS_NOTIFICATION",
-      result: {
-        subscriptionRequest: "pro-0123456789abcdef0123456789ab",
-        merchantSubscriptionId: "pro",
-        subscriptionId: "SUB1",
-        subscriptionStatus,
-        userInfo: { userId: "user_1" },
-        updatedAt: "2026-09-30T00:00:00.000Z",
-        ...extra,
-      },
-    });
-    const refund = (refundStatus: string, refundAmount = "49.75") => ({
-      eventType: "REFUND_NOTIFICATION",
-      result: {
-        refundRequestId: "rr1",
-        acquiringRefundOrderId: "REF1",
-        acquiringOrderId: "ACQ1",
-        origPaymentRequestId: "req1",
-        refundAmount,
-        refundStatus,
-        remainingRefundAmount: "149.25",
-        userInfo: { userId: "user_1" },
-        refundUpdatedAt: "2026-10-01T00:00:00.000Z",
-      },
-    });
-
-    test("一次性付款成功 → checkout.completed，带回套餐、用户、金额（最小单位）", () => {
-      expect(s.provider.parseEvent(payment({}))).toEqual({
+    test("order.completed → checkout.completed：订单是这笔付款（paymentId），金额取实付，幂等键是事件类型 + eventId", () => {
+      expect(
+        s.provider.parseEvent(
+          event("order.completed", {
+            chargedAmount: "199.00",
+            paymentId: "PAY_0000000000000000000one",
+          }),
+        ),
+      ).toEqual({
         provider: "waffo",
         type: "checkout.completed",
-        eventId: "PAYMENT_NOTIFICATION:ACQ1:PAY_SUCCESS",
+        eventId: "order.completed:evt-order.completed",
         occurredAt: new Date("2026-09-29T08:01:00.000Z"),
         userId: "user_1",
-        checkoutId: "req1",
-        orderId: "ACQ1",
+        checkoutId: ORDER,
+        orderId: "PAY_0000000000000000000one",
         planId: "lifetime",
         amount: 19900,
         currency: "USD",
         raw: expect.anything(),
       });
+      // 万一没带 paymentId，退回订单 ID（仍然能记账，只是退款对不上）。
+      expect(s.provider.parseEvent(event("order.completed"))).toMatchObject({
+        orderId: ORDER,
+      });
     });
 
-    test("同一状态的重推得到同一个事件 ID；状态不同 ID 不同", () => {
-      const a = s.provider.parseEvent(payment({}));
-      const b = s.provider.parseEvent(payment({}));
-      expect(a!.eventId).toBe(b!.eventId);
-      const refundA = s.provider.parseEvent(refund("ORDER_PARTIALLY_REFUNDED"));
-      const refundB = s.provider.parseEvent(refund("ORDER_FULLY_REFUNDED"));
-      expect(refundA!.eventId).not.toBe(refundB!.eventId);
+    test("用户 ID：metadata 优先，其次 buyerIdentity", () => {
+      const fromIdentity = s.provider.parseEvent(
+        event("order.completed", { orderMetadata: undefined }),
+      );
+      expect(fromIdentity).toMatchObject({
+        userId: "user_1",
+        planId: undefined,
+      });
     });
 
-    test("订阅扣款成功（含首期）→ subscription.renewed，当期按扣款时间 + 一个月推算", () => {
-      expect(s.provider.parseEvent(subscriptionPayment("1"))).toMatchObject({
+    test("订阅：激活 / 续期 / 恢复 / 撤销取消 → active（带当期起止），订阅 ID 记作客户 ID", () => {
+      for (const type of [
+        "subscription.activated",
+        "subscription.renewed",
+        "subscription.recovered",
+        "subscription.uncanceled",
+      ]) {
+        expect(
+          s.provider.parseEvent(event(type, subscriptionData)),
+        ).toMatchObject({
+          type: "subscription.active",
+          subscriptionId: SUB,
+          customerId: SUB,
+          planId: "pro",
+          currentPeriodStart: new Date("2026-09-29T08:00:00.000Z"),
+          currentPeriodEnd: new Date("2026-10-29T08:00:00.000Z"),
+        });
+      }
+    });
+
+    test("每一期扣款 → subscription.renewed，订单是这一期的 paymentId；没有 paymentId 忽略", () => {
+      expect(
+        s.provider.parseEvent(
+          event("subscription.payment_succeeded", {
+            ...subscriptionData,
+            paymentId: "PAY_0000000000000000000001",
+            chargedAmount: "19.00",
+          }),
+        ),
+      ).toMatchObject({
         type: "subscription.renewed",
-        subscriptionId: "SUB1",
-        customerId: "SUB1",
-        orderId: "ACQ-1",
+        subscriptionId: SUB,
+        orderId: "PAY_0000000000000000000001",
         planId: "pro",
         amount: 1900,
         currency: "USD",
-        currentPeriodStart: new Date("2026-09-29T08:01:00.000Z"),
-        currentPeriodEnd: new Date("2026-10-29T08:01:00.000Z"),
       });
+      expect(
+        s.provider.parseEvent(
+          event("subscription.payment_succeeded", subscriptionData),
+        ),
+      ).toBeNull();
     });
 
-    test("续费扣款失败（第 2 期起）→ payment.failed；一次性订单和首期的失败忽略", () => {
+    test("取消中 → canceled（用到当期结束）；彻底终止 → expired；续费失败 → payment.failed", () => {
       expect(
-        s.provider.parseEvent(subscriptionPayment("2", "ORDER_CLOSE")),
+        s.provider.parseEvent(
+          event("subscription.canceling", subscriptionData),
+        ),
       ).toMatchObject({
-        type: "payment.failed",
-        subscriptionId: "SUB1",
-        orderId: "ACQ-2",
+        type: "subscription.canceled",
+        subscriptionId: SUB,
+        currentPeriodEnd: new Date("2026-10-29T08:00:00.000Z"),
       });
       expect(
-        s.provider.parseEvent(subscriptionPayment("1", "ORDER_CLOSE")),
-      ).toBeNull();
+        s.provider.parseEvent(event("subscription.canceled", subscriptionData)),
+      ).toMatchObject({ type: "subscription.expired", subscriptionId: SUB });
       expect(
-        s.provider.parseEvent(payment({ orderStatus: "ORDER_CLOSE" })),
-      ).toBeNull();
-      expect(
-        s.provider.parseEvent(payment({ orderStatus: "PAY_IN_PROGRESS" })),
-      ).toBeNull();
+        s.provider.parseEvent(event("subscription.past_due", subscriptionData)),
+      ).toMatchObject({ type: "payment.failed", subscriptionId: SUB });
     });
 
-    test("订阅状态：ACTIVE → active（套餐取 merchantSubscriptionId）、取消 → canceled（用到下次扣款）、过期 / 关闭 → expired", () => {
-      expect(s.provider.parseEvent(status("ACTIVE"))).toMatchObject({
-        type: "subscription.active",
-        subscriptionId: "SUB1",
-        customerId: "SUB1",
-        userId: "user_1",
-        planId: "pro",
-        occurredAt: new Date("2026-09-30T00:00:00.000Z"),
-      });
-      for (const cancelled of [
-        "USER_CANCELLED",
-        "MERCHANT_CANCELLED",
-        "CHANNEL_CANCELLED",
-        "PLATFORM_CANCELLED",
-      ]) {
-        expect(
-          s.provider.parseEvent(
-            status(cancelled, {
-              productInfo: { nextPaymentDateTime: "2026-10-29T08:01:00.000Z" },
-            }),
+    test("退款：按被退的那笔付款（paymentId）对上 —— 一次性订单和订阅某一期同一套；没有 paymentId 不映射", () => {
+      expect(
+        s.provider.parseEvent(
+          event(
+            "refund.succeeded",
+            {
+              refundedAmount: "49.75",
+              paymentId: "PAY_0000000000000000000one",
+            },
+            { eventId: "REF_0000000000000000000001" },
           ),
-        ).toMatchObject({
-          type: "subscription.canceled",
-          currentPeriodEnd: new Date("2026-10-29T08:01:00.000Z"),
-        });
-      }
-      expect(s.provider.parseEvent(status("EXPIRED"))).toMatchObject({
-        type: "subscription.expired",
-      });
-      expect(s.provider.parseEvent(status("CLOSE"))).toMatchObject({
-        type: "subscription.expired",
-      });
-      expect(s.provider.parseEvent(status("IN_PROGRESS"))).toBeNull();
-      expect(
-        s.provider.parseEvent(status("AUTHORIZATION_REQUIRED")),
-      ).toBeNull();
-    });
-
-    test("退款：部分 / 全额 → refund.created（对应原订单）；进行中和失败的忽略", () => {
-      expect(
-        s.provider.parseEvent(refund("ORDER_PARTIALLY_REFUNDED")),
+        ),
       ).toMatchObject({
         type: "refund.created",
-        orderId: "ACQ1",
-        refundId: "REF1",
+        eventId: "refund.succeeded:REF_0000000000000000000001",
+        orderId: "PAY_0000000000000000000one",
+        refundId: "REF_0000000000000000000001",
         amount: 4975,
         currency: "USD",
-        eventId: "REFUND_NOTIFICATION:REF1:ORDER_PARTIALLY_REFUNDED",
-        occurredAt: new Date("2026-10-01T00:00:00.000Z"),
       });
       expect(
-        s.provider.parseEvent(refund("ORDER_FULLY_REFUNDED", "199.00")),
-      ).toMatchObject({ type: "refund.created", amount: 19900 });
-      expect(s.provider.parseEvent(refund("REFUND_IN_PROGRESS"))).toBeNull();
-      expect(s.provider.parseEvent(refund("ORDER_REFUND_FAILED"))).toBeNull();
+        s.provider.parseEvent(
+          event("refund.succeeded", {
+            ...subscriptionData,
+            paymentId: "PAY_0000000000000000000002",
+            refundedAmount: "19.00",
+          }),
+        ),
+      ).toMatchObject({
+        type: "refund.created",
+        orderId: "PAY_0000000000000000000002",
+        amount: 1900,
+      });
+      expect(
+        s.provider.parseEvent(
+          event("refund.succeeded", { refundedAmount: "1.00" }),
+        ),
+      ).toBeNull();
+      expect(s.provider.parseEvent(event("refund.failed"))).toBeNull();
     });
 
     test("不关心或结构不对的 payload 返回 null", () => {
@@ -553,20 +419,10 @@ describe("Waffo adapter", () => {
         null,
         "x",
         {},
-        { eventType: "PAYMENT_NOTIFICATION" },
-        {
-          eventType: "PAYMENT_NOTIFICATION",
-          result: { orderStatus: "PAY_SUCCESS" },
-        },
-        {
-          eventType: "SUBSCRIPTION_PERIOD_CHANGED_NOTIFICATION",
-          result: { subscriptionId: "S" },
-        },
-        { eventType: "CHARGEBACK_NOTIFICATION", result: { id: "x" } },
-        {
-          eventType: "SUBSCRIPTION_STATUS_NOTIFICATION",
-          result: { subscriptionStatus: "ACTIVE" },
-        },
+        { id: "x", eventType: "order.completed" },
+        { id: "x", eventType: "order.completed", data: { currency: "USD" } },
+        event("subscription.plan_changed", subscriptionData),
+        event("something.new"),
       ]) {
         expect(s.provider.parseEvent(payload)).toBeNull();
       }
@@ -574,60 +430,51 @@ describe("Waffo adapter", () => {
   });
 
   describe("门户与取消", () => {
-    test("门户：按订阅 ID 现取管理链接；拿不到就抛错", async () => {
-      s.http.reply("/api/v1/subscription/manage", {
-        data: {
-          managementUrl: "https://cashier-sandbox.waffo.com/manage/1",
-          expiredAt: "x",
-        },
-      });
-      await expect(s.provider.getPortalUrl("SUB1")).resolves.toBe(
-        "https://cashier-sandbox.waffo.com/manage/1",
+    test("门户：返回 Pancake 的托管门户登录页（魔法链接登录，官方还没有预登录链接）", async () => {
+      await expect(s.provider.getPortalUrl(SUB)).resolves.toBe(
+        WAFFO_PORTAL_URL,
       );
-      expect(s.http.requests[0]!.body).toMatchObject({
-        subscriptionId: "SUB1",
-      });
-
-      s.http.reply("/api/v1/subscription/manage", {
-        code: "A0028",
-        msg: "processing",
-      });
-      await expect(s.provider.getPortalUrl("SUB1")).rejects.toThrow(/A0028/);
+      expect(s.http.calls).toHaveLength(0);
     });
 
-    test("取消：成功直接返回；接口报错但订阅已经结束视为成功（便于重试）；仍在进行就抛错", async () => {
-      s.http.reply("/api/v1/subscription/cancel", {
-        data: { subscriptionId: "SUB1" },
+    test("取消：调 cancel-order；报错但订阅已不再扣款（或查不到）视为成功；仍在扣款就抛错", async () => {
+      s.http.reply("/v1/actions/subscription-order/cancel-order", {
+        data: { orderId: SUB, status: "canceling" },
       });
-      await expect(
-        s.provider.cancelSubscription("SUB1"),
-      ).resolves.toBeUndefined();
+      await expect(s.provider.cancelSubscription(SUB)).resolves.toBeUndefined();
+      expect(s.http.calls[0]).toMatchObject({
+        path: "/v1/actions/subscription-order/cancel-order",
+        body: { orderId: SUB },
+      });
 
-      s.http.reply("/api/v1/subscription/cancel", {
-        code: "A0025",
-        msg: "not active",
-      });
-      s.http.reply("/api/v1/subscription/inquiry", {
-        data: { subscriptionId: "SUB1", subscriptionStatus: "USER_CANCELLED" },
-      });
-      await expect(
-        s.provider.cancelSubscription("SUB1"),
-      ).resolves.toBeUndefined();
+      for (const status of ["canceling", "canceled", "expired", "closed"]) {
+        s.http.reply("/v1/actions/subscription-order/cancel-order", {
+          data: null,
+          errors: [{ message: "invalid state", layer: "order" }],
+        });
+        s.http.reply("/v1/graphql", {
+          data: { subscriptionOrder: { status } },
+        });
+        await expect(
+          s.provider.cancelSubscription(SUB),
+        ).resolves.toBeUndefined();
+      }
 
-      s.http.reply("/api/v1/subscription/cancel", {
-        code: "E0001",
-        msg: "unknown",
+      s.http.reply("/v1/actions/subscription-order/cancel-order", {
+        data: null,
+        errors: [{ message: "not found", layer: "order" }],
       });
-      s.http.reply("/api/v1/subscription/inquiry", {
-        data: { subscriptionId: "SUB1", subscriptionStatus: "ACTIVE" },
+      s.http.reply("/v1/graphql", { data: { subscriptionOrder: null } });
+      await expect(s.provider.cancelSubscription(SUB)).resolves.toBeUndefined();
+
+      s.http.reply("/v1/actions/subscription-order/cancel-order", {
+        data: null,
+        errors: [{ message: "psp unavailable", layer: "psp" }],
       });
-      // E0001（结果未知）SDK 直接抛异常；查到订阅仍在进行，把原始错误抛出去，由调用方重试。
-      await expect(s.provider.cancelSubscription("SUB1")).rejects.toThrow();
-      expect(
-        s.http.requests.filter(
-          (r) => r.path === "/api/v1/subscription/inquiry",
-        ),
-      ).toHaveLength(2);
+      s.http.reply("/v1/graphql", {
+        data: { subscriptionOrder: { status: "active" } },
+      });
+      await expect(s.provider.cancelSubscription(SUB)).rejects.toThrow();
     });
   });
 });

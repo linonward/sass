@@ -1,14 +1,9 @@
-import { randomUUID } from "node:crypto";
-
 import {
-  Environment,
-  Waffo,
-  type ApiResponse,
-  type HttpTransport,
-  type PaymentNotificationResult,
-  type RefundNotificationResult,
-  type SubscriptionNotificationResult,
-} from "@waffo/waffo-node";
+  verifyWebhook,
+  WaffoPancake,
+  type WebhookEvent,
+  type WebhookEventData,
+} from "@waffo/pancake-ts";
 
 import siteConfig from "../../../../site.config";
 import type { WaffoMode } from "../env";
@@ -22,76 +17,55 @@ import {
 } from "../provider";
 
 /**
- * Waffo（https://waffo.com/docs）的 adapter，走官方 SDK `@waffo/waffo-node`。
+ * Waffo Pancake（https://pancake.waffo.ai，MoR）的 adapter，走官方 SDK `@waffo/pancake-ts`。
  *
- * 和其它三家的结构性差异（设计取舍都从这里来）：
- * - **没有产品目录**：金额每次下单时直接传，取套餐的 `price` 和 `billing.currency`（`inlinePricing`）。
- * - **所有请求 / 响应 / webhook 都是 RSA 签名**（SHA256WithRSA）：请求用我们的私钥签、响应和
- *   webhook 用 Waffo 的公钥验，webhook 的**回复**也要用我们的私钥签（`webhookResponse`），
- *   否则 Waffo 按失败重推。这些都交给 SDK。
- * - **webhook 没有事件 ID 和时间戳**：事件 ID 用「事件类型 + 业务 ID + 状态」合成（同一状态的
- *   重推得到同一个 ID），发生时间取通知里的业务时间（`orderCompletedAt` / `refundUpdatedAt` /
- *   `updatedAt`），都没有才用收到的时间。
- * - **取消订阅立即生效**：本 adapter 的 `cancelSubscription` 只在删号时调用，立即取消正是那里要的。
- * - 订阅没有现成的当期起止时间：续费事件用扣款完成时间 + 套餐周期推算。
+ * 和 Creem / Lemon Squeezy 一样是 MoR、有产品目录：套餐的 `providerProductId` 填 Pancake 的
+ * 产品 ID（`PROD_…`，test / prod 两套），金额和周期在 Pancake 后台的产品上定义。
  *
- * 事件映射（`eventType` / 结果里的状态 → BillingEvent）：
+ * - 结账：`checkout.authenticated.create`。`buyerIdentity` = 我们的用户 ID（订单绑定到它，
+ *   换邮箱也不会串单），`metadata` 带上 userId / planId，webhook 的 `orderMetadata` 原样带回。
+ * - 验签：`verifyWebhook`（`X-Waffo-Signature`，RSA-SHA256，带时间戳防重放），**固定按 `WAFFO_MODE`
+ *   的环境验**，并再核对事件的 `mode` —— 否则生产站点会收下测试环境（免费测试卡）的付款并发积分。
+ * - 发生时间取信封的 `timestamp`；幂等键见下。
+ * - 取消：`orders.cancelSubscription` —— 生效中的订阅变成 canceling，用到当期结束。
  *
- * | Waffo                                                        | BillingEvent            |
- * | ------------------------------------------------------------ | ----------------------- |
- * | PAYMENT_NOTIFICATION，PAY_SUCCESS，一次性订单                 | checkout.completed      |
- * | PAYMENT_NOTIFICATION，PAY_SUCCESS，订阅扣款（含首期）          | subscription.renewed    |
- * | PAYMENT_NOTIFICATION，ORDER_CLOSE，订阅续费（第 2 期起）        | payment.failed          |
- * | PAYMENT_NOTIFICATION，ORDER_CLOSE，一次性订单 / 订阅首期        | 忽略（见下）             |
- * | SUBSCRIPTION_STATUS_NOTIFICATION，ACTIVE                     | subscription.active     |
- * | SUBSCRIPTION_STATUS_NOTIFICATION，*_CANCELLED                | subscription.canceled   |
- * | SUBSCRIPTION_STATUS_NOTIFICATION，EXPIRED / CLOSE            | subscription.expired    |
- * | REFUND_NOTIFICATION，ORDER_PARTIALLY / FULLY_REFUNDED        | refund.created          |
- * | 其它（进行中的状态、PERIOD_CHANGED、CHANGE、拒付等）          | 忽略                    |
+ * 事件映射（Pancake → BillingEvent）：
  *
- * 一次性订单的 ORDER_CLOSE 是「打开收银台没付、订单过期」，映射成 payment.failed 会给用户发
- * 「付款失败」邮件；订阅首期失败时订阅本身会变成 CLOSE（映射为 expired），不需要再报一次。
- * 续费重试用完时 Waffo 不会关订阅（仍是 ACTIVE），每次失败的扣款都会发 ORDER_CLOSE ——
- * 映射成 payment.failed，模板把订阅标成 past_due，失败邮件 24 小时内最多一封。
+ * | Pancake                                                   | BillingEvent          |
+ * | --------------------------------------------------------- | --------------------- |
+ * | order.completed（一次性订单首付成功）                      | checkout.completed    |
+ * | subscription.activated / renewed / recovered / uncanceled | subscription.active   |
+ * | subscription.payment_succeeded（每一期扣款，含首期）       | subscription.renewed  |
+ * | subscription.canceling（取消，用到当期结束）               | subscription.canceled |
+ * | subscription.canceled（彻底终止）                          | subscription.expired  |
+ * | subscription.past_due（续费扣款失败）                      | payment.failed        |
+ * | refund.succeeded                                          | refund.created        |
+ * | refund.failed、plan_change_* 等                            | 忽略                  |
  *
- * 我们带过去、webhook 里带回来的 ID：
- * - `userInfo.userId` = 我们的用户 ID；
- * - 一次性：`merchantOrderId` = `<套餐 id>-<随机>`，`paymentRequestId`（幂等键）= 随机；
- * - 订阅：`subscriptionRequest`（幂等键，≤32 字符）= `<套餐 id>-<随机>`，扣款通知里只有它能带回套餐；
- *   `merchantSubscriptionId` = 套餐 id（Waffo 文档对这个字段的定义就是「订阅计划 ID」）。
- * - 订阅 ID 记作客户 ID：Waffo 没有客户对象，门户（`subscription/manage`）按订阅开。
+ * 订单 ID 的约定：模板的一张订单 = Pancake 的一笔付款（`paymentId`，`PAY_…`），一次性订单和订阅的
+ * 每一期都一样；退款事件带着被退的那笔 `paymentId`，所以部分 / 全额退款都能对上具体哪一笔
+ * （包括订阅的某一期）。订阅 ID 是订阅那张订单的 `orderId`（`ORD_…`）。
+ *
+ * 幂等键用「事件类型 + eventId」：官方文档和 SDK 对信封里 `id` 的含义说法不一（事件实体 ID /
+ * 投递记录 UUID），官方文档建议按 eventType + eventId 去重，两种说法下都安全。
+ *
+ * 订阅 ID 同时记作客户 ID（Pancake 没有独立的客户对象）。套餐升降级（plan_change）不接：
+ * 模板没有换套餐的流程。一次性付款被拒、结账放弃都没有 webhook（订单停在 pending），不需要映射。
  */
 
 export const WAFFO_PROVIDER_ID = "waffo";
 
-/** `subscriptionRequest` 最长 32 字符；套餐 id 占掉的越多，随机部分越短。至少留 16 位十六进制（64 位）。 */
-export const WAFFO_MAX_PLAN_ID_LENGTH = 15;
+/** Pancake 的托管客户门户：魔法链接登录，跨商户。官方还没有「预登录」的门户链接接口。 */
+export const WAFFO_PORTAL_URL =
+  "https://pancake.waffo.ai/consumer/portal/login";
 
-/** Waffo 要求 0 位小数的币种（同币种下单时）；其余按 2 位。见 https://waffo.com/docs/en/developer-docs/core-concepts/currency */
-const ZERO_DECIMAL = new Set([
-  "JPY",
-  "KRW",
-  "VND",
-  "CLP",
-  "IDR",
-  "COP",
-  "KES",
-  "TWD",
+/** 不会再扣款的订阅单状态：取消中（用到期末）、已关闭 / 取消 / 过期。 */
+const ENDED_SUBSCRIPTION = new Set([
+  "canceling",
+  "closed",
+  "canceled",
+  "expired",
 ]);
-
-const CANCELLED = new Set([
-  "MERCHANT_CANCELLED",
-  "USER_CANCELLED",
-  "CHANNEL_CANCELLED",
-  "PLATFORM_CANCELLED",
-]);
-const ENDED = new Set(["EXPIRED", "CLOSE"]);
-const REFUNDED = new Set(["ORDER_PARTIALLY_REFUNDED", "ORDER_FULLY_REFUNDED"]);
-
-/** 套餐价格（主币单位）→ Waffo 要的小数字符串。 */
-export function waffoAmount(price: number, currency: string) {
-  return price.toFixed(ZERO_DECIMAL.has(currency) ? 0 : 2);
-}
 
 /**
  * 币种的 ISO 4217 最小单位位数（模板里的金额都按它存，例如 USD 2、JPY 0、KWD 3）。
@@ -132,439 +106,232 @@ function isoDigits(currency: string) {
   return 2;
 }
 
-/** Waffo 的小数字符串 → 模板的最小货币单位。 */
+/** Pancake 的展示金额（小数字符串，例如 "29.00"）→ 模板的最小货币单位。 */
 export function waffoMinorUnits(
   amount: string | undefined,
   currency: string,
 ): number | undefined {
   if (amount === undefined || amount === "") return undefined;
-  const value = Number(amount);
+  const value = Number(amount.replace(/,/g, ""));
   if (!Number.isFinite(value)) return undefined;
   return Math.round(value * 10 ** isoDigits(currency));
 }
 
-function randomHex(length: number) {
-  return randomUUID().replace(/-/g, "").slice(0, length);
-}
-
-/** `<套餐 id>-<随机>` 里取回套餐 id。 */
-function planFromRequest(value: unknown) {
-  if (typeof value !== "string") return undefined;
-  const cut = value.lastIndexOf("-");
-  return cut > 0 ? value.slice(0, cut) : undefined;
-}
-
-function asObject(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-function asString(value: unknown) {
-  return typeof value === "string" && value !== "" ? value : undefined;
-}
-
-function asDate(value: unknown) {
-  if (typeof value !== "string") return undefined;
+function asDate(value: string | undefined) {
+  if (!value) return undefined;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-/** 订单 / 订阅的 `*Action` 是 JSON 字符串：取出收银台地址。 */
-function redirectUrl(action: unknown) {
-  if (typeof action !== "string") return undefined;
-  try {
-    const parsed = asObject(JSON.parse(action));
-    return asString(parsed?.webUrl) ?? asString(parsed?.deeplinkUrl);
-  } catch {
-    return undefined;
-  }
-}
-
-function addInterval(start: Date, plan: ReturnType<typeof getPlan>) {
-  if (!plan || plan.interval === "once") return undefined;
-  const end = new Date(start);
-  end.setUTCMonth(end.getUTCMonth() + (plan.interval === "year" ? 12 : 1));
-  return end;
-}
-
-function unwrap<T>(response: ApiResponse<T>, what: string): T {
-  if (response.isSuccess()) {
-    const data = response.getData();
-    if (data) return data;
-  }
-  throw new Error(
-    `Waffo ${what} failed: ${response.getCode()} ${response.getMessage() ?? ""}`.trim(),
-  );
-}
-
 export type WaffoProviderOptions = {
-  apiKey: string;
-  /** 我们的 RSA 私钥（Base64 PKCS8 DER 或 PEM）。 */
-  privateKey: string;
-  /** Waffo 的 RSA 公钥（Base64 X509 或 PEM）。 */
-  publicKey: string;
   merchantId: string;
+  privateKey: string;
   mode: WaffoMode;
-  /** 测试注入：替换 SDK 的 HTTP 层，不联网。 */
-  httpTransport?: HttpTransport;
-  /** 测试注入：固定时间。 */
-  now?: () => Date;
+  /** 测试注入：替换 SDK 的 fetch，不联网。 */
+  fetch?: typeof fetch;
+  /** 测试注入：webhook 验签用的公钥（生产用 SDK 内置的 Waffo 公钥）。 */
+  webhookPublicKey?: string;
 };
 
+type PancakeEvent = WebhookEvent<WebhookEventData>;
+
 export function createWaffoProvider({
-  apiKey,
-  privateKey,
-  publicKey,
   merchantId,
+  privateKey,
   mode,
-  httpTransport,
-  now = () => new Date(),
+  fetch: fetchImpl,
+  webhookPublicKey,
 }: WaffoProviderOptions): PaymentProvider {
-  const waffo = new Waffo({
-    apiKey,
-    privateKey,
-    waffoPublicKey: publicKey,
+  const client = new WaffoPancake({
     merchantId,
-    environment:
-      mode === "production" ? Environment.PRODUCTION : Environment.SANDBOX,
-    ...(httpTransport ? { httpTransport } : {}),
+    privateKey,
+    environment: mode,
+    ...(fetchImpl ? { fetch: fetchImpl } : {}),
   });
-  const webhook = waffo.webhook();
-  const currency = siteConfig.billing.currency;
 
-  function paymentEvent(
-    result: PaymentNotificationResult,
-    base: { eventId: string; raw: unknown },
-  ): BillingEvent | null {
-    const status = result.orderStatus;
-    const orderId = asString(result.acquiringOrderId);
-    const orderCurrency = asString(result.orderCurrency) ?? currency;
-    const money = {
-      amount: waffoMinorUnits(result.orderAmount, orderCurrency),
-      currency: orderCurrency,
-    };
+  function mapEvent(event: PancakeEvent): BillingEvent | null {
+    const data = event.data;
+    const metadata = data.orderMetadata ?? {};
+    const currency = data.currency;
+    const planId = metadata.planId || undefined;
     const common = {
       provider: WAFFO_PROVIDER_ID,
-      eventId: base.eventId,
-      raw: base.raw,
-      userId: asString(asObject(result.userInfo)?.userId),
-      occurredAt:
-        asDate(result.orderCompletedAt) ??
-        asDate(result.orderUpdatedAt) ??
-        now(),
+      eventId: `${event.eventType}:${event.eventId || event.id}`,
+      occurredAt: asDate(event.timestamp) ?? new Date(),
+      userId:
+        metadata.userId || data.merchantProvidedBuyerIdentity || undefined,
+      raw: event,
     };
-    const subscription = asObject(result.subscriptionInfo);
-    const subscriptionId = asString(subscription?.subscriptionId);
-
-    if (!subscriptionId) {
-      if (status !== "PAY_SUCCESS" || !orderId) return null;
-      return {
-        ...common,
-        ...money,
-        type: "checkout.completed",
-        checkoutId: asString(result.paymentRequestId) ?? orderId,
-        orderId,
-        planId: planFromRequest(result.merchantOrderId),
-      };
-    }
-
-    const planId = planFromRequest(subscription?.subscriptionRequest);
-    const period = Number(subscription?.period ?? "1");
-    if (status === "PAY_SUCCESS") {
-      return {
-        ...common,
-        ...money,
-        type: "subscription.renewed",
-        customerId: subscriptionId,
-        subscriptionId,
-        orderId,
-        planId,
-        currentPeriodStart: common.occurredAt,
-        currentPeriodEnd: addInterval(
-          common.occurredAt,
-          planId ? getPlan(planId) : undefined,
-        ),
-      };
-    }
-    if (status === "ORDER_CLOSE" && period > 1) {
-      return {
-        ...common,
-        ...money,
-        type: "payment.failed",
-        customerId: subscriptionId,
-        subscriptionId,
-        orderId,
-      };
-    }
-    return null;
-  }
-
-  function subscriptionEvent(
-    result: SubscriptionNotificationResult,
-    base: { eventId: string; raw: unknown },
-  ): BillingEvent | null {
-    const subscriptionId = asString(result.subscriptionId);
-    if (!subscriptionId) return null;
-    const status = result.subscriptionStatus ?? "";
-    const productInfo = asObject(result.productInfo);
-    const common = {
-      provider: WAFFO_PROVIDER_ID,
-      eventId: base.eventId,
-      raw: base.raw,
-      userId: asString(asObject(result.userInfo)?.userId),
-      customerId: subscriptionId,
-      subscriptionId,
-      occurredAt: asDate(result.updatedAt) ?? now(),
+    const subscription = {
+      ...common,
+      customerId: data.orderId,
+      subscriptionId: data.orderId,
     };
-    if (status === "ACTIVE") {
-      return {
-        ...common,
-        type: "subscription.active",
-        planId:
-          asString(result.merchantSubscriptionId) ??
-          planFromRequest(result.subscriptionRequest),
-      };
-    }
-    if (CANCELLED.has(status)) {
-      // Waffo 取消立即生效，但用户已经付过当期：用到下一次扣款时间为止。
-      return {
-        ...common,
-        type: "subscription.canceled",
-        currentPeriodEnd: asDate(productInfo?.nextPaymentDateTime),
-      };
-    }
-    if (ENDED.has(status)) return { ...common, type: "subscription.expired" };
-    return null;
-  }
-
-  function refundEvent(
-    result: RefundNotificationResult,
-    base: { eventId: string; raw: unknown },
-  ): BillingEvent | null {
-    const orderId = asString(result.acquiringOrderId);
-    const refundId =
-      asString(result.acquiringRefundOrderId) ??
-      asString(result.refundRequestId);
-    if (!REFUNDED.has(result.refundStatus ?? "") || !orderId || !refundId) {
-      return null;
-    }
-    // 退款通知不带币种；退款和原订单同币种，而我们只按站点币种下单。
-    const amount = waffoMinorUnits(result.refundAmount, currency);
-    if (amount === undefined) return null;
-    const subscriptionId = asString(
-      asObject(result.subscriptionInfo)?.subscriptionId,
-    );
-    return {
-      provider: WAFFO_PROVIDER_ID,
-      eventId: base.eventId,
-      raw: base.raw,
-      userId: asString(asObject(result.userInfo)?.userId),
-      ...(subscriptionId ? { customerId: subscriptionId } : {}),
-      occurredAt:
-        asDate(result.refundCompletedAt) ??
-        asDate(result.refundUpdatedAt) ??
-        now(),
-      type: "refund.created",
-      orderId,
-      refundId,
-      amount,
-      currency,
+    const period = {
+      currentPeriodStart: asDate(data.currentPeriodStart),
+      currentPeriodEnd: asDate(data.currentPeriodEnd),
     };
+
+    switch (event.eventType) {
+      case "order.completed":
+        return {
+          ...common,
+          type: "checkout.completed",
+          checkoutId: data.orderId,
+          orderId: data.paymentId ?? data.orderId,
+          planId,
+          amount: waffoMinorUnits(data.chargedAmount ?? data.amount, currency),
+          currency,
+        };
+
+      case "subscription.activated":
+      case "subscription.renewed":
+      case "subscription.recovered":
+      case "subscription.uncanceled":
+        return {
+          ...subscription,
+          ...period,
+          type: "subscription.active",
+          planId,
+        };
+
+      case "subscription.payment_succeeded":
+        if (!data.paymentId) return null;
+        return {
+          ...subscription,
+          type: "subscription.renewed",
+          orderId: data.paymentId,
+          planId,
+          amount: waffoMinorUnits(data.chargedAmount ?? data.amount, currency),
+          currency,
+        };
+
+      case "subscription.canceling":
+        return {
+          ...subscription,
+          type: "subscription.canceled",
+          currentPeriodEnd: period.currentPeriodEnd,
+        };
+
+      case "subscription.canceled":
+        return { ...subscription, type: "subscription.expired" };
+
+      case "subscription.past_due":
+        return {
+          ...subscription,
+          type: "payment.failed",
+          ...(data.paymentId ? { orderId: data.paymentId } : {}),
+        };
+
+      case "refund.succeeded": {
+        const amount = waffoMinorUnits(
+          data.refundedAmount ?? data.amount,
+          currency,
+        );
+        if (!data.paymentId || amount === undefined) return null;
+        return {
+          ...common,
+          type: "refund.created",
+          // 被退的那笔付款（一次性订单或订阅的某一期），和记账时的订单 ID 同一套。
+          orderId: data.paymentId,
+          // eventId 是 Pancake 的退款 ID（REF_…）。
+          refundId: event.eventId || event.id,
+          amount,
+          currency,
+        };
+      }
+
+      default:
+        return null;
+    }
   }
 
   return {
     id: WAFFO_PROVIDER_ID,
-    inlinePricing: true,
 
     async createCheckout(input: CreateCheckoutInput): Promise<Checkout> {
       const plan = getPlan(input.planId);
-      if (!plan || plan.price <= 0) {
-        throw new Error(`Plan "${input.planId}" is not a paid plan`);
+      if (!plan?.providerProductId) {
+        throw new Error(`Plan "${input.planId}" has no providerProductId`);
       }
-      if (plan.id.length > WAFFO_MAX_PLAN_ID_LENGTH) {
-        throw new Error(
-          `Plan id "${plan.id}" is longer than ${WAFFO_MAX_PLAN_ID_LENGTH} characters, which Waffo's 32-character request id cannot carry`,
-        );
-      }
-      const origin = new URL(input.successUrl).origin;
-      const notifyUrl = `${origin}/api/webhooks/${WAFFO_PROVIDER_ID}`;
-      const amount = waffoAmount(plan.price, currency);
-      const requestedAt = now().toISOString();
-      const description = `${siteConfig.name} ${plan.id}`.slice(0, 128);
-      const userInfo = {
-        userId: input.userId,
-        // Waffo 要求邮箱；没有时按它文档给的兜底格式。
-        userEmail: input.customerEmail ?? `${input.userId}@examples.com`,
-        userTerminal: "WEB",
-      };
-      const goodsInfo = {
-        goodsId: plan.id,
-        goodsName: description,
-        goodsUrl: `${origin}/pricing`,
-      };
-      const redirects = {
-        successRedirectUrl: input.successUrl,
-        failedRedirectUrl: input.cancelUrl,
-        cancelRedirectUrl: input.cancelUrl,
-      };
-
-      if (plan.interval === "once") {
-        const paymentRequestId = randomHex(32);
-        const data = unwrap(
-          await waffo.order().create({
-            paymentRequestId,
-            merchantOrderId: `${plan.id}-${randomHex(32)}`,
-            orderCurrency: currency,
-            orderAmount: amount,
-            orderDescription: description,
-            orderRequestedAt: requestedAt,
-            notifyUrl,
-            userInfo,
-            goodsInfo,
-            paymentInfo: { productName: "ONE_TIME_PAYMENT" },
-            ...redirects,
-          }),
-          "order/create",
-        );
-        const url = redirectUrl(data.orderAction);
-        if (!url)
-          throw new Error("Waffo order/create returned no checkout URL");
-        return { checkoutId: paymentRequestId, url };
-      }
-
-      const subscriptionRequest = `${plan.id}-${randomHex(31 - plan.id.length)}`;
-      const data = unwrap(
-        await waffo.subscription().create({
-          subscriptionRequest,
-          merchantSubscriptionId: plan.id,
-          currency,
-          amount,
-          notifyUrl,
-          productInfo: {
-            description,
-            // Waffo 没有 YEARLY：年付是每 12 个月一期。
-            periodType: "MONTHLY",
-            periodInterval: plan.interval === "year" ? "12" : "1",
-          },
-          userInfo,
-          goodsInfo,
-          paymentInfo: { productName: "SUBSCRIPTION" },
-          requestedAt,
-          // 用户在 Waffo 页面里点「管理订阅」时回到这里（要求是登录后的页面）。
-          subscriptionManagementUrl: `${origin}/billing`,
-          ...redirects,
-        }),
-        "subscription/create",
-      );
-      const url = redirectUrl(data.subscriptionAction);
-      if (!url) {
-        throw new Error("Waffo subscription/create returned no checkout URL");
-      }
-      return { checkoutId: subscriptionRequest, url };
-    },
-
-    /** 客户 ID 在这里就是订阅 ID（见文件头）；链接短时有效，所以每次点击时现取。 */
-    async getPortalUrl(customerId: string): Promise<string> {
-      const data = unwrap(
-        await waffo.subscription().manage({ subscriptionId: customerId }),
-        "subscription/manage",
-      );
-      if (!data.managementUrl) {
-        throw new Error(
-          `Waffo subscription ${customerId} has no management URL`,
-        );
-      }
-      return data.managementUrl;
+      const result = await client.checkout.authenticated.create({
+        productId: plan.providerProductId,
+        currency: siteConfig.billing.currency,
+        buyerIdentity: input.userId,
+        ...(input.customerEmail ? { buyerEmail: input.customerEmail } : {}),
+        successUrl: input.successUrl,
+        metadata: { userId: input.userId, planId: plan.id },
+        orderMerchantExternalId: `${input.userId}:${plan.id}`.slice(0, 128),
+      });
+      return { checkoutId: result.sessionId, url: result.checkoutUrl };
     },
 
     /**
-     * 取消订阅（删号时调用）：Waffo 的取消立即生效，这正是删号要的。
-     * 已经结束的订阅（取消 / 过期 / 关闭）视为成功，和其它 adapter 对齐，便于重试。
+     * Pancake 的托管客户门户是魔法链接登录（买家输入邮箱收链接），官方还没有「预登录」链接的接口，
+     * 所以这里返回门户登录页：买家用付款时的邮箱登录后能查订单、下发票、取消 / 恢复订阅。
+     */
+    async getPortalUrl(): Promise<string> {
+      return WAFFO_PORTAL_URL;
+    },
+
+    /**
+     * 删号时调用：生效中的订阅变成 canceling（不再续费，用到当期结束）。
+     * 模板的约定是「已取消或不存在的订阅视为成功」（删号钩子要能安全重试）：接口报错时查一次
+     * 这张订阅单，已经不会再扣款（或查不到）就当成功，否则把原错误抛出去。
      */
     async cancelSubscription(subscriptionId: string): Promise<void> {
-      // SDK 对多数业务错误返回错误码，对「结果未知」（E0001）直接抛异常：两种都先查一次状态。
-      let failure: unknown;
       try {
-        const response = await waffo
-          .subscription()
-          .cancel({ subscriptionId, requestedAt: now().toISOString() });
-        if (response.isSuccess()) return;
-        failure = new Error(
-          `Waffo subscription/cancel failed: ${response.getCode()} ${response.getMessage() ?? ""}`.trim(),
-        );
+        await client.orders.cancelSubscription({ orderId: subscriptionId });
+        return;
       } catch (error) {
-        failure = error;
+        const result = await client.graphql.query<{
+          subscriptionOrder: { status: string } | null;
+        }>({
+          query: "query ($id: ID!) { subscriptionOrder(id: $id) { status } }",
+          variables: { id: subscriptionId },
+        });
+        const status = result.data?.subscriptionOrder?.status;
+        if (!status || ENDED_SUBSCRIPTION.has(status)) return;
+        throw error;
       }
-      const inquiry = await waffo.subscription().inquiry({ subscriptionId });
-      const status = inquiry.getData()?.subscriptionStatus ?? "";
-      if (CANCELLED.has(status) || ENDED.has(status)) return;
-      throw failure;
     },
 
     async verifyWebhook(request: Request): Promise<unknown> {
       const body = await request.text();
-      const signature = request.headers.get("x-signature");
-      if (!signature || !webhook.verifySignature(body, signature)) {
+      const signature = request.headers.get("x-waffo-signature");
+      if (!signature) throw new WebhookVerificationError();
+      let event: PancakeEvent;
+      try {
+        event = verifyWebhook<WebhookEventData>(body, signature, {
+          environment: mode,
+          ...(webhookPublicKey ? { publicKey: webhookPublicKey } : {}),
+        });
+      } catch {
         throw new WebhookVerificationError();
       }
-      try {
-        return JSON.parse(body);
-      } catch {
-        throw new WebhookVerificationError("Invalid webhook body");
+      // 签名对了，但来自另一个环境（例如生产站点收到测试模式的付款）：当作无效，不处理。
+      if (event.mode && event.mode !== mode) {
+        throw new WebhookVerificationError(
+          `Waffo webhook from ${event.mode} rejected in ${mode} mode`,
+        );
       }
+      return event;
     },
 
     parseEvent(payload: unknown): BillingEvent | null {
-      const body = asObject(payload);
-      const eventType = asString(body?.eventType);
-      const result = asObject(body?.result);
-      if (!eventType || !result) return null;
-      const id = (businessId: unknown, status: unknown) =>
-        `${eventType}:${String(businessId)}:${String(status)}`;
-
-      switch (eventType) {
-        case "PAYMENT_NOTIFICATION": {
-          const r = result as PaymentNotificationResult;
-          if (!r.acquiringOrderId) return null;
-          return paymentEvent(r, {
-            eventId: id(r.acquiringOrderId, r.orderStatus),
-            raw: payload,
-          });
-        }
-        case "SUBSCRIPTION_STATUS_NOTIFICATION": {
-          const r = result as SubscriptionNotificationResult;
-          return subscriptionEvent(r, {
-            eventId: id(r.subscriptionId, r.subscriptionStatus),
-            raw: payload,
-          });
-        }
-        case "REFUND_NOTIFICATION": {
-          const r = result as RefundNotificationResult;
-          return refundEvent(r, {
-            eventId: id(
-              r.acquiringRefundOrderId ?? r.refundRequestId,
-              r.refundStatus,
-            ),
-            raw: payload,
-          });
-        }
-        default:
-          return null;
+      const event = payload as PancakeEvent | null;
+      if (
+        !event ||
+        typeof event !== "object" ||
+        typeof event.id !== "string" ||
+        typeof event.eventType !== "string" ||
+        !event.data ||
+        typeof event.data.orderId !== "string" ||
+        typeof event.data.currency !== "string"
+      ) {
+        return null;
       }
-    },
-
-    webhookResponse(ok: boolean): Response {
-      const { body, signature } = ok
-        ? webhook.buildSuccessResponse()
-        : webhook.buildFailedResponse("processing_failed");
-      return new Response(body, {
-        status: ok ? 200 : 500,
-        headers: {
-          "content-type": "application/json",
-          "x-signature": signature,
-        },
-      });
+      return mapEvent(event);
     },
   };
 }

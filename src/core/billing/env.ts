@@ -9,8 +9,11 @@ type RuntimeEnv = Record<string, string | undefined>;
 export const creemModes = ["test", "live"] as const;
 export type CreemMode = (typeof creemModes)[number];
 
-/** Waffo 的环境：sandbox 走 api-sandbox.waffo.com（测试卡），production 走 api.waffo.com（真实扣款）。 */
-export const waffoModes = ["sandbox", "production"] as const;
+/**
+ * Waffo Pancake 的环境：test（测试卡，不真实扣款）/ prod（真实收款）。两边的商户私钥、产品 ID
+ * 互不通用；webhook 也按这个环境验签，另一个环境的事件一律拒收（见 providers/waffo.ts）。
+ */
+export const waffoModes = ["test", "prod"] as const;
 export type WaffoMode = (typeof waffoModes)[number];
 
 /** 可选的支付服务商。`site.config.ts` 的 `billing.provider` 从这里取值，实现见 ./providers/。 */
@@ -54,7 +57,7 @@ function isLiveStripeKey(runtimeEnv: RuntimeEnv) {
  * - 不在 Vercel 上（任何 VERCEL_ENV）——硬锁，部署到 Vercel 的站点一律用真实服务商；
  * - `CREEM_MODE !== "live"` ——硬锁，真实扣款模式绝不能落在假支付上；
  * - `STRIPE_SECRET_KEY` 不是 live 密钥 ——硬锁，同上，换了服务商也一样；
- * - `WAFFO_MODE !== "production"` ——硬锁，同上；
+ * - `WAFFO_MODE !== "prod"` ——硬锁，同上；
  * - `NODE_ENV` 是 development / test —— `next build`、`next start`、Docker 里都是 production，
  *   自托管生产默认拒绝（收紧前这一条缺失：自托管的 `next start` 会静默放行 fake）。
  *   `NODE_ENV` 没设置时按生产处理，避免自建服务忘了设置就默认放行。
@@ -71,7 +74,7 @@ export function fakeBillingAllowed(runtimeEnv: RuntimeEnv) {
   if (runtimeEnv.VERCEL_ENV) return false;
   if (runtimeEnv.CREEM_MODE === "live") return false;
   if (isLiveStripeKey(runtimeEnv)) return false;
-  if (runtimeEnv.WAFFO_MODE === "production") return false;
+  if (runtimeEnv.WAFFO_MODE === "prod") return false;
   return fakeBillingOptIn(runtimeEnv) || isNonProductionRuntime(runtimeEnv);
 }
 
@@ -85,10 +88,9 @@ export function fakeBillingAllowed(runtimeEnv: RuntimeEnv) {
  *   此时结账和 webhook 接口返回 503，其他功能不受影响。Lemon Squeezy 的 STORE_ID 也要填：
  *   建结账会话必须带上 store 关系。
  * - `CREEM_MODE`：默认 test。切到真实收款必须显式设为 live，并换成生产模式的 key、secret 和产品 ID。
- * - `WAFFO_API_KEY`、`WAFFO_PRIVATE_KEY`、`WAFFO_PUBLIC_KEY`、`WAFFO_MERCHANT_ID`：Waffo 的四项，
- *   生效服务商是 waffo 时按同样规则必填。私钥是**我们的** RSA 私钥（请求和 webhook 回复都用它签名），
- *   公钥是 **Waffo 的**（验证它的响应和 webhook）。`WAFFO_MODE` 默认 sandbox，真实收款显式设 production，
- *   沙箱和生产的四项互不通用。
+ * - `WAFFO_MERCHANT_ID`、`WAFFO_PRIVATE_KEY`：Waffo Pancake 的商户 ID（`MER_`）和 API 私钥，
+ *   生效服务商是 waffo 时按同样规则必填。`WAFFO_MODE` 默认 test，真实收款显式设 prod，
+ *   两个环境的私钥和产品 ID 互不通用。
  * - `BILLING_PROVIDER`：默认取 `site.config.ts` 的 billing.provider（见下面的 provider 参数）；
  *   fake 只在本地和 CI 可用（见 fakeBillingAllowed）。
  * - `ALLOW_FAKE_BILLING`：可选，默认关闭。显式设为 1 / true 时允许 fake（CI 的 e2e 需要，
@@ -125,13 +127,11 @@ export function billingServerEnv(
       z.string().min(1),
     ),
     CREEM_MODE: z.enum(creemModes).default("test"),
-    // Waffo：私钥 / 公钥填 Base64（DER，一行）或 PEM 都行（官方 SDK 两种都认），
-    // 从 Portal → Integration 取；沙箱的密钥对由 Waffo 生成，生产的私钥由你自己生成并上传公钥。
-    WAFFO_API_KEY: requiredWhen(requiredFor("waffo"), z.string().min(1)),
-    WAFFO_PRIVATE_KEY: requiredWhen(requiredFor("waffo"), z.string().min(1)),
-    WAFFO_PUBLIC_KEY: requiredWhen(requiredFor("waffo"), z.string().min(1)),
+    // Waffo Pancake：Dashboard → Integration（Settings → Developers）里的商户 ID 和 API 私钥。
+    // 私钥 PEM、一行 Base64、带字面 \n 的都行（官方 SDK 会规范化）。
     WAFFO_MERCHANT_ID: requiredWhen(requiredFor("waffo"), z.string().min(1)),
-    WAFFO_MODE: z.enum(waffoModes).default("sandbox"),
+    WAFFO_PRIVATE_KEY: requiredWhen(requiredFor("waffo"), z.string().min(1)),
+    WAFFO_MODE: z.enum(waffoModes).default("test"),
     // Stripe 的密钥是 sk_/rk_ 开头（测试模式 sk_test_，真实扣款 sk_live_），
     // secret 是 `stripe webhook` 或控制台给的 whsec_，和 Creem 的不通用。
     STRIPE_SECRET_KEY: requiredWhen(requiredFor("stripe"), z.string().min(1)),
@@ -147,7 +147,7 @@ export function billingServerEnv(
       .default(provider)
       .refine((value) => value !== "fake" || fakeBillingAllowed(runtimeEnv), {
         message:
-          'must be "creem", "stripe", "lemonsqueezy" or "waffo" in a production runtime, on Vercel, when CREEM_MODE=live or WAFFO_MODE=production, or with a live Stripe secret key (set ALLOW_FAKE_BILLING=1 to override the production check)',
+          'must be "creem", "stripe", "lemonsqueezy" or "waffo" in a production runtime, on Vercel, when CREEM_MODE=live or WAFFO_MODE=prod, or with a live Stripe secret key (set ALLOW_FAKE_BILLING=1 to override the production check)',
       }),
     // 显式放行 fake（可选，默认关闭）。只接受 1 / true / 0 / false：写错时启动即报错，不静默当成关闭。
     ALLOW_FAKE_BILLING: z.enum(fakeBillingOptInValues).optional(),

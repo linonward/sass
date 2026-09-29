@@ -246,9 +246,9 @@ importers:
       '@vercel/speed-insights':
         specifier: ^2.0.0
         version: 2.0.0(next@16.3.6(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@24.13.6)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
-      '@waffo/waffo-node':
-        specifier: 3.1.0
-        version: 3.1.0
+      '@waffo/pancake-ts':
+        specifier: 0.25.0
+        version: 0.25.0
       ai:
         specifier: ^7.0.113
         version: 7.0.113(zod@4.6.5)
@@ -3322,9 +3322,9 @@ packages:
   '@vitest/spy@5.0.1':
     resolution: {integrity: sha512-rbto/mF/SGERxEgYOek7Xm6B9b+y+mVoo+f4b2LymYO8zM1b7uB5nHuhVMTP2hxdzgxvGiZYGxGIaMvL5y180Q==}
 
-  '@waffo/waffo-node@3.1.0':
-    resolution: {integrity: sha512-EqYhiJS9cSF8M4NmCwiV3Dkk/APmuafrTB1e3cPEqqN8r/1P0mzTFCGkeEODEX21r4cIRzCN4kzVG7CTtAw+OA==}
-    engines: {node: '>=18.0.0'}
+  '@waffo/pancake-ts@0.25.0':
+    resolution: {integrity: sha512-6Zye8je5nhTh2tuu7XBZycqdgg3CwEiS0DLDGvbPZQiSwmraqPBRdy4qMDCJ5IbdZhjRRFlDcNSZSmEr3BE0dg==}
+    engines: {node: '>=20.0.0'}
 
   '@workflow/serde@4.1.0':
     resolution: {integrity: sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ==}
@@ -9554,7 +9554,7 @@ snapshots:
 
   '@vitest/spy@5.0.1': {}
 
-  '@waffo/waffo-node@3.1.0': {}
+  '@waffo/pancake-ts@0.25.0': {}
 
   '@workflow/serde@4.1.0': {}
 
