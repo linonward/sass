@@ -1,6 +1,6 @@
 # 出海 SaaS 套件方案
 
-状态：已确认并实施（2026-09-25 定稿；2026-09-27 更新：阶段 1–11 已落地，阶段 12 进行中，阶段 13 部分落地）
+状态：已确认并实施（2026-09-25 定稿；2026-09-29 更新：阶段 1–22 已落地，阶段 23 进行中）
 
 ## 目标
 
@@ -29,7 +29,7 @@
 | 数据库 | Neon Postgres + Drizzle ORM + drizzle-kit 迁移                                           |
 | 认证   | Better Auth：Google OAuth + 邮箱验证码（`emailOTP` 插件，Resend 发送）；admin 插件管角色 |
 | 邮件   | Resend + React Email                                                                     |
-| 支付   | `PaymentProvider` 接口，v1 只实现 Creem                                                  |
+| 支付   | `PaymentProvider` 接口，三个适配器：Creem（默认）、Stripe、Lemon Squeezy                 |
 | 积分   | Postgres 账本                                                                            |
 | AI     | Vercel AI SDK                                                                            |
 | 限流   | Upstash Redis + `@upstash/ratelimit`                                                     |
@@ -41,7 +41,7 @@
 
 ### v1 不做
 
-CLI 生成器、npm 包 / monorepo、文档站、license 授权、多套 UI 主题、团队 / 组织 / 多租户、Stripe 适配器（只留接口）、Cloudflare / Docker 部署、原生 App、营销邮件 / Resend Audiences、队列与定时任务、Session 缓存。
+CLI 生成器、npm 包 / monorepo、文档站、license 授权、多套 UI 主题、团队 / 组织 / 多租户、Cloudflare / Docker 部署、原生 App、营销邮件 / Resend Audiences、**独立的消息队列 / 工作流服务**（定时触发只用于恢复核对，见阶段 23）、Session 缓存。
 
 ## 架构
 
@@ -50,7 +50,7 @@ site.config.ts ──┐        .env（zod 校验，缺失即启动失败）
                  ▼
 ┌──────────────── src/core（套件维护，业务不改）─────────────────────┐
 │ auth(Better Auth) ─ db(Drizzle+Neon) ─ email(Resend)              │
-│ billing(PaymentProvider→Creem) ──webhook──► credits(账本)         │
+│ billing(PaymentProvider × 3) ──webhook──► credits(账本)            │
 │ ai(AI SDK) ──扣积分──► credits    ratelimit(Upstash)              │
 │ storage(R2)    admin                                               │
 └────────────────────────────────────────────────────────────────────┘
@@ -71,7 +71,7 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 | `site.config.ts`                  | 业务 | 品牌、域名、功能开关、套餐、限流阈值       |
 | `messages/**`、`content/**`       | 业务 | 文案、博客文章                             |
 
-业务项目用 `git remote add upstream <本仓库>` 合并套件更新，规则写进 `UPGRADING.md`。
+业务项目用 `git remote add upstream <本仓库>` 合并套件更新，规则写进 `UPGRADING.md`。注意这条路径**只对从 git 仓库 fork 的项目成立**：走 zip 发行包的买家与模板没有共同 Git 历史，`git merge`（含 `--allow-unrelated-histories`）不能作为升级方案 —— 修复见阶段 23 的 T2301（版本基线 + 差量更新包 + 三路合并）。
 
 ## 关键决策
 
@@ -94,12 +94,12 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 
 ### Redis（Upstash，只做限流）
 
-| 场景                       | 是否用 Redis                               |
-| -------------------------- | ------------------------------------------ |
-| AI、上传预签名接口限流     | 是：按用户 + IP 的滑动窗口，阈值写在配置里 |
-| 登录、验证码发送与校验频率 | 否：用 Better Auth 自带的限流，存 Postgres |
-| 积分余额                   | 否：必须和账本在同一个事务里               |
-| Session 缓存、队列         | v1 不做                                    |
+| 场景                       | 是否用 Redis                                                   |
+| -------------------------- | -------------------------------------------------------------- |
+| AI、上传预签名接口限流     | 是：按用户 + IP 的滑动窗口，阈值写在配置里                     |
+| 登录、验证码发送与校验频率 | 否：用 Better Auth 自带的限流，存 Postgres                     |
+| 积分余额                   | 否：必须和账本在同一个事务里                                   |
+| Session 缓存、独立队列     | v1 不做（恢复与补发走 Postgres + 受保护的定时入口，见阶段 23） |
 
 - 生产环境只要开了 `ai` 或 `upload`，就强制要求 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`。
 - 本地未配置时跳过限流，并打印警告。
@@ -157,32 +157,54 @@ src/features/*、src/app/[locale]/(app)/*、content/、messages/  ← 业务代�
 - **设置页暂时没有改邮箱入口。** 接口能用（e2e 直接调接口覆盖），UI 属于后续任务；核心插件的链接式
   `/change-email`（`user.changeEmail.enabled`）在本仓库保持关闭。
 
+### 交付与恢复（阶段 23，进行中）
+
+2026-09-29 定：目标用户固定为**使用 Next.js、需要积分收费的中文独立开发者**，暂停扩充通用功能，用三周把「别人能买、能升级、出问题能自己查」补完。任务见 [阶段 23](tasks/phase-23-delivery.md)。
+
+| 批次     | 内容                                                         | 任务        |
+| -------- | ------------------------------------------------------------ | ----------- |
+| 交付基础 | 落卡与文档修正、买家升级路径、买家 agent 指引                | T2300–T2302 |
+| 恢复能力 | AI 任务服务端推进与核对、计费异常台、事务邮件持久化重试      | T2303–T2305 |
+| 真实交付 | 参考产品、首个候选发行包（版本/许可/支持范围）、外部买家试用 | T2306–T2308 |
+
+四条约束（写在阶段文档开头，也写进各卡）：
+
+- **不引入独立队列服务**：沿用 TypeScript + Node + Postgres，恢复靠「受保护的 HTTP 入口 + 任何调度器都能调它」，触发频率由部署方式决定（Vercel Hobby 的 cron **每天只能跑一次**，必须有兜底）。
+- **超时只表示需要核对，不等于失败**：先去供应商侧核对，能拿到结果就先保存结果，不许「等太久了所以判失败并退款」。
+- **随包交付的文件不能引用任务卡，也不能指向未随包交付的文件**（排除清单在 `scripts/release-package.sh`）。
+- **结算类改动必须同时检查订单、任务、积分流水三处状态**，页面提示与日志不算证据。
+
+需要外部输入（阻塞 T2307 / T2308）：发行主体与支持邮箱、三家支付商与模型服务商的测试环境账号、3 位试用用户。
+
 ## 风险
 
-- **最脆弱的假设**：业务代码遵守目录边界。一旦大量改动 `src/core`，上游更新就合不回去。缓解：在 T503 加 `UPGRADING.md`，并用 lint 规则标记业务项目对 `src/core` 的改动。
-- **外部服务失效**：Creem webhook 延迟时，靠轮询 + 幂等；Upstash 挂掉时放行 + 积分兜底；Resend 挂掉时验证码发不出，页面提示稍后重试，并引导用户改用 Google 登录。
+- **最脆弱的假设**：业务代码遵守目录边界。一旦大量改动 `src/core`，上游更新就合不回去。缓解：`UPGRADING.md` 写明目录边界，`scripts/core-drift.sh` 给出冲突报告（**目前只手工跑，没接进 CI**），以及阶段 23 的差量更新流程（T2301）—— 它让「模板改了、买家也改了」显式暴露成冲突，而不是被整份覆盖。
+- **外部服务失效**：支付商 webhook 延迟时，靠轮询 + 幂等；Upstash 挂掉时放行 + 积分兜底；Resend 挂掉时验证码发不出，页面提示稍后重试，并引导用户改用 Google 登录 —— 持久化重试由阶段 23 的 T2305 补上。AI 供应商侧超时不等于失败，先核对再判定（T2303）。
 - **回滚**：全新仓库，没有现存数据，每个 PR 都能单独 revert。
 
 ## 测试
 
-- **Vitest**：积分扣减（余额充足、余额不足、并发）、webhook（签名错误、重复事件、未知类型）、env 校验（关闭模块后不再要求 key）、限流（超阈值返回 429、Redis 不可用时的行为）。
-- **Playwright 冒烟**：落地页多语言切换 → 邮箱验证码登录（测试环境从 `.tmp/emails/` 读取验证码）→ Creem 测试模式付款 → 积分到账 → 调一次 AI 并扣积分。
+- **Vitest**：积分扣减（余额充足、余额不足、并发）、webhook（签名错误、重复事件、未知类型）、env 校验（关闭模块后不再要求 key）、限流（超阈值返回 429、Redis 不可用时的行为）。三家适配器各有单测；阶段 23 再加恢复扫描与异常处理的库测试（用户关掉页面、进程重启、并发结算、退款事务失败重放）。
+- **Playwright 冒烟**：落地页多语言切换 → 邮箱验证码登录（测试环境从 `.tmp/emails/` 读取验证码）→ 用 `BILLING_PROVIDER=fake` 的站内假服务商结账 → 积分到账 → 调一次 AI 并扣积分。**假服务商只覆盖流程，不覆盖真实服务商的字段与签名**；真实测试环境的验证结果记在阶段 23 的 T2306 / T2307。
 
 ## 外部依赖
 
-| 服务                      | 首次需要 |
-| ------------------------- | -------- |
-| GitHub、Vercel、域名      | T108     |
-| Neon                      | T201     |
-| Resend（需验证域名）      | T202     |
-| Google Cloud OAuth Client | T203     |
-| Creem（先用测试模式）     | T302     |
-| Upstash Redis             | T401     |
-| AI 服务商 key（至少一个） | T402     |
-| Cloudflare R2             | T403     |
-| Sentry（可选）            | T602     |
+| 服务                            | 首次需要                      |
+| ------------------------------- | ----------------------------- |
+| GitHub、Vercel、域名            | T108                          |
+| Neon                            | T201                          |
+| Resend（需验证域名）            | T202                          |
+| Google Cloud OAuth Client       | T203                          |
+| Creem（先用测试模式）           | T302                          |
+| Upstash Redis                   | T401                          |
+| AI 服务商 key（至少一个）       | T402                          |
+| Cloudflare R2                   | T403                          |
+| Sentry（可选）                  | T602                          |
+| Stripe / Lemon Squeezy 测试账号 | T2306（真实测试环境验证）     |
+| 发行主体与支持邮箱              | T2307（`LICENSE` 与支持范围） |
+| 试用用户（3 位）                | T2308                         |
 
 ## 推迟项
 
-- **Stripe 适配器**：等有海外公司主体时再做。
-- **是否商业化**：~~做完 2 个项目后用 `/office-hours` 评估。~~ 已提前决策（2026-09-26）：直接售卖，商品化工作见阶段 8。
+- ~~**Stripe 适配器**：等有海外公司主体时再做。~~ 已实现（T1801；Lemon Squeezy 见 T1802）。真实测试环境的验证结果仍待补，见阶段 23 的 T2306 / T2307。
+- **是否商业化**：~~做完 2 个项目后用 `/office-hours` 评估。~~ 已提前决策（2026-09-26）：直接售卖，商品化工作见阶段 8。正式售卖的门槛见阶段 23（T2308 的五条放行条件）。
