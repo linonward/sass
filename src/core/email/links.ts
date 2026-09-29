@@ -2,7 +2,10 @@ import { routing } from "@/core/i18n/routing";
 
 import { emailBrand } from "./brand";
 
-/** 邮件里指向站内页面的绝对地址，带收件人语言的前缀（默认语言不带）。 */
+/**
+ * Absolute URL to a site page for use in emails, with the recipient's locale prefix (none for the
+ * default locale).
+ */
 export function siteLink(locale: string, path: string) {
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
   return `${emailBrand.siteUrl}${prefix}${path}`;

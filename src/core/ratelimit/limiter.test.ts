@@ -11,7 +11,7 @@ import {
 
 const NOW = 1_000_000;
 
-/** 内存里的固定窗口计数器，模拟 Redis 上的 @upstash/ratelimit。 */
+/** An in-memory fixed-window counter standing in for @upstash/ratelimit on Redis. */
 function memoryLimiter(limit: number, windowMs = 60_000): WindowLimiter {
   const counts = new Map<string, number>();
   return {
@@ -45,7 +45,7 @@ function setup(
 const caller = { userId: "u1", ip: "1.2.3.4" };
 
 describe("checkRateLimit", () => {
-  test("阈值内放行，超过后拒绝并给出 retryAfter", async () => {
+  test("allows requests within the threshold, then rejects with retryAfter", async () => {
     const { checkRateLimit } = setup(memoryLimiter(2, 30_000));
     expect(await checkRateLimit("ai", caller)).toEqual({
       ok: true,
@@ -59,7 +59,7 @@ describe("checkRateLimit", () => {
     });
   });
 
-  test("按用户和按 IP 分别计数：换 IP 也躲不开用户的限额，换账号也躲不开 IP 的限额", async () => {
+  test("counts per user and per IP separately: switching IPs doesn't escape the user limit, and switching accounts doesn't escape the IP limit", async () => {
     const { checkRateLimit } = setup(memoryLimiter(1));
     expect((await checkRateLimit("ai", caller)).ok).toBe(true);
     expect(
@@ -73,14 +73,14 @@ describe("checkRateLimit", () => {
     ).toBe(true);
   });
 
-  test("只有 IP 时按 IP 计数", async () => {
+  test("counts by IP when only the IP is known", async () => {
     const limit = vi.fn(memoryLimiter(1).limit);
     const { checkRateLimit } = setup({ limit });
     await checkRateLimit("upload", { ip: "1.2.3.4" });
     expect(limit).toHaveBeenCalledExactlyOnceWith("ip:1.2.3.4");
   });
 
-  test("每条策略只创建一次计数器，未定义的策略直接报错", async () => {
+  test("creates one counter per policy and throws for undefined policies", async () => {
     const { checkRateLimit, createLimiter } = setup(memoryLimiter(10));
     await checkRateLimit("ai", caller);
     await checkRateLimit("ai", caller);
@@ -95,7 +95,7 @@ describe("checkRateLimit", () => {
     );
   });
 
-  test("没有配置 Redis 时跳过限流，只警告一次", async () => {
+  test("skips rate limiting without Redis and warns only once", async () => {
     const { checkRateLimit, warn, logError } = setup(null);
     for (let i = 0; i < 3; i++) {
       expect((await checkRateLimit("ai", caller)).ok).toBe(true);
@@ -107,7 +107,7 @@ describe("checkRateLimit", () => {
     );
   });
 
-  test("onMissingRedis 为 unavailable 时拒绝请求（自托管生产漏配），只记一次 error", async () => {
+  test("rejects requests when onMissingRedis is unavailable (self-hosted production misconfig), logging one error", async () => {
     const { checkRateLimit, warn, logError } = setup(
       null,
       "open",
@@ -124,24 +124,24 @@ describe("checkRateLimit", () => {
     expect(logError).toHaveBeenCalledExactlyOnceWith("ratelimit.unconfigured", {
       reason: "UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set",
     });
-    // 放行的那条 warn 不该再打一遍。
+    // The warn for the let-through case must not be logged as well.
     expect(warn).not.toHaveBeenCalled();
   });
 
-  test("配了 Redis 时 onMissingRedis 不影响判定", async () => {
+  test("onMissingRedis has no effect when Redis is configured", async () => {
     const { checkRateLimit } = setup(memoryLimiter(1), "open", "unavailable");
     expect((await checkRateLimit("ai", caller)).ok).toBe(true);
   });
 
   const failing: Record<string, WindowLimiter> = {
-    报错: { limit: () => Promise.reject(new Error("ECONNREFUSED")) },
-    超时: {
+    errors: { limit: () => Promise.reject(new Error("ECONNREFUSED")) },
+    "times out": {
       limit: async () => ({ success: true, reset: 0, reason: "timeout" }),
     },
   };
 
   test.each(Object.entries(failing))(
-    "Redis %s时，open 放行并记录错误",
+    "when Redis %s, open lets requests through and logs the error",
     async (_, limiter) => {
       const { checkRateLimit, logError } = setup(limiter, "open");
       expect(await checkRateLimit("ai", caller)).toEqual({
@@ -153,7 +153,7 @@ describe("checkRateLimit", () => {
   );
 
   test.each(Object.entries(failing))(
-    "Redis %s时，closed 拒绝并标记 unavailable",
+    "when Redis %s, closed rejects and marks unavailable",
     async (_, limiter) => {
       const { checkRateLimit, logError } = setup(limiter, "closed");
       expect(await checkRateLimit("ai", caller)).toEqual({
@@ -167,7 +167,7 @@ describe("checkRateLimit", () => {
 });
 
 describe("rateLimitResponse", () => {
-  test("超限返回 429 和 Retry-After", async () => {
+  test("returns 429 with Retry-After when over the limit", async () => {
     const response = rateLimitResponse({
       ok: false,
       reason: "limited",
@@ -178,7 +178,7 @@ describe("rateLimitResponse", () => {
     expect(await response.json()).toEqual({ error: "rate_limited" });
   });
 
-  test("Redis 不可用返回 503", async () => {
+  test("returns 503 when Redis is unavailable", async () => {
     const response = rateLimitResponse({
       ok: false,
       reason: "unavailable",
@@ -190,7 +190,7 @@ describe("rateLimitResponse", () => {
 });
 
 describe("getClientIp", () => {
-  test("取 x-forwarded-for 的第一个地址，没有时用 x-real-ip", () => {
+  test("takes the first x-forwarded-for address, falling back to x-real-ip", () => {
     expect(
       getClientIp(new Headers({ "x-forwarded-for": "1.1.1.1, 10.0.0.1" })),
     ).toBe("1.1.1.1");

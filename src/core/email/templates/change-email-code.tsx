@@ -6,17 +6,23 @@ import { EmailLayout, emailStyles } from "../components/email-layout";
 import { emailTranslator, type EmailT } from "../translator";
 
 export type ChangeEmailCodeProps = {
-  /** 6 位数字验证码。 */
+  /** 6-digit verification code. */
   code: string;
-  /** 有效期（分钟），与 Better Auth emailOTP 的 expiresIn 保持一致。 */
+  /** Validity in minutes; matches Better Auth emailOTP's expiresIn. */
   expiresInMinutes: number;
-  /** true 表示发往新邮箱（确认新地址），false 表示发往当前邮箱（确认是本人发起的变更）。 */
+  /**
+   * true: sent to the new address (confirms the new address); false: sent to the current address
+   * (confirms the account owner started the change).
+   */
   forNewEmail: boolean;
 };
 
 type Props = ChangeEmailCodeProps & { t: EmailT; locale: string };
 
-/** 两个验证码的主题不同，收件人一眼能看出这封信是确认变更还是确认新地址。 */
+/**
+ * The two codes use different subjects so the recipient can tell at a glance whether this email
+ * confirms the change or confirms the new address.
+ */
 export function changeEmailCodeSubject(t: EmailT, props: ChangeEmailCodeProps) {
   return props.forNewEmail
     ? t("changeEmailCode.subjectNew", { name: brand.name })

@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { mergeRows, NO_SOURCE_BUCKET, parseReportFilters } from "./report";
 
 describe("parseReportFilters", () => {
-  test("接受快照里可能出现的来源：utm 值、外部域名、direct 和 unknown", () => {
+  test("accepts sources that can appear in snapshots: utm values, external domains, direct, and unknown", () => {
     expect(parseReportFilters({ source: "launch" })).toEqual({
       source: "launch",
     });
@@ -21,14 +21,14 @@ describe("parseReportFilters", () => {
     );
   });
 
-  test("合成桶也接受：它是表格里的一行，筛选框必须能选它", () => {
+  test("accepts the synthetic bucket too: it's a table row, so the filter must be able to select it", () => {
     expect(parseReportFilters({ source: NO_SOURCE_BUCKET })).toEqual({
       source: NO_SOURCE_BUCKET,
     });
   });
 
-  test("不在白名单里的值当作没传，不带进查询", () => {
-    // 含引号、分号、换行的值不是合法 utm，也不是合法 hostname。
+  test("values outside the allowlist are treated as absent and never reach the query", () => {
+    // Values with quotes, semicolons, or newlines are neither valid utm values nor valid hostnames.
     for (const source of [
       "launch';drop table",
       "launch\n",
@@ -36,18 +36,18 @@ describe("parseReportFilters", () => {
       "",
     ])
       expect(parseReportFilters({ source })).toEqual({ source: undefined });
-    // 一个字段不合法不影响另一个。
+    // One invalid field doesn't affect the others.
     expect(parseReportFilters({ source: "launch", medium: "!!" })).toEqual({
       source: "launch",
       medium: undefined,
     });
-    // 超长（>80 字符的 utm；hostname 上限 253）不通过。
+    // Too long (utm > 80 chars; hostname max 253) is rejected.
     expect(parseReportFilters({ source: "a".repeat(300) })).toEqual({
       source: undefined,
     });
   });
 
-  test("重复的查询参数（数组）和缺省都不算筛选", () => {
+  test("repeated query params (arrays) and missing ones don't count as filters", () => {
     expect(parseReportFilters({ source: ["launch", "other"] })).toEqual({
       source: undefined,
     });
@@ -68,7 +68,7 @@ const empty = {
 };
 
 describe("mergeRows", () => {
-  test("出现在任意一组里的来源都有一行，缺的填 0", () => {
+  test("a source in any aggregate gets a row, with 0 for missing values", () => {
     const rows = mergeRows({
       ...empty,
       confirmedLeads: [],
@@ -102,7 +102,7 @@ describe("mergeRows", () => {
     ]);
   });
 
-  test("净收入为 0 的币种不列出（全额退款），待核对照列", () => {
+  test("currencies with zero net revenue are omitted (full refunds); needs-reconciling amounts are still listed", () => {
     const rows = mergeRows({
       ...empty,
       revenue: [
@@ -117,7 +117,7 @@ describe("mergeRows", () => {
     });
   });
 
-  test("排序：注册多的在前，再按付费人数，最后按来源名", () => {
+  test("sorting: most registrations first, then paying users, then source name", () => {
     const rows = mergeRows({
       ...empty,
       registrations: [

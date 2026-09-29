@@ -1,6 +1,6 @@
 import { logger } from "@/core/observability/logger";
 
-/** 删除账户时传给各个钩子的用户信息。 */
+/** User info passed to each hook when an account is deleted. */
 export type DeletedUser = { userId: string; email: string };
 
 export type OnUserDeleteHandler = (user: DeletedUser) => Promise<void> | void;
@@ -8,9 +8,10 @@ export type OnUserDeleteHandler = (user: DeletedUser) => Promise<void> | void;
 const handlers = new Map<string, OnUserDeleteHandler>();
 
 /**
- * 注册删除账户前要执行的清理逻辑，比如取消订阅、删除上传的文件。
- * 按注册顺序执行；同名重复注册会覆盖前一个（模块热更新时不会重复执行）。
- * 在 ./hooks.ts 里 import 注册文件，保证删除时所有模块都已注册。
+ * Register cleanup logic to run before an account is deleted, such as canceling subscriptions or
+ * deleting uploaded files. Hooks run in registration order; registering the same name again
+ * replaces the previous one (so hot module reloads don't make it run twice). Import the
+ * registration file in ./hooks.ts so every module is registered by the time a deletion runs.
  */
 export function registerOnUserDelete(
   name: string,
@@ -20,17 +21,17 @@ export function registerOnUserDelete(
   handlers.set(name, handler);
 }
 
-/** 已注册的钩子名称，按执行顺序。 */
+/** Names of the registered hooks, in execution order. */
 export function onUserDeleteHandlers(): string[] {
   return [...handlers.keys()];
 }
 
-/** 仅供测试：清空注册表。 */
+/** Test-only: clear the registry. */
 export function resetOnUserDelete() {
   handlers.clear();
 }
 
-/** 某个钩子失败时抛出；删除随之中止，用户数据保持不变。 */
+/** Thrown when a hook fails; the deletion is aborted and the user's data is left untouched. */
 export class OnUserDeleteError extends Error {
   constructor(
     readonly handler: string,
@@ -42,9 +43,10 @@ export class OnUserDeleteError extends Error {
 }
 
 /**
- * 依次执行所有钩子。任何一个失败就停止，后面的钩子不再执行，并抛出 OnUserDeleteError。
- * 在删除用户之前调用：钩子还能读到用户数据；外部资源（如订阅）没清理干净时不删除账户，
- * 避免用户被删了却还在扣费。
+ * Run all hooks in order. Stop at the first failure, skip the remaining hooks, and throw
+ * OnUserDeleteError. Call this before deleting the user: hooks can still read the user's data, and
+ * if external resources (such as subscriptions) weren't fully cleaned up, the account is not
+ * deleted — so a user is never deleted while still being charged.
  */
 export async function runOnUserDelete(user: DeletedUser) {
   for (const [name, handler] of handlers) {

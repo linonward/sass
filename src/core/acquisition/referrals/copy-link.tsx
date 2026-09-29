@@ -7,8 +7,9 @@ import { Button } from "@/core/ui/button";
 import { Input } from "@/core/ui/input";
 
 /**
- * 邀请链接的展示与复制。复制失败（无剪贴板权限、非安全上下文）时退回手动复制：
- * 选中输入框内容并提示按键，不假装已经复制成功。
+ * Shows and copies the referral link. If copying fails (no clipboard permission, insecure context),
+ * fall back to manual copy: select the input's contents and show a keyboard hint instead of
+ * pretending it was copied.
  */
 export function CopyLink({ link }: { link: string }) {
   const t = useTranslations("Referrals");

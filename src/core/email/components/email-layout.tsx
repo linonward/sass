@@ -14,7 +14,10 @@ import {
 import { emailBrand as brand } from "../brand";
 import type { EmailT } from "../translator";
 
-/** 所有事务邮件共用的外框：品牌页眉、正文卡片、页脚。样式全部内联，兼容主流邮件客户端。 */
+/**
+ * Shared frame for every transactional email: brand header, body card, footer. All styles are
+ * inline for compatibility with mainstream email clients.
+ */
 export function EmailLayout({
   t,
   locale,
@@ -98,7 +101,7 @@ const footerText = {
   color: brand.muted,
 };
 
-/** 正文里常用的样式，模板间共享。 */
+/** Common body styles, shared across templates. */
 export const emailStyles = {
   heading: {
     margin: "0 0 16px",

@@ -2,7 +2,10 @@ import type { Messages } from "next-intl";
 
 import { loadMessages } from "./translator";
 
-/** 套餐在收件人语言里的显示名称（messages 的 Landing.pricing.plans.<id>.name），缺失时用 planId。 */
+/**
+ * The plan's display name in the recipient's locale (Landing.pricing.plans.<id>.name in messages),
+ * falling back to planId.
+ */
 export async function planDisplayName(
   locale: string,
   planId: string | null | undefined,

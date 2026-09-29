@@ -7,7 +7,7 @@ describe("safeCallbackURL", () => {
     ["/dashboard", "/dashboard"],
     ["/de/dashboard?tab=1#top", "/de/dashboard?tab=1#top"],
     ["/settings/../dashboard", "/dashboard"],
-  ])("站内路径 %s 保留为 %s", (input, expected) => {
+  ])("keeps same-site path %s as %s", (input, expected) => {
     expect(safeCallbackURL(input, "/fallback")).toBe(expected);
   });
 
@@ -21,43 +21,47 @@ describe("safeCallbackURL", () => {
     ["dashboard"],
     ["/sign-in"],
     ["/de/sign-in"],
-  ])("不安全或无意义的 %s 回退到默认地址", (input) => {
+  ])("falls back to the default for unsafe or meaningless %s", (input) => {
     expect(safeCallbackURL(input, "/fallback")).toBe("/fallback");
   });
 
   test.each([
-    // 登录页带语言前缀或结尾斜杠时同样回退，别转回登录页。
+    // The sign-in page with a locale prefix or a trailing slash also falls back; don't send the
+    // user back to sign-in.
     ["/sign-in/"],
     ["/de/sign-in/"],
-    // 缺前导斜杠的相对路径也回退。
+    // Relative paths without a leading slash fall back too.
     ["./dashboard"],
     ["../dashboard"],
     ["./."],
-  ])("登录页变体和相对路径 %s 回退到默认地址", (input) => {
-    expect(safeCallbackURL(input, "/fallback")).toBe("/fallback");
-  });
+  ])(
+    "falls back to the default for sign-in variants and relative paths: %s",
+    (input) => {
+      expect(safeCallbackURL(input, "/fallback")).toBe("/fallback");
+    },
+  );
 
-  test("边界：编码过的斜杠不会被当成 scheme-relative（浏览器不解码就跳）", () => {
+  test("edge: encoded slashes are not treated as scheme-relative (browsers navigate without decoding)", () => {
     expect(safeCallbackURL("/%2f%2fevil.example", "/fallback")).toBe(
       "/%2f%2fevil.example",
     );
   });
 
-  test("边界：根路径和规范化后的路径保留", () => {
+  test("edge: keeps the root path and normalized paths", () => {
     expect(safeCallbackURL("/", "/fallback")).toBe("/");
     expect(safeCallbackURL("/..", "/fallback")).toBe("/");
     expect(safeCallbackURL("/./dashboard", "/fallback")).toBe("/dashboard");
     expect(safeCallbackURL("/dashboard/", "/fallback")).toBe("/dashboard/");
   });
 
-  test("边界：查询串和 hash 原样带回，路径里有 sign-in 不算登录页", () => {
+  test("edge: keeps the query string and hash as-is; sign-in inside them is not the sign-in page", () => {
     expect(safeCallbackURL("/dashboard?next=/sign-in", "/fallback")).toBe(
       "/dashboard?next=/sign-in",
     );
     expect(safeCallbackURL("/dashboard#/sign-in", "/fallback")).toBe(
       "/dashboard#/sign-in",
     );
-    // 只有整段 pathname 恰好是登录页才回退。
+    // Only fall back when the whole pathname is exactly the sign-in page.
     expect(safeCallbackURL("/sign-in/extra", "/fallback")).toBe(
       "/sign-in/extra",
     );

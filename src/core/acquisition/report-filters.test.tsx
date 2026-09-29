@@ -14,13 +14,14 @@ import { ReportFilters, sourceLabel } from "./report-filters";
 describe("sourceLabel", () => {
   const labels = { unknown: "No attribution", direct: "Direct" };
 
-  test("合成桶显示成文案里的名字，快照里的取值原样显示", () => {
+  test("the synthetic bucket shows its name from the messages; snapshot values are shown as is", () => {
     expect(sourceLabel(NO_SOURCE_BUCKET, labels)).toBe("No attribution");
     expect(sourceLabel("direct", labels)).toBe("Direct");
     expect(sourceLabel("news.ycombinator.com", labels)).toBe(
       "news.ycombinator.com",
     );
-    // 真的把 utm_source 填成 unknown 的流量：字面量照原样显示，和合成桶区分开。
+    // Traffic that really sets utm_source to unknown: the literal is shown as is, distinct from the
+    // synthetic bucket.
     expect(sourceLabel("unknown", labels)).toBe("unknown");
   });
 });
@@ -32,8 +33,9 @@ const options: FilterOptions = {
 };
 
 /**
- * 同一棵树里换 props 就是「客户端跳转换了 searchParams」：路由不变时 React 不会
- * 重新挂载节点，只更新 props —— 只用 defaultValue 的话 select 会停在旧值上。
+ * Changing props within the same tree is what "a client-side navigation changed searchParams" looks
+ * like: with the same route React doesn't remount the nodes, it only updates props — with
+ * defaultValue alone the select would stay on the old value.
  */
 function renderFilters(
   current: { source?: string; medium?: string },
@@ -62,8 +64,8 @@ const shown = (name: string) => selectedValue(document.body, name);
 const trigger = (label: string) =>
   screen.getByLabelText(label, { exact: true });
 
-describe("渠道筛选", () => {
-  test("URL 的筛选变化后，下拉显示跟着变", () => {
+describe("channel filters", () => {
+  test("the dropdowns follow when the URL filters change", () => {
     const view = renderFilters({});
     const source = messages.Admin.acquisition.filters;
     expect(shown("source")).toBe("");
@@ -73,13 +75,13 @@ describe("渠道筛选", () => {
     expect(shown("source")).toBe("twitter");
     expect(trigger(source.source).textContent).toContain("twitter");
 
-    // 回到不带筛选的 URL：下拉也回到「全部」。
+    // Back to a URL without filters: the dropdowns go back to "all" too.
     view.show({});
     expect(shown("source")).toBe("");
     expect(trigger(source.source).textContent).toContain(source.allSources);
   });
 
-  test("手写 URL 里数据中没有的取值也留在框里", () => {
+  test("a hand-written URL value that isn't in the data stays in the select", () => {
     renderFilters({ source: "e2e-never-used" });
     expect(shown("source")).toBe("e2e-never-used");
     expect(
@@ -87,9 +89,10 @@ describe("渠道筛选", () => {
     ).toContain("e2e-never-used");
   });
 
-  // 表格里出现的每一行都要能选到，包括「没有可用归因」那一行：筛选框里的取值来自
-  // getFilterOptions，它同时喂给表格和下拉，两边必须是同一份。
-  test("合成桶在下拉里是自己的选项，显示成文案里的名字", async () => {
+  // Every row that appears in the table must be selectable, including the "no usable attribution"
+  // row: the filter values come from getFilterOptions, which feeds both the table and the
+  // dropdowns, so the two must be the same set.
+  test("the synthetic bucket is its own dropdown option, shown with its name from the messages", async () => {
     renderFilters(
       { source: NO_SOURCE_BUCKET },
       { ...options, sources: [NO_SOURCE_BUCKET, "twitter"] },
@@ -98,7 +101,8 @@ describe("渠道筛选", () => {
     expect(await optionLabels(source)).toEqual(
       expect.arrayContaining([messages.Admin.acquisition.unknown, "twitter"]),
     );
-    // 选中的就是它自己：显示成「No attribution」的那一项，值仍是合成桶的取值。
+    // The selected option is the bucket itself: the item shown as "No attribution", whose value is
+    // still the synthetic bucket's value.
     expect(source.textContent).toContain(messages.Admin.acquisition.unknown);
     expect(shown("source")).toBe(NO_SOURCE_BUCKET);
   });

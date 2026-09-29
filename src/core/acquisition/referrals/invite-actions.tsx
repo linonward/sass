@@ -9,14 +9,16 @@ import { Button } from "@/core/ui/button";
 type Mode = "offer" | "accepted" | "clear";
 
 /**
- * 邀请的接受/拒绝。只把码交给服务端，归属由服务端在注册时依据登录身份决定；
- * 客户端不提交任何用户 ID，也不决定谁能拿奖励。动作完成后刷新服务端渲染的页面。
+ * Accepting / declining an invite. Only the code goes to the server, which decides attribution at
+ * sign-up based on the signed-in identity; the client submits no user ID and doesn't decide who
+ * gets a reward. Refreshes the server-rendered page when the action completes.
  */
 export function InviteActions({ code, mode }: { code: string; mode: Mode }) {
   const t = useTranslations("Referrals.invite");
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  // 清掉的是哪一份邀请：清除前一处上下文和拒绝本次邀请不是同一件事，文案要说对。
+  // Which invite was cleared: clearing an earlier context and declining this invite are different
+  // things, and the copy has to say the right one.
   const [done, setDone] = useState<"declined" | "cleared" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +59,8 @@ export function InviteActions({ code, mode }: { code: string; mode: Mode }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {/* 已有上下文时接受不了这一份（服务端保持第一个邀请不动），不给会静默失败的按钮。 */}
+        {/* With an existing context this invite can't be accepted (the server keeps the first
+            invite), so don't show a button that would fail silently. */}
         {mode === "offer" && (
           <Button
             type="button"
@@ -82,7 +85,8 @@ export function InviteActions({ code, mode }: { code: string; mode: Mode }) {
           </Button>
         )}
       </div>
-      {/* 清除或拒绝后说清楚发生了什么：页面回到未接受的状态，别让人以为点了没反应。 */}
+      {/* After clearing or declining, say what happened: the page goes back to the not-accepted
+          state, and people shouldn't think the click did nothing. */}
       {done && (
         <p role="status" className="text-muted-foreground text-sm">
           {done === "cleared" ? t("cleared") : t("declined")}

@@ -7,14 +7,15 @@ const siteUrl = `https://${siteConfig.domain}`;
 const neutral = neutralScale(siteConfig.brand.primaryColor);
 
 /**
- * 邮件里用到的品牌信息。颜色一律十六进制（邮件客户端不支持 CSS 变量，也不支持 oklch），
- * 图片用绝对 URL。
+ * Brand values used in emails. Colors are always hex (email clients support neither CSS variables
+ * nor oklch), and images use absolute URLs.
  *
- * 这些值全部取自 `brand-css` 的亮色 token —— 邮件内联不了 CSS 变量，但「用哪个色」
- * 必须和站内是同一个决策、同一组值：`onPrimary` 就是 `foregroundFor`（`--primary-foreground`
- * 用的那个），中性色就是 `neutralScale`（`--foreground` / `--muted-foreground` /
- * `--border` / `--background`）。以前这里写的是另一套冷灰，买家换品牌色后邮件会和
- * 站点对不上（暖墨 vs 纯灰）。
+ * Every value comes from the light-mode tokens in `brand-css` — emails can't inline CSS variables,
+ * but "which color" must be the same decision and the same values as the site: `onPrimary` is
+ * `foregroundFor` (what `--primary-foreground` uses), and the neutrals are `neutralScale`
+ * (`--foreground` / `--muted-foreground` / `--border` / `--background`). This used to be a
+ * separate set of cool grays, so after a buyer changed the brand color the emails no longer
+ * matched the site (warm ink vs. plain gray).
  */
 export const emailBrand = {
   name: siteConfig.name,

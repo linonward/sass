@@ -6,15 +6,17 @@ import {
 } from "node:crypto";
 
 /**
- * 给 outbox 里的敏感模板参数（验证码）加密。
+ * Encrypts sensitive template props in the outbox (verification codes).
  *
- * 为什么要加密：验证码在 `verification` 表里是**哈希**存的（`storeOTP: "hashed"`），
- * 只读得到数据库的人拿不到可用的验证码。outbox 要能补发，就得存原文 —— 明文存等于把
- * 这层保护拆掉。所以用从 BETTER_AUTH_SECRET 派生的密钥做 AES-256-GCM：
- * 光有数据库不够，还得有应用的密钥。发出或作废后原文会从行里清掉（见 ./outbox.ts）。
+ * Why encrypt: verification codes are stored **hashed** in the `verification` table
+ * (`storeOTP: "hashed"`), so someone who can only read the database gets no usable code. For the
+ * outbox to resend, it has to keep the original — storing it in plain text would undo that
+ * protection. So we use AES-256-GCM with a key derived from BETTER_AUTH_SECRET: the database alone
+ * isn't enough, you also need the app's secret. The original is cleared from the row once it's
+ * sent or discarded (see ./outbox.ts).
  *
- * 换了 BETTER_AUTH_SECRET 之后旧行解不开 —— 那时它们本来也过期了（验证码只有几分钟有效），
- * 按发送失败处理。
+ * After BETTER_AUTH_SECRET changes, old rows can't be decrypted — by then they've expired anyway
+ * (codes are only valid for a few minutes), so they're treated as send failures.
  */
 const INFO = "sass/notification-outbox/v1";
 

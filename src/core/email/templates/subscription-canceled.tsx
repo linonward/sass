@@ -10,7 +10,7 @@ import { emailTranslator, type EmailT } from "../translator";
 
 export type SubscriptionCanceledProps = {
   planName?: string;
-  /** 取消后仍可使用到这个时间，ISO；不知道时不显示。 */
+  /** Access continues until this time after canceling, ISO; hidden when unknown. */
   endsAt?: string;
   manageUrl: string;
 };

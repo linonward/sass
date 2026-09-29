@@ -1,5 +1,6 @@
 // @vitest-environment node
-// 启动检查读 process.env 和 site.config.ts，按服务端模块测（和 env.test.ts 同理）。
+// The startup check reads process.env and site.config.ts, so test it as a server module (same as
+// env.test.ts).
 import { describe, expect, test, vi } from "vitest";
 
 import { warnIfRateLimitUnconfigured } from "./startup";
@@ -16,36 +17,36 @@ function run(runtimeEnv: Record<string, string | undefined>) {
 }
 
 describe("warnIfRateLimitUnconfigured", () => {
-  test("自托管生产漏配 Upstash：error 级日志，说清后果和修法", () => {
+  test("self-hosted production without Upstash: error-level log explaining the impact and the fix", () => {
     const log = run({ NODE_ENV: "production" });
     expect(log.error).toHaveBeenCalledOnce();
     expect(log.error.mock.calls[0]?.[0]).toBe("ratelimit.unconfigured");
     const fields = JSON.stringify(log.error.mock.calls[0]?.[1]);
     expect(fields).toContain("UPSTASH_REDIS_REST_URL");
-    expect(fields).toContain("ALLOW_UNRATELIMITED"); // 显式放行的出口要写在日志里
+    expect(fields).toContain("ALLOW_UNRATELIMITED"); // the log must mention the explicit opt-out
     expect(log.warn).not.toHaveBeenCalled();
   });
 
-  test("本地开发、测试和 CI（无 Upstash）不打日志：照常放行，不是故障", () => {
+  test("logs nothing in local development, tests, and CI (no Upstash): requests go through, not an outage", () => {
     expect(run({ NODE_ENV: "development" }).error).not.toHaveBeenCalled();
     expect(run({ NODE_ENV: "test" }).error).not.toHaveBeenCalled();
     expect(run({ NODE_ENV: "development" }).warn).not.toHaveBeenCalled();
   });
 
-  test("配好了 Upstash 就不提这件事", () => {
+  test("says nothing once Upstash is configured", () => {
     const log = run({ NODE_ENV: "production", ...upstash });
     expect(log.error).not.toHaveBeenCalled();
     expect(log.warn).not.toHaveBeenCalled();
   });
 
-  test("自托管生产显式设了 ALLOW_UNRATELIMITED：降为 warn，说明限流确实是关的", () => {
+  test("self-hosted production with ALLOW_UNRATELIMITED set: downgrades to a warn saying rate limiting is off", () => {
     const log = run({ NODE_ENV: "production", ALLOW_UNRATELIMITED: "1" });
     expect(log.error).not.toHaveBeenCalled();
     expect(log.warn).toHaveBeenCalledOnce();
     expect(log.warn.mock.calls[0]?.[0]).toBe("ratelimit.disabled");
   });
 
-  test("Vercel 预览不判定（预览照旧跳过限流）", () => {
+  test("doesn't apply to Vercel previews (previews still skip rate limiting)", () => {
     const log = run({ VERCEL_ENV: "preview", NODE_ENV: "production" });
     expect(log.error).not.toHaveBeenCalled();
     expect(log.warn).not.toHaveBeenCalled();

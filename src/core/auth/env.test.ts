@@ -1,5 +1,5 @@
 // @vitest-environment node
-// t3-env 只在服务端校验 server 变量，jsdom 下会被当成客户端。
+// t3-env only validates server variables on the server; under jsdom it would count as the client.
 import { describe, expect, test } from "vitest";
 
 import { createAppEnv } from "../create-env";
@@ -17,34 +17,34 @@ function check(runtimeEnv: Record<string, string | undefined>) {
 }
 
 describe("authServerEnv", () => {
-  test("缺少 BETTER_AUTH_SECRET 时报错", () => {
+  test("fails when BETTER_AUTH_SECRET is missing", () => {
     expect(check({})).toThrow("- BETTER_AUTH_SECRET: ");
   });
 
-  test("BETTER_AUTH_SECRET 太短时报错", () => {
+  test("fails when BETTER_AUTH_SECRET is too short", () => {
     expect(check({ BETTER_AUTH_SECRET: "short" })).toThrow(
       "- BETTER_AUTH_SECRET: ",
     );
   });
 
-  test("本地、CI 和预览不要求 Google 凭据", () => {
+  test("does not require Google credentials locally, in CI, or in previews", () => {
     expect(check({ BETTER_AUTH_SECRET: secret })).not.toThrow();
     expect(
       check({ BETTER_AUTH_SECRET: secret, VERCEL_ENV: "preview" }),
     ).not.toThrow();
   });
 
-  test("Vercel 生产环境缺少 Google 凭据时报错", () => {
+  test("fails in Vercel production when Google credentials are missing", () => {
     expect(
       check({ BETTER_AUTH_SECRET: secret, VERCEL_ENV: "production" }),
     ).toThrow("- GOOGLE_CLIENT_ID: ");
   });
 
-  test("边界：空字符串的 BETTER_AUTH_SECRET 也算没设置", () => {
+  test("edge: an empty BETTER_AUTH_SECRET counts as unset", () => {
     expect(check({ BETTER_AUTH_SECRET: "" })).toThrow("- BETTER_AUTH_SECRET: ");
   });
 
-  test("边界：刚好 32 字符的 secret 通过，31 字符不通过", () => {
+  test("edge: a secret of exactly 32 characters passes, 31 does not", () => {
     expect(check({ BETTER_AUTH_SECRET: "x".repeat(31) })).toThrow(
       "- BETTER_AUTH_SECRET: ",
     );
@@ -53,7 +53,7 @@ describe("authServerEnv", () => {
 });
 
 describe("googleCredentials", () => {
-  test("预览部署不启用 Google 登录", () => {
+  test("disables Google sign-in on preview deployments", () => {
     expect(
       googleCredentials({
         VERCEL_ENV: "preview",
@@ -63,14 +63,14 @@ describe("googleCredentials", () => {
     ).toBeUndefined();
   });
 
-  test("两项齐全才返回", () => {
+  test("returns credentials only when both values are set", () => {
     expect(googleCredentials({ GOOGLE_CLIENT_ID: "id" })).toBeUndefined();
     expect(
       googleCredentials({ GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "s" }),
     ).toEqual({ clientId: "id", clientSecret: "s" });
   });
 
-  test("边界：空字符串按没设置处理（.env 里的空变量不算凭据）", () => {
+  test("edge: empty strings count as unset (empty variables in .env are not credentials)", () => {
     expect(
       googleCredentials({ GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_SECRET: "" }),
     ).toBeUndefined();
@@ -81,7 +81,7 @@ describe("googleCredentials", () => {
 });
 
 describe("googleClientId", () => {
-  test("与 googleCredentials 同一判断，只取 client ID", () => {
+  test("uses the same check as googleCredentials and returns only the client ID", () => {
     expect(googleClientId({})).toBeUndefined();
     expect(googleClientId({ GOOGLE_CLIENT_ID: "id" })).toBeUndefined();
     expect(
@@ -89,7 +89,7 @@ describe("googleClientId", () => {
     ).toBe("id");
   });
 
-  test("预览部署同样是 undefined（页面按钮、One Tap 与 CSP 都靠它判断）", () => {
+  test("is also undefined on preview deployments (the page button, One Tap, and CSP all rely on it)", () => {
     expect(
       googleClientId({
         VERCEL_ENV: "preview",
@@ -101,7 +101,7 @@ describe("googleClientId", () => {
 });
 
 describe("resolveAuthBaseURL", () => {
-  test("显式设置的 BETTER_AUTH_URL 优先", () => {
+  test("an explicit BETTER_AUTH_URL wins", () => {
     expect(
       resolveAuthBaseURL(
         {
@@ -113,7 +113,7 @@ describe("resolveAuthBaseURL", () => {
     ).toBe("https://auth.example.com");
   });
 
-  test("生产部署：允许生产域名，兜底为生产域名", () => {
+  test("production deployment: allows the production domain and falls back to it", () => {
     expect(
       resolveAuthBaseURL(
         {
@@ -130,7 +130,7 @@ describe("resolveAuthBaseURL", () => {
     });
   });
 
-  test("预览部署：只允许本次部署的地址，不放开整个 vercel.app", () => {
+  test("preview deployment: allows only this deployment's URLs, not all of vercel.app", () => {
     const baseURL = resolveAuthBaseURL(
       {
         VERCEL_ENV: "preview",
@@ -150,14 +150,14 @@ describe("resolveAuthBaseURL", () => {
     });
   });
 
-  test("本地：允许 localhost 任意端口", () => {
+  test("local: allows localhost on any port", () => {
     expect(resolveAuthBaseURL({}, "example.com")).toEqual({
       allowedHosts: ["localhost:*", "127.0.0.1:*"],
       protocol: "http",
     });
   });
 
-  test("边界：空的 BETTER_AUTH_URL 按没设置处理，走动态判断", () => {
+  test("edge: an empty BETTER_AUTH_URL counts as unset and uses dynamic resolution", () => {
     expect(
       resolveAuthBaseURL(
         { BETTER_AUTH_URL: "", VERCEL_ENV: "production" },
@@ -170,7 +170,7 @@ describe("resolveAuthBaseURL", () => {
     });
   });
 
-  test("边界：生产部署缺 VERCEL_URL 时只剩生产域名，不放开 vercel.app", () => {
+  test("edge: production without VERCEL_URL allows only the production domain, not vercel.app", () => {
     const baseURL = resolveAuthBaseURL(
       {
         VERCEL_ENV: "production",
@@ -185,7 +185,7 @@ describe("resolveAuthBaseURL", () => {
     });
   });
 
-  test("边界：域名与 VERCEL_URL 相同时去重", () => {
+  test("edge: dedupes when the domain equals VERCEL_URL", () => {
     expect(
       resolveAuthBaseURL(
         {
@@ -198,7 +198,7 @@ describe("resolveAuthBaseURL", () => {
     ).toMatchObject({ allowedHosts: ["example.com"] });
   });
 
-  test("边界：预览部署缺 BRANCH_URL 时兜底用 VERCEL_URL", () => {
+  test("edge: a preview without BRANCH_URL falls back to VERCEL_URL", () => {
     expect(
       resolveAuthBaseURL(
         { VERCEL_ENV: "preview", VERCEL_URL: "app-abc123-team.vercel.app" },

@@ -10,7 +10,7 @@ const valid: SiteConfigInput = {
   locales: ["en", "zh-CN"],
   defaultLocale: "en",
   features: { ai: true },
-  // features.ai 开启时必须有模型；免费模型不要求开启 features.credits。
+  // With features.ai on there must be models; free models don't require features.credits.
   ai: {
     models: [
       { id: "free", provider: "openai", model: "gpt-5-mini", creditCost: 0 },
@@ -40,7 +40,7 @@ const valid: SiteConfigInput = {
 };
 
 describe("defineConfig", () => {
-  test("合法配置通过校验，未填写的 feature 默认关闭（示例模块例外）", () => {
+  test("a valid config passes; unset features default to off (except the example modules)", () => {
     const config = defineConfig(valid);
     expect(config.features).toEqual({
       credits: false,
@@ -50,12 +50,13 @@ describe("defineConfig", () => {
       admin: false,
       rateLimit: false,
       observability: false,
-      // 示例业务模块出货默认开着：模板要能跑起来看。关掉写 examples: { invoices: false }。
+      // The example business modules ship on by default: the template should run and be
+      // viewable out of the box. Turn them off with examples: { invoices: false }.
       examples: { invoices: true },
     });
   });
 
-  test("省略 features 时全部关闭，只剩示例模块", () => {
+  test("omitting features turns everything off except the example modules", () => {
     const config = defineConfig({ ...valid, features: undefined });
     const { examples, ...rest } = config.features;
     expect(Object.values(rest)).not.toContain(true);
@@ -76,13 +77,13 @@ describe("defineConfig", () => {
       "features.examples.invoices",
       { features: { examples: { invoices: "yes" } } },
     ],
-  ])("非法字段 %s 出现在报错中", (path, patch) => {
+  ])("invalid field %s appears in the error", (path, patch) => {
     expect(() =>
       defineConfig({ ...valid, ...patch } as SiteConfigInput),
     ).toThrow(`- ${path}: `);
   });
 
-  test("拼错的字段名会被指出", () => {
+  test("points out misspelled field names", () => {
     expect(() =>
       defineConfig({
         ...valid,
@@ -93,7 +94,7 @@ describe("defineConfig", () => {
 });
 
 describe("brand", () => {
-  test("省略 logo 时合法：用内置标记，它跟着 primaryColor 走", () => {
+  test("omitting logo is valid: the built-in mark is used and follows primaryColor", () => {
     const config = defineConfig({
       ...valid,
       brand: { primaryColor: "#4f46e5" },
@@ -103,7 +104,7 @@ describe("brand", () => {
 });
 
 describe("nav", () => {
-  test("省略 nav 时 header 与 footer 为空", () => {
+  test("omitting nav leaves header and footer empty", () => {
     expect(defineConfig(valid).nav).toEqual({ header: [], footer: [] });
   });
 
@@ -111,7 +112,7 @@ describe("nav", () => {
     ["nav.header.0.href", { header: [{ key: "a", href: "http://x.com" }] }],
     ["nav.header.0.key", { header: [{ key: "Get started", href: "/a" }] }],
     ["nav.footer.0.links", { footer: [{ key: "product", links: [] }] }],
-  ])("非法字段 %s 出现在报错中", (path, nav) => {
+  ])("invalid field %s appears in the error", (path, nav) => {
     expect(() => defineConfig({ ...valid, nav } as SiteConfigInput)).toThrow(
       `- ${path}: `,
     );
@@ -119,11 +120,11 @@ describe("nav", () => {
 });
 
 describe("legal", () => {
-  test("合法的 legal 原样保留", () => {
+  test("a valid legal block is kept as is", () => {
     expect(defineConfig(valid).legal.companyName).toBe("Acme Inc.");
   });
 
-  test("缺少 legal 时报错", () => {
+  test("errors when legal is missing", () => {
     expect(() =>
       defineConfig({
         ...valid,
@@ -138,7 +139,7 @@ describe("legal", () => {
     ["legal.jurisdiction", { jurisdiction: "" }],
     ["legal.effectiveDate", { effectiveDate: "31/01/2026" }],
     ["legal.effectiveDate", { effectiveDate: "2026-02-30" }],
-  ])("非法字段 %s 出现在报错中", (path, patch) => {
+  ])("invalid field %s appears in the error", (path, patch) => {
     expect(() =>
       defineConfig({ ...valid, legal: { ...valid.legal!, ...patch } }),
     ).toThrow(`- ${path}: `);
@@ -146,7 +147,7 @@ describe("legal", () => {
 });
 
 describe("email", () => {
-  test("合法的 email 原样保留，logo 可省略", () => {
+  test("a valid email block is kept as is; logo is optional", () => {
     expect(defineConfig(valid).email).toEqual({
       fromName: "Acme",
       fromAddress: "noreply@example.com",
@@ -154,7 +155,7 @@ describe("email", () => {
     });
   });
 
-  test("缺少 email 时报错", () => {
+  test("errors when email is missing", () => {
     const { email: _email, ...rest } = valid;
     void _email;
     expect(() => defineConfig(rest as SiteConfigInput)).toThrow("- email: ");
@@ -165,7 +166,7 @@ describe("email", () => {
     ["email.replyTo", { fromName: "A", fromAddress: "a@b.co", replyTo: "x" }],
     ["email.fromName", { fromName: " ", fromAddress: "a@b.co" }],
     ["email.logo", { fromName: "A", fromAddress: "a@b.co", logo: "/logo.svg" }],
-  ])("非法字段 %s 出现在报错中", (path, email) => {
+  ])("invalid field %s appears in the error", (path, email) => {
     expect(() => defineConfig({ ...valid, email } as SiteConfigInput)).toThrow(
       `- ${path}: `,
     );
@@ -178,7 +179,7 @@ describe("auth", () => {
     ["auth.emailOtp.expiresIn", { expiresIn: 0 }],
     ["auth.emailOtp.allowedAttempts", { allowedAttempts: 1.5 }],
     ["auth.emailOtp.resendCooldown", { resendCooldown: -1 }],
-  ])("非法字段 %s 出现在报错中", (path, patch) => {
+  ])("invalid field %s appears in the error", (path, patch) => {
     expect(() =>
       defineConfig({
         ...valid,
@@ -190,14 +191,15 @@ describe("auth", () => {
     ).toThrow(`- ${path}: `);
   });
 
-  test("缺少 auth 时报错", () => {
+  test("errors when auth is missing", () => {
     const rest: Partial<SiteConfigInput> = { ...valid };
     delete rest.auth;
     expect(() => defineConfig(rest as SiteConfigInput)).toThrow("- auth: ");
   });
 
-  // 改邮箱的两个开关都必须显式写出（不给默认值），漏了就在启动时报错。
-  test("缺少 changeEmail 时报错", () => {
+  // Both change-email switches must be written out explicitly (no defaults); leaving one out
+  // fails at startup.
+  test("errors when changeEmail is missing", () => {
     expect(() =>
       defineConfig({
         ...valid,
@@ -208,11 +210,11 @@ describe("auth", () => {
 });
 
 describe("dashboard", () => {
-  test("省略 dashboard 时业务菜单为空", () => {
+  test("omitting dashboard leaves the business menu empty", () => {
     expect(defineConfig(valid).dashboard).toEqual({ nav: [] });
   });
 
-  test("合法的业务菜单项通过校验", () => {
+  test("valid business menu items pass validation", () => {
     const config = defineConfig({
       ...valid,
       dashboard: {
@@ -237,7 +239,7 @@ describe("dashboard", () => {
         { key: "b", href: "/a", icon: "home" },
       ],
     ],
-  ])("非法字段 %s 出现在报错中", (path, nav) => {
+  ])("invalid field %s appears in the error", (path, nav) => {
     expect(() =>
       defineConfig({ ...valid, dashboard: { nav } } as SiteConfigInput),
     ).toThrow(`- ${path}: `);
@@ -245,7 +247,7 @@ describe("dashboard", () => {
 });
 
 describe("credits", () => {
-  test("lowBalanceThreshold 默认 100，可以设为 0 关闭提醒", () => {
+  test("lowBalanceThreshold defaults to 100 and can be set to 0 to disable reminders", () => {
     expect(defineConfig(valid).credits.lowBalanceThreshold).toBe(100);
     expect(
       defineConfig({ ...valid, credits: { lowBalanceThreshold: 0 } }).credits
@@ -253,15 +255,18 @@ describe("credits", () => {
     ).toBe(0);
   });
 
-  test.each([-1, 1.5])("lowBalanceThreshold 非法值 %s 报错", (value) => {
-    expect(() =>
-      defineConfig({ ...valid, credits: { lowBalanceThreshold: value } }),
-    ).toThrow("- credits.lowBalanceThreshold: ");
-  });
+  test.each([-1, 1.5])(
+    "lowBalanceThreshold rejects invalid value %s",
+    (value) => {
+      expect(() =>
+        defineConfig({ ...valid, credits: { lowBalanceThreshold: value } }),
+      ).toThrow("- credits.lowBalanceThreshold: ");
+    },
+  );
 });
 
 describe("rateLimit", () => {
-  test("默认 failMode 为 open，ai 每分钟 20 次、upload 每分钟 10 次", () => {
+  test("defaults: failMode open, ai 20 per minute, upload 10 per minute", () => {
     expect(defineConfig(valid).rateLimit).toEqual({
       failMode: "open",
       policies: {
@@ -271,7 +276,7 @@ describe("rateLimit", () => {
     });
   });
 
-  test("可以自定义策略和 failMode", () => {
+  test("policies and failMode can be customized", () => {
     const config = defineConfig({
       ...valid,
       rateLimit: {
@@ -299,7 +304,7 @@ describe("rateLimit", () => {
       "rateLimit.policies.ai.window",
       { policies: { ai: { limit: 1, window: "0 s" } } },
     ],
-  ])("非法字段 %s 出现在报错中", (path, rateLimit) => {
+  ])("invalid field %s appears in the error", (path, rateLimit) => {
     expect(() =>
       defineConfig({ ...valid, rateLimit } as SiteConfigInput),
     ).toThrow(`- ${path}: `);
@@ -307,7 +312,7 @@ describe("rateLimit", () => {
 });
 
 describe("upload", () => {
-  test("默认只允许常见图片和 PDF，上限 10 MB，私有访问", () => {
+  test("defaults allow only common images and PDF, 10 MB max, private access", () => {
     expect(defineConfig(valid).upload).toEqual({
       allowedMimeTypes: [
         "image/png",
@@ -329,7 +334,7 @@ describe("upload", () => {
     ],
     ["upload.maxFileSize", { maxFileSize: 0 }],
     ["upload.maxFileSize", { maxFileSize: 6 * 1024 ** 3 }],
-  ])("非法字段 %s 出现在报错中", (path, upload) => {
+  ])("invalid field %s appears in the error", (path, upload) => {
     expect(() => defineConfig({ ...valid, upload } as SiteConfigInput)).toThrow(
       `- ${path}: `,
     );
@@ -337,7 +342,7 @@ describe("upload", () => {
 });
 
 describe("observability", () => {
-  test("省略时全部关闭，日志级别默认 info", () => {
+  test("everything is off when omitted; log level defaults to info", () => {
     expect(defineConfig(valid).observability).toEqual({
       logLevel: "info",
       otel: false,
@@ -348,7 +353,7 @@ describe("observability", () => {
     });
   });
 
-  test("Sentry 采样率必须在 0 到 1 之间", () => {
+  test("Sentry sample rate must be between 0 and 1", () => {
     expect(() =>
       defineConfig({
         ...valid,
@@ -357,7 +362,7 @@ describe("observability", () => {
     ).toThrow("- observability.sentryTracesSampleRate: ");
   });
 
-  test("非法日志级别和拼错的字段会被指出", () => {
+  test("points out invalid log levels and misspelled fields", () => {
     expect(() =>
       defineConfig({
         ...valid,
@@ -387,13 +392,13 @@ describe("ai", () => {
   const withAi = (ai: unknown, features = { ai: true, credits: true }) =>
     ({ ...valid, features, ai }) as SiteConfigInput;
 
-  test("省略时没有模型", () => {
+  test("no models when omitted", () => {
     expect(
       defineConfig({ ...valid, features: undefined, ai: undefined }).ai,
     ).toEqual({ models: [], imageModels: [], videoModels: [] });
   });
 
-  test("合法的模型列表和默认模型", () => {
+  test("a valid model list and default model", () => {
     const config = defineConfig(
       withAi({ models: [...models], defaultModel: "smart" }),
     );
@@ -421,7 +426,7 @@ describe("ai", () => {
     ["ai.defaultModel", { models: [...models] }],
     ["ai.defaultModel", { models: [...models], defaultModel: "nope" }],
     ["ai.models", { models: [] }],
-  ])("非法字段 %s 出现在报错中", (path, ai) => {
+  ])("invalid field %s appears in the error", (path, ai) => {
     expect(() => defineConfig(withAi(ai))).toThrow(`- ${path}: `);
   });
 
@@ -434,7 +439,7 @@ describe("ai", () => {
     } as const;
     const base = { models: [...models], defaultModel: "fast" };
 
-    test("省略时为空，合法时保留", () => {
+    test("empty when omitted, kept when valid", () => {
       expect(defineConfig(withAi(base)).ai.imageModels).toEqual([]);
       const config = defineConfig(
         withAi({
@@ -464,13 +469,13 @@ describe("ai", () => {
         "ai.defaultImageModel",
         { imageModels: [image], defaultImageModel: "nope" },
       ],
-    ])("非法字段 %s 出现在报错中", (path, ai) => {
+    ])("invalid field %s appears in the error", (path, ai) => {
       expect(() => defineConfig(withAi({ ...base, ...ai }))).toThrow(
         `- ${path}: `,
       );
     });
 
-    test("收费图片模型要求开启 features.credits", () => {
+    test("paid image models require features.credits", () => {
       expect(() =>
         defineConfig(
           withAi(
@@ -497,7 +502,7 @@ describe("ai", () => {
     } as const;
     const base = { models: [...models], defaultModel: "fast" };
 
-    test("时长默认 5 秒、分辨率默认 720P", () => {
+    test("duration defaults to 5 seconds and resolution to 720P", () => {
       const config = defineConfig(
         withAi({ ...base, videoModels: [video], defaultVideoModel: "wan-i2v" }),
       );
@@ -535,14 +540,14 @@ describe("ai", () => {
         "ai.defaultVideoModel",
         { videoModels: [video], defaultVideoModel: "nope" },
       ],
-    ])("非法字段 %s 出现在报错中", (path, ai) => {
+    ])("invalid field %s appears in the error", (path, ai) => {
       expect(() => defineConfig(withAi({ ...base, ...ai }))).toThrow(
         `- ${path}: `,
       );
     });
   });
 
-  test("收费模型要求开启 features.credits，免费模型不要求", () => {
+  test("paid models require features.credits; free models don't", () => {
     expect(() =>
       defineConfig(
         withAi(

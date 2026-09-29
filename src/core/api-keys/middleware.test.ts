@@ -52,13 +52,13 @@ describe("bearerToken", () => {
     expect(bearerToken(header)).toBe(expected);
   });
 
-  test("没有 Authorization 头时为 null", () => {
+  test("null when there is no Authorization header", () => {
     expect(bearerToken(null)).toBeNull();
   });
 });
 
 describe("createApiKeyMiddleware", () => {
-  test("模块关闭时带有效 key 也 404", async () => {
+  test("404 when the module is disabled, even with a valid key", async () => {
     const findKeyByHash = vi.fn(async () => lookup());
     const { plaintext } = generateApiKey();
     const result = await build({ enabled: false, findKeyByHash }).authenticate(
@@ -67,17 +67,17 @@ describe("createApiKeyMiddleware", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.response.status).toBe(404);
-    // 关闭时连库都不查。
+    // When disabled, the database isn't even queried.
     expect(findKeyByHash).not.toHaveBeenCalled();
   });
 
-  test("没有 Authorization 头 → 401", async () => {
+  test("no Authorization header → 401", async () => {
     const result = await build().authenticate(request());
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.response.status).toBe(401);
   });
 
-  test("不是 Bearer → 401", async () => {
+  test("not Bearer → 401", async () => {
     const result = await build().authenticate(
       request({ authorization: "Basic c2tfbG9s" }),
     );
@@ -85,7 +85,7 @@ describe("createApiKeyMiddleware", () => {
     if (!result.ok) expect(result.response.status).toBe(401);
   });
 
-  test("格式不对（不是 sk_ + 64 hex）→ 401，且不查库", async () => {
+  test("wrong format (not sk_ + 64 hex) → 401, without a database lookup", async () => {
     const findKeyByHash = vi.fn(async () => lookup());
     for (const value of ["sk_short", "nope", `sk_${"A".repeat(64)}`]) {
       const result = await build({ findKeyByHash }).authenticate(
@@ -97,7 +97,7 @@ describe("createApiKeyMiddleware", () => {
     expect(findKeyByHash).not.toHaveBeenCalled();
   });
 
-  test("查不到 → 401", async () => {
+  test("not found → 401", async () => {
     const { plaintext } = generateApiKey();
     const result = await build({
       findKeyByHash: async () => null,
@@ -106,7 +106,7 @@ describe("createApiKeyMiddleware", () => {
     if (!result.ok) expect(result.response.status).toBe(401);
   });
 
-  test("按哈希查库，不拿明文去查", async () => {
+  test("looks up by hash, never by plaintext", async () => {
     const { plaintext, hashedKey } = generateApiKey();
     const findKeyByHash = vi.fn(async () => lookup());
     const result = await build({ findKeyByHash }).authenticate(
@@ -117,7 +117,7 @@ describe("createApiKeyMiddleware", () => {
     expect(findKeyByHash).not.toHaveBeenCalledWith(plaintext);
   });
 
-  test("有效 key → 注入 userId / keyId / name / prefix", async () => {
+  test("valid key → attaches userId / keyId / name / prefix", async () => {
     const { plaintext } = generateApiKey();
     const touchLastUsed = vi.fn(async () => {});
     const result = await build({
@@ -136,7 +136,7 @@ describe("createApiKeyMiddleware", () => {
     expect(touchLastUsed).toHaveBeenCalledWith(KEY_ID);
   });
 
-  test("已撤销 → 401", async () => {
+  test("revoked → 401", async () => {
     const { plaintext } = generateApiKey();
     const touchLastUsed = vi.fn(async () => {});
     const result = await build({
@@ -148,7 +148,7 @@ describe("createApiKeyMiddleware", () => {
     expect(touchLastUsed).not.toHaveBeenCalled();
   });
 
-  test("已过期 → 401；到点那一刻就算过期", async () => {
+  test("expired → 401; expired at the exact expiry moment", async () => {
     const { plaintext } = generateApiKey();
     const now = new Date("2026-01-01T00:00:00Z");
     for (const expiresAt of [
@@ -162,7 +162,7 @@ describe("createApiKeyMiddleware", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(401);
     }
-    // 还没到点就照常放行。
+    // Before the expiry time it's allowed as usual.
     const alive = await build({
       findKeyByHash: async () =>
         lookup({ expiresAt: new Date(now.getTime() + 1) }),
@@ -171,9 +171,10 @@ describe("createApiKeyMiddleware", () => {
     expect(alive.ok).toBe(true);
   });
 
-  test("撤销接口幂等：重复撤销后鉴权仍然是 401", async () => {
+  test("revoke is idempotent: after repeated revokes authentication is still 401", async () => {
     const { plaintext } = generateApiKey();
-    // 撤销两次以上的行长得一样（revokedAt 只写一次），鉴权结果不随调用次数变化。
+    // A row revoked two or more times looks the same (revokedAt is written only once), so the
+    // auth result doesn't depend on how many times revoke was called.
     const middleware = build({
       findKeyByHash: async () => lookup({ revokedAt: new Date(0) }),
     });
@@ -186,7 +187,7 @@ describe("createApiKeyMiddleware", () => {
     }
   });
 
-  test("记使用时间抛错不影响鉴权，只记日志", async () => {
+  test("a throwing usage-time write doesn't affect authentication, it's only logged", async () => {
     const { plaintext } = generateApiKey();
     const logError = vi.fn();
     const result = await build({
@@ -203,7 +204,7 @@ describe("createApiKeyMiddleware", () => {
     );
   });
 
-  test("超出 per-key 限流 → 429，带 Retry-After，且不记使用时间", async () => {
+  test("over the per-key rate limit → 429 with Retry-After, and no usage time recorded", async () => {
     const { plaintext } = generateApiKey();
     const touchLastUsed = vi.fn(async () => {});
     const result = await build({
@@ -222,7 +223,7 @@ describe("createApiKeyMiddleware", () => {
     expect(touchLastUsed).not.toHaveBeenCalled();
   });
 
-  test("限流放行（null / ok）时照常鉴权", async () => {
+  test("authenticates normally when the rate limit allows (null / ok)", async () => {
     const { plaintext } = generateApiKey();
     for (const checkRateLimit of [
       async () => null,
@@ -236,7 +237,7 @@ describe("createApiKeyMiddleware", () => {
     }
   });
 
-  test("Redis 不可用（failMode closed）→ 503", async () => {
+  test("Redis unavailable (failMode closed) → 503", async () => {
     const { plaintext } = generateApiKey();
     const result = await build({
       findKeyByHash: async () => lookup(),
@@ -250,7 +251,7 @@ describe("createApiKeyMiddleware", () => {
     if (!result.ok) expect(result.response.status).toBe(503);
   });
 
-  test("响应不缓存", async () => {
+  test("responses are not cached", async () => {
     const result = await build().authenticate(request());
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -260,7 +261,7 @@ describe("createApiKeyMiddleware", () => {
 });
 
 describe("withApiKey", () => {
-  test("鉴权通过后处理函数能读到 request.apiKey", async () => {
+  test("the handler can read request.apiKey after authentication passes", async () => {
     const { plaintext } = generateApiKey();
     const handler = vi.fn((request: Request & { apiKey: { userId: string } }) =>
       Response.json({ userId: request.apiKey.userId }),
@@ -277,7 +278,7 @@ describe("withApiKey", () => {
     expect(handler).toHaveBeenCalledOnce();
   });
 
-  test("鉴权失败时处理函数不被调用", async () => {
+  test("the handler isn't called when authentication fails", async () => {
     const handler = vi.fn(() => Response.json({ ok: true }));
     const wrapped = withApiKey(build(), handler);
     const response = await wrapped(request());
@@ -289,7 +290,7 @@ describe("withApiKey", () => {
 describe("apiKeyStatus", () => {
   const now = new Date("2026-01-01T00:00:00Z");
 
-  test("撤销优先于过期", () => {
+  test("revoked takes precedence over expired", () => {
     expect(
       apiKeyStatus(
         {
@@ -301,13 +302,13 @@ describe("apiKeyStatus", () => {
     ).toBe("revoked");
   });
 
-  test("没有 expiresAt 就不过期", () => {
+  test("never expires without expiresAt", () => {
     expect(apiKeyStatus({ revokedAt: null, expiresAt: null }, now)).toBe(
       "active",
     );
   });
 
-  test("到点即过期", () => {
+  test("expires at the exact expiry time", () => {
     expect(apiKeyStatus({ revokedAt: null, expiresAt: now }, now)).toBe(
       "expired",
     );
@@ -319,7 +320,7 @@ describe("apiKeyStatus", () => {
     ).toBe("active");
   });
 
-  test("哈希是十六进制字符串，长度和 sha256 一致", () => {
+  test("the hash is a hex string with sha256's length", () => {
     expect(hashApiKey("hello")).toHaveLength(64);
   });
 });

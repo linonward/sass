@@ -32,8 +32,9 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 
-// 指标是全表聚合，和其他用例共用一个库时数字不确定，所以建一个临时库，跑完删掉。
-describe.skipIf(!url)("后台指标", () => {
+// Metrics are full-table aggregates, so the numbers are unpredictable when sharing a database with
+// other tests; create a temporary database and drop it afterward.
+describe.skipIf(!url)("admin metrics", () => {
   const dbName = `metrics_test_${randomUUID().replaceAll("-", "")}`;
   let admin: Pool;
   let pool: Pool;
@@ -57,7 +58,7 @@ describe.skipIf(!url)("后台指标", () => {
     const testUrl = new URL(url!);
     testUrl.pathname = `/${dbName}`;
     pool = new Pool({ connectionString: testUrl.toString() });
-    // 删库时服务端会断开残留的连接，不当作错误。
+    // Dropping the database makes the server cut lingering connections; that's not an error.
     pool.on("error", () => {});
     const nodeDb = drizzle({ client: pool, schema });
     db = nodeDb;
@@ -123,14 +124,14 @@ describe.skipIf(!url)("后台指标", () => {
     });
     await db.insert(orders).values([
       order(ids.recent, { createdAt: daysAgo(1) }),
-      // 部分退款：净收入 1000。
+      // Partial refund: net revenue 1000.
       order(ids.recent2, {
         createdAt: daysAgo(2),
         status: "partially_refunded",
         amount: 1900,
         refundedAmount: 900,
       }),
-      // 全额退款、失败、区间外的订单都不计入。
+      // Fully refunded, failed, and out-of-range orders don't count.
       order(ids.banned, {
         createdAt: daysAgo(2),
         status: "refunded",
@@ -138,17 +139,18 @@ describe.skipIf(!url)("后台指标", () => {
       }),
       order(ids.banned, { createdAt: daysAgo(2), status: "failed" }),
       order(ids.old, { createdAt: daysAgo(30) }),
-      // 退款先到的占位订单：收款金额未知，不算收入（累计值会变成负数），
-      // 只出现在渠道报表的待核对那一列。
+      // Placeholder order where the refund arrived first: the collected amount is unknown, so it
+      // isn't revenue (the sum would go negative); it only shows in the channel report's
+      // to-reconcile column.
       order(ids.banned, {
         createdAt: daysAgo(2),
         status: "refunded",
         amount: null,
         refundedAmount: 400,
       }),
-      // 收款但金额未知、也还没退款：同样不算收入。
+      // Collected but with an unknown amount and no refund yet: also not revenue.
       order(ids.banned, { createdAt: daysAgo(2), amount: null }),
-      // 其他币种单独列出，不进每日图表。
+      // Other currencies are listed separately and stay out of the daily chart.
       order(ids.old, { createdAt: daysAgo(1), amount: 500, currency: "eur" }),
     ]);
 
@@ -228,7 +230,7 @@ describe.skipIf(!url)("后台指标", () => {
       ]);
   }
 
-  test("用户：新注册、累计、封禁和每天的注册数", async () => {
+  test("users: new sign-ups, total, banned, and sign-ups per day", async () => {
     const metrics = await getUserMetrics(db, window);
     expect(metrics).toMatchObject({
       newUsers: 3,
@@ -244,7 +246,7 @@ describe.skipIf(!url)("后台指标", () => {
     expect(metrics.daily.reduce((sum, p) => sum + p.value, 0)).toBe(3);
   });
 
-  test("收入：净收入按币种、付费用户、活跃订阅和 MRR", async () => {
+  test("revenue: net revenue per currency, paying users, active subscriptions, and MRR", async () => {
     const metrics = await getRevenueMetrics(db, window, {
       currency: "USD",
       plans,
@@ -253,22 +255,23 @@ describe.skipIf(!url)("后台指标", () => {
       { currency: "USD", amount: 2900 },
       { currency: "EUR", amount: 500 },
     ]);
-    // recent（USD）、recent2（部分退款后仍有收入）、old（EUR）；
-    // 全额退款的和金额未知的都不算。
+    // recent (USD), recent2 (still has revenue after a partial refund), old (EUR); fully refunded
+    // and unknown-amount orders don't count.
     expect(metrics.payingUsers).toBe(3);
     expect(metrics.activeSubscriptions).toBe(4);
-    // 2 × $19 + $190 ÷ 12 = 3800 + 1583.33 分。
+    // 2 × $19 + $190 ÷ 12 = 3800 + 1583.33 cents.
     expect(metrics.mrr).toEqual({ currency: "USD", amount: 5383 });
     expect(metrics.unpricedSubscriptions).toBe(1);
     const byDay = Object.fromEntries(
       metrics.daily.map((p) => [p.day, p.value]),
     );
     expect(byDay[dayKey(daysAgo(1))]).toBe(1900);
-    // 当天只有 recent2 的部分退款净额；占位订单不进每日图。
+    // Today only has recent2's net after partial refund; placeholder orders stay out of the daily
+    // chart.
     expect(byDay[dayKey(daysAgo(2))]).toBe(1000);
   });
 
-  test("积分：发放、消耗和退款", async () => {
+  test("credits: granted, consumed, and refunded", async () => {
     expect(await getCreditMetrics(db, window)).toEqual({
       granted: 150,
       consumed: 35,
@@ -276,10 +279,10 @@ describe.skipIf(!url)("后台指标", () => {
     });
   });
 
-  test("AI：按类型和模型的调用次数与失败率，pending 不计入失败率分母", async () => {
+  test("AI: call counts and failure rates by kind and model; pending isn't in the failure-rate denominator", async () => {
     const metrics = await getAiMetrics(db, window);
     expect(metrics.calls).toBe(7);
-    // 失败 2 次 ÷ 已结束 5 次（text 4 + image 1）。
+    // 2 failures ÷ 5 finished (text 4 + image 1).
     expect(metrics.failureRate).toBeCloseTo(2 / 5);
     expect(metrics.models).toEqual([
       {

@@ -11,10 +11,10 @@ describe("driverFor", () => {
     ["postgresql://u:p@ep-x-pooler.eu-central-1.aws.neon.tech/db", "neon"],
     ["postgres://postgres:postgres@localhost:5432/postgres", "pg"],
     ["postgres://u:p@db.example.com:5432/app", "pg"],
-    // 只看主机名，路径或参数里出现 neon.tech 不算。
+    // Only the hostname counts; neon.tech in the path or query string doesn't.
     ["postgres://u:p@localhost/neon.tech", "pg"],
     ["postgres://u:p@notneon.tech/db", "pg"],
-  ])("%s 使用 %s", (url, expected) => {
+  ])("%s uses %s", (url, expected) => {
     expect(driverFor(url)).toBe(expected);
   });
 });

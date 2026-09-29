@@ -5,12 +5,15 @@ import { RESEND_COOLDOWN } from "./errors";
 
 const SEND_PATH = "/email-otp/send-verification-otp";
 
-/** 冷却记录在 verification 表里的 identifier。前缀与插件的 `<type>-otp-<email>` 不重叠，任何邮箱都不会撞上。 */
+/**
+ * The identifier of a cooldown record in the verification table. The prefix never overlaps the
+ * plugin's `<type>-otp-<email>`, so no email can collide with it.
+ */
 export function cooldownIdentifier(email: string) {
   return `otp-resend-cooldown:${email.trim().toLowerCase()}`;
 }
 
-/** 距离下次可以发送还剩几秒；没有冷却时返回 0。 */
+/** Seconds left until the next send is allowed; 0 when there is no cooldown. */
 export function remainingCooldown(
   expiresAt: Date | undefined,
   now: Date,
@@ -20,8 +23,9 @@ export function remainingCooldown(
 }
 
 /**
- * 同一邮箱两次发送验证码之间的最短间隔。emailOTP 插件只有按 IP 的限流，
- * 没有按邮箱的重发冷却，所以在发送接口前加一层校验，冷却状态复用 verification 表。
+ * Minimum interval between two verification code sends to the same email. The emailOTP plugin only
+ * rate limits by IP and has no per-email resend cooldown, so this adds a check in front of the send
+ * endpoint, storing the cooldown state in the verification table.
  */
 export function otpResendCooldown({
   seconds,

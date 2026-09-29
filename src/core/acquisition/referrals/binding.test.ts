@@ -18,8 +18,8 @@ const run = (enabled = true) =>
 
 beforeEach(() => vi.resetAllMocks());
 
-describe("注册时绑定邀请人", () => {
-  test("模块关闭、没有邀请上下文时不写关系", async () => {
+describe("binding the inviter at sign-up", () => {
+  test("writes no relationship when the module is off or there is no referral context", async () => {
     await run(false)("user-1", headers(referralCookie()));
     await run()("user-1", headers("other=1"));
     await run()("user-1", undefined);
@@ -27,14 +27,14 @@ describe("注册时绑定邀请人", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  test("只提交码和登录身份，邀请人由服务端再查一次", async () => {
+  test("only submits the code and signed-in identity; the server looks up the inviter again", async () => {
     bind.mockResolvedValue({ ok: true, inviterUserId: "inviter" });
     await run()("user-1", headers(referralCookie()));
     expect(bind).toHaveBeenCalledWith({ inviteeUserId: "user-1", code });
     expect(warn).not.toHaveBeenCalled();
   });
 
-  test("归因上下文与绑定无关：只有邀请 cookie 时照样绑定", async () => {
+  test("attribution context is unrelated to binding: binds with only the referral cookie", async () => {
     bind.mockResolvedValue({ ok: true, inviterUserId: "inviter" });
     const snapshot = captureEntry(
       { pathname: "/", utm_source: "launch" },
@@ -44,21 +44,21 @@ describe("注册时绑定邀请人", () => {
       { v: 1, purpose: "source", attribution: snapshot },
       secret,
     );
-    // 归因关闭的站点不会有 SOURCE_COOKIE，绑定不依赖它。
+    // Sites with attribution off have no SOURCE_COOKIE; binding doesn't depend on it.
     await run()("user-1", headers(referralCookie()));
     expect(bind).toHaveBeenCalledTimes(1);
-    // 同时带着归因上下文时，绑定读的还是邀请 cookie。
+    // With an attribution context present too, binding still reads the referral cookie.
     await run()(
       "user-2",
       headers(`${SOURCE_COOKIE}=${source}; ${referralCookie()}`),
     );
     expect(bind).toHaveBeenCalledTimes(2);
-    // 只有归因、没有邀请上下文时不绑定。
+    // With attribution but no referral context, nothing is bound.
     await run()("user-3", headers(`${SOURCE_COOKIE}=${source}`));
     expect(bind).toHaveBeenCalledTimes(2);
   });
 
-  test("拒绝的结果只告警，不影响注册", async () => {
+  test("rejected results only warn and don't affect sign-up", async () => {
     bind.mockResolvedValue({ ok: false, reason: "self" });
     await expect(
       run()("user-1", headers(referralCookie())),
@@ -69,7 +69,7 @@ describe("注册时绑定邀请人", () => {
     });
   });
 
-  test("存储故障吞掉并告警，注册流程不失败", async () => {
+  test("storage failures are swallowed with a warning; sign-up doesn't fail", async () => {
     bind.mockRejectedValue(new Error("db down"));
     await expect(
       run()("user-1", headers(referralCookie())),

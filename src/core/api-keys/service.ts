@@ -6,7 +6,7 @@ import { user, userApiKeys } from "@/core/db/schema";
 import { generateApiKey } from "./generate";
 import { API_KEY_NAME_MAX } from "./name";
 
-/** 界面与接口用的 key 视图：不含明文，也不含哈希。 */
+/** Key view for the UI and API: contains neither the plaintext nor the hash. */
 export type ApiKeyView = {
   id: string;
   userId: string;
@@ -22,7 +22,7 @@ export type CreateApiKeyResult =
   | { ok: true; plaintext: string; key: ApiKeyView }
   | { ok: false; reason: "invalid_name" | "duplicate" };
 
-/** 后台列表的一行：某个用户名下的 key 数量与最后使用时间。 */
+/** A row in the admin list: how many keys a user has and when they were last used. */
 export type ApiKeyOwnerView = {
   userId: string;
   email: string;
@@ -45,7 +45,7 @@ const viewColumns = {
 
 export function createApiKeyService(db: Database) {
   return {
-    /** 当前用户的 key，新建的在前。 */
+    /** The current user's keys, newest first. */
     async listForUser(userId: string): Promise<ApiKeyView[]> {
       return db
         .select(viewColumns)
@@ -55,18 +55,20 @@ export function createApiKeyService(db: Database) {
     },
 
     /**
-     * 新建一把 key。明文只在这个返回值里出现一次，之后任何人（包括管理员）都看不到。
-     * 同一位用户名下重名会被拒绝：列表里两把同名 key 分不清哪把是哪把。
+     * Creates a key. The plaintext appears only once, in this return value; nobody (admins
+     * included) can see it afterwards. Duplicate names for the same user are rejected: two keys
+     * with the same name in a list can't be told apart.
      */
     async create(userId: string, name: string): Promise<CreateApiKeyResult> {
-      // 前后空格不算名字的一部分：全是空格的名字等于没起名字，列表里也看不出差别。
+      // Leading and trailing spaces aren't part of the name: an all-space name is no name, and it
+      // would look the same in the list.
       const trimmed = name.trim();
       if (!trimmed || trimmed.length > API_KEY_NAME_MAX) {
         return { ok: false, reason: "invalid_name" };
       }
       const generated = generateApiKey();
-      // 唯一约束冲突（同名）走 onConflictDoNothing：不依赖捕获数据库错误，
-      // 并发提交两次也只会留下一把。
+      // A unique-constraint conflict (same name) goes through onConflictDoNothing: no relying on
+      // catching database errors, and two concurrent submits still leave only one key.
       const [created] = await db
         .insert(userApiKeys)
         .values({
@@ -82,8 +84,9 @@ export function createApiKeyService(db: Database) {
     },
 
     /**
-     * 撤销：写 `revokedAt`，不删行（列表里留痕，用户看得到「已撤销」）。
-     * 幂等 —— 已经撤销过或不是自己的 key 都返回 false，不报错、不改写时间。
+     * Revokes: sets `revokedAt` without deleting the row (it stays in the list, where the user can
+     * see "revoked"). Idempotent — an already revoked key or someone else's key returns false,
+     * without an error and without rewriting the time.
      */
     async revoke(userId: string, keyId: string): Promise<boolean> {
       const [row] = await db
@@ -101,8 +104,8 @@ export function createApiKeyService(db: Database) {
     },
 
     /**
-     * 鉴权查库。已撤销 / 已过期的也照常返回，由中间件判定 ——
-     * 判定逻辑只有一处，免得两边漂移。
+     * Lookup for authentication. Revoked / expired keys are returned too, and the middleware
+     * decides — the decision logic lives in one place so the two sides can't drift.
      */
     async findByHash(hashedKey: string): Promise<ApiKeyView | null> {
       const [row] = await db
@@ -113,7 +116,8 @@ export function createApiKeyService(db: Database) {
     },
 
     /**
-     * 记最后一次使用时间。抛错由调用方决定怎么办（中间件那边只记日志，不影响鉴权）。
+     * Records the last usage time. Callers decide what to do if it throws (the middleware only
+     * logs it; authentication is unaffected).
      */
     async touchLastUsed(keyId: string, at = new Date()): Promise<void> {
       await db
@@ -123,8 +127,8 @@ export function createApiKeyService(db: Database) {
     },
 
     /**
-     * 后台：有 key 的用户 + key 数量 + 最后使用时间。
-     * 永远不含明文和哈希 —— 撤销状态只影响 activeCount，明细留在用户自己的页面上。
+     * Admin: users with keys + key count + last usage time. Never includes plaintext or hashes —
+     * revocation only affects activeCount; the details stay on the user's own page.
      */
     async listOwners(limit = 100): Promise<ApiKeyOwnerView[]> {
       const rows = await db
@@ -133,7 +137,7 @@ export function createApiKeyService(db: Database) {
           email: user.email,
           name: user.name,
           keyCount: count(userApiKeys.id),
-          // 已撤销的行也留在表里，用它反推有效数量。
+          // Revoked rows stay in the table too; use them to derive the active count.
           revokedCount: count(userApiKeys.revokedAt),
           lastUsedAt: max(userApiKeys.lastUsedAt),
         })

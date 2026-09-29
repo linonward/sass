@@ -25,7 +25,10 @@ type Dependencies = {
   enabled: boolean;
   secret: string;
   getUserId: (headers: Headers) => Promise<string | null>;
-  /** 公开接口的限流（按 IP），和留资入口同一套；拒绝时返回 429 / 503。 */
+  /**
+   * Rate limit for the public endpoint (per IP), the same one the lead capture endpoint uses;
+   * rejections return 429 / 503.
+   */
   limit: (ip: string | null) => Promise<RateLimitResult>;
   service: Pick<
     ReturnType<typeof createReferralService>,
@@ -36,15 +39,17 @@ const json = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
 /**
- * 接受/拒绝邀请。只写签名后的邀请上下文 Cookie，不涉及账号和归属：
- * 关系在首次创建账号时由 `user.create.after` 依据登录身份和服务端存储建立，
- * 客户端始终不能指定发奖用户。
+ * Accepts / declines an invite. Only writes the signed referral context cookie and never touches
+ * accounts or attribution: the relationship is created when the account is first created, by
+ * `user.create.after`, based on the signed-in identity and server-side storage. The client can
+ * never choose who gets the reward.
  */
 export function createReferralHandlers(deps: Dependencies) {
   return {
     async POST(request: Request) {
       if (!deps.enabled) return json({ error: "not_found" }, 404);
-      // 与其余获客接口一致：只接受同源 JSON POST，避免被当成跨站写入点。
+      // Same as the other acquisition endpoints: only accept same-origin JSON POSTs, so this can't
+      // be used as a cross-site write endpoint.
       if (
         request.headers.get("origin") !== new URL(request.url).origin ||
         request.headers.get("content-type")?.split(";")[0] !==
@@ -63,18 +68,21 @@ export function createReferralHandlers(deps: Dependencies) {
       }
       const code = normalizeReferralCode(parsed.data.code);
       if (!isReferralCode(code)) return json({ error: "invalid" }, 400);
-      // 首个已接受且有效的邀请码胜出：已有上下文就保持不动。
-      // 这一步只验签、不查库，放在限流前，重复点击不会白耗配额。
+      // The first accepted, valid referral code wins: an existing context is left untouched. This
+      // step only verifies the signature without touching the database, so it runs before the rate
+      // limit and repeated clicks don't burn quota.
       const accepted = referralFromHeaders(request.headers, deps.secret);
       if (accepted) return json({ accepted: true, code: accepted.code });
-      // 未登录也能调的公开接口：和留资入口一样先过限流，再查库。
+      // A public endpoint callable while signed out: like the lead capture endpoint, pass the rate
+      // limit first, then query the database.
       const limit = await deps.limit(getClientIp(request.headers));
       if (!limit.ok) return rateLimitResponse(limit);
       const inviter = await deps.service.resolveInviter(code);
       if (!inviter) return json({ error: "invalid" }, 400);
       const userId = await deps.getUserId(request.headers);
       if (userId === inviter.userId) return json({ error: "self" }, 400);
-      // 已有关系不能再换：老账号（这里指早已注册且已被绑定的账号）直接拒绝。
+      // An existing relationship can't be changed: existing accounts (here, accounts that signed up
+      // earlier and are already bound) are rejected outright.
       if (userId && (await deps.service.relationshipFor(userId)))
         return json({ error: "bound" }, 400);
       const response = json({ accepted: true, code });

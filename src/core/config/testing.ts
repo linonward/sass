@@ -1,11 +1,12 @@
 import siteConfig from "../../../site.config";
 
 /**
- * 把值里出现的站点域名换成固定占位（`<domain>`），快照用。
+ * Replaces the site domain inside a value with a fixed placeholder (`<domain>`), for snapshots.
  *
- * sitemap / robots / RSS 的输出里到处是绝对地址，直接快照的话买家一改 `domain`
- * 就得跑 `pnpm test -u`。过一层这个函数，快照只锁结构和路径，域名跟随配置。
- * 断言（`toContain`、`toEqual`）不用它：那里直接写 `${siteConfig.domain}` 插值就行。
+ * sitemap / robots / RSS output is full of absolute URLs, so snapshotting it directly would force
+ * buyers to run `pnpm test -u` as soon as they change `domain`. Passed through this function, the
+ * snapshot pins only structure and paths, and the domain follows the config. Assertions
+ * (`toContain`, `toEqual`) don't need it: just interpolate `${siteConfig.domain}` there.
  */
 export function withoutSiteDomain<T>(value: T): T {
   return JSON.parse(

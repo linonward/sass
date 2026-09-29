@@ -12,18 +12,20 @@ import {
 const pattern = new RegExp(`^[${REFERRAL_ALPHABET}]{${REFERRAL_CODE_LENGTH}}$`);
 
 describe("referral code", () => {
-  test("生成的码长度固定，只用无歧义字符", () => {
+  test("generated codes have a fixed length and use only unambiguous characters", () => {
     for (let index = 0; index < 500; index += 1) {
       const code = newReferralCode();
       expect(code).toMatch(pattern);
       expect(isReferralCode(code)).toBe(true);
-      // i、l、o、u 这类易混字符不在字符表里，手抄不会抄错。
+      // Easily confused characters such as i, l, o, u aren't in the alphabet, so hand copying can't
+      // get them wrong.
       expect(code).not.toMatch(/[ilou]/);
     }
   });
 
-  test("码与用户 ID 无关：生成函数没有入参，随机空间不可枚举", () => {
-    // 结构上的保证：没有任何参数能把账号信息带进码里，码也不是 ID 的变形。
+  test("codes are unrelated to user IDs: the generator takes no input and the random space can't be enumerated", () => {
+    // A structural guarantee: no parameter can carry account data into a code, and a code is not a
+    // transformed ID.
     expect(newReferralCode).toHaveLength(0);
     expect(REFERRAL_ALPHABET).toHaveLength(32);
     const codes = new Set(
@@ -32,7 +34,7 @@ describe("referral code", () => {
     expect(codes.size).toBe(2000);
   });
 
-  test("归一化容错空白与大小写，非法值一律拒绝", () => {
+  test("normalization tolerates whitespace and case; invalid values are always rejected", () => {
     const code = newReferralCode();
     expect(normalizeReferralCode(`  ${code.toUpperCase()} `)).toBe(code);
     expect(isReferralCode(normalizeReferralCode(` ${code}\n`))).toBe(true);

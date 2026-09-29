@@ -16,7 +16,8 @@ export {
   type WindowLimiter,
 } from "./limiter";
 
-// 等待 Redis 的上限。超时按 failMode 处理，不让限流拖慢接口。
+// Upper bound on waiting for Redis. A timeout is handled per failMode so rate limiting never slows
+// down the endpoint.
 const REDIS_TIMEOUT_MS = 1000;
 
 let redis: Redis | null | undefined;
@@ -31,9 +32,10 @@ function getRedis() {
 }
 
 /**
- * 建一个滑动窗口计数器。Redis 没配时返回 null，由调用方决定怎么处理
- * （`createRateLimiter` 走 `onMissingRedis`，api-keys 的 per-key 限流直接放行）。
- * Redis 客户端在这里只建一次，套件策略和 api-keys 共用。
+ * Create a sliding-window counter. Returns null when Redis isn't configured and lets the caller
+ * decide (`createRateLimiter` uses `onMissingRedis`; api-keys' per-key limits let requests
+ * through). The Redis client is created only once here and shared by the core policies and
+ * api-keys.
  */
 export function createUpstashWindowLimiter(
   prefix: string,
@@ -43,18 +45,19 @@ export function createUpstashWindowLimiter(
   if (!client) return null;
   return new Ratelimit({
     redis: client,
-    // 调用方的 schema 已按 Duration 的格式校验过。
+    // The caller's schema has already validated the Duration format.
     limiter: Ratelimit.slidingWindow(limit, window as Duration),
     prefix,
     timeout: REDIS_TIMEOUT_MS,
   });
 }
 
-/** 绑定 Upstash Redis 和 `site.config.ts` 中 `rateLimit` 配置的限流检查。 */
+/** The rate limit check, bound to Upstash Redis and the `rateLimit` config in `site.config.ts`. */
 export const { checkRateLimit } = createRateLimiter({
   config: siteConfig.rateLimit,
-  // 自托管生产（`NODE_ENV=production` 且不在 Vercel 上）漏配 Redis 时拒绝请求，而不是静默
-  // 不限流：这类部署没有平台侧的变量校验，唯一的信号原本只有一行 warn 日志。
+  // Self-hosted production (`NODE_ENV=production` and not on Vercel) with Redis missing rejects
+  // requests instead of silently not rate limiting: such deployments have no platform-side
+  // variable validation, and the only signal would otherwise be a single warn log line.
   onMissingRedis: missingRedisPolicy(process.env, {
     enabled: rateLimitingEnabled(),
   }),

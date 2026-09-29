@@ -1,84 +1,98 @@
 /**
- * 全站安全响应头。`next.config.ts` 的 `headers()` 用它，一次覆盖所有路径 —— 包括
- * `src/proxy.ts` 的 matcher 故意排除掉的 `/api`、`/_next`、`/monitoring` 和带扩展名的文件。
+ * Site-wide security response headers. `headers()` in `next.config.ts` uses them to cover every
+ * path at once — including `/api`, `/_next`, `/monitoring`, and files with extensions, which the
+ * `src/proxy.ts` matcher deliberately excludes.
  *
- * **CSP 用的是静态策略，不带 nonce。** nonce 每个请求都得重新生成，Next 只在动态渲染时
- * 把它写进行内脚本，因此开 nonce 等于全站放弃静态预渲染和 CDN 缓存
- * （见 `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`
- * 的「Static vs Dynamic Rendering with CSP」）。代价是 `script-src` 必须留 `'unsafe-inline'`：
- * 没有 nonce 可用的行内脚本（Next 注入的 RSC 数据、next-themes 的主题脚本）就只能这样放行。
- * 本站没有把用户内容当 HTML 渲染的地方，行内脚本的执行点仍然只有自己的构建产物。
+ * **The CSP is a static policy without a nonce.** A nonce has to be regenerated on every request,
+ * and Next only writes it into inline scripts during dynamic rendering, so enabling a nonce means
+ * giving up static prerendering and CDN caching site-wide (see "Static vs Dynamic Rendering with
+ * CSP" in `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`). The cost is
+ * that `script-src` must keep `'unsafe-inline'`: that's the only way to allow inline scripts that
+ * have no nonce (the RSC data Next injects, the next-themes theme script). The site never renders
+ * user content as HTML, so inline scripts still only come from its own build output.
  *
- * 改白名单前先想清楚：多加一项只是放宽，漏一项是**对应资源被浏览器直接拦掉**
- * （生成结果图片变破图、脚本不执行），而且拦掉的资源往往只是静默失败。
+ * Think before changing the allowlist: adding an entry only loosens it, but missing one means
+ * **the browser blocks that resource outright** (generated images turn into broken images, scripts
+ * don't run), and blocked resources often fail silently.
  */
 
-// 会被 next.config.ts 加载，那里不解析 `@/` 别名，只能用相对路径。
+// Loaded by next.config.ts, which doesn't resolve the `@/` alias, so use relative paths.
 import { googleClientId } from "../auth/env";
 
 export type SecurityHeader = { key: string; value: string };
 
 type RuntimeEnv = Record<string, string | undefined>;
 
-/** Vercel Analytics / Speed Insights 的脚本域。生产在 Vercel 上走同源的 `/_vercel/*`；
- * 本地开发和没接 Vercel 的部署走这个域上的调试脚本（SDK 按 `NODE_ENV` 选，见两个包的 `getScriptSrc`）。 */
+/**
+ * Script origin for Vercel Analytics / Speed Insights. Production on Vercel uses the same-origin
+ * `/_vercel/*`; local development and deployments not on Vercel use the debug scripts on this
+ * origin (the SDKs choose by `NODE_ENV`; see `getScriptSrc` in both packages).
+ */
 const VERCEL_SCRIPTS_ORIGIN = "https://va.vercel-scripts.com";
 
 /**
- * Google Identity Services（One Tap）的三个源，清单来自官方文档：
+ * The three Google Identity Services (One Tap) origins, per the official docs:
  * https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
- * - `gsi/client`：脚本本体（GIS 不支持自托管）；
- * - `gsi/`：One Tap 提示与按钮 iframe 的父地址、以及 GIS 的服务端点（官方建议连
- *   `connect-src` 也用这个父地址，不用逐个列具体端点）；
- * - `gsi/style`：iframe 内按钮的样式表。
+ * - `gsi/client`: the script itself (GIS can't be self-hosted);
+ * - `gsi/`: the parent URL of the One Tap prompt and button iframes, plus the GIS service
+ *   endpoints (the docs recommend using this parent URL for `connect-src` too, rather than listing
+ *   each endpoint);
+ * - `gsi/style`: the stylesheet for the button inside the iframe.
  *
- * 只在 Google 登录启用时才放宽（见 `contentSecurityPolicy` 里的 `google` 判断）：
- * 没配凭据时登录页根本不会加载这个脚本。
+ * Only loosened when Google sign-in is enabled (see the `google` check in `contentSecurityPolicy`):
+ * without credentials, the sign-in page never loads this script.
  */
 const GIS_SCRIPT = "https://accounts.google.com/gsi/client";
 const GIS_PARENT = "https://accounts.google.com/gsi/";
 const GIS_STYLE = "https://accounts.google.com/gsi/style";
 
 /**
- * R2 的 S3 兼容接口域：浏览器直传（预签名 PUT）和私有文件的签名 GET 都打到这里。
- * 用通配而不是 `<account>.r2.cloudflarestorage.com`：CSP 是公开响应头，没必要把账号 ID
- * 写给每个访客；这个域是 Cloudflare 自己的，只接受带签名的请求。
+ * R2's S3-compatible API origin: direct browser uploads (presigned PUT) and signed GETs for private
+ * files both go here. A wildcard instead of `<account>.r2.cloudflarestorage.com`: the CSP is a
+ * public response header, so there's no reason to show every visitor the account ID; the domain
+ * belongs to Cloudflare and only accepts signed requests.
  */
 const R2_API_ORIGIN = "https://*.r2.cloudflarestorage.com";
 
-/** `R2_PUBLIC_URL` 的源（`upload.public` 为 true 时生成结果的图片/视频直接用它）。 */
+/** The origin of `R2_PUBLIC_URL` (generated images/videos use it directly when `upload.public` is true). */
 function r2PublicOrigin(runtimeEnv: RuntimeEnv): string | undefined {
   const value = runtimeEnv.R2_PUBLIC_URL?.trim();
   if (!value) return undefined;
   try {
     return new URL(value).origin;
   } catch {
-    // 本地没配 R2 时这个值可能是空的或不是合法 URL；少一个白名单项，不在这里额外报错
-    // （`upload.public` 为 true 时 upload 的 env 校验会先拦下生产环境的漏配）。
+    // Without R2 configured locally, this may be empty or not a valid URL; just drop the allowlist
+    // entry without raising an error here (when `upload.public` is true, upload's env validation
+    // catches a missing value in production first).
     return undefined;
   }
 }
 
-/** 生成结果的图片来源：公开域名 + R2 接口域（`upload.public` 为 false 时是签名 GET 地址）。 */
+/**
+ * Image sources for generated results: the public domain + the R2 API origin (signed GET URLs when
+ * `upload.public` is false).
+ */
 function mediaOrigins(runtimeEnv: RuntimeEnv): string[] {
   const publicOrigin = r2PublicOrigin(runtimeEnv);
   return publicOrigin ? [R2_API_ORIGIN, publicOrigin] : [R2_API_ORIGIN];
 }
 
 /**
- * 内容安全策略。
+ * Content Security Policy.
  *
- * 白名单的来源：
- * - `script-src` / `connect-src`：Vercel Analytics 与 Speed Insights；
- * - `img-src` / `media-src` / `connect-src`：R2（生成结果、上传直传）；
- * - `script-src` / `style-src` / `connect-src` / `frame-src`：Google One Tap，**仅在
- *   Google 登录启用时**（见下）；
- * - `connect-src` 的 `'self'` 覆盖 Sentry 的转发路径 `/monitoring`（`next.config.ts` 的
- *   `tunnelRoute`，上报走本站同源地址）。**关掉 tunnelRoute 的话要在这里补上 Sentry 的 ingest 域。**
+ * Where the allowlist entries come from:
+ * - `script-src` / `connect-src`: Vercel Analytics and Speed Insights;
+ * - `img-src` / `media-src` / `connect-src`: R2 (generated results, direct uploads);
+ * - `script-src` / `style-src` / `connect-src` / `frame-src`: Google One Tap, **only when Google
+ *   sign-in is enabled** (see below);
+ * - `'self'` in `connect-src` covers Sentry's tunnel path `/monitoring` (`tunnelRoute` in
+ *   `next.config.ts`, which sends reports through the site's own origin). **If you turn off
+ *   tunnelRoute, add Sentry's ingest domain here.**
  *
- * 注意这里读的是**构建期**的环境变量（`next.config.ts` 在启动时调一次），不是每个请求。
- * 自托管时只在运行时注入 `GOOGLE_CLIENT_ID` 会出现「登录页有按钮、One Tap 被静默拦掉」，
- * 和 `R2_PUBLIC_URL` 是同一类问题。
+ * Note that this reads **build-time** environment variables (`next.config.ts` calls it once at
+ * startup), not per request. When self-hosting, injecting `GOOGLE_CLIENT_ID` only at runtime
+ * leads to "the sign-in page has the button, but One Tap is silently blocked" — the same class of
+ * problem as `R2_PUBLIC_URL`.
  */
 export function contentSecurityPolicy({
   runtimeEnv,
@@ -87,14 +101,16 @@ export function contentSecurityPolicy({
   runtimeEnv: RuntimeEnv;
   isDev: boolean;
 }): string {
-  // 登录页只有在 Google 启用时才会加载 GIS 脚本，所以白名单也跟着开关走：
-  // 没配凭据（本地、CI、Vercel 预览）时策略一个字都不放宽。
+  // The sign-in page only loads the GIS script when Google is enabled, so the allowlist follows
+  // the same switch: without credentials (local, CI, Vercel previews) the policy isn't loosened at
+  // all.
   const google = Boolean(googleClientId(runtimeEnv));
 
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
-    // 'unsafe-inline'：Next 注入的 RSC 数据脚本、next-themes 的主题脚本都是行内脚本，
-    // 静态 CSP 没有 nonce 可用。'unsafe-eval' 只在开发环境需要（React 用它重建服务端错误栈）。
+    // 'unsafe-inline': the RSC data scripts Next injects and the next-themes theme script are
+    // inline, and a static CSP has no nonce to use. 'unsafe-eval' is only needed in development
+    // (React uses it to rebuild server error stacks).
     "script-src": [
       "'self'",
       "'unsafe-inline'",
@@ -102,11 +118,12 @@ export function contentSecurityPolicy({
       VERCEL_SCRIPTS_ORIGIN,
       ...(google ? [GIS_SCRIPT] : []),
     ],
-    // 'unsafe-inline' 同时覆盖行内 <style> 和组件里的 style="..." 属性。
+    // 'unsafe-inline' covers both inline <style> and style="..." attributes in components.
     "style-src": ["'self'", "'unsafe-inline'", ...(google ? [GIS_STYLE] : [])],
     "img-src": ["'self'", "blob:", "data:", ...mediaOrigins(runtimeEnv)],
     "media-src": ["'self'", "blob:", ...mediaOrigins(runtimeEnv)],
-    // next/font 在构建时把字体下载到 /_next/static/media，运行时不连外部域。
+    // next/font downloads fonts to /_next/static/media at build time, so there are no external
+    // connections at runtime.
     "font-src": ["'self'"],
     "connect-src": [
       "'self'",
@@ -117,14 +134,16 @@ export function contentSecurityPolicy({
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],
-    // One Tap 的提示是一个 iframe，只在启用时下发这条。
-    // **必须带 `'self'`**：一旦出现 frame-src，它就取代 default-src 对 frame 的回落，
-    // 漏掉 `'self'` 会连本站同源 iframe 一起拦掉 —— `e2e/security-headers.spec.ts` 的
-    // 「/admin 不能被 iframe 嵌套」正是靠同源 iframe 真的被加载、再由 X-Frame-Options 拒绝
-    // 才能等到那条控制台消息。未启用时整条不下发，保持原有策略不变。
+    // The One Tap prompt is an iframe; send this directive only when it's enabled.
+    // **It must include `'self'`**: once frame-src is present, it replaces the default-src fallback
+    // for frames, and leaving out `'self'` would also block the site's own same-origin iframes —
+    // the "/admin can't be framed" test in `e2e/security-headers.spec.ts` relies on a same-origin
+    // iframe actually loading and then being refused by X-Frame-Options to get that console
+    // message. When disabled, the directive isn't sent at all, leaving the policy unchanged.
     ...(google ? { "frame-src": ["'self'", GIS_PARENT] } : {}),
     "frame-ancestors": ["'none'"],
-    // 本地是 http，升级会把开发环境的子资源顶成 https；生产把漏掉的 http 子资源顶成 https。
+    // Local is http, and upgrading would force dev subresources to https; in production it upgrades
+    // any stray http subresources to https.
     ...(isDev ? {} : { "upgrade-insecure-requests": [] }),
   };
 
@@ -134,14 +153,14 @@ export function contentSecurityPolicy({
 }
 
 /**
- * 每个响应都带的安全头。HSTS **不在这里**：域名定下来之前下发会被浏览器记住，
- * 上线清单（README）里作为一步手动开启。
+ * Security headers sent on every response. HSTS is **not here**: sent before the domain is final,
+ * browsers would remember it; the launch checklist (README) turns it on manually as one step.
  */
 export function staticSecurityHeaders(): SecurityHeader[] {
   return [
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-    // 防点击劫持；和 CSP 的 frame-ancestors 一起下发，后者被新浏览器优先采用。
+    // Clickjacking protection; sent alongside CSP frame-ancestors, which newer browsers prefer.
     { key: "X-Frame-Options", value: "DENY" },
     {
       key: "Permissions-Policy",
@@ -150,7 +169,7 @@ export function staticSecurityHeaders(): SecurityHeader[] {
   ];
 }
 
-/** `next.config.ts` 的 `headers()` 的返回值。 */
+/** The return value for `headers()` in `next.config.ts`. */
 export function securityHeaders({
   runtimeEnv,
   isDev,

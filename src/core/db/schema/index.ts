@@ -1,5 +1,6 @@
-// 套件的表在这个目录下按模块分文件定义，并从这里汇总导出，供 drizzle() 的 schema 参数使用。
-// 业务的表放在 src/features/*/schema.ts，由 drizzle.config.ts 一并收录生成迁移。
+// The kit's tables are defined in this directory, one file per module, and re-exported from here
+// for drizzle()'s schema option. Business tables live in src/features/*/schema.ts and are picked up
+// by drizzle.config.ts for migration generation as well.
 export * from "./auth";
 export * from "./credits";
 export * from "./billing";

@@ -7,20 +7,22 @@ import { user, verification } from "@/core/db/schema";
 import "./hooks";
 import { runOnUserDelete, type DeletedUser } from "./on-user-delete";
 
-/** 转义 LIKE 的通配符，邮箱里的 `_` 不能匹配任意字符。 */
+/** Escape LIKE wildcards so an `_` in an email doesn't match any character. */
 function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
 /**
- * 删除用户及其数据：先执行 onUserDelete 钩子（失败则中止），再在一个事务里删除
- * 该邮箱的验证码与冷却记录和用户本身；session、account 由外键级联删除。
- * 业务表引用 user.id 时应设 `onDelete: "cascade"`，或者注册钩子自行清理。
+ * Delete a user and their data: first run the onUserDelete hooks (abort on failure), then in one
+ * transaction delete the verification codes and cooldown records for that email, plus the user
+ * itself; session and account rows go through foreign-key cascades. Business tables that
+ * reference user.id should set `onDelete: "cascade"`, or register a hook to clean up themselves.
  *
- * 登录状态这里就结束了：`session.userId` 是 `onDelete: "cascade"`（见
- * src/core/db/schema/auth.ts），删 user 那一行时数据库把 session 一起删掉，
- * 不需要（也不应该）先手动删 session —— 事务里多一条语句就多一个中途失败的机会。
- * 浏览器里的登录 cookie 由调用方清（src/core/account/actions.ts 的 deleteAccount）。
+ * This is also where the signed-in state ends: `session.userId` is `onDelete: "cascade"` (see
+ * src/core/db/schema/auth.ts), so deleting the user row makes the database delete the sessions
+ * too. There is no need to (and you shouldn't) delete sessions manually first — every extra
+ * statement in the transaction is one more chance to fail halfway. The auth cookies in the
+ * browser are cleared by the caller (deleteAccount in src/core/account/actions.ts).
  */
 export async function deleteUserAccount({ userId, email }: DeletedUser) {
   await runOnUserDelete({ userId, email });
@@ -29,7 +31,7 @@ export async function deleteUserAccount({ userId, email }: DeletedUser) {
   await db.transaction(async (tx) => {
     await tx.delete(verification).where(
       or(
-        // emailOTP 插件的记录：`<type>-otp-<email>`。
+        // Records from the emailOTP plugin: `<type>-otp-<email>`.
         like(verification.identifier, `%-otp-${escapeLike(normalized)}`),
         eq(verification.identifier, cooldownIdentifier(normalized)),
       ),

@@ -23,11 +23,11 @@ export type SendEmailOptions<T extends EmailTemplateName> = {
   to: string | string[];
   template: T;
   props: EmailTemplateProps[T];
-  /** 收件人的语言，决定模板文案；默认使用站点默认语言。 */
+  /** Recipient's locale, which picks the template copy; defaults to the site's default locale. */
   locale?: string;
 };
 
-/** 渲染模板（html + 纯文本），但不发送。sendEmail 和测试共用。 */
+/** Renders a template (html + plain text) without sending. Shared by sendEmail and tests. */
 export async function renderEmail<T extends EmailTemplateName>({
   to,
   template,
@@ -36,7 +36,8 @@ export async function renderEmail<T extends EmailTemplateName>({
 }: SendEmailOptions<T>): Promise<OutgoingEmail> {
   const t = emailTranslator(locale, await loadMessages(locale));
   const definition = getEmailTemplate(template);
-  // 泛型模板名下 TS 无法把 props 与组件对应起来；类型已由 SendEmailOptions<T> 约束。
+  // With a generic template name TS can't match props to the component; SendEmailOptions<T>
+  // already constrains the types.
   const Component = definition.Component as unknown as ComponentType<
     Record<string, unknown>
   >;
@@ -61,8 +62,9 @@ export async function renderEmail<T extends EmailTemplateName>({
 }
 
 /**
- * 发送事务邮件。发送方式由 `EMAIL_TRANSPORT` 决定（见 src/core/env.ts）：
- * resend 真实发送，console 打印到终端，file 写入 `.tmp/emails/` 供 e2e 读取。
+ * Sends a transactional email. The transport comes from `EMAIL_TRANSPORT` (see src/core/env.ts):
+ * resend sends for real, console prints to the terminal, and file writes to `.tmp/emails/` for e2e
+ * to read.
  */
 export async function sendEmail<T extends EmailTemplateName>(
   options: SendEmailOptions<T>,

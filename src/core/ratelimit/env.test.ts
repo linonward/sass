@@ -1,5 +1,5 @@
 // @vitest-environment node
-// t3-env 只在服务端校验 server 变量，jsdom 下会被当成客户端。
+// t3-env only validates server variables on the server; under jsdom it would count as the client.
 import { describe, expect, test } from "vitest";
 
 import { createAppEnv } from "../create-env";
@@ -23,7 +23,7 @@ const upstash = {
 };
 
 describe("rateLimitServerEnv", () => {
-  test("Vercel 生产环境开启了 ai / upload / rateLimit 时，缺少 Upstash 变量会报错", () => {
+  test("fails in Vercel production with ai / upload / rateLimit enabled when the Upstash variables are missing", () => {
     expect(check({ VERCEL_ENV: "production" })).toThrow(
       "- UPSTASH_REDIS_REST_URL: ",
     );
@@ -33,22 +33,22 @@ describe("rateLimitServerEnv", () => {
     expect(check({ VERCEL_ENV: "production", ...upstash })).not.toThrow();
   });
 
-  test("相关模块都没开时生产环境也不要求", () => {
+  test("doesn't require them in production when none of the related modules are on", () => {
     expect(check({ VERCEL_ENV: "production" }, false)).not.toThrow();
   });
 
-  test("本地、CI 和预览不要求", () => {
+  test("doesn't require them locally, in CI, or in previews", () => {
     expect(check({})).not.toThrow();
     expect(check({ VERCEL_ENV: "preview" })).not.toThrow();
   });
 
-  test("REST 地址必须是 https", () => {
+  test("the REST URL must be https", () => {
     expect(
       check({ ...upstash, UPSTASH_REDIS_REST_URL: "redis://example:6379" }),
     ).toThrow("- UPSTASH_REDIS_REST_URL: ");
   });
 
-  test("ALLOW_UNRATELIMITED 只认 1 / true / 0 / false", () => {
+  test("ALLOW_UNRATELIMITED only accepts 1 / true / 0 / false", () => {
     expect(check({ ALLOW_UNRATELIMITED: "true" })).not.toThrow();
     expect(check({ ALLOW_UNRATELIMITED: "yes" })).toThrow(
       "- ALLOW_UNRATELIMITED: ",
@@ -57,7 +57,7 @@ describe("rateLimitServerEnv", () => {
 });
 
 describe("upstashConfigured", () => {
-  test("两个变量都要有，缺一个或空串都算没配", () => {
+  test("both variables are required; one missing or an empty string counts as unset", () => {
     expect(upstashConfigured(upstash)).toBe(true);
     expect(
       upstashConfigured({ ...upstash, UPSTASH_REDIS_REST_TOKEN: "" }),
@@ -74,22 +74,22 @@ describe("upstashConfigured", () => {
 describe("missingRedisPolicy", () => {
   const enabled = { enabled: true };
 
-  test("自托管生产（NODE_ENV=production 且不在 Vercel 上）漏配时拒绝请求", () => {
+  test("rejects requests in self-hosted production (NODE_ENV=production, not on Vercel) when unconfigured", () => {
     expect(missingRedisPolicy({ NODE_ENV: "production" }, enabled)).toBe(
       "unavailable",
     );
   });
 
-  test("本地开发、测试和 CI 照常放行", () => {
+  test("lets requests through in local development, tests, and CI", () => {
     expect(missingRedisPolicy({ NODE_ENV: "development" }, enabled)).toBe(
       "allow",
     );
     expect(missingRedisPolicy({ NODE_ENV: "test" }, enabled)).toBe("allow");
-    // NODE_ENV 没设置（本地 `pnpm dev` 之外的场景）不按生产处理。
+    // An unset NODE_ENV (scenarios other than local `pnpm dev`) is not treated as production.
     expect(missingRedisPolicy({}, enabled)).toBe("allow");
   });
 
-  test("Vercel 预览照常放行；Vercel 生产拒绝（变量校验会先拦下来）", () => {
+  test("Vercel previews let requests through; Vercel production rejects (env validation catches it first)", () => {
     expect(
       missingRedisPolicy(
         { VERCEL_ENV: "preview", NODE_ENV: "production" },
@@ -104,7 +104,7 @@ describe("missingRedisPolicy", () => {
     ).toBe("unavailable");
   });
 
-  test("ALLOW_UNRATELIMITED=1 / true 时显式放行，0 或不填照旧拒绝", () => {
+  test("ALLOW_UNRATELIMITED=1 / true explicitly lets requests through; 0 or unset still rejects", () => {
     expect(
       missingRedisPolicy(
         { NODE_ENV: "production", ALLOW_UNRATELIMITED: "1" },
@@ -125,7 +125,7 @@ describe("missingRedisPolicy", () => {
     ).toBe("unavailable");
   });
 
-  test("限流相关的模块都没开时不判定", () => {
+  test("doesn't apply when none of the rate-limited modules are on", () => {
     expect(
       missingRedisPolicy({ NODE_ENV: "production" }, { enabled: false }),
     ).toBe("allow");

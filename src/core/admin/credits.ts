@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import type { Credits } from "@/core/credits";
 
-/** 后台调整积分的流水来源；sourceId 是表单渲染时生成的请求 ID，重复提交只生效一次。 */
+/**
+ * Transaction source for admin credit adjustments; sourceId is a request ID generated when the form
+ * renders, so resubmissions take effect only once.
+ */
 export const ADMIN_ADJUST_SOURCE = "admin";
 
 export const adjustCreditsInput = z.object({
@@ -13,7 +16,7 @@ export const adjustCreditsInput = z.object({
     .min(-1_000_000_000)
     .max(1_000_000_000)
     .refine((n) => n !== 0, "must not be zero"),
-  // 必须填写原因，写进流水的 reason。
+  // A reason is required; it's written to the transaction's reason.
   reason: z.string().trim().min(1).max(500),
   requestId: z.uuid(),
 });
@@ -21,8 +24,9 @@ export const adjustCreditsInput = z.object({
 export type AdjustCreditsInput = z.input<typeof adjustCreditsInput>;
 
 /**
- * 管理员调整某个用户的积分：写一条 adjust 流水，actor_id 记录操作的管理员。
- * 负数调整不能让余额低于 0（抛 InsufficientCreditsError）。
+ * An admin adjusts a user's credits: writes an adjust transaction, with actor_id recording the
+ * acting admin. A negative adjustment can't take the balance below 0 (throws
+ * InsufficientCreditsError).
  */
 export async function adjustUserCredits(
   credits: Pick<Credits, "adjustCredits">,

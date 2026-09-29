@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { fillDays, metricWindow, parseRange } from "./metrics";
 
 describe("parseRange", () => {
-  test("只接受 7 / 30 / 90，其他值按 30 天", () => {
+  test("accepts only 7 / 30 / 90; anything else means 30 days", () => {
     expect(parseRange("7")).toBe(7);
     expect(parseRange("90")).toBe(90);
     for (const value of [undefined, "", "14", "7.0x", ["7"], "-30"]) {
@@ -13,7 +13,7 @@ describe("parseRange", () => {
 });
 
 describe("metricWindow", () => {
-  test("从 range - 1 天前的 UTC 零点开始，最后一天是今天", () => {
+  test("starts at UTC midnight range - 1 days ago and ends today", () => {
     const window = metricWindow(7, new Date("2026-03-02T23:30:00+08:00"));
     expect(window.since.toISOString()).toBe("2026-02-24T00:00:00.000Z");
     expect(window.days).toEqual([
@@ -29,7 +29,7 @@ describe("metricWindow", () => {
 });
 
 describe("fillDays", () => {
-  test("没有数据的天补 0，区间外的行忽略", () => {
+  test("fills days without data with 0 and ignores rows outside the range", () => {
     expect(
       fillDays(
         ["2026-01-01", "2026-01-02", "2026-01-03"],

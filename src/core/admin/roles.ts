@@ -8,8 +8,9 @@ import {
 export const ADMIN_ROLE = "admin";
 
 /**
- * Better Auth admin 插件的权限：admin 角色保留默认权限，但去掉模拟登录（impersonate），
- * v1 不提供这个功能，也不让它能通过 /api/auth/admin/impersonate-user 调用。
+ * Permissions for the Better Auth admin plugin: the admin role keeps the default permissions minus
+ * impersonation. v1 doesn't offer that feature, and it must not be callable through
+ * /api/auth/admin/impersonate-user either.
  */
 const ac = createAccessControl(defaultStatements);
 
@@ -28,7 +29,7 @@ export const adminAccess = {
 
 type RoleHolder = { role?: string | null };
 
-/** 用户是否有 admin 角色。插件把多个角色存成逗号分隔的字符串。 */
+/** Whether the user has the admin role. The plugin stores multiple roles as a comma-separated string. */
 export function isAdmin(user: RoleHolder | null | undefined): boolean {
   return Boolean(
     user?.role
@@ -39,8 +40,9 @@ export function isAdmin(user: RoleHolder | null | undefined): boolean {
 }
 
 /**
- * 登录时是否要把这个用户提升为 admin：邮箱在 ADMIN_EMAILS 里、已验证，且还不是 admin。
- * 只提升不降级：从 ADMIN_EMAILS 删掉邮箱不会收回已有的 admin 角色。
+ * Whether to promote this user to admin on sign-in: the email is in ADMIN_EMAILS, verified, and
+ * the user isn't admin yet. Promote only, never demote: removing an email from ADMIN_EMAILS doesn't
+ * revoke an existing admin role.
  */
 export function shouldPromoteToAdmin(
   user: RoleHolder & { email: string; emailVerified: boolean },
@@ -53,7 +55,7 @@ export function shouldPromoteToAdmin(
   );
 }
 
-/** 提升后的角色：保留已有的其他角色。 */
+/** Roles after promotion: keeps any other existing roles. */
 export function withAdminRole(role: string | null | undefined): string {
   const roles = (role ?? "")
     .split(",")

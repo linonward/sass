@@ -33,21 +33,26 @@ type AuthError = {
 };
 
 type Props = {
-  /** 登录成功后跳转的站内地址（已清洗，含语言前缀）。 */
+  /** Same-site URL to go to after a successful sign-in (already sanitized, with locale prefix). */
   callbackURL: string;
   /**
-   * 首次运行引导地址（含语言前缀）。这次登录带了 callbackURL 参数时为 null：
-   * 深链优先，不做引导（规则见 src/core/onboarding/landing.ts）。
+   * First-run onboarding URL (with locale prefix). null when this sign-in carries a callbackURL
+   * parameter: the deep link wins and there's no onboarding (rules in
+   * src/core/onboarding/landing.ts).
    */
   onboardingPath: string | null;
-  /** Google client ID（公开值）；为 null 表示没启用 Google 登录（本地没配凭据、Vercel 预览）。 */
+  /**
+   * Google client ID (a public value); null means Google sign-in is disabled (no credentials
+   * locally, or a Vercel preview).
+   */
   googleClientId: string | null;
   otp: OtpSettings;
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// 「已水合」没有外部事件源 —— 水合是 React 自己的一次性切换，订阅函数返回空退订即可。
+// "Hydrated" has no external event source — hydration is React's own one-time switch, so the
+// subscribe function just returns a no-op unsubscribe.
 const subscribeHydration = () => () => {};
 const hydratedSnapshot = () => true;
 const serverSnapshot = () => false;
@@ -83,7 +88,8 @@ export function SignInForm({
 }: Props) {
   const t = useTranslations("Auth.signIn");
   const te = useTranslations("Auth.errors");
-  // 有 client ID 就等于启用了 Google 登录：按钮和 One Tap 提示同源，不会各判一次。
+  // Having a client ID means Google sign-in is enabled: the button and the One Tap prompt share one
+  // source rather than each checking separately.
   const googleEnabled = googleClientId !== null;
 
   const [step, setStep] = useState<"email" | "code">("email");
@@ -94,12 +100,15 @@ export function SignInForm({
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
-  // 水合完成前 onSubmit 还没挂上，这时提交走的是浏览器的原生表单 GET：地址栏会被整个换成
-  // `/sign-in?email=…`，callbackURL 随之丢失，从受保护页面或邀请链接过来的用户登录后会落到
-  // 引导页、而不是原目标页（慢网与移动端才会碰到，本地 dev 能稳定复现）。禁用提交按钮可以
-  // 同时挡掉点击和回车（表单的隐式提交）两条路径，水合完成后恢复可用。
-  // 取法同 src/core/hooks/use-mobile.ts：服务端快照 false、客户端快照 true，SSR 与首帧一致
-  // 不会失配，也不必在 effect 里同步 setState（eslint 的 set-state-in-effect 会拦）。
+  // Before hydration, onSubmit isn't attached yet, so a submit goes through the browser's native
+  // form GET: the whole URL becomes `/sign-in?email=…` and callbackURL is lost, so users coming
+  // from a protected page or a referral link land on onboarding after sign-in instead of their
+  // original target (only on slow networks and mobile, but reliably reproducible in local dev).
+  // Disabling the submit button blocks both paths — clicking and pressing Enter (the form's
+  // implicit submission) — and it becomes usable again once hydrated.
+  // Same approach as src/core/hooks/use-mobile.ts: the server snapshot is false and the client
+  // snapshot is true, so SSR and the first frame match without a mismatch, and there's no need to
+  // setState synchronously in an effect (which eslint's set-state-in-effect rule would block).
   const hydrated = useSyncExternalStore(
     subscribeHydration,
     hydratedSnapshot,
@@ -108,7 +117,7 @@ export function SignInForm({
 
   const secondsLeft = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
 
-  // 倒计时：冷却期间每秒刷新一次，到 0 就停。
+  // Countdown: refresh every second during the cooldown and stop at 0.
   useEffect(() => {
     if (cooldownUntil <= Date.now()) return;
     const timer = setInterval(() => {
@@ -119,8 +128,9 @@ export function SignInForm({
     return () => clearInterval(timer);
   }, [cooldownUntil]);
 
-  // Google One Tap：进页面即弹出账号提示，点一下头像就完成登录。
-  // 用 ref 守卫是因为 StrictMode 会把 effect 跑两次，而插件自己的并发守卫只是 console.warn。
+  // Google One Tap: show the account prompt as soon as the page loads; one click on the avatar
+  // completes sign-in. Guarded with a ref because StrictMode runs effects twice, and the plugin's
+  // own concurrency guard only does a console.warn.
   const prompted = useRef(false);
   useEffect(() => {
     if (!googleClientId || prompted.current) return;
@@ -128,7 +138,8 @@ export function SignInForm({
     void signInWithOneTap({
       clientId: googleClientId,
       callbackURL,
-      // 只有「点了提示、但回调失败」会走到这里；脚本本身没加载出来不打扰用户（见 one-tap.ts）。
+      // Only reached when the user clicked the prompt but the callback failed; a script that
+      // failed to load doesn't bother the user (see one-tap.ts).
       onError: () => setError(te("googleFailed")),
     });
   }, [googleClientId, callbackURL, te]);
@@ -172,7 +183,8 @@ export function SignInForm({
     if (err) {
       const authError = err as AuthError;
       if (authError.code === RESEND_COOLDOWN) {
-        // 刚发过：直接进入输入验证码这一步，按服务端的剩余时间倒计时。
+        // Just sent one: go straight to the code entry step and count down from the server's
+        // remaining time.
         setStep("code");
         startCooldown(authError.retryAfter ?? otp.resendCooldown);
       }
@@ -208,8 +220,9 @@ export function SignInForm({
       setError(describe(err as AuthError));
       return;
     }
-    // 整页跳转，让服务端组件读到新的 session cookie。去哪儿由返回值里的用户记录决定：
-    // 没带 callbackURL 的登录里，还没走完首次运行引导的用户先去引导页。
+    // Full-page navigation so server components read the new session cookie. Where to go depends
+    // on the returned user record: in a sign-in without a callbackURL, users who haven't finished
+    // first-run onboarding go to onboarding first.
     window.location.assign(
       resolvePostSignInPath({ callbackURL, onboardingPath, user: data?.user }),
     );
@@ -227,8 +240,10 @@ export function SignInForm({
     const { error: err } = await authClient.signIn.social({
       provider: "google",
       callbackURL,
-      // Google 这条路径是整页往返，客户端插不上话：新注册的用户只能靠服务端回调目标
-      // 直接送进引导页。已有账号但还没走完清单的不引导 —— 服务端分不出他完成没完成。
+      // The Google path is a full-page round trip the client can't intervene in: new sign-ups can
+      // only be sent to onboarding through the server's callback target. Existing accounts that
+      // haven't finished the checklist aren't sent there — the server can't tell whether they're
+      // done.
       ...(onboardingPath ? { newUserCallbackURL: onboardingPath } : {}),
     });
     if (err) {

@@ -5,8 +5,8 @@ import { referralRewardDebt } from "@/core/db/schema";
 import { logger } from "@/core/observability/logger";
 
 /**
- * 偿还用户的推荐奖励债务（FIFO）。
- * 在积分发放之后调用，用当前余额还最早的债。
+ * Repays a user's referral reward debts (FIFO).
+ * Called after credits are granted; uses the current balance to pay off the oldest debts first.
  */
 export async function repayReferralDebts(
   tx: DbTransaction,
@@ -28,8 +28,8 @@ export async function repayReferralDebts(
 
   if (debts.length === 0) return;
 
-  // 读当前余额（已在调用方的事务里，无需额外锁）
-  // 注意：余额直接读 user_credits 表
+  // Read the current balance (already inside the caller's transaction, so no separate locking step
+  // is needed). Note: the balance is read straight from the user_credits table
   const balanceResult = await tx.execute(
     sql`SELECT balance FROM user_credits WHERE user_id = ${userId} FOR UPDATE`,
   );
@@ -41,12 +41,12 @@ export async function repayReferralDebts(
     const repay = Math.min(debt.amount, balance);
     if (repay <= 0) continue;
 
-    // 扣减余额（手动更新 user_credits）
+    // Deduct from the balance (updating user_credits by hand)
     await tx.execute(
       sql`UPDATE user_credits SET balance = balance - ${repay}, updated_at = now() WHERE user_id = ${userId} AND balance >= ${repay}`,
     );
 
-    // 更新债务
+    // Update the debt
     const remaining = debt.amount - repay;
     if (remaining <= 0) {
       await tx

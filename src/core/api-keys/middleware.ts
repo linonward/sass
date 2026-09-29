@@ -4,7 +4,7 @@ import { rateLimitResponse, type RateLimitResult } from "@/core/ratelimit";
 import { hashApiKey, isApiKeyFormat } from "./generate";
 import { apiKeyStatus } from "./status";
 
-/** 鉴权通过后注入到 request 上的身份。 */
+/** Identity attached to the request once authentication passes. */
 export type ApiKeyContext = {
   userId: string;
   keyId: string;
@@ -12,7 +12,7 @@ export type ApiKeyContext = {
   prefix: string;
 };
 
-/** 库里的一行（已撤销 / 已过期的也照常返回，由中间件判定）。 */
+/** A database row (revoked / expired ones are returned too; the middleware decides). */
 export type ApiKeyLookup = {
   id: string;
   userId: string;
@@ -26,25 +26,26 @@ export type ApiKeyAuthResult =
   { ok: true; apiKey: ApiKeyContext } | { ok: false; response: Response };
 
 export type ApiKeyMiddlewareDeps = {
-  /** `siteConfig.apiKeys.enabled`。关闭时任何带 key 的请求都按 404 处理。 */
+  /** `siteConfig.apiKeys.enabled`. When off, every request carrying a key gets a 404. */
   enabled: boolean;
-  /** 按 `hashedKey` 查一把 key；查不到返回 null。 */
+  /** Looks up a key by `hashedKey`; null when not found. */
   findKeyByHash: (hashedKey: string) => Promise<ApiKeyLookup | null>;
   /**
-   * 记一次使用时间。不参与鉴权判定：它抛错只记一条日志（记不上时间不该让请求失败）。
-   * 也不需要等它结束 —— 路由那边用 `runAfterResponse` 包一层。
+   * Records a usage time. Not part of the auth decision: if it throws we only log it (failing to
+   * record a timestamp shouldn't fail the request). No need to wait for it either — the route wraps
+   * it in `runAfterResponse`.
    */
   touchLastUsed?: (keyId: string) => Promise<void>;
-  /** per-key 限流；返回 null 表示放行。不传就是完全不限流。 */
+  /** Per-key rate limit; null means allowed. Omit it for no rate limiting at all. */
   checkRateLimit?: (keyId: string) => Promise<RateLimitResult | null>;
   now?: () => Date;
   logError?: LogFn;
 };
 
-/** 从 `Authorization` 头里取 Bearer token；不是 Bearer 或为空时返回 null。 */
+/** Extracts the Bearer token from the `Authorization` header; null when not Bearer or empty. */
 export function bearerToken(header: string | null) {
   if (!header) return null;
-  // 头值两侧的空格按规范会被剥掉，这里也容忍一下（多空格同理）。
+  // Per spec, whitespace around header values is stripped; tolerate it here too (and extra spaces).
   const [scheme, ...rest] = header.trim().split(" ");
   if (scheme?.toLowerCase() !== "bearer") return null;
   return rest.join(" ").trim() || null;
@@ -58,11 +59,12 @@ function fail(error: "unauthorized" | "not_found", status: 401 | 404) {
 }
 
 /**
- * API Key 鉴权中间件。不在 `src/core` 里全局挂载 —— 套件的路由不认 key，
- * 需要识别调用用户的 API 路由自己选这个中间件（见 `withApiKey`）。
+ * API key authentication middleware. Not mounted globally in `src/core` — the kit's own routes
+ * don't accept keys; API routes that need to identify the calling user opt in to this middleware
+ * (see `withApiKey`).
  *
- * 失败一律返回同一种 401（格式不对、查不到、已撤销、已过期都不区分），
- * 免得把「这把 key 存在但失效了」告诉调用方。
+ * Every failure returns the same 401 (bad format, not found, revoked, and expired are
+ * indistinguishable), so the caller never learns "this key exists but is no longer valid".
  */
 export function createApiKeyMiddleware({
   enabled,
@@ -95,7 +97,8 @@ export function createApiKeyMiddleware({
       try {
         await touchLastUsed?.(row.id);
       } catch (error) {
-        // 记使用时间失败不影响这次鉴权：它是运营信息，不是安全判定。
+        // Failing to record usage doesn't affect this authentication: it's operational info, not
+        // a security decision.
         logError("apiKeys.touch_last_used_failed", { error, keyId: row.id });
       }
 
@@ -112,11 +115,11 @@ export function createApiKeyMiddleware({
   };
 }
 
-/** 挂了身份的 request：`request.apiKey.userId` / `.keyId`。 */
+/** A request with identity attached: `request.apiKey.userId` / `.keyId`. */
 export type ApiKeyRequest = Request & { apiKey: ApiKeyContext };
 
 /**
- * 把鉴权结果挂到 request 上再交给处理函数，路由里这样用：
+ * Attaches the auth result to the request, then calls the handler. Use it in a route like this:
  *
  * ```ts
  * export const GET = withApiKey(middleware, (request) =>

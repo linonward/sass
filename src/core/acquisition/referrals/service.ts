@@ -9,7 +9,10 @@ import {
 } from "@/core/db/schema";
 import { newReferralCode } from "./code";
 
-/** 邀请关系状态：包含奖励结算的 rewarded / revoked / pending_review。 */
+/**
+ * Referral relationship status, including the reward settlement states rewarded / revoked /
+ * pending_review.
+ */
 export type ReferralStatus =
   "awaiting_payment" | "rewarded" | "revoked" | "pending_review";
 export type RelationshipView = { status: ReferralStatus; createdAt: Date };
@@ -33,7 +36,8 @@ export type DebtView = {
   createdAt: Date;
 };
 
-// 与 better-auth 的登录判断保持一致：过期封禁不算封禁，永久封禁的 banExpires 为空。
+// Matches better-auth's sign-in check: an expired ban doesn't count as a ban, and a permanent ban
+// has an empty banExpires.
 function activeBan(
   row: { banned: boolean | null; banExpires: Date | null },
   now: Date,
@@ -62,14 +66,15 @@ export function createReferralService(db: Database) {
     return { userId: row.userId, name: row.name };
   }
   return {
-    /** 一人一码，反复调用返回同一个码。 */
+    /** One code per user; repeated calls return the same code. */
     async ensureCode(userId: string) {
       const [existing] = await db
         .select({ code: referralCodes.code })
         .from(referralCodes)
         .where(eq(referralCodes.userId, userId));
       if (existing) return existing.code;
-      // 码是随机生成的：撞码或并发插入都不改写既有归属，冲突后重试或读回。
+      // Codes are random: neither a collision nor a concurrent insert rewrites an existing owner;
+      // on conflict, retry or read back.
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const [created] = await db
           .insert(referralCodes)
@@ -85,13 +90,17 @@ export function createReferralService(db: Database) {
       }
       throw new Error("referral code allocation failed");
     },
-    /** 有效邀请人：码存在且邀请人未被封禁。查不到一律返回 null，不区分原因。 */
+    /**
+     * Valid inviter: the code exists and the inviter isn't banned. Any miss returns null, without
+     * saying why.
+     */
     async resolveInviter(code: string, now = new Date()) {
       return readInviter(db, code, now);
     },
     /**
-     * 绑定只在首次创建账号时调用（`user.create.after`）：受邀人是主键，
-     * 并发注册、重复回调都只会留下一条关系，先到的胜出，之后不能更换。
+     * Binding is only called when the account is first created (`user.create.after`): the invitee
+     * is the primary key, so concurrent sign-ups and repeated callbacks leave a single
+     * relationship. The first one wins and can't be changed afterwards.
      */
     async bind(
       input: { inviteeUserId: string; code: string },
@@ -100,7 +109,8 @@ export function createReferralService(db: Database) {
       return db.transaction(async (tx) => {
         const inviter = await readInviter(tx, input.code, now);
         if (!inviter) return { ok: false, reason: "invalid" } as const;
-        // 自邀在服务端拦截：客户端只能提交码，关系和归属由服务端存储决定。
+        // Self-referral is blocked on the server: the client can only submit a code, and the
+        // relationship and attribution are decided by server-side storage.
         if (inviter.userId === input.inviteeUserId)
           return { ok: false, reason: "self" } as const;
         const [created] = await tx
@@ -116,7 +126,7 @@ export function createReferralService(db: Database) {
         return { ok: true, inviterUserId: inviter.userId } as const;
       });
     },
-    /** 当前用户作为受邀人的关系（有没有被人邀请过）。 */
+    /** The current user's relationship as an invitee (whether someone invited them). */
     async relationshipFor(
       inviteeUserId: string,
     ): Promise<RelationshipView | null> {
@@ -130,8 +140,9 @@ export function createReferralService(db: Database) {
       return row ?? null;
     },
     /**
-     * 邀请记录只回状态与时间：邀请人看不到受邀人的邮箱或身份。
-     * `total` 是真实总数，`rows` 只取最近 `limit` 条 —— 页面上的数字不能因为分页而说谎。
+     * Invite records only return status and time: the inviter can't see the invitee's email or
+     * identity. `total` is the real total and `rows` only holds the latest `limit` entries — the
+     * number on the page must not lie because of pagination.
      */
     async listInvited(inviterUserId: string, limit = 50) {
       const [rows, [counted]] = await Promise.all([
@@ -151,7 +162,7 @@ export function createReferralService(db: Database) {
       ]);
       return { rows, total: counted?.total ?? 0 };
     },
-    /** 查看用户的奖励事件（作为邀请人或受邀人）。 */
+    /** A user's reward events (as inviter or invitee). */
     async listRewards(userId: string, limit = 20): Promise<RewardView[]> {
       const rows = await db
         .select({
@@ -171,7 +182,7 @@ export function createReferralService(db: Database) {
         type: r.type as "granted" | "revoked",
       }));
     },
-    /** 查看用户作为邀请人获得的奖励事件。 */
+    /** Reward events a user earned as an inviter. */
     async listInviterRewards(
       inviterUserId: string,
       limit = 20,
@@ -194,7 +205,7 @@ export function createReferralService(db: Database) {
         type: r.type as "granted" | "revoked",
       }));
     },
-    /** 查看用户的未清偿债务。 */
+    /** A user's outstanding debts. */
     async listDebts(userId: string): Promise<DebtView[]> {
       return db
         .select({
@@ -205,7 +216,7 @@ export function createReferralService(db: Database) {
         .from(referralRewardDebt)
         .where(eq(referralRewardDebt.userId, userId));
     },
-    /** 管理端：查询所有邀请关系（支持状态筛选）。 */
+    /** Admin: all referral relationships (with an optional status filter). */
     async listAllRelationships({
       status,
       page = 1,
@@ -243,7 +254,7 @@ export function createReferralService(db: Database) {
         totalPages: Math.max(1, Math.ceil((counted?.total ?? 0) / limit)),
       };
     },
-    /** 管理端：查询所有奖励事件。 */
+    /** Admin: all reward events. */
     async listAllRewards({ page = 1, limit = 20 }) {
       const offset = (page - 1) * limit;
       const [rows, [counted]] = await Promise.all([

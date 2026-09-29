@@ -1,19 +1,20 @@
 import { z } from "zod";
 
-// 会被 next.config.ts 间接加载，那里不解析 `@/` 别名，只能用相对路径。
+// Loaded indirectly by next.config.ts, which doesn't resolve the `@/` alias, so use relative paths.
 import { requiredWhen } from "../create-env";
 
 type RuntimeEnv = Record<string, string | undefined>;
 
-/** 是否运行在 Vercel 上（生产或预览部署）。 */
+/** Whether this is running on Vercel (a production or preview deployment). */
 function onVercel(runtimeEnv: RuntimeEnv) {
   return Boolean(runtimeEnv.VERCEL_ENV);
 }
 
 /**
- * 登录模块的变量。
- * - `BETTER_AUTH_SECRET` 始终必填（签名 session、加密数据）。
- * - Google 凭据在 Vercel 生产环境必填；本地、CI 和预览可以不填，此时只提供邮箱验证码登录。
+ * Variables for the auth module.
+ * - `BETTER_AUTH_SECRET` is always required (it signs sessions and encrypts data).
+ * - Google credentials are required in Vercel production; locally, in CI, and in previews they can
+ *   be omitted, in which case only email verification code sign-in is offered.
  */
 export function authServerEnv(runtimeEnv: RuntimeEnv) {
   const production = runtimeEnv.VERCEL_ENV === "production";
@@ -34,10 +35,11 @@ type DynamicBaseURL = {
 };
 
 /**
- * Better Auth 的 baseURL（决定 OAuth 回调地址和可信来源）。
- * - 设置了 `BETTER_AUTH_URL` 时直接使用。
- * - 否则按请求的 Host 动态确定，但只接受已知的主机：生产域名、本次部署的
- *   Vercel 地址（每个预览都不同）以及本地开发地址，不放开整个 *.vercel.app。
+ * Better Auth's baseURL (it determines the OAuth callback URL and the trusted origins).
+ * - When `BETTER_AUTH_URL` is set, use it as-is.
+ * - Otherwise resolve it dynamically from the request's Host, but only accept known hosts: the
+ *   production domain, this deployment's Vercel URLs (different for every preview), and local
+ *   development addresses. Never open up all of *.vercel.app.
  */
 export function resolveAuthBaseURL(
   runtimeEnv: RuntimeEnv,
@@ -66,8 +68,9 @@ export function resolveAuthBaseURL(
 }
 
 /**
- * 是否提供 Google 登录：凭据齐全，且不是 Vercel 预览部署。
- * 预览地址每次都不同，无法逐个登记为 Google 的回调地址，预览只提供邮箱验证码登录。
+ * Whether Google sign-in is offered: both credentials are set and this is not a Vercel preview
+ * deployment. Preview URLs change every time and can't each be registered as a Google callback
+ * URL, so previews only offer email verification code sign-in.
  */
 export function googleCredentials(runtimeEnv: RuntimeEnv) {
   if (runtimeEnv.VERCEL_ENV === "preview") return undefined;
@@ -77,11 +80,13 @@ export function googleCredentials(runtimeEnv: RuntimeEnv) {
 }
 
 /**
- * Google 登录是否可用的**唯一**判断依据：登录页按钮、One Tap 提示和 CSP 白名单
- * 三处都用它。分散判断会让预览部署出现「客户端弹了提示、服务端却禁用」的错配。
+ * The **single** source of truth for whether Google sign-in is available: the sign-in page button,
+ * the One Tap prompt, and the CSP allowlist all use it. Checking separately would let a preview
+ * deployment end up mismatched, with the client showing the prompt while the server has it
+ * disabled.
  *
- * 只返回 client ID：它本来就会随 GIS 脚本发到浏览器，而 CSP 是公开响应头，
- * 不该让安全模块碰到 client secret。
+ * Returns only the client ID: it is sent to the browser with the GIS script anyway, while the CSP
+ * is a public response header, so the security module should never touch the client secret.
  */
 export function googleClientId(runtimeEnv: RuntimeEnv) {
   return googleCredentials(runtimeEnv)?.clientId;

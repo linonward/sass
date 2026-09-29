@@ -7,14 +7,16 @@ import { missingRedisPolicy } from "@/core/ratelimit/env";
 import { rateLimitingEnabled } from "@/core/ratelimit/features";
 import { createRateLimiter } from "@/core/ratelimit/limiter";
 
-// 策略名只用在这里，不进 `site.config.ts` 的 `rateLimit.policies`（那套是按用户和 IP 计数的）。
+// The policy name is only used here and is not part of `rateLimit.policies` in `site.config.ts`
+// (those count per user and per IP).
 const PER_KEY_POLICY = "apiKey";
 
 /**
- * per-key 限流：每个 key 各占一个滑动窗口，计数键为 `api_key:<keyId>`。
- * 复用套件的 `createRateLimiter`，所以超时、failMode 和日志行为跟 AI / 上传一致。
+ * Per-key rate limiting: each key gets its own sliding window, counted under `api_key:<keyId>`.
+ * Reuses the kit's `createRateLimiter`, so timeouts, failMode, and logging behave the same as for
+ * AI / uploads.
  *
- * 没配 `apiKeys.rateLimitPerKey`（默认）时返回一个永远放行的检查函数。
+ * Without `apiKeys.rateLimitPerKey` (the default), returns a check that always allows.
  */
 export function createApiKeyRateLimiter({
   perKey,
@@ -28,7 +30,8 @@ export function createApiKeyRateLimiter({
   if (!perKey) return async () => null;
 
   const { checkRateLimit } = createRateLimiter({
-    // 这里只借用滑动窗口的判定逻辑：策略名固定，阈值来自 apiKeys 配置。
+    // Only borrow the sliding-window logic here: the policy name is fixed and the thresholds come
+    // from the apiKeys config.
     config: {
       failMode: rateLimit.failMode,
       policies: { [PER_KEY_POLICY]: perKey },

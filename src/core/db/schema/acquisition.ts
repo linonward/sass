@@ -18,7 +18,8 @@ export const userAttribution = pgTable(
     registeredAt: timestamp("registered_at", { withTimezone: true }).notNull(),
     withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
   },
-  // user_attribution.userId 是主键（自带索引），报表四组聚合的 LEFT JOIN 都走它。
-  // source / utm_medium / utm_campaign 是快照里的 jsonb 字段，只在筛选下拉里做
-  // distinct 取值用 —— 表每注册一行，全表 distinct 的开销可以忽略，不再各建表达式索引。
+  // user_attribution.userId is the primary key (indexed by definition); all four report
+  // aggregations LEFT JOIN on it. source / utm_medium / utm_campaign are jsonb fields in the
+  // snapshot, only used for distinct values in the filter dropdowns — the table gets one row per
+  // sign-up, so a full-table distinct is negligible and no per-field expression indexes are built.
 );

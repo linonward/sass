@@ -18,8 +18,8 @@ const token = (acceptedAt: number) =>
   signContext({ v: 1, purpose: "referral", code, acceptedAt }, secret);
 const headers = (cookie: string) => new Headers({ cookie });
 
-describe("邀请上下文", () => {
-  test("签名往返：读回码与接受时间", () => {
+describe("referral context", () => {
+  test("signed round trip: reads back the code and accepted time", () => {
     const now = Date.now();
     expect(
       referralFromHeaders(
@@ -30,7 +30,7 @@ describe("邀请上下文", () => {
     ).toEqual({ code, acceptedAt: now });
   });
 
-  test("30 天窗口：过期和未来时间都读不到", () => {
+  test("30-day window: neither expired nor future times can be read", () => {
     const now = Date.now();
     const value = token(now);
     const cookie = `${REFERRAL_COOKIE}=${value}`;
@@ -57,7 +57,7 @@ describe("邀请上下文", () => {
     ).toBeNull();
   });
 
-  test("改过签名、换了 secret、垃圾值都不是邀请上下文", () => {
+  test("a tampered signature, a different secret, or junk is not a referral context", () => {
     const forged = token(Date.now()).replace(/.$/, "x");
     expect(
       referralFromHeaders(headers(`${REFERRAL_COOKIE}=${forged}`), secret),
@@ -74,7 +74,7 @@ describe("邀请上下文", () => {
     expect(referralFromHeaders(new Headers(), secret)).toBeNull();
   });
 
-  test("信封里的码必须符合生成格式，任意字符串塞不进去", () => {
+  test("the code in the envelope must match the generated format; arbitrary strings can't be smuggled in", () => {
     const value = signContext(
       {
         v: 1,
@@ -89,7 +89,7 @@ describe("邀请上下文", () => {
     ).toBeNull();
   });
 
-  test("邀请上下文与渠道 UTM 分开存：两者互不认，也不会互相覆盖", () => {
+  test("referral context and channel UTM are stored separately: neither accepts the other or overwrites it", () => {
     const snapshot = captureEntry(
       { pathname: "/", utm_source: "launch", utm_campaign: "first" },
       "site.test",
@@ -98,7 +98,8 @@ describe("邀请上下文", () => {
       { v: 1, purpose: "source", attribution: snapshot },
       secret,
     );
-    // 归因上下文当成邀请读、邀请上下文当成归因读，都必须为空。
+    // Reading the attribution context as a referral, or the referral context as attribution, must
+    // both yield nothing.
     expect(
       referralFromHeaders(headers(`${SOURCE_COOKIE}=${source}`), secret),
     ).toBeNull();
@@ -108,7 +109,7 @@ describe("邀请上下文", () => {
         secret,
       ),
     ).toBeNull();
-    // 各自存在自己的 cookie 里，互不影响。
+    // Each lives in its own cookie, independent of the other.
     expect(
       sourceFromHeaders(headers(`${SOURCE_COOKIE}=${source}`), secret),
     ).toEqual(snapshot);

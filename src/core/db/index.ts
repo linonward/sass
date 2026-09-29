@@ -6,13 +6,16 @@ export type { Database, DbTransaction } from "./client";
 
 let client: ReturnType<typeof createDbClient> | undefined;
 
-/** 惰性创建的全局连接。import 本模块不会连接数据库，next build 时也不需要可用的数据库。 */
+/**
+ * Lazily created global connection. Importing this module doesn't connect to the database, and
+ * `next build` doesn't need a reachable database.
+ */
 export function getDb(): Database {
   client ??= createDbClient(env.DATABASE_URL);
   return client.db;
 }
 
-/** 等同于 getDb()，方便直接写 `db.select()...`。 */
+/** Same as getDb(), so you can write `db.select()...` directly. */
 export const db = new Proxy({} as Database, {
   get(_, property) {
     const target = getDb();

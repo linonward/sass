@@ -42,19 +42,19 @@ function paged<T>(rows: T[], total: number, page: number): Paged<T> {
 
 const offsetOf = (page: number) => (page - 1) * ADMIN_PAGE_SIZE;
 
-/** LIKE 的通配符按字面匹配。 */
+/** Match LIKE wildcards literally. */
 function likePattern(query: string) {
   return `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
 
-/** 解析状态筛选：不在取值范围内时视为不筛选。 */
+/** Parses the status filter: values outside the allowed set mean no filter. */
 export function parseLeadStatus(value: unknown): LeadStatus | undefined {
   return leadStatuses.includes(value as LeadStatus)
     ? (value as LeadStatus)
     : undefined;
 }
 
-/** 线索列表：支持状态筛选和邮箱搜索，最新创建的在前。 */
+/** Lead list: supports status filter and email search, newest first. */
 export async function listLeads(
   db: Database,
   {
@@ -112,7 +112,7 @@ export async function listLeads(
   return paged(mapped, counted?.total ?? 0, page);
 }
 
-/** 删除一条线索。仅限管理员调用，权限由调用方保证。 */
+/** Deletes a lead. Admins only; the caller is responsible for the permission check. */
 export async function deleteLead(db: Database | DbTransaction, leadId: string) {
   const [deleted] = await db
     .delete(leads)
@@ -121,7 +121,7 @@ export async function deleteLead(db: Database | DbTransaction, leadId: string) {
   return deleted ?? null;
 }
 
-/** CSV 导出用：不加分页，最多 MAX_EXPORT_ROWS 行。 */
+/** For CSV export: no pagination, at most MAX_EXPORT_ROWS rows. */
 const MAX_EXPORT_ROWS = 10_000;
 
 export type LeadExportRow = {

@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe("onUserDelete", () => {
-  test("按注册顺序调用每个钩子，并传入用户信息", async () => {
+  test("calls every hook in registration order with the user info", async () => {
     const calls: string[] = [];
     registerOnUserDelete("billing", async (u) => {
       calls.push(`billing:${u.userId}`);
@@ -30,7 +30,7 @@ describe("onUserDelete", () => {
     expect(calls).toEqual(["billing:u1", "storage:a@example.com"]);
   });
 
-  test("某个钩子失败时抛出 OnUserDeleteError，后面的钩子不再执行", async () => {
+  test("throws OnUserDeleteError when a hook fails and skips the remaining hooks", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const later = vi.fn();
     registerOnUserDelete("billing", () => {
@@ -45,7 +45,7 @@ describe("onUserDelete", () => {
     expect(later).not.toHaveBeenCalled();
   });
 
-  test("同名重复注册会覆盖，且移到队尾", async () => {
+  test("re-registering the same name replaces the handler and moves it to the end", async () => {
     const first = vi.fn();
     const second = vi.fn();
     registerOnUserDelete("billing", first);
@@ -59,7 +59,7 @@ describe("onUserDelete", () => {
     expect(second).toHaveBeenCalledWith(user);
   });
 
-  test("没有注册任何钩子时正常完成", async () => {
+  test("completes normally when no hooks are registered", async () => {
     await expect(runOnUserDelete(user)).resolves.toBeUndefined();
   });
 });

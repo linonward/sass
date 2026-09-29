@@ -9,13 +9,13 @@ import {
 } from "./roles";
 
 describe("ADMIN_EMAILS", () => {
-  test("逗号分隔，去空格，转小写", () => {
+  test("splits on commas, trims, and lowercases", () => {
     expect(
       adminEmailsSchema.parse(" Me@Example.com, ops@example.com ,"),
     ).toEqual(["me@example.com", "ops@example.com"]);
   });
 
-  test("拒绝不是邮箱的值和空列表", () => {
+  test("rejects non-email values and empty lists", () => {
     expect(adminEmailsSchema.safeParse("me@example.com,nope").success).toBe(
       false,
     );
@@ -23,8 +23,8 @@ describe("ADMIN_EMAILS", () => {
   });
 });
 
-describe("角色", () => {
-  test("isAdmin 识别逗号分隔的多角色", () => {
+describe("roles", () => {
+  test("isAdmin recognizes comma-separated multiple roles", () => {
     expect(isAdmin({ role: "admin" })).toBe(true);
     expect(isAdmin({ role: "editor, admin" })).toBe(true);
     expect(isAdmin({ role: "user" })).toBe(false);
@@ -32,7 +32,7 @@ describe("角色", () => {
     expect(isAdmin(null)).toBe(false);
   });
 
-  test("只提升邮箱已验证、在名单里、还不是 admin 的用户（大小写不敏感）", () => {
+  test("promotes only verified, listed, not-yet-admin users (case-insensitive)", () => {
     const list = ["boss@example.com"];
     const user = {
       email: "Boss@Example.com",
@@ -49,13 +49,13 @@ describe("角色", () => {
     ).toBe(false);
   });
 
-  test("提升时替换 user、保留其他角色", () => {
+  test("promotion replaces user and keeps other roles", () => {
     expect(withAdminRole(null)).toBe("admin");
     expect(withAdminRole("user")).toBe("admin");
     expect(withAdminRole("editor")).toBe("admin,editor");
   });
 
-  test("admin 角色不能模拟登录，其他管理权限保留", () => {
+  test("the admin role can't impersonate; other admin permissions remain", () => {
     const { admin, user } = adminAccess.roles;
     expect(admin.authorize({ user: ["impersonate"] }).success).toBe(false);
     expect(admin.authorize({ user: ["impersonate-admins"] }).success).toBe(

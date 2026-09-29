@@ -9,7 +9,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
-// 一人一码：随机生成、不包含也不派生自用户 ID，所以从码反推不出账号，也无法枚举。
+// One code per person: randomly generated, neither containing nor derived from the user ID, so a
+// code can't be traced back to an account or enumerated.
 export const referralCodes = pgTable(
   "referral_codes",
   {
@@ -25,12 +26,15 @@ export const referralCodes = pgTable(
 );
 
 /**
- * 邀请关系：受邀人即主键，写入一次之后不会再改；状态从「等待首次付款」开始，
- * 奖励结算只推进状态，不改归属。code 只作历史留痕，不设外键：
- * 邀请人删号时关系一并删除（数据删除口径），码本身不参与结算。
+ * Referral relationship: the invitee is the primary key and is never changed after the first
+ * write. Status starts at "awaiting first payment"; reward settlement only advances the status and
+ * never changes attribution. code is kept only as a historical record, with no foreign key: when
+ * the inviter deletes their account the relationship is deleted too (per the data-deletion
+ * policy), and the code itself plays no part in settlement.
  *
- * rule_snapshot 冻结奖励规则版本：创建关系时的 config snapshot，奖励发放按它判定，
- * 而不是按当前 config，确保规则变更不影响已有关系。
+ * rule_snapshot freezes the reward rule version: a config snapshot taken when the relationship is
+ * created. Rewards are decided by it rather than the current config, so rule changes don't affect
+ * existing relationships.
  */
 export const referralRelationships = pgTable(
   "referral_relationships",
@@ -47,7 +51,7 @@ export const referralRelationships = pgTable(
     })
       .notNull()
       .default("awaiting_payment"),
-    /** 创建关系时冻结的奖励规则快照。null = 创建时 rewards 未开启。 */
+    /** Reward rule snapshot frozen at creation. null = rewards were off at creation. */
     ruleSnapshot: jsonb("rule_snapshot"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -56,8 +60,10 @@ export const referralRelationships = pgTable(
   (t) => [index("referral_relationships_inviter_idx").on(t.inviterUserId)],
 );
 
-/** 奖励事件：每次发放或回收都有一条记录。账户删除时保留（FK set null），
- *  credit_transactions 里有对应的 source_id 可追溯。 */
+/**
+ * Reward events: one record per grant or reclaim. Kept when the account is deleted (FK set null);
+ * the matching source_id in credit_transactions makes them traceable.
+ */
 export const referralRewards = pgTable(
   "referral_rewards",
   {
@@ -68,7 +74,7 @@ export const referralRewards = pgTable(
     inviterUserId: text("inviter_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "set null" }),
-    /** 触发的订单 provider + orderId，格式 "{provider}:{orderId}" */
+    /** The triggering order's provider + orderId, formatted "{provider}:{orderId}". */
     orderRef: text("order_ref").notNull(),
     type: text("type", { enum: ["granted", "revoked"] }).notNull(),
     inviterCredits: integer("inviter_credits").notNull().default(0),
@@ -87,9 +93,10 @@ export const referralRewards = pgTable(
 );
 
 /**
- * 奖励债务：回收时余额不够扣的部分。积分余额上涨后按 FIFO 偿还。
- * 账户删除时 CASCADE：债务跟着用户走，用户删除后债权自然消失
- * （credit_transactions 里的余额记录已随 user CASCADE，债也没地方要了）。
+ * Reward debt: the part of a reclaim the balance couldn't cover. Repaid FIFO as the credit balance
+ * grows. CASCADE on account deletion: the debt follows the user, and once the user is deleted the
+ * claim simply goes away (the balance records in credit_transactions already CASCADE with user, so
+ * there's nothing left to collect from).
  */
 export const referralRewardDebt = pgTable(
   "referral_reward_debt",

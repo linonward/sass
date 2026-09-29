@@ -8,7 +8,8 @@ export const SOURCE_CHOICE_COOKIE = "source_preference";
 export const SOURCE_COOKIE = "acquisition_source";
 export const RETRY_COOKIE = "acquisition_registration";
 export const RETRY_SECONDS = 24 * 60 * 60;
-// 邀请上下文与渠道归因分开存：接受邀请不写 SOURCE_COOKIE，营销来源也不会写这里。
+// The referral context is stored separately from channel attribution: accepting an invite never
+// writes SOURCE_COOKIE, and marketing sources never write here.
 export const REFERRAL_COOKIE = "acquisition_referral";
 export const REFERRAL_SECONDS = 30 * 24 * 60 * 60;
 export const cookieOptions = {

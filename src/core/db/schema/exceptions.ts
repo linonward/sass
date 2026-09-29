@@ -14,12 +14,15 @@ import {
 import { user } from "./auth";
 
 /**
- * 异常单的种类。新增种类时加在这里，并同步 check 约束（`pnpm db:generate` 会生成迁移）。
- * - `refund_reclaim_shortfall`：支付退款后回收积分，余额不够，差额还欠着；
- * - `ai_job_needs_review`：AI 任务的结论需要人看 —— 服务商状态一直查不到，
- *   或者按「服务商没有结果」退了款（服务商后来可能其实成功了）；
- * - `notification_failed`：关键事务邮件重试用完仍没发出去（source_id 是 pending_notifications.id），
- *   可以在后台补发。
+ * Exception kinds. Add new kinds here and update the check constraint to match (`pnpm db:generate`
+ * generates the migration).
+ * - `refund_reclaim_shortfall`: credits were reclaimed after a payment refund, the balance wasn't
+ *   enough, and the difference is still owed.
+ * - `ai_job_needs_review`: an AI job's outcome needs a human — the provider status could never be
+ *   retrieved, or it was refunded as "provider has no result" (the provider may actually have
+ *   succeeded later).
+ * - `notification_failed`: a critical transactional email still wasn't sent after all retries
+ *   (source_id is pending_notifications.id); it can be resent from the admin panel.
  */
 export const billingExceptionKinds = [
   "refund_reclaim_shortfall",
@@ -28,7 +31,10 @@ export const billingExceptionKinds = [
 ] as const;
 export type BillingExceptionKind = (typeof billingExceptionKinds)[number];
 
-/** open：待处理；resolved：处理完了；ignored：看过，决定不处理。后两者都要写处理说明。 */
+/**
+ * open: pending; resolved: handled; ignored: reviewed and decided not to act. The latter two both
+ * require a resolution note.
+ */
 export const billingExceptionStatuses = [
   "open",
   "resolved",
@@ -37,15 +43,19 @@ export const billingExceptionStatuses = [
 export type BillingExceptionStatus = (typeof billingExceptionStatuses)[number];
 
 /**
- * 钱或结果出问题、需要有人看的地方。一行一张异常单。
+ * Places where money or results went wrong and someone needs to look. One row per exception.
  *
- * - `(kind, source, source_id)` 唯一：webhook 重放、扫描重跑都开不出第二张；
- * - `source` / `source_id` 指向出问题的东西：回收流水的 (source, sourceId)、`ai_usage` 行；
- * - `detail` 是开单时的上下文快照（订单号、授予 / 已回收 / 差额、任务 id、服务商状态），
- *   之后的处理会更新它；
- * - `attempts` / `last_error`：自动或手动重试的次数和最近一次的失败原因。
+ * - `(kind, source, source_id)` is unique: webhook replays and sweep reruns can't open a second
+ *   one.
+ * - `source` / `source_id` point at the thing that went wrong: the reclaim transaction's
+ *   (source, sourceId), or an `ai_usage` row.
+ * - `detail` is a snapshot of the context when opened (order number, granted / reclaimed /
+ *   shortfall, job id, provider status); later handling updates it.
+ * - `attempts` / `last_error`: number of automatic or manual retries and the most recent failure
+ *   reason.
  *
- * 不做自动关闭：关单必须有人写 `resolution`（处理动作本身带的理由也算）。
+ * There is no auto-close: closing requires someone to write a `resolution` (the reason attached to
+ * a handling action counts).
  */
 export const billingExceptions = pgTable(
   "billing_exceptions",
@@ -81,7 +91,7 @@ export const billingExceptions = pgTable(
       table.source,
       table.sourceId,
     ),
-    // 后台列表：待处理的在前，新的在前；侧边栏数 open。
+    // Admin list: open ones first, newest first; the sidebar counts open.
     index("billing_exceptions_status_created_idx").on(
       table.status,
       table.createdAt,
@@ -100,10 +110,11 @@ export const billingExceptions = pgTable(
 export type BillingException = typeof billingExceptions.$inferSelect;
 
 /**
- * 后台动作的审计：谁（actor）在什么时候对什么（target）做了什么（action）、为什么（reason）、
- * 结果如何（result）。目前只有异常台的动作写这里；积分调整在流水上已有 `actor_id`。
+ * Audit log of admin actions: who (actor) did what (action) to what (target) and when, why
+ * (reason), and with what outcome (result). Currently only exceptions page actions write here;
+ * credit adjustments already carry `actor_id` on the transaction.
  *
- * `actor_id` 不设外键：管理员账号删掉之后，审计记录仍要留着。
+ * `actor_id` has no foreign key: audit records must survive the admin account being deleted.
  */
 export const adminActions = pgTable(
   "admin_actions",

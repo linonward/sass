@@ -25,8 +25,8 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 
-// 报表是全表聚合，和其他用例共用一个库时数字不确定，所以每个 describe 建一个临时库，
-// 跑完删掉。
+// The report aggregates whole tables, so its numbers are unpredictable when sharing a database with
+// other tests. Each describe therefore creates a temporary database and drops it afterwards.
 async function openTestDatabase() {
   const name = `acquisition_report_test_${randomUUID().replaceAll("-", "")}`;
   const admin = new Pool({ connectionString: url });
@@ -34,7 +34,7 @@ async function openTestDatabase() {
   const testUrl = new URL(url!);
   testUrl.pathname = `/${name}`;
   const pool = new Pool({ connectionString: testUrl.toString() });
-  // 删库时服务端会断开残留的连接，不当作错误。
+  // Dropping the database makes the server cut leftover connections; that's not an error.
   pool.on("error", () => {});
   const db = drizzle({ client: pool, schema });
   await migrate(db, {
@@ -68,7 +68,7 @@ const snapshot = (
 const rowOf = (rows: ReportRow[], source: string) =>
   rows.find((entry) => entry.source === source)!;
 
-describe.skipIf(!url)("渠道报表", () => {
+describe.skipIf(!url)("channel report", () => {
   let db: Database;
   let close: () => Promise<void>;
 
@@ -128,20 +128,21 @@ describe.skipIf(!url)("渠道报表", () => {
         snapshot: snapshot("direct"),
         registeredAt: daysAgo(3),
       },
-      // 真的把 utm_source 填成 unknown 的流量：和「没有归因」不是同一行。
+      // Traffic that really sets utm_source to unknown: not the same row as "no attribution".
       {
         userId: ids.literal,
         snapshot: snapshot("unknown"),
         registeredAt: daysAgo(2),
       },
-      // 撤回留下的墓碑：快照为 null，归到合成桶。
+      // Tombstone left by a withdrawal: null snapshot, goes into the synthetic bucket.
       {
         userId: ids.withdrawn,
         snapshot: null,
         registeredAt: daysAgo(2),
         withdrawnAt: daysAgo(1),
       },
-      // 归因开启前注册的老用户：没有这一行，也归到合成桶。ids.legacy 故意不写。
+      // An existing user who signed up before attribution was on: no row, also in the synthetic
+      // bucket. ids.legacy is deliberately not written.
       {
         userId: ids.old,
         snapshot: snapshot("launch"),
@@ -162,56 +163,59 @@ describe.skipIf(!url)("渠道报表", () => {
       ...values,
     });
     await db.insert(orders).values([
-      // launch：同一用户两笔（续费）只算一个付费用户，按币种分别累计。
+      // launch: two orders from one user (a renewal) count as one paying user, summed per currency.
       order(ids.launch, { createdAt: daysAgo(1) }),
       order(ids.launch, {
         createdAt: daysAgo(2),
         amount: 500,
         currency: "EUR",
       }),
-      // 刚好落在区间起点上的订单算在区间内。
+      // An order exactly at the start of the range is inside it.
       order(ids.direct, { createdAt: week.since, amount: 1000 }),
-      // 起点前一毫秒的不算。
+      // One millisecond before the start is not.
       order(ids.hacker, {
         createdAt: new Date(week.since.getTime() - 1),
         amount: 5000,
       }),
-      // 退款先到的占位订单：金额未知，只进待核对，不算付费人数。
+      // Placeholder order where the refund arrived first: unknown amount, only needs reconciling,
+      // not a paying user.
       order(ids.hacker, {
         createdAt: daysAgo(2),
         status: "refunded",
         amount: null,
         refundedAmount: 400,
       }),
-      // 部分退款：净收入 750。
+      // Partial refund: net revenue 750.
       order(ids.legacy, {
         createdAt: daysAgo(3),
         status: "partially_refunded",
         amount: 1000,
         refundedAmount: 250,
       }),
-      // 全额退款：净收入 0，不再算付费人数。
+      // Full refund: net revenue 0, no longer a paying user.
       order(ids.withdrawn, {
         createdAt: daysAgo(2),
         status: "refunded",
         refundedAmount: 1900,
       }),
-      // 失败订单不计入；金额未知的失败订单也不该落进待核对。
+      // Failed orders don't count; a failed order with an unknown amount shouldn't land in needs-
+      // reconciling either.
       order(ids.legacy, {
         createdAt: daysAgo(3),
         status: "failed",
         amount: null,
       }),
-      // 区间外的订单进 90 天，不进 7 天。
+      // An order outside the range shows up in 90 days, not in 7 days.
       order(ids.old, { createdAt: daysAgo(30) }),
-      // 收款但金额未知、也还没退款：列 0 的待核对，不是无声消失。
+      // Collected, amount unknown, no refund yet: needs reconciling with 0, rather than silently
+      // vanishing.
       order(ids.direct, { createdAt: daysAgo(1), amount: null }),
-      // 字面量 unknown 的来源自己一行。
+      // A literal unknown source gets its own row.
       order(ids.literal, { createdAt: daysAgo(2), amount: 800 }),
     ]);
   }
 
-  test("按冻结来源分组：注册、付费人数去重、按币种净收入", async () => {
+  test("groups by frozen source: registrations, deduplicated paying users, net revenue per currency", async () => {
     const rows = await getAcquisitionReport(db, week);
     expect(rows.map((entry) => entry.source)).toEqual([
       NO_SOURCE_BUCKET,
@@ -221,7 +225,8 @@ describe.skipIf(!url)("渠道报表", () => {
       "news.ycombinator.com",
     ]);
 
-    // 没有归因行的用户和撤回后的墓碑都归到合成桶；全额退款的用户不算付费人数。
+    // Users without an attribution row and withdrawal tombstones both go into the synthetic bucket;
+    // fully refunded users aren't paying users.
     expect(rowOf(rows, NO_SOURCE_BUCKET)).toEqual({
       source: NO_SOURCE_BUCKET,
       registrations: 2,
@@ -232,7 +237,7 @@ describe.skipIf(!url)("渠道报表", () => {
       conversionRate: 0,
     });
 
-    // 字面量 utm_source=unknown 是独立的一行，不并进合成桶。
+    // A literal utm_source=unknown is its own row, not merged into the synthetic bucket.
     expect(rowOf(rows, "unknown")).toEqual({
       source: "unknown",
       registrations: 1,
@@ -243,7 +248,8 @@ describe.skipIf(!url)("渠道报表", () => {
       conversionRate: 0,
     });
 
-    // 两笔订单（含续费、另一币种）只算一个付费用户；全额退款的不列收入。
+    // Two orders (including a renewal in another currency) count as one paying user; full refunds
+    // aren't listed as revenue.
     expect(rowOf(rows, "launch")).toEqual({
       source: "launch",
       registrations: 1,
@@ -257,7 +263,8 @@ describe.skipIf(!url)("渠道报表", () => {
       conversionRate: 0,
     });
 
-    // 金额未知又还没退款的订单列 0：表示还没有退款，不表示已经结清。
+    // An order with an unknown amount and no refund yet shows 0: it means no refund yet, not that
+    // it's settled.
     expect(rowOf(rows, "direct")).toEqual({
       source: "direct",
       registrations: 1,
@@ -268,7 +275,8 @@ describe.skipIf(!url)("渠道报表", () => {
       conversionRate: 0,
     });
 
-    // 退款先到的占位订单单列待核对，也不算付费人数。
+    // A placeholder order whose refund arrived first is listed separately as needs reconciling and
+    // isn't a paying user.
     expect(rowOf(rows, "news.ycombinator.com")).toEqual({
       source: "news.ycombinator.com",
       registrations: 1,
@@ -280,13 +288,14 @@ describe.skipIf(!url)("渠道报表", () => {
     });
   });
 
-  test("时间边界：起点当刻算内、起点前一刻算外；90 天补回更早的订单", async () => {
+  test("time boundaries: the start instant is in, the instant before is out; 90 days brings back older orders", async () => {
     const rows = await getAcquisitionReport(db, quarter);
     expect(rowOf(rows, "news.ycombinator.com").revenue).toEqual([
       { currency: "USD", amount: 5000 },
     ]);
     expect(rowOf(rows, "news.ycombinator.com").payingUsers).toBe(1);
-    // 30 天前的注册和订单进 90 天：同一来源多一个注册、一个付费用户。
+    // Registrations and orders from 30 days ago show up in 90 days: one more registration and
+    // paying user for the same source.
     expect(rowOf(rows, "launch")).toMatchObject({
       registrations: 2,
       payingUsers: 2,
@@ -297,7 +306,7 @@ describe.skipIf(!url)("渠道报表", () => {
     });
   });
 
-  test("筛来源：合成桶与字面量 unknown 各筛各的，未知取值返回空表", async () => {
+  test("source filter: the synthetic bucket and literal unknown filter separately; unknown values return an empty table", async () => {
     const none = await getAcquisitionReport(db, week, {
       source: NO_SOURCE_BUCKET,
     });
@@ -316,7 +325,7 @@ describe.skipIf(!url)("渠道报表", () => {
     ).toEqual([]);
   });
 
-  test("筛 medium / campaign：注册、订单、待核对都按同一份快照过滤", async () => {
+  test("medium / campaign filters: registrations, orders, and needs-reconciling all filter on the same snapshot", async () => {
     const filtered = await getAcquisitionReport(db, week, { medium: "email" });
     expect(filtered).toHaveLength(1);
     expect(filtered[0]).toMatchObject({
@@ -332,7 +341,7 @@ describe.skipIf(!url)("渠道报表", () => {
     ).toEqual([]);
   });
 
-  test("筛选框的取值覆盖表格里的每一行，合成桶也在列", async () => {
+  test("filter options cover every table row, including the synthetic bucket", async () => {
     expect(await getFilterOptions(db)).toEqual({
       sources: [
         NO_SOURCE_BUCKET,
@@ -346,9 +355,10 @@ describe.skipIf(!url)("渠道报表", () => {
     });
   });
 
-  test("口径对照：报表逐行相加等于 /admin/metrics 的净收入与付费人数", async () => {
+  test("basis check: report rows add up to /admin/metrics net revenue and paying users", async () => {
     const rows = await getAcquisitionReport(db, week);
-    // 币种在报表里按订单原样分组，这里的数据都是大写，直接按币种加回去。
+    // The report groups currencies as they appear on orders; the data here is all uppercase, so add
+    // back per currency directly.
     const totals = new Map<string, number>();
     for (const entry of rows)
       for (const money of entry.revenue) {
@@ -367,121 +377,126 @@ describe.skipIf(!url)("渠道报表", () => {
     expect(metrics.payingUsers).toBe(
       rows.reduce((sum, entry) => sum + entry.payingUsers, 0),
     );
-    // 每日图只统计 billing.currency，合计等于该币种的净收入。
+    // The daily chart only counts billing.currency, and its total equals that currency's net
+    // revenue.
     expect(metrics.daily.reduce((sum, point) => sum + point.value, 0)).toBe(
       4450,
     );
   });
 });
 
-// 合成桶在旧口径里靠墓碑（快照为 null）才出现在筛选框里，这个库两者都没有：
-// 只有「缺归因行」的用户，另有一条只出现在线索快照里的来源。
-describe.skipIf(!url)("渠道报表：没有归因行、也没有墓碑的库", () => {
-  let db: Database;
-  let close: () => Promise<void>;
+// Under the old logic the synthetic bucket only showed up in the filter thanks to tombstones (null
+// snapshot). This database has neither: only users missing an attribution row, plus one source
+// that only appears in lead snapshots.
+describe.skipIf(!url)(
+  "channel report: database with no attribution rows and no tombstones",
+  () => {
+    let db: Database;
+    let close: () => Promise<void>;
 
-  beforeAll(async () => {
-    ({ db, close } = await openTestDatabase());
-    await seed();
-  });
+    beforeAll(async () => {
+      ({ db, close } = await openTestDatabase());
+      await seed();
+    });
 
-  afterAll(async () => {
-    await close?.();
-  });
+    afterAll(async () => {
+      await close?.();
+    });
 
-  async function seed() {
-    await db.insert(user).values([
-      {
-        id: "u-fresh",
-        name: "fresh",
-        email: "fresh@example.com",
-        createdAt: daysAgo(1),
-      },
-      // 累计净收入 3 × 1_000_000_000，超过 int4 上限。
-      {
-        id: "u-big",
-        name: "big",
-        email: "big@example.com",
-        createdAt: daysAgo(2),
-      },
-    ]);
-    await db.insert(userAttribution).values([
-      {
-        userId: "u-big",
-        snapshot: snapshot("big.example.com"),
-        registeredAt: daysAgo(2),
-      },
-    ]);
-    await db.insert(orders).values(
-      Array.from({ length: 3 }, () => ({
-        userId: "u-big",
-        provider: "fake",
-        providerOrderId: randomUUID(),
-        status: "paid" as const,
-        amount: 1_000_000_000,
+    async function seed() {
+      await db.insert(user).values([
+        {
+          id: "u-fresh",
+          name: "fresh",
+          email: "fresh@example.com",
+          createdAt: daysAgo(1),
+        },
+        // Cumulative net revenue of 3 × 1_000_000_000 exceeds the int4 maximum.
+        {
+          id: "u-big",
+          name: "big",
+          email: "big@example.com",
+          createdAt: daysAgo(2),
+        },
+      ]);
+      await db.insert(userAttribution).values([
+        {
+          userId: "u-big",
+          snapshot: snapshot("big.example.com"),
+          registeredAt: daysAgo(2),
+        },
+      ]);
+      await db.insert(orders).values(
+        Array.from({ length: 3 }, () => ({
+          userId: "u-big",
+          provider: "fake",
+          providerOrderId: randomUUID(),
+          status: "paid" as const,
+          amount: 1_000_000_000,
+          currency: "USD",
+          createdAt: daysAgo(2),
+        })),
+      );
+      await db.insert(leads).values([
+        {
+          id: "lead-confirmed",
+          listId: "list",
+          email: "lead@example.com",
+          status: "confirmed",
+          snapshot: snapshot("partner.example.com"),
+          createdAt: daysAgo(2),
+          expiresAt: daysAgo(-1),
+        },
+        {
+          id: "lead-pending",
+          listId: "list",
+          email: "pending@example.com",
+          status: "pending",
+          snapshot: snapshot("pending.example.com"),
+          createdAt: daysAgo(2),
+          expiresAt: daysAgo(-1),
+        },
+      ]);
+    }
+
+    test("filter options include the synthetic bucket and lead-only sources, but not sources of unconfirmed leads", async () => {
+      expect((await getFilterOptions(db)).sources).toEqual([
+        NO_SOURCE_BUCKET,
+        "big.example.com",
+        "partner.example.com",
+      ]);
+    });
+
+    test("users missing an attribution row get their own row, and lead-only sources get a row too", async () => {
+      const rows = await getAcquisitionReport(db, week);
+      expect(rowOf(rows, NO_SOURCE_BUCKET)).toMatchObject({
+        registrations: 1,
+        payingUsers: 0,
+        revenue: [],
+        pending: [],
+      });
+      expect(rowOf(rows, "partner.example.com")).toMatchObject({
+        registrations: 0,
+        confirmedLeads: 1,
+        conversionRate: null,
+      });
+    });
+
+    test("both pages return numbers when cumulative amounts exceed the int4 maximum", async () => {
+      const rows = await getAcquisitionReport(db, week);
+      expect(rowOf(rows, "big.example.com").revenue).toEqual([
+        { currency: "USD", amount: 3_000_000_000 },
+      ]);
+      const metrics = await getRevenueMetrics(db, week, {
         currency: "USD",
-        createdAt: daysAgo(2),
-      })),
-    );
-    await db.insert(leads).values([
-      {
-        id: "lead-confirmed",
-        listId: "list",
-        email: "lead@example.com",
-        status: "confirmed",
-        snapshot: snapshot("partner.example.com"),
-        createdAt: daysAgo(2),
-        expiresAt: daysAgo(-1),
-      },
-      {
-        id: "lead-pending",
-        listId: "list",
-        email: "pending@example.com",
-        status: "pending",
-        snapshot: snapshot("pending.example.com"),
-        createdAt: daysAgo(2),
-        expiresAt: daysAgo(-1),
-      },
-    ]);
-  }
-
-  test("筛选框里有合成桶和只在线索里的来源，未确认线索的来源不在", async () => {
-    expect((await getFilterOptions(db)).sources).toEqual([
-      NO_SOURCE_BUCKET,
-      "big.example.com",
-      "partner.example.com",
-    ]);
-  });
-
-  test("缺归因行的用户自成一行，只在线索里的来源也有一行", async () => {
-    const rows = await getAcquisitionReport(db, week);
-    expect(rowOf(rows, NO_SOURCE_BUCKET)).toMatchObject({
-      registrations: 1,
-      payingUsers: 0,
-      revenue: [],
-      pending: [],
+        plans: [],
+      });
+      expect(metrics.revenue).toEqual([
+        { currency: "USD", amount: 3_000_000_000 },
+      ]);
+      expect(metrics.daily.reduce((sum, point) => sum + point.value, 0)).toBe(
+        3_000_000_000,
+      );
     });
-    expect(rowOf(rows, "partner.example.com")).toMatchObject({
-      registrations: 0,
-      confirmedLeads: 1,
-      conversionRate: null,
-    });
-  });
-
-  test("累计金额超过 int4 上限时两页都给数字", async () => {
-    const rows = await getAcquisitionReport(db, week);
-    expect(rowOf(rows, "big.example.com").revenue).toEqual([
-      { currency: "USD", amount: 3_000_000_000 },
-    ]);
-    const metrics = await getRevenueMetrics(db, week, {
-      currency: "USD",
-      plans: [],
-    });
-    expect(metrics.revenue).toEqual([
-      { currency: "USD", amount: 3_000_000_000 },
-    ]);
-    expect(metrics.daily.reduce((sum, point) => sum + point.value, 0)).toBe(
-      3_000_000_000,
-    );
-  });
-});
+  },
+);

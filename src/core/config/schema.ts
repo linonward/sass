@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// 会被 next.config.ts 间接加载，那里不解析 `@/` 别名，只能用相对路径。
+// Loaded indirectly by next.config.ts, which does not resolve the `@/` alias, so relative paths only.
 import { billingProviderNames } from "../billing/env";
 import { formatIssues } from "./format-issues";
 
@@ -11,10 +11,12 @@ const localeSchema = z
     'must be a BCP 47 locale such as "en" or "zh-CN"',
   );
 
-// 示例业务模块（src/features/example/、src/features/invoices/）的开关。
-// 出货默认开着：模板的价值一半在「能跑起来看」；不做示例的买家按文件末尾的清单删掉。
+// Toggles for the example business modules (src/features/example/, src/features/invoices/).
+// Shipped on by default: half the template's value is "run it and see it work". Buyers who don't
+// want the examples delete them using the checklist at the end of the file.
 const examplesSchema = z.strictObject({
-  // 发票 CRUD 示例。关掉后 /invoices 404、侧边栏没有入口、action 也拒绝写入。
+  // Invoice CRUD example. When off, /invoices is a 404, the sidebar has no entry, and the actions
+  // refuse writes.
   invoices: z.boolean().default(true),
 });
 
@@ -25,12 +27,12 @@ export const featuresSchema = z.strictObject({
   upload: z.boolean().default(false),
   admin: z.boolean().default(false),
   rateLimit: z.boolean().default(false),
-  // 可观测性总开关；细项在 observability 字段。
+  // Master switch for observability; the details live in the `observability` field.
   observability: z.boolean().default(false),
   examples: examplesSchema.default(examplesSchema.parse({})),
 });
 
-// 文案 key，对应 messages/<locale>.json 里 Nav 下的字段。
+// Message key, matching a field under Nav in messages/<locale>.json.
 const navKeySchema = z
   .string()
   .regex(/^[A-Za-z][A-Za-z0-9]*$/, 'must be a message key such as "pricing"');
@@ -54,7 +56,7 @@ export const navSchema = z.strictObject({
     .default([]),
 });
 
-// 法律页（content/legal/）中引用的主体信息。
+// Entity details referenced by the legal pages (content/legal/).
 export const legalSchema = z.strictObject({
   companyName: z.string().trim().min(1),
   contactEmail: z.email(),
@@ -62,7 +64,7 @@ export const legalSchema = z.strictObject({
   effectiveDate: z.iso.date('must be a date such as "2026-01-31"'),
 });
 
-// 文案 key（驼峰或小写），对应 messages 里的某个字段名。
+// Message key (camelCase or lowercase), matching a field name in messages.
 const messageKeySchema = z
   .string()
   .regex(/^[A-Za-z][A-Za-z0-9]*$/, 'must be a message key such as "fast"');
@@ -133,14 +135,14 @@ const testimonialItem = z.discriminatedUnion("type", [
 ]);
 
 export const landingSchema = z.strictObject({
-  // 首页显示哪些区块、按什么顺序。
+  // Which sections the home page shows, and in what order.
   sections: z
     .array(z.enum(landingSectionIds))
     .refine(unique, { message: "must not contain duplicates" })
     .default([...landingSectionIds]),
   hero: z
     .strictObject({
-      // public/ 下的图片；文案（含 alt）在 messages 的 Landing.hero。
+      // An image under public/; the copy (including alt) is in Landing.hero in messages.
       image: z
         .strictObject({
           src: z
@@ -149,7 +151,8 @@ export const landingSchema = z.strictObject({
               "/",
               'must be a path under public/ such as "/hero.png"',
             ),
-          // 暗色模式下使用的图片，尺寸需与 src 相同；不填则两种模式共用 src。
+          // Image used in dark mode; must have the same dimensions as src. When omitted, both modes
+          // use src.
           darkSrc: z
             .string()
             .startsWith(
@@ -163,11 +166,13 @@ export const landingSchema = z.strictObject({
         .optional(),
     })
     .default({}),
-  // 用这套代码搭出来的真实站点（https）。配了之后首屏和结尾的次按钮是「看真实案例」，
-  // 新标签页打开；不配时次按钮是站内的 /demo。
+  // A real site (https) built with this codebase. When set, the secondary button in the hero and
+  // the closing CTA becomes "see a real example" and opens in a new tab; when unset, the secondary
+  // button links to the in-site /demo.
   showcaseUrl: z.url({ protocol: /^https$/ }).optional(),
-  // 「省掉的工时」区块：每项是模板里已经做好的一块活和估算的工时，合计自动算。
-  // 标题和说明在 Landing.timesaved.items.<key>；空数组自动隐藏整个区块。
+  // "Time saved" section: each item is a piece of work the template already does plus its estimated
+  // hours; the total is computed automatically. Titles and descriptions are in
+  // Landing.timesaved.items.<key>; an empty array hides the whole section.
   timeSaved: z
     .array(
       z.strictObject({
@@ -179,7 +184,7 @@ export const landingSchema = z.strictObject({
       message: "keys must not contain duplicates",
     })
     .default([]),
-  // 每项的标题和描述在 Landing.features.items.<key>。
+  // Each item's title and description are in Landing.features.items.<key>.
   features: z
     .array(
       z.strictObject({
@@ -192,7 +197,7 @@ export const landingSchema = z.strictObject({
       message: "keys must not contain duplicates",
     })
     .default([]),
-  // 文案在 Landing.testimonials.items.<key>；空数组自动隐藏整个区块。
+  // Copy is in Landing.testimonials.items.<key>; an empty array hides the whole section.
   testimonials: z
     .strictObject({
       items: z
@@ -203,22 +208,24 @@ export const landingSchema = z.strictObject({
         .default([]),
     })
     .default({ items: [] }),
-  // 首页「交付」区块购买卡片卖的套餐（billing.plans 里付费套餐的 id）。
-  // 不填、找不到这个套餐、或套餐被隐藏时，卡片显示「即将公布」、没有购买按钮 —— 不报错：
-  // 买家删掉这个套餐时站点照常启动。
+  // The plan sold by the purchase card in the home page "delivery" section (the id of a paid plan
+  // in billing.plans). When omitted, not found, or hidden, the card shows "coming soon" with no buy
+  // button — not an error, so the site still boots if the buyer deletes that plan.
   purchasePlan: messageKeySchema.optional(),
-  // 每项的问题和回答在 Landing.faq.items.<key>。
+  // Each item's question and answer are in Landing.faq.items.<key>.
   faq: z
     .array(messageKeySchema)
     .refine(unique, { message: "must not contain duplicates" })
     .default([]),
 });
 
-// 每个套餐分两段：上面是展示字段（价格、周期、卖点文案），下面从「交易字段」起是结账和发积分用的字段。
+// Each plan has two parts: display fields on top (price, interval, feature copy), and from
+// "transaction fields" down, the fields used for checkout and granting credits.
 export const billingSchema = z.strictObject({
-  // 用来收款的支付服务商。值域在 src/core/billing/env.ts，实现见 src/core/billing/providers/。
-  // 运行时的 BILLING_PROVIDER 变量可以覆盖它（类型校验的默认值就是这里的值）；下面套餐的
-  // providerProductId 怎么解释也跟着它走：creem 填产品 ID，lemonsqueezy 填变体（variant）ID。
+  // The payment provider that collects money. Allowed values are in src/core/billing/env.ts;
+  // implementations are in src/core/billing/providers/. The BILLING_PROVIDER variable overrides it
+  // at runtime (its validated default is this value). How each plan's providerProductId below is
+  // interpreted follows it too: a product ID for creem, a variant ID for lemonsqueezy.
   provider: z.enum(billingProviderNames).default("creem"),
   currency: z
     .string()
@@ -228,25 +235,28 @@ export const billingSchema = z.strictObject({
     .array(
       z
         .strictObject({
-          // 名称和描述在 Landing.pricing.plans.<id>。
+          // Name and description are in Landing.pricing.plans.<id>.
           id: messageKeySchema,
-          // 以主币单位计的展示价格，例如 19 表示 $19。
+          // Display price in major currency units, e.g. 19 means $19.
           price: z.number().nonnegative(),
           interval: z.enum(["month", "year", "once"]),
-          // 每项文案在 Landing.pricing.features.<key>。
+          // Each item's copy is in Landing.pricing.features.<key>.
           features: z.array(messageKeySchema).min(1),
           highlighted: z.boolean().default(false),
-          // 不在定价页 / 首页展示、不能新购；但仍留在配置里 —— 已有这个套餐的订阅照常续费、
-          // 照常发积分（直接删掉套餐的话，老订阅续费时找不到套餐，积分就发不出去）。
+          // Not shown on the pricing or home page and can't be newly purchased, but stays in the
+          // config — existing subscriptions on this plan keep renewing and keep getting credits
+          // (if you delete the plan outright, renewals of old subscriptions can't find it and no
+          // credits get granted).
           hidden: z.boolean().default(false),
-          // —— 交易字段 ——
-          // 省略时按 interval 推导：once → one_time，month / year → subscription。
+          // —— Transaction fields ——
+          // When omitted, derived from interval: once → one_time, month / year → subscription.
           type: z.enum(["subscription", "one_time"]).optional(),
-          // 支付服务商那边的产品 ID：creem 是 prod_*，stripe 是 Price 的 price_*。
-          // 免费套餐（price 为 0）不能填，付费套餐必填。
+          // The product ID on the provider's side: prod_* for creem, a Price's price_* for stripe.
+          // Must be omitted for free plans (price 0) and is required for paid plans.
           providerProductId: z.string().trim().min(1).optional(),
-          // 购买（一次性）或每个计费周期（订阅）发放的积分。免费套餐的积分何时发放由业务决定，
-          // billing 只处理付费事件。
+          // Credits granted per purchase (one-time) or per billing period (subscription). When
+          // free-plan credits are granted is up to your business logic; billing only handles paid
+          // events.
           credits: z.number().int().nonnegative().default(0),
         })
         .superRefine((plan, ctx) => {
@@ -289,12 +299,14 @@ export const billingSchema = z.strictObject({
     .default([]),
 });
 
-// 事务邮件的发件信息；发件域名需在 Resend 验证（见 README 上线清单）。
+// Sender details for transactional email; the sending domain must be verified in Resend (see the
+// launch checklist in the README).
 export const emailSchema = z.strictObject({
   fromName: z.string().trim().min(1),
   fromAddress: z.email(),
   replyTo: z.email().optional(),
-  // 邮件页眉的 logo（public/ 下的 PNG 或 JPG）。Gmail 等客户端不显示 SVG，不填则只显示站点名。
+  // Logo in the email header (a PNG or JPG under public/). Gmail and other clients don't render
+  // SVG. When omitted, only the site name is shown.
   logo: z
     .string()
     .regex(
@@ -304,27 +316,29 @@ export const emailSchema = z.strictObject({
     .optional(),
 });
 
-// 登录参数。显式写出，不依赖 Better Auth 插件的默认值。
+// Sign-in parameters. Spelled out explicitly instead of relying on Better Auth plugin defaults.
 export const authSchema = z.strictObject({
   emailOtp: z.strictObject({
-    // 验证码位数。
+    // Number of digits in the verification code.
     length: z.number().int().min(4).max(10),
-    // 有效期（秒）。
+    // Lifetime in seconds.
     expiresIn: z.number().int().positive(),
-    // 允许输错的次数，用完后验证码作废。
+    // Allowed wrong attempts; once used up, the verification code is invalidated.
     allowedAttempts: z.number().int().positive(),
-    // 同一邮箱两次发送之间的最短间隔（秒）。
+    // Minimum interval in seconds between two sends to the same email.
     resendCooldown: z.number().int().nonnegative(),
   }),
-  // 改邮箱（`/email-otp/change-email`）。enabled 关掉后端点直接报错，不会静默改成功。
+  // Changing email (`/email-otp/change-email`). With enabled off, the endpoint returns an error
+  // rather than silently succeeding.
   changeEmail: z.strictObject({
     enabled: z.boolean(),
-    // 是否要求同时验证当前邮箱。关掉后只偷到 session cookie 就能把邮箱改成攻击者的。
+    // Whether the current email must be verified too. When off, a stolen session cookie alone is
+    // enough to change the email to the attacker's.
     verifyCurrentEmail: z.boolean(),
   }),
 });
 
-// 登录后侧边栏的图标，限定在一小组 lucide 图标内。
+// Icons for the signed-in sidebar, limited to a small set of lucide icons.
 export const dashboardIcons = [
   "home",
   "settings",
@@ -340,12 +354,12 @@ export const dashboardIcons = [
   "download",
 ] as const;
 
-// 业务的侧边栏菜单项；套件自带的（Dashboard、Settings）写在 src/core/dashboard 里。
+// Business sidebar items; the built-in ones (Dashboard, Settings) live in src/core/dashboard.
 export const dashboardSchema = z.strictObject({
   nav: z
     .array(
       z.strictObject({
-        // 文案在 messages 的 Dashboard.nav.<key>。
+        // Copy is in Dashboard.nav.<key> in messages.
         key: messageKeySchema,
         href: z
           .string()
@@ -359,13 +373,15 @@ export const dashboardSchema = z.strictObject({
     .default([]),
 });
 
-// 积分相关的设置；只在 features.credits 开启时生效。
+// Credits settings; only take effect when features.credits is on.
 export const creditsConfigSchema = z.strictObject({
-  // 一次扣减让余额从 >= 阈值降到 < 阈值时，发送 credits-low 邮件（24 小时内最多一封）。0 表示不提醒。
+  // When a deduction takes the balance from >= threshold to < threshold, send the credits-low email
+  // (at most one per 24 hours). 0 disables the reminder.
   lowBalanceThreshold: z.number().int().nonnegative().default(100),
 });
 
-// 滑动窗口时长，格式同 @upstash/ratelimit 的 Duration，例如 "60 s"、"1 m"、"1 h"。
+// Sliding window length, in the same format as @upstash/ratelimit's Duration, e.g. "60 s", "1 m",
+// "1 h".
 const durationSchema = z
   .string()
   .regex(
@@ -376,16 +392,19 @@ const durationSchema = z
     message: "must be greater than 0",
   });
 
-// 接口限流（Upstash Redis）。只用于 AI、上传等接口；登录限流由 Better Auth 负责。
+// API rate limiting (Upstash Redis). Only for endpoints like AI and upload; sign-in rate limiting is
+// handled by Better Auth.
 export const rateLimitConfigSchema = z.strictObject({
-  // Redis 出错或超时时：open 放行并记录错误日志（积分扣减兜底），closed 返回 503。
+  // When Redis errors or times out: open lets the request through and logs an error (credit
+  // deduction is the backstop); closed returns 503.
   failMode: z.enum(["open", "closed"]).default("open"),
-  // 按名称定义的滑动窗口；每条策略同时按用户和按 IP 计数，任一超限即拒绝。
+  // Named sliding windows; each policy counts per user and per IP at once, and rejects if either is
+  // over the limit.
   policies: z
     .record(
       messageKeySchema,
       z.strictObject({
-        // 窗口内允许的请求数。
+        // Requests allowed per window.
         limit: z.number().int().positive(),
         window: durationSchema,
       }),
@@ -396,23 +415,25 @@ export const rateLimitConfigSchema = z.strictObject({
     }),
 });
 
-// 用户 API Key（src/core/api-keys/）。关闭时 /api-keys 页面、后台页和鉴权接口都返回 404，
-// 数据库里的 key 不删（重新打开就能继续用）。
+// User API keys (src/core/api-keys/). When off, the /api-keys page, the admin page, and the auth
+// endpoint all return 404; keys in the database are not deleted (turn it back on and they work).
 export const apiKeysConfigSchema = z.strictObject({
   enabled: z.boolean().default(false),
-  // 每个 key 独立的滑动窗口：按 key 计数（`api_key:<keyId>`），不按用户或 IP。
-  // 不填（默认）不限制。填了就需要 Upstash Redis，见 src/core/ratelimit/features.ts。
+  // A separate sliding window per key: counted by key (`api_key:<keyId>`), not by user or IP.
+  // Omitted (the default) means no limit. Setting it requires Upstash Redis; see
+  // src/core/ratelimit/features.ts.
   rateLimitPerKey: z
     .strictObject({
-      // 窗口内允许的请求数。
+      // Requests allowed per window.
       limit: z.number().int().positive(),
       window: durationSchema,
     })
     .optional(),
 });
 
-// 允许上传的 MIME 类型及对应的对象扩展名。扩展名由类型决定，不取用户的文件名。
-// 不含 SVG 和 HTML：公开访问时它们会在站点的文件域名下执行脚本。
+// MIME types allowed for upload and their object extensions. The extension is determined by the
+// type, never taken from the user's filename. SVG and HTML are excluded: when publicly accessible
+// they would execute scripts on the site's file domain.
 export const uploadMimeTypes = {
   "image/png": "png",
   "image/jpeg": "jpg",
@@ -431,10 +452,11 @@ export const uploadMimeTypes = {
 } as const;
 export type UploadMimeType = keyof typeof uploadMimeTypes;
 
-// 单次 PUT 上传的上限是 5 GiB（S3 / R2 的限制），更大的文件需要分片上传，v1 不做。
+// A single PUT upload is capped at 5 GiB (an S3 / R2 limit). Larger files need multipart upload,
+// which v1 doesn't do.
 const MAX_SINGLE_PUT_BYTES = 5 * 1024 ** 3;
 
-// 文件上传（Cloudflare R2）；只在 features.upload 开启时生效。
+// File upload (Cloudflare R2); only takes effect when features.upload is on.
 export const uploadConfigSchema = z.strictObject({
   allowedMimeTypes: z
     .array(
@@ -445,30 +467,34 @@ export const uploadConfigSchema = z.strictObject({
     .min(1)
     .refine(unique, { message: "must not contain duplicates" })
     .default(["image/png", "image/jpeg", "image/webp", "application/pdf"]),
-  // 单个文件的大小上限（字节）。
+  // Maximum size of a single file, in bytes.
   maxFileSize: z
     .number()
     .int()
     .positive()
     .max(MAX_SINGLE_PUT_BYTES, "must be at most 5 GiB (single PUT limit)")
     .default(10 * 1024 * 1024),
-  // true：文件通过 R2 的公开域名访问（R2_PUBLIC_URL）；false：只能通过有时效的签名地址访问。
+  // true: files are served from R2's public domain (R2_PUBLIC_URL); false: only via time-limited
+  // signed URLs.
   public: z.boolean().default(false),
 });
 
-// 可观测性（features.observability 开启时生效），细项见 README 的「配置」一节。
+// Observability (takes effect when features.observability is on); see the "Configuration" section
+// of the README for details.
 export const observabilityConfigSchema = z.strictObject({
-  // 日志级别：低于这个级别的日志不输出。
+  // Log level: logs below this level are not emitted.
   logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
-  // OpenTelemetry 追踪（@vercel/otel）。
+  // OpenTelemetry tracing (@vercel/otel).
   otel: z.boolean().default(false),
-  // Sentry 错误上报，需要 NEXT_PUBLIC_SENTRY_DSN。
+  // Sentry error reporting; requires NEXT_PUBLIC_SENTRY_DSN.
   sentry: z.boolean().default(false),
-  // Sentry 性能追踪的采样率（0–1）。同时开了 otel 时追踪交给 OTel，这一项不生效。
+  // Sample rate (0–1) for Sentry performance tracing. When otel is also on, tracing goes to OTel
+  // and this setting has no effect.
   sentryTracesSampleRate: z.number().min(0).max(1).default(0.1),
-  // Vercel Analytics（页面浏览）。要先去 Vercel 项目里 Enable，见 README 的「上线清单」。
+  // Vercel Analytics (page views). Enable it in the Vercel project first; see the "launch
+  // checklist" in the README.
   analytics: z.boolean().default(false),
-  // Vercel Speed Insights（Web Vitals）。同样要先去 Vercel 项目里 Enable。
+  // Vercel Speed Insights (Web Vitals). Also needs enabling in the Vercel project first.
   speedInsights: z.boolean().default(false),
 });
 
@@ -476,11 +502,12 @@ export const aiProviders = [
   "openai",
   "anthropic",
   "google",
-  // 阿里云百炼（DashScope）：Qwen，以及百炼上托管的 DeepSeek、Kimi 等模型。
+  // Alibaba Cloud Model Studio (DashScope): Qwen, plus models hosted there such as DeepSeek and
+  // Kimi.
   "alibaba",
 ] as const;
 
-// AI SDK 的 reasoning 调用参数，各服务商映射成自己的思考开关或力度。
+// The AI SDK's reasoning call option; each provider maps it to its own thinking toggle or effort.
 export const aiReasoningLevels = [
   "provider-default",
   "none",
@@ -491,10 +518,10 @@ export const aiReasoningLevels = [
   "xhigh",
 ] as const;
 
-// 有视频生成模型的服务商。v1 只接了阿里云百炼（通义万相）。
+// Providers with video generation models. v1 only integrates Alibaba Cloud Model Studio (Wan).
 export const aiVideoProviders = ["alibaba"] as const;
 
-// 有图片生成模型的服务商（Anthropic 没有）。
+// Providers with image generation models (Anthropic has none).
 export const aiImageProviders = ["openai", "google", "alibaba"] as const;
 
 const aiModelIdSchema = z
@@ -504,23 +531,26 @@ const aiModelIdSchema = z
     'must be lowercase letters, digits, ".", "_" or "-", such as "fast"',
   );
 
-// AI 模型。v1 按次固定扣费：`creditCost` 是每次调用的积分成本，不按 token 计费。
+// AI models. v1 charges a fixed amount per call: `creditCost` is the credit cost of each call, not
+// billed by tokens.
 export const aiConfigSchema = z
   .strictObject({
     models: z
       .array(
         z.strictObject({
-          // 站内使用的模型 ID，前端和接口按它选模型，例如 "fast"。
+          // Model ID used inside the site; the frontend and API select models by it, e.g. "fast".
           id: aiModelIdSchema,
           provider: z.enum(aiProviders),
-          // 服务商那边的模型名，例如 "gpt-5-mini"、"claude-haiku-4-5-20251001"。
+          // The model name on the provider's side, e.g. "gpt-5-mini", "claude-haiku-4-5-20251001".
           model: z.string().trim().min(1),
-          // 每次调用预扣的积分；0 表示免费（不需要开启 features.credits）。
+          // Credits pre-deducted per call; 0 means free (doesn't require features.credits).
           creditCost: z.number().int().nonnegative(),
-          // 单次输出的 token 上限。按次计费时建议设置，避免一次调用成本失控。
+          // Max output tokens per call. Recommended with per-call pricing so one call's cost can't
+          // run away.
           maxOutputTokens: z.number().int().positive().optional(),
-          // 思考力度；不填用服务商默认。有的模型默认开思考（如百炼上的 deepseek-v4），
-          // 按次计费时可以设成 "none" 省掉思考的 token。
+          // Reasoning effort; omitted means the provider default. Some models think by default
+          // (e.g. deepseek-v4 on Model Studio); with per-call pricing you can set "none" to save
+          // the thinking tokens.
           reasoning: z.enum(aiReasoningLevels).optional(),
         }),
       )
@@ -528,15 +558,17 @@ export const aiConfigSchema = z
         message: "ids must not contain duplicates",
       })
       .default([]),
-    // 请求里没指定模型时使用。有模型时必填，且必须是 models 里的 id。
+    // Used when a request doesn't specify a model. Required when there are models, and must be an
+    // id from models.
     defaultModel: z.string().optional(),
-    // 图片生成模型。每次生成一张，按 creditCost 预扣；结果存进 R2（需要 features.upload）。
+    // Image generation models. One image per generation, with creditCost pre-deducted; results
+    // are stored in R2 (requires features.upload).
     imageModels: z
       .array(
         z.strictObject({
           id: aiModelIdSchema,
           provider: z.enum(aiImageProviders),
-          // 服务商那边的模型名，例如 "qwen-image-3.0"、"gpt-image-1"。
+          // The model name on the provider's side, e.g. "qwen-image-3.0", "gpt-image-1".
           model: z.string().trim().min(1),
           creditCost: z.number().int().nonnegative(),
         }),
@@ -546,19 +578,20 @@ export const aiConfigSchema = z
       })
       .default([]),
     defaultImageModel: z.string().optional(),
-    // 视频生成模型。异步任务：提交时按 creditCost 预扣，失败或超时退回；结果存进 R2。
-    // 时长和分辨率固定在配置里，保证按次扣费和实际成本对得上。
+    // Video generation models. Async jobs: creditCost is pre-deducted on submit and refunded on
+    // failure or timeout; results are stored in R2. Duration and resolution are fixed in config so
+    // the per-call charge matches the actual cost.
     videoModels: z
       .array(
         z.strictObject({
           id: aiModelIdSchema,
           provider: z.enum(aiVideoProviders),
-          // 服务商那边的模型名，例如 "wan2.7-t2v"、"wan2.7-i2v"。
+          // The model name on the provider's side, e.g. "wan2.7-t2v", "wan2.7-i2v".
           model: z.string().trim().min(1),
-          // text：只用提示词；image：需要一张首帧图片。
+          // text: prompt only; image: requires a first-frame image.
           input: z.enum(["text", "image"]),
           creditCost: z.number().int().nonnegative(),
-          // 视频时长（秒）。
+          // Video duration in seconds.
           duration: z.number().int().min(2).max(15).default(5),
           resolution: z.enum(["720P", "1080P"]).default("720P"),
         }),
@@ -620,8 +653,8 @@ export const aiConfigSchema = z
     }
   });
 
-// 更新日志：`content/changelog/` 的 MDX 驱动 `/changelog` 页面和 RSS。关闭时两者都返回 404，
-// 页脚也不显示入口（见 core/layout/footer-nav.ts）。
+// Changelog: MDX in `content/changelog/` drives the `/changelog` page and RSS. When off, both return
+// 404 and the footer shows no link (see core/layout/footer-nav.ts).
 export const changelogConfigSchema = z.strictObject({
   enabled: z.boolean().default(false),
 });
@@ -677,8 +710,8 @@ export const acquisitionConfigSchema = z.strictObject({
     }),
 });
 
-// 组件 id：存进 `status_events.component` 的内部键。和展示名分开，
-// 改 label 不会让历史 incident 找不到组件。
+// Component id: the internal key stored in `status_events.component`. Kept separate from the
+// display name so changing a label doesn't orphan historical incidents.
 const statusComponentKeySchema = z
   .string()
   .regex(
@@ -686,21 +719,23 @@ const statusComponentKeySchema = z
     'must be a lowercase id such as "api" (letters and digits, starting with a letter)',
   );
 
-// 系统状态页（/status）。手动模式由管理员在后台创建 incident；
-// 自动模式在页面渲染时探测 `healthUrl`（见 src/core/status/health.ts），
-// 连续失败到阈值才记为 degraded，探测成功会自动解决它开的那条 incident。
+// System status page (/status). In manual mode, admins create incidents in the admin panel. In
+// auto mode the page probes `healthUrl` at render time (see src/core/status/health.ts); a component
+// is marked degraded only after consecutive failures reach the threshold, and a successful probe
+// automatically resolves the incident it opened.
 export const statusPageSchema = z.strictObject({
-  // 关闭时 /status 返回 404、后台不出现入口。
+  // When off, /status returns 404 and the admin panel shows no entry.
   enabled: z.boolean().default(false),
   mode: z.enum(["manual", "auto"]).default("manual"),
-  // 展示在状态页上的服务清单。label 是给访客看的展示名（配置字面量，不进 messages）。
+  // Services listed on the status page. label is the display name visitors see (a config literal,
+  // not in messages).
   components: z
     .record(
       statusComponentKeySchema,
       z.strictObject({
         label: z.string().trim().min(1),
         description: z.string().trim().min(1).optional(),
-        // 探测地址；不填的组件在 auto 模式下仍由管理员手动控制。
+        // Probe URL; components without one are still controlled manually by admins in auto mode.
         healthUrl: z
           .string()
           .regex(
@@ -711,11 +746,11 @@ export const statusPageSchema = z.strictObject({
       }),
     )
     .default({}),
-  // 展示最近 N 天的 uptime 和 incident。
+  // Show uptime and incidents for the last N days.
   historyDays: z.number().int().min(1).max(365).default(30),
 });
 
-// 用户面 feature flag 的名字，也是 `isEnabled()` 的第一个参数。
+// Name of a user-facing feature flag; also the first argument to `isEnabled()`.
 export const userFlagNameSchema = z
   .string()
   .regex(
@@ -724,42 +759,50 @@ export const userFlagNameSchema = z
   );
 
 /**
- * 用户面开关（灰度发布）。v1 纯配置驱动：flag 状态不落库，改配置要重新部署
- * （`/admin/flags` 里能看到当前生效的定义）。评估逻辑见 `src/core/flags/evaluate.ts`。
+ * User-facing feature flags (gradual rollout). v1 is purely config-driven: flag state isn't stored
+ * in the database, and config changes need a redeploy (`/admin/flags` shows the definitions in
+ * effect). Evaluation logic is in `src/core/flags/evaluate.ts`.
  */
 export const userFlagsConfigSchema = z.strictObject({
-  // 总开关。关闭时 isEnabled() 恒为 false、<FeatureFlag> 不渲染 children、/admin/flags 404。
+  // Master switch. When off, isEnabled() is always false, <FeatureFlag> doesn't render children,
+  // and /admin/flags is a 404.
   enabled: z.boolean().default(false),
   definitions: z
     .record(
       userFlagNameSchema,
       z.strictObject({
-        // 给管理员看的说明。买家自己写的配置文本，和 flag 名一起展示在 /admin/flags。
+        // Description for admins. Config text the buyer writes, shown with the flag name on
+        // /admin/flags.
         description: z.string().trim().min(1).max(200),
-        // 单个 flag 的开关：留着定义但置 false，等于「还没上线」。
+        // Per-flag switch: keeping the definition but setting false means "not launched yet".
         enabled: z.boolean().default(false),
-        // 灰度百分比 0–100。0 是硬关闭（可配 adminOnly 只给自己人开），100 是全量。
+        // Rollout percentage 0–100. 0 is hard off (combine with adminOnly to enable it just for your
+        // team), 100 is everyone.
         rollout: z.number().int().min(0).max(100).default(0),
-        // 只给管理员看：和灰度无关，admin 恒可见（dogfooding）。
+        // Admins only: independent of rollout, admins always see it (dogfooding).
         adminOnly: z.boolean().default(false),
       }),
     )
     .default({}),
 });
 
-// 卖可下载文件（src/features/downloads/）：买了指定套餐的用户获得一份授权，
-// 可以在 /downloads 下载授权期内发布的版本；付款成功后邮件发下载页链接。
+// Selling downloadable files (src/features/downloads/): users who buy the given plan get a license
+// and can download, at /downloads, the versions released during the license period. After a
+// successful payment they're emailed a link to the downloads page.
 export const downloadsConfigSchema = z.strictObject({
-  // 出厂关闭：大多数 SaaS 不卖文件。关闭时 /downloads 与下载接口 404、不发授权邮件。
+  // Off by default: most SaaS products don't sell files. When off, /downloads and the download
+  // endpoint are 404 and no license emails are sent.
   enabled: z.boolean().default(false),
   products: z
     .array(
       z.strictObject({
-        // 产品 ID，发布版本时用它（pnpm downloads:publish <id> …）；名称在 messages 的 Downloads.products.<id>。
+        // Product ID, used when publishing a version (pnpm downloads:publish <id> …); the name is in
+        // Downloads.products.<id> in messages.
         id: messageKeySchema,
-        // 买哪个套餐获得这个产品（billing.plans 里一次性套餐的 id）。
+        // The plan that grants this product (the id of a one-time plan in billing.plans).
         planId: messageKeySchema,
-        // 授权包含多少个月内发布的版本；之后发布的新版本不再提供，已有版本照常可下。
+        // How many months of releases the license covers; versions released afterward aren't
+        // included, while already-available versions stay downloadable.
         updateMonths: z.number().int().positive(),
       }),
     )
@@ -786,8 +829,9 @@ export const siteConfigSchema = z
           /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/,
           'must be a hex color such as "#4f46e5"',
         ),
-      // 不配就用内置的内联标记（跟随 primaryColor，见 core/layout/brand-mark.tsx）；
-      // 配了就用 `public/` 下的那张图，顶栏、侧边栏和结构化数据都会用它。
+      // When unset, the built-in inline mark is used (follows primaryColor; see
+      // core/layout/brand-mark.tsx). When set, that image under `public/` is used by the header,
+      // sidebar, and structured data.
       logo: z
         .string()
         .startsWith("/", 'must be a path under public/ such as "/logo.svg"')
@@ -912,7 +956,7 @@ export type UserFlagsConfig = SiteConfig["userFlags"];
 export type UserFlagDefinition =
   UserFlagsConfig["definitions"][keyof UserFlagsConfig["definitions"]];
 
-/** 校验 `site.config.ts`。配置非法时抛错，并逐条列出出错字段。 */
+/** Validates `site.config.ts`. Throws on invalid config, listing each failing field. */
 export function defineConfig(input: SiteConfigInput): SiteConfig {
   const result = siteConfigSchema.safeParse(input);
   if (!result.success) {

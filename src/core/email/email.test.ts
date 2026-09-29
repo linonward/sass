@@ -13,7 +13,7 @@ import { renderEmail, sendEmail } from "./send";
 import { readLatestEmail, waitForEmail } from "./testing";
 import { createTransport, type OutgoingEmail } from "./transports";
 
-// 模拟多语言站点，第二门语言的文案由 en.json 伪翻译而来。
+// Simulate a multi-locale site; the second locale's copy is pseudo-translated from en.json.
 vi.mock("@/core/i18n/routing", () => ({
   routing: { locales: ["en", "de"], defaultLocale: "en" },
 }));
@@ -45,11 +45,12 @@ vi.mock("resend", () => ({
   }),
 }));
 
-// 邮件模板把站点名、品牌色和站点地址内联进 HTML，直接渲染真实配置的话买家改
-// site.config.ts 的 name / brand / domain 就得跑 `pnpm test -u`。
-// 这里换成固定值，快照只锁模板结构（颜色仍是十六进制，和真实渲染一致），
-// 断言需要写站点名时也用这份固定值。真实配置到这层常量的映射由下面
-// 「品牌信息取自 site.config.ts」一条守着。
+// Email templates inline the site name, brand color, and site URL into the HTML. Rendering the
+// real config would force buyers to run `pnpm test -u` whenever they change name / brand / domain
+// in site.config.ts. So fixed values are used here: the snapshots only lock the template structure
+// (colors are still hex, same as a real render), and assertions that need the site name use this
+// fixture too. The mapping from the real config to these constants is guarded by the "brand values
+// come from site.config.ts" test below.
 const brand = vi.hoisted(() => ({
   name: "Fixture",
   siteUrl: "https://example.com",
@@ -71,7 +72,7 @@ const signIn = {
 } as const;
 
 describe("renderEmail", () => {
-  test("品牌信息取自 site.config.ts", async () => {
+  test("brand values come from site.config.ts", async () => {
     const { emailBrand } =
       await vi.importActual<typeof import("./brand")>("./brand");
     expect(emailBrand.name).toBe(siteConfig.name);
@@ -79,9 +80,10 @@ describe("renderEmail", () => {
     expect(emailBrand.siteUrl).toBe(`https://${siteConfig.domain}`);
   });
 
-  test("颜色和站内 token 是同一组值", async () => {
-    // 邮件内联不了 CSS 变量，只能写死十六进制；但「主色上放什么字」「中性色是哪一档」
-    // 必须和站内是同一个决策，否则买家换完品牌色，邮件会留在另一套冷灰上。
+  test("colors are the same values as the site tokens", async () => {
+    // Emails can't inline CSS variables, so hex is hard-coded; but "what text color goes on the
+    // primary" and "which neutral step" must be the same decision as on the site, or after a buyer
+    // changes the brand color the emails stay on a different set of cool grays.
     const { emailBrand } =
       await vi.importActual<typeof import("./brand")>("./brand");
     const neutral = neutralScale(siteConfig.brand.primaryColor);
@@ -94,7 +96,7 @@ describe("renderEmail", () => {
     expect(emailBrand.background).toBe(neutral.canvas);
   });
 
-  test("生成 html、纯文本、主题和发件信息", async () => {
+  test("produces html, plain text, subject, and sender info", async () => {
     const email = await renderEmail(signIn);
     const { fromName, fromAddress, replyTo } = siteConfig.email;
     expect(email.from).toBe(`${fromName} <${fromAddress}>`);
@@ -107,7 +109,7 @@ describe("renderEmail", () => {
     expect(email.html).not.toMatch(/oklch/);
   });
 
-  test("模板跟随 locale 切换文案", async () => {
+  test("template copy follows the locale", async () => {
     const email = await renderEmail({ ...signIn, locale: "de" });
     expect(email.locale).toBe("de");
     expect(email.subject).toBe(`[de] Your ${brand.name} sign-in code`);
@@ -115,13 +117,13 @@ describe("renderEmail", () => {
     expect(email.html).toContain('lang="de"');
   });
 
-  test("未启用的语言会报错", async () => {
+  test("throws for a locale that is not enabled", async () => {
     await expect(renderEmail({ ...signIn, locale: "fr" })).rejects.toThrow(
       /Unsupported email locale "fr"/,
     );
   });
 
-  test("welcome 没有名字时使用通用称呼", async () => {
+  test("welcome uses a generic greeting when there is no name", async () => {
     const email = await renderEmail({
       to: "a@b.co",
       template: "welcome",
@@ -190,19 +192,21 @@ describe("renderEmail", () => {
       "status-subscription",
       { confirmUrl: "https://example.com/status/confirm?token=abc" },
     ],
-  ] as const)("%s 模板渲染快照", async (template, props) => {
+  ] as const)("%s template snapshot", async (template, props) => {
     const email = await renderEmail({ to: "a@b.co", template, props } as never);
     expect(email.html).toMatchSnapshot("html");
     expect(email.text).toMatchSnapshot("text");
   });
 });
 
-describe("改邮箱验证码", () => {
+describe("change-email verification codes", () => {
   const props = { code: "482913", expiresInMinutes: 5 };
 
-  // 改邮箱要两个验证码：发往当前邮箱的是"确认是你发起的变更"，发往新邮箱的是
-  // "确认这个地址能用"。两封信的措辞不能一样，否则收件人分不清在确认哪一步。
-  test("发往当前邮箱与新邮箱用不同主题和文案", async () => {
+  // Changing the email takes two codes: the one sent to the current address means "confirm you
+  // started this change", the one sent to the new address means "confirm this address works". The
+  // two emails must be worded differently, or the recipient can't tell which step they're
+  // confirming.
+  test("current and new address get different subjects and copy", async () => {
     const current = await renderEmail({
       to: "a@b.co",
       template: "change-email-code",
@@ -221,8 +225,8 @@ describe("改邮箱验证码", () => {
   });
 });
 
-describe("账单邮件模板", () => {
-  test("主题、金额和日期随语言切换", async () => {
+describe("billing email templates", () => {
+  test("subject, amount, and date follow the locale", async () => {
     const props = {
       planName: "Pro",
       kind: "one_time",
@@ -239,7 +243,7 @@ describe("账单邮件模板", () => {
     expect(en.subject).toBe(`Payment received for Pro · ${brand.name}`);
     expect(en.text).toContain("$199.00");
     expect(en.text).toContain("September 25, 2026");
-    // 一次性购买没有续费日期
+    // One-time purchases have no renewal date
     expect(en.text).not.toContain("Renews on");
 
     const de = await renderEmail({
@@ -250,11 +254,11 @@ describe("账单邮件模板", () => {
     });
     expect(de.subject.startsWith("[de] ")).toBe(true);
     expect(de.html).toContain('lang="de"');
-    // 德语的日期格式
+    // German date format
     expect(de.text).toContain("25. September 2026");
   });
 
-  test("可选字段缺失时对应的行不显示", async () => {
+  test("rows for missing optional fields are hidden", async () => {
     const email = await renderEmail({
       to: "a@b.co",
       template: "payment-failed",
@@ -265,7 +269,7 @@ describe("账单邮件模板", () => {
   });
 });
 
-describe("状态邮件模板", () => {
+describe("status email templates", () => {
   const props = {
     component: "API",
     status: "degraded",
@@ -275,7 +279,7 @@ describe("状态邮件模板", () => {
     withdrawUrl: "https://example.com/status/unsubscribe?email=a%40b.co&sig=x",
   } as const;
 
-  test("进行中与已恢复的标题、主题各不相同", async () => {
+  test("ongoing and resolved notices have different headings and subjects", async () => {
     const open = await renderEmail({
       to: "a@b.co",
       template: "status-incident",
@@ -291,11 +295,12 @@ describe("状态邮件模板", () => {
     });
     expect(resolved.subject).toBe("API has recovered");
     expect(resolved.subject).not.toBe(open.subject);
-    // 恢复通知仍带着事发时的级别，别让「已恢复」吃掉「刚才坏成什么样」。
+    // A resolution notice still carries the level from when it happened; "resolved" shouldn't
+    // erase "how bad it just was".
     expect(resolved.text).toContain("Degraded");
   });
 
-  test("通知邮件一定带退订链接", async () => {
+  test("notices always include an unsubscribe link", async () => {
     const email = await renderEmail({
       to: "a@b.co",
       template: "status-incident",
@@ -304,7 +309,7 @@ describe("状态邮件模板", () => {
     expect(email.html).toContain(props.withdrawUrl.replace(/&/g, "&amp;"));
   });
 
-  test("确认邮件带令牌链接", async () => {
+  test("confirmation email includes the token link", async () => {
     const email = await renderEmail({
       to: "a@b.co",
       template: "status-subscription",
@@ -319,7 +324,7 @@ describe("状态邮件模板", () => {
   });
 });
 
-describe("发送方式", () => {
+describe("transports", () => {
   let email: OutgoingEmail;
   beforeEach(async () => {
     email = await renderEmail(signIn);
@@ -330,7 +335,7 @@ describe("发送方式", () => {
     vi.restoreAllMocks();
   });
 
-  test("console：打印收件人、主题和纯文本正文", async () => {
+  test("console: prints recipient, subject, and plain-text body", async () => {
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     const { id } = await createTransport("console")(email);
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
@@ -340,7 +345,7 @@ describe("发送方式", () => {
     expect(output).toContain("123456");
   });
 
-  test("file：同一毫秒内连续写入，文件名顺序仍与发送顺序一致", async () => {
+  test("file: back-to-back writes in the same millisecond keep file names in send order", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "emails-"));
     try {
       const transport = createTransport("file", { outboxDir: dir });
@@ -365,7 +370,7 @@ describe("发送方式", () => {
     }
   });
 
-  test("file：写入 JSON，readLatestEmail / waitForEmail 能读到", async () => {
+  test("file: writes JSON that readLatestEmail / waitForEmail can read", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "emails-"));
     try {
       const transport = createTransport("file", { outboxDir: dir });
@@ -412,7 +417,7 @@ describe("发送方式", () => {
     }
   });
 
-  test("resend：把渲染结果交给 SDK", async () => {
+  test("resend: hands the rendered email to the SDK", async () => {
     send.mockResolvedValue({ data: { id: "email_1" }, error: null });
     const { id } = await createTransport("resend", { resendApiKey: "re_test" })(
       email,
@@ -429,7 +434,7 @@ describe("发送方式", () => {
     });
   });
 
-  test("resend：SDK 返回错误时抛出", async () => {
+  test("resend: throws when the SDK returns an error", async () => {
     send.mockResolvedValue({
       data: null,
       error: { name: "validation_error", message: "bad from" },
@@ -439,11 +444,11 @@ describe("发送方式", () => {
     ).rejects.toThrow(/Resend failed to send "sign-in-code": bad from/);
   });
 
-  test("resend：缺少 key 时报错", () => {
+  test("resend: throws when the key is missing", () => {
     expect(() => createTransport("resend")).toThrow(/RESEND_API_KEY/);
   });
 
-  test("sendEmail 按 EMAIL_TRANSPORT 选择发送方式", async () => {
+  test("sendEmail picks the transport from EMAIL_TRANSPORT", async () => {
     vi.stubEnv("EMAIL_TRANSPORT", "console");
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     await sendEmail(signIn);

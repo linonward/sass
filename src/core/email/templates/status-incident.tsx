@@ -8,16 +8,19 @@ import { EmailLayout, emailStyles } from "../components/email-layout";
 import { emailTranslator, type EmailT } from "../translator";
 
 export type StatusIncidentProps = {
-  /** 组件的展示名（`site.config.ts` 里的 label）。 */
+  /** Component display name (its label in `site.config.ts`). */
   component: string;
-  /** 影响级别。恢复通知保留事发时的级别，所以这里不是「已恢复」。 */
+  /**
+   * Impact level. Resolution notices keep the level from when the incident happened, so this is
+   * never "resolved".
+   */
   status: "operational" | "degraded" | "outage";
   message: string;
-  /** 已恢复的时间（ISO）；仍在进行中为 null。 */
+  /** When it was resolved (ISO); null while still ongoing. */
   resolvedAt: string | null;
-  /** 状态页地址。 */
+  /** Status page URL. */
   url: string;
-  /** 带签名的退订地址。 */
+  /** Signed unsubscribe URL. */
   withdrawUrl: string;
 };
 
@@ -29,7 +32,7 @@ export function statusIncidentSubject(t: EmailT, props: StatusIncidentProps) {
     : t("statusIncident.subject", { component: props.component });
 }
 
-/** 事件通知：一个组件出问题、更新或恢复时发给订阅者。 */
+/** Incident notice, sent to subscribers when a component has a problem, an update, or recovers. */
 export default function StatusIncidentEmail({
   t,
   locale,

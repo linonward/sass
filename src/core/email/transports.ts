@@ -6,7 +6,7 @@ import { Resend } from "resend";
 
 import type { EmailTransport } from "./env";
 
-/** 渲染完成、准备交给发送方式的邮件。 */
+/** A rendered email, ready to hand to a transport. */
 export type OutgoingEmail = {
   from: string;
   to: string[];
@@ -19,14 +19,18 @@ export type OutgoingEmail = {
   props: Record<string, unknown>;
 };
 
-/** `file` 方式写入 `.tmp/emails/` 的 JSON 格式。e2e 依赖它，改动需同步 testing.ts。 */
+/**
+ * JSON format the `file` transport writes to `.tmp/emails/`. e2e depends on it; keep testing.ts in
+ * sync when changing it.
+ */
 export type StoredEmail = OutgoingEmail & { id: string; sentAt: string };
 
 export const EMAIL_OUTBOX_DIR = path.join(process.cwd(), ".tmp", "emails");
 
 /**
- * 发送选项。`idempotencyKey`：同一封信（outbox 的同一行）重发时带同一个键，
- * 服务商据此认出是同一封、不再投递第二次（Resend 保留 24 小时）。console / file 忽略它。
+ * Send options. `idempotencyKey`: resending the same email (the same outbox row) carries the same
+ * key, so the provider recognizes it and doesn't deliver it twice (Resend keeps keys for 24 hours).
+ * console / file ignore it.
  */
 export type SendOptions = { idempotencyKey?: string };
 
@@ -55,7 +59,8 @@ function consoleTransport(): Send {
   };
 }
 
-// 进程内递增序号：同一毫秒内写入的多封邮件，文件名也按发送顺序排列。
+// In-process counter: emails written within the same millisecond still get file names in send
+// order.
 let fileSeq = 0;
 
 function fileTransport(dir: string): Send {
@@ -64,10 +69,11 @@ function fileTransport(dir: string): Send {
     const sentAt = new Date().toISOString();
     const stored: StoredEmail = { ...email, id, sentAt };
     await mkdir(dir, { recursive: true });
-    // 文件名是「时间-序号-id」，按名字排序即按发送顺序。
+    // File names are "time-seq-id", so sorting by name sorts by send order.
     const seq = String(fileSeq++ % 1_000_000).padStart(6, "0");
     const name = `${sentAt.replace(/[:.]/g, "-")}-${seq}-${id}.json`;
-    // 先写临时文件再改名：e2e 并行轮询 outbox 时不会读到写了一半的文件。
+    // Write a temp file, then rename: e2e polling the outbox in parallel never reads a
+    // half-written file.
     const file = path.join(dir, name);
     await writeFile(`${file}.tmp`, JSON.stringify(stored, null, 2));
     await rename(`${file}.tmp`, file);
@@ -94,8 +100,9 @@ function resendTransport(apiKey: string | undefined): Send {
       },
       { idempotencyKey: options.idempotencyKey },
     );
-    // 同一个幂等键之前已经被收下、这次内容却不同（比如重发之间换了模板）：
-    // 服务商那边已经有这封信了，按「已发送」处理，而不是当成失败再重试一轮。
+    // The same idempotency key was already accepted but the content differs this time (e.g. the
+    // template changed between retries): the provider already has this email, so treat it as
+    // sent rather than as a failure to retry again.
     if (error?.name === "invalid_idempotent_request") {
       return { id: `idempotent:${options.idempotencyKey}` };
     }

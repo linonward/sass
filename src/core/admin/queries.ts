@@ -16,7 +16,7 @@ import {
 
 import { ADMIN_PAGE_SIZE } from "./index";
 
-// 后台的只读查询，都在服务端分页。写操作见 ./actions.ts。
+// Read-only admin queries, all paginated server-side. Writes are in ./actions.ts.
 
 export type Paged<T> = {
   rows: T[];
@@ -25,7 +25,7 @@ export type Paged<T> = {
   totalPages: number;
 };
 
-/** 解析状态筛选：不在取值范围内时视为不筛选。 */
+/** Parses the status filter: values outside the allowed set mean no filter. */
 export function parseStatus<T extends string>(
   value: unknown,
   statuses: readonly T[],
@@ -38,7 +38,7 @@ export const parseOrderStatus = (value: unknown) =>
 export const parseSubscriptionStatus = (value: unknown) =>
   parseStatus<SubscriptionStatus>(value, subscriptionStatuses);
 
-/** LIKE 的通配符按字面匹配。 */
+/** Match LIKE wildcards literally. */
 function likePattern(query: string) {
   return `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
@@ -54,7 +54,7 @@ function paged<T>(rows: T[], total: number, page: number): Paged<T> {
 
 const offsetOf = (page: number) => (page - 1) * ADMIN_PAGE_SIZE;
 
-/** 用户列表：按邮箱或名称搜索（不区分大小写），最新注册的在前。 */
+/** User list: search by email or name (case-insensitive), most recently registered first. */
 export async function listUsers(
   db: Database,
   { query = "", page = 1 }: { query?: string; page?: number },
@@ -91,10 +91,14 @@ export type AdminUserRow = Awaited<
 
 const actor = alias(user, "actor");
 
-/** 用户详情：资料、余额、最近 20 条积分流水（含操作者邮箱）、订阅和订单。不存在时为 null。 */
+/**
+ * User detail: profile, balance, the latest 20 credit transactions (with the actor's email),
+ * subscriptions, and orders. null if the user doesn't exist.
+ */
 export async function getUserDetail(db: Database, userId: string) {
-  // 四个查询都只依赖 userId，一次并发发出；profile 为空时仍然返回 null，
-  // 调用方（/admin/users/[id]）据此在流式开始前 notFound()。
+  // All four queries depend only on userId, so they're issued concurrently. When profile is empty
+  // this still returns null, and the caller (/admin/users/[id]) uses that to call notFound()
+  // before streaming starts.
   const [[profile], transactions, userSubscriptions, userOrders] =
     await Promise.all([
       db
@@ -159,7 +163,7 @@ export type AdminUserDetail = NonNullable<
   Awaited<ReturnType<typeof getUserDetail>>
 >;
 
-/** 订单列表，可按状态筛选，最新的在前。 */
+/** Order list, filterable by status, newest first. */
 export async function listOrders(
   db: Database,
   { status, page = 1 }: { status?: OrderStatus; page?: number },
@@ -191,7 +195,7 @@ export async function listOrders(
   return paged(rows, counted?.total ?? 0, page);
 }
 
-/** 订阅列表，可按状态筛选，最新的在前。 */
+/** Subscription list, filterable by status, newest first. */
 export async function listSubscriptions(
   db: Database,
   { status, page = 1 }: { status?: SubscriptionStatus; page?: number },

@@ -1,6 +1,7 @@
 // @vitest-environment node
-// t3-env 只在服务端校验 server 变量：jsdom 下 import 本模块会被当成客户端，
-// 读 env.ADMIN_EMAILS 直接抛错（见 src/core/env.ts）。这里和 env.test.ts 一样走 node。
+// t3-env only validates server variables on the server: importing this module under jsdom counts as
+// the client, and reading env.ADMIN_EMAILS throws right away (see src/core/env.ts). So this runs in
+// node, like env.test.ts.
 import { APIError } from "better-auth/api";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -15,11 +16,12 @@ import { EMAIL_SEND_FAILED } from "./errors";
 import { auth } from "./server";
 
 /**
- * 协作者全部替换成 mock：不连库、不发信、不进请求作用域。断言只对着
- * server.ts 自己写的那几段（插件装配、验证码回调、两个 databaseHook）。
+ * Every collaborator is replaced with a mock: no database, no emails, no request scope. Assertions
+ * target only the parts server.ts writes itself (plugin wiring, the verification code callback, and
+ * the two databaseHooks).
  *
- * 工厂函数的返回值在 vi.hoisted 里就定好，因为 server.ts 在 import 时就会调用它们
- * （createAttributionStore(db).freeze 这种），比任何 beforeEach 都早。
+ * The factories' return values are fixed inside vi.hoisted because server.ts calls them at import
+ * time (things like createAttributionStore(db).freeze), earlier than any beforeEach.
  */
 const mocks = vi.hoisted(() => {
   const sendEmail = vi.fn();
@@ -31,7 +33,7 @@ const mocks = vi.hoisted(() => {
   const loggerWarn = vi.fn();
   const loggerError = vi.fn();
   const trackServer = vi.fn();
-  /** runAfterResponse 收到的任务；测试里手动 drain，模拟「响应之后」。 */
+  /** Tasks passed to runAfterResponse; tests drain them manually to simulate "after the response". */
   const queued: (() => Promise<void> | void)[] = [];
 
   return {
@@ -54,8 +56,10 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("@/core/email", () => ({ sendEmail: mocks.sendEmail }));
-// 验证码走 outbox：这里换成内存版，deliver 直接转调 sendEmail（和真实 outbox 立即发送的那一次一样），
-// 发送失败返回 "retry"（行留在库里等补发）。outbox 自己的行为见 src/core/email/outbox.test.ts。
+// Verification codes go through the outbox: here it's an in-memory version whose deliver calls
+// sendEmail directly (like the real outbox's immediate send attempt) and returns "retry" when the
+// send fails (the row stays in the database for a resend). For the outbox's own behavior, see
+// src/core/email/outbox.test.ts.
 vi.mock("@/core/email/queue", () => {
   const rows = new Map<string, Record<string, unknown>>();
   return {
@@ -83,8 +87,8 @@ vi.mock("@/core/email/queue", () => {
   };
 });
 
-// 不真调 next/server 的 after（测试里不在请求作用域），只把任务排队，
-// 这样能验证「发信排在响应之后」而不是「注册时同步发信」。
+// Don't actually call next/server's after (tests aren't in a request scope); just queue the tasks,
+// so we can verify that emails are sent after the response rather than synchronously during sign-up.
 vi.mock("@/core/lib/after-response", () => ({
   runAfterResponse: (task: () => Promise<void> | void) => {
     mocks.queued.push(task);
@@ -127,8 +131,9 @@ vi.mock("@/core/acquisition/store", () => ({
   createAttributionStore: mocks.createAttributionStore,
 }));
 
-// 演示站配置里 leads / attribution 是关的，那两条分支就不会执行。这里只把
-// acquisition 的三个开关打开（其余字段原样保留），让 hook 里对应的分支可达。
+// The demo site config has leads / attribution off, so those two branches would never run. Turn on
+// just the three acquisition flags here (keeping every other field as-is) so the matching branches
+// in the hooks are reachable.
 vi.mock("../../../site.config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../site.config")>();
   return {
@@ -175,12 +180,15 @@ type ServerOptions = {
   };
 };
 
-/** hook 的入参类型来自 better-auth，测试里不需要精确，用 unknown 调用。 */
+/** Hook argument types come from better-auth; tests don't need them exact, so call with unknown. */
 type UnknownHook = (value: unknown, ctx: unknown) => Promise<void>;
 
 const ADMIN_EMAIL = "admin@example.com";
 const hasGoogle = Boolean(googleCredentials(process.env));
-/** 非默认语言，用来验证「邮件语言跟随请求」；站点至少配了一门语言（schema 保证）。 */
+/**
+ * A non-default locale, used to verify that the email language follows the request; the site has at
+ * least one locale configured (guaranteed by the schema).
+ */
 const secondLocale = routing.locales[1] ?? routing.locales[0] ?? "en";
 
 function optionsOf(instance: unknown): ServerOptions {
@@ -193,11 +201,11 @@ function pluginIds(options: ServerOptions): string[] {
 
 function plugin(options: ServerOptions, id: string): PluginLike {
   const found = options.plugins.find((candidate) => candidate.id === id);
-  if (!found) throw new Error(`插件 ${id} 没有注册`);
+  if (!found) throw new Error(`plugin ${id} is not registered`);
   return found;
 }
 
-/** 插件的 before-hook：matcher 决定是否命中，handler 是真正的逻辑。 */
+/** A plugin's before-hook: matcher decides whether it applies, handler holds the actual logic. */
 type BeforeHook = {
   matcher: (context: { path: string }) => boolean;
   handler: (ctx: unknown) => Promise<unknown>;
@@ -206,11 +214,14 @@ type BeforeHook = {
 function beforeHook(options: ServerOptions, id: string): BeforeHook {
   const hooks = plugin(options, id).hooks as { before: BeforeHook[] };
   const [first] = hooks.before;
-  if (!first) throw new Error(`插件 ${id} 没有 before hook`);
+  if (!first) throw new Error(`plugin ${id} has no before hook`);
   return first;
 }
 
-/** resetModules 之后再 import，才能让被 stub 的环境变量进入 env / server 的模块级常量。 */
+/**
+ * Import after resetModules so stubbed environment variables make it into the module-level
+ * constants of env / server.
+ */
 async function freshAuth() {
   vi.resetModules();
   const { auth: instance } = await import("./server");
@@ -241,8 +252,8 @@ function createCtx({
 }
 
 /**
- * session.create.after 只用到 ctx.context.internalAdapter 和 ctx.headers；
- * user.create.after 多用到 ctx.setCookie。
+ * session.create.after only uses ctx.context.internalAdapter and ctx.headers; user.create.after also
+ * uses ctx.setCookie.
  */
 function hookCtx(ctx: ReturnType<typeof createCtx>) {
   return {
@@ -275,14 +286,14 @@ beforeEach(() => {
   mocks.trackServer.mockResolvedValue(undefined);
 });
 
-describe("Better Auth 配置", () => {
-  test("nextCookies 是最后一个插件（Server Action 里也要能写 cookie）", () => {
+describe("Better Auth config", () => {
+  test("nextCookies is the last plugin (Server Actions must be able to write cookies too)", () => {
     const ids = pluginIds(optionsOf(auth));
     expect(ids.filter((id) => id === "next-cookies")).toHaveLength(1);
     expect(ids.at(-1)).toBe("next-cookies");
   });
 
-  test("自定义插件排在 emailOTP 之前：cooldown 要在发信前拦下重发", () => {
+  test("custom plugins come before emailOTP: the cooldown must block resends before sending", () => {
     const ids = pluginIds(optionsOf(auth));
     expect(ids).toContain("identify-session-user");
     expect(ids).toContain("otp-resend-cooldown");
@@ -294,24 +305,25 @@ describe("Better Auth 配置", () => {
     );
   });
 
-  test("admin 插件一直注册，且排在 nextCookies 之前", () => {
+  test("the admin plugin is always registered, before nextCookies", () => {
     const ids = pluginIds(optionsOf(auth));
     expect(ids).toContain("admin");
     expect(ids.indexOf("admin")).toBeLessThan(ids.indexOf("next-cookies"));
   });
 
-  test("emailOTP 的参数与 siteConfig.auth.emailOtp 一致", () => {
+  test("emailOTP options match siteConfig.auth.emailOtp", () => {
     const otp = plugin(optionsOf(auth), "email-otp").options ?? {};
     expect(otp.otpLength).toBe(siteConfig.auth.emailOtp.length);
     expect(otp.expiresIn).toBe(siteConfig.auth.emailOtp.expiresIn);
     expect(otp.allowedAttempts).toBe(siteConfig.auth.emailOtp.allowedAttempts);
-    // 验证码只存哈希，库里拿不到明文。
+    // Codes are stored only as hashes; the plaintext is never in the database.
     expect(otp.storeOTP).toBe("hashed");
-    // 按 IP 的发送频率由插件自己限，按邮箱的重发冷却由 otpResendCooldown 负责。
+    // The plugin itself rate limits sends by IP; the per-email resend cooldown is otpResendCooldown's
+    // job.
     expect(otp.rateLimit).toEqual({ window: 60, max: 5 });
   });
 
-  test("重发冷却秒数取自 siteConfig.auth.emailOtp.resendCooldown", async () => {
+  test("the resend cooldown seconds come from siteConfig.auth.emailOtp.resendCooldown", async () => {
     const { handler } = beforeHook(optionsOf(auth), "otp-resend-cooldown");
     const created: { identifier: string; value: string; expiresAt: Date }[] =
       [];
@@ -332,13 +344,13 @@ describe("Better Auth 配置", () => {
     expect(created).toHaveLength(1);
     const record = created[0]!;
     expect(record.identifier).toBe(cooldownIdentifier("ada@example.com"));
-    // 用 expiresAt - value 算间隔，不依赖真实时钟。
+    // Compute the interval as expiresAt - value, independent of the real clock.
     expect(
       new Date(record.expiresAt).getTime() - new Date(record.value).getTime(),
     ).toBe(siteConfig.auth.emailOtp.resendCooldown * 1000);
   });
 
-  test("admin 插件带上封禁提示，且不开放模拟登录", () => {
+  test("the admin plugin sets the ban message and doesn't allow impersonation", () => {
     const adminOptions = plugin(optionsOf(auth), "admin").options as {
       bannedUserMessage: string;
       roles: { admin: { statements: { user: string[] } } };
@@ -350,24 +362,24 @@ describe("Better Auth 配置", () => {
     expect(
       actions.filter((action) => action.startsWith("impersonate")),
     ).toEqual([]);
-    // 别把权限收得只剩空壳：常规的用户管理动作还在。
+    // Don't strip permissions down to an empty shell: the usual user management actions remain.
     expect(actions).toContain("ban");
     expect(actions).toContain("update");
   });
 
-  test("账号合并：信任 Google，同邮箱两条登录路径进同一个账号", () => {
+  test("account linking: trusts Google, so both sign-in paths for the same email reach one account", () => {
     const options = optionsOf(auth);
     expect(options.account.accountLinking.enabled).toBe(true);
     expect(options.account.accountLinking.trustedProviders).toContain("google");
   });
 
-  test("One Tap 回调端点按 IP 限流，挡住被当成免费验签服务刷", () => {
+  test("the One Tap callback endpoint is rate limited by IP so it can't be abused as a free verification service", () => {
     const rules = optionsOf(auth).rateLimit.customRules;
     expect(rules["/sign-in/social"]).toEqual({ window: 60, max: 10 });
     expect(rules["/one-tap/callback"]).toEqual({ window: 60, max: 10 });
   });
 
-  test("locale 字段只接受站点启用的语言", () => {
+  test("the locale field only accepts locales enabled on the site", () => {
     const field = optionsOf(auth).user.additionalFields.locale;
     for (const locale of routing.locales) {
       expect(field.validator.input.safeParse(locale).success).toBe(true);
@@ -376,26 +388,27 @@ describe("Better Auth 配置", () => {
     expect(field.validator.input.safeParse(undefined).success).toBe(false);
   });
 
-  test("baseURL 与 resolveAuthBaseURL 同源", () => {
+  test("baseURL comes from resolveAuthBaseURL", () => {
     expect(optionsOf(auth).baseURL).toEqual(
       resolveAuthBaseURL(process.env, siteConfig.domain),
     );
   });
 });
 
-describe("Google 凭据与 One Tap", () => {
-  test("有没有 Google 凭据决定 socialProviders 和 oneTap 的注册", () => {
+describe("Google credentials and One Tap", () => {
+  test("Google credentials decide whether socialProviders and oneTap are registered", () => {
     const options = optionsOf(auth);
-    // 本地 .env.local 和 CI 的凭据情况不同，期望值从同一个判断函数推导，两边都成立。
+    // Local .env.local and CI differ in which credentials they have; expected values are derived
+    // from the same check function, so the test holds in both.
     expect(pluginIds(options).includes("one-tap")).toBe(hasGoogle);
     if (hasGoogle) {
       const credentials = googleCredentials(process.env);
       expect(options.socialProviders?.google).toMatchObject({
         clientId: credentials?.clientId,
-        // 每次都要问用哪个账号，别静默用上一次的。
+        // Always ask which account to use; don't silently reuse the last one.
         prompt: "select_account",
       });
-      // One Tap 的 audience 只有一个来源：和 socialProviders 同一个 clientId。
+      // One Tap's audience has a single source: the same clientId as socialProviders.
       expect(plugin(options, "one-tap").options?.clientId).toBe(
         credentials?.clientId,
       );
@@ -404,7 +417,7 @@ describe("Google 凭据与 One Tap", () => {
     }
   });
 
-  test("缺凭据时（本地 / CI / 预览）连 socialProviders 都不给", async () => {
+  test("without credentials (local / CI / preview) there are no socialProviders at all", async () => {
     vi.stubEnv("GOOGLE_CLIENT_ID", undefined);
     vi.stubEnv("GOOGLE_CLIENT_SECRET", undefined);
     try {
@@ -412,7 +425,7 @@ describe("Google 凭据与 One Tap", () => {
       const options = await freshAuth();
       expect(options.socialProviders).toBeUndefined();
       expect(pluginIds(options)).not.toContain("one-tap");
-      // 少了 One Tap，emailOTP 和 admin 照常装配。
+      // Without One Tap, emailOTP and admin are still wired up as usual.
       expect(pluginIds(options)).toContain("email-otp");
       expect(pluginIds(options)).toContain("admin");
     } finally {
@@ -449,9 +462,9 @@ describe("sendVerificationOTP", () => {
     };
   }
 
-  // 哪些类型发哪种邮件由 `otpEmail()` 决定（见 otp-email.test.ts），这里只钉住
-  // 「映射返回 null 时什么都不做」：不发信，也不动冷却。
-  test("没有对应模板的类型不发信，也不动冷却", async () => {
+  // Which types send which email is decided by `otpEmail()` (see otp-email.test.ts); this only pins
+  // down that a null mapping does nothing: no email, and the cooldown is left alone.
+  test("types without a template send nothing and leave the cooldown alone", async () => {
     const ctx = otpCtx({ headers: new Headers({ "x-locale": "en" }) });
     await sendVerificationOTP()(
       { email: "ada@example.com", otp: "123456", type: "forget-password" },
@@ -461,7 +474,7 @@ describe("sendVerificationOTP", () => {
     expect(ctx.deleteVerificationByIdentifier).not.toHaveBeenCalled();
   });
 
-  test("sign-in 时发 sign-in-code 邮件，过期时间按分钟取整", async () => {
+  test("sign-in sends the sign-in-code email with the expiry rounded to minutes", async () => {
     const ctx = otpCtx({ headers: new Headers({ "x-locale": "en" }) });
     await sendVerificationOTP()(
       { email: "ada@example.com", otp: "123456", type: "sign-in" },
@@ -477,11 +490,11 @@ describe("sendVerificationOTP", () => {
       },
       locale: "en",
     });
-    // 发成功就不动冷却，用户必须等冷却结束才能重发。
+    // A successful send leaves the cooldown in place; the user must wait for it to end to resend.
     expect(ctx.deleteVerificationByIdentifier).not.toHaveBeenCalled();
   });
 
-  test("发信失败：删掉冷却记录并抛 EMAIL_SEND_FAILED，让用户可以立刻重试", async () => {
+  test("send failure: deletes the cooldown record and throws EMAIL_SEND_FAILED so the user can retry right away", async () => {
     const ctx = otpCtx({ headers: new Headers({ "x-locale": "en" }) });
     mocks.sendEmail.mockRejectedValue(new Error("resend 502"));
 
@@ -494,7 +507,7 @@ describe("sendVerificationOTP", () => {
       type: "sign-in",
       outcome: "retry",
     });
-    // identifier 按邮箱归一化，和 cooldown 插件写进去的是同一个 key。
+    // The identifier is normalized by email, the same key the cooldown plugin writes.
     expect(ctx.deleteVerificationByIdentifier).toHaveBeenCalledWith(
       cooldownIdentifier(" Ada@Example.com "),
     );
@@ -506,7 +519,7 @@ describe("sendVerificationOTP", () => {
     });
   });
 
-  test("入队本身失败（数据库不可用）：同样是明确的 EMAIL_SEND_FAILED，不是 500；冷却清掉可立即重试", async () => {
+  test("enqueue failure (database unavailable): still a clear EMAIL_SEND_FAILED, not a 500; the cooldown is cleared for an immediate retry", async () => {
     const ctx = otpCtx({ headers: new Headers({ "x-locale": "en" }) });
     vi.mocked(notificationOutbox.enqueue).mockRejectedValueOnce(
       new Error("connection refused"),
@@ -530,7 +543,7 @@ describe("sendVerificationOTP", () => {
       body: { code: EMAIL_SEND_FAILED },
     });
 
-    // 数据库恢复后再请求一次（冷却已清）：正常发出。
+    // Request again once the database recovers (cooldown cleared): sent normally.
     await sendVerificationOTP()(
       { email: "ada@example.com", otp: "654321", type: "sign-in" },
       ctx,
@@ -538,7 +551,7 @@ describe("sendVerificationOTP", () => {
     expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
   });
 
-  test("验证码入队时加密存放、到期作废、取代同一邮箱没发出的旧码", async () => {
+  test("enqueued codes are stored encrypted, expire, and supersede unsent older codes for the same email", async () => {
     const ctx = otpCtx({ headers: new Headers({ "x-locale": "en" }) });
     await sendVerificationOTP()(
       { email: "Ada@Example.com", otp: "123456", type: "sign-in" },
@@ -556,7 +569,7 @@ describe("sendVerificationOTP", () => {
     );
   });
 
-  test("删冷却记录本身失败也要抛同一个错误（冷却没清掉好过不报错）", async () => {
+  test("throws the same error even when deleting the cooldown record fails (an uncleared cooldown beats no error)", async () => {
     const ctx = otpCtx({
       headers: new Headers({ "x-locale": "en" }),
       deleteFails: true,
@@ -572,7 +585,7 @@ describe("sendVerificationOTP", () => {
     expect(ctx.deleteVerificationByIdentifier).toHaveBeenCalled();
   });
 
-  test("没有 ctx 时（内部调用）也能抛出同一个错误", async () => {
+  test("throws the same error without a ctx (internal calls)", async () => {
     mocks.sendEmail.mockRejectedValue(new Error("resend 502"));
     await expect(
       sendVerificationOTP()(
@@ -582,7 +595,7 @@ describe("sendVerificationOTP", () => {
     ).rejects.toMatchObject({ body: { code: EMAIL_SEND_FAILED } });
   });
 
-  test("邮件语言跟随请求头", async () => {
+  test("the email language follows the request headers", async () => {
     const ctx = otpCtx({
       headers: new Headers({ cookie: `NEXT_LOCALE=${secondLocale}` }),
     });
@@ -608,13 +621,13 @@ describe("session.create.after", () => {
     return sessionAfter;
   }
 
-  test("ctx 缺失时什么都不做（adapter 拿不到）", async () => {
+  test("does nothing without a ctx (no adapter available)", async () => {
     const hook = await sessionHook();
     await hook({ userId: "user_1" }, null);
     expect(mocks.linkRegistration).not.toHaveBeenCalled();
   });
 
-  test("ADMIN_EMAILS 里的已验证用户登录后提升为 admin", async () => {
+  test("verified users in ADMIN_EMAILS are promoted to admin on sign-in", async () => {
     const hook = await sessionHook();
     const ctx = createCtx({
       user: account({ email: ADMIN_EMAIL.toUpperCase() }),
@@ -622,11 +635,11 @@ describe("session.create.after", () => {
     await hook({ userId: "user_1" }, hookCtx(ctx));
 
     expect(ctx.findUserById).toHaveBeenCalledWith("user_1");
-    // 与 admin 插件的角色拼法一致：只写 admin。
+    // Matches the admin plugin's role spelling: just admin.
     expect(ctx.updateUser).toHaveBeenCalledWith("user_1", { role: "admin" });
   });
 
-  test("未验证邮箱、不在名单或已是 admin 都不重复提升", async () => {
+  test("unverified emails, users not on the list, and existing admins are not promoted again", async () => {
     const hook = await sessionHook();
 
     for (const user of [
@@ -640,7 +653,7 @@ describe("session.create.after", () => {
     }
   });
 
-  test("适配器查不到用户时跳过提升和留资", async () => {
+  test("skips promotion and lead linking when the adapter can't find the user", async () => {
     const hook = await sessionHook();
     const ctx = createCtx({});
     await hook({ userId: "ghost" }, hookCtx(ctx));
@@ -648,7 +661,7 @@ describe("session.create.after", () => {
     expect(mocks.linkRegistration).not.toHaveBeenCalled();
   });
 
-  test("没有来源 cookie 时把渠道归因继承给已有留资", async () => {
+  test("passes channel attribution on to an existing lead when there is no source cookie", async () => {
     const hook = await sessionHook();
     const user = account({ email: "ada@example.com" });
     const ctx = createCtx({ user });
@@ -657,20 +670,20 @@ describe("session.create.after", () => {
     expect(mocks.linkRegistration).toHaveBeenCalledWith(user, true);
   });
 
-  test("没配 ADMIN_EMAILS 时照样为留资做链接，但没人被提升", async () => {
+  test("still links leads without ADMIN_EMAILS configured, but promotes no one", async () => {
     vi.stubEnv("ADMIN_EMAILS", undefined);
     const { sessionAfter } = await importHooks();
     const user = account({ email: ADMIN_EMAIL });
     const ctx = createCtx({ user });
     await sessionAfter({ userId: user.id }, hookCtx(ctx));
 
-    // 提前返回的条件是「没有管理员邮箱 **且** 留资关闭」，这里留资开着。
+    // The early return requires "no admin emails **and** leads disabled"; leads are on here.
     expect(ctx.findUserById).toHaveBeenCalledWith(user.id);
     expect(mocks.linkRegistration).toHaveBeenCalledWith(user, true);
     expect(ctx.updateUser).not.toHaveBeenCalled();
   });
 
-  test("用户明确拒绝归因时不继承来源", async () => {
+  test("doesn't pass on the source when the user explicitly declined attribution", async () => {
     const hook = await sessionHook();
     const user = account();
     const ctx = createCtx({
@@ -682,7 +695,7 @@ describe("session.create.after", () => {
     expect(mocks.linkRegistration).toHaveBeenCalledWith(user, false);
   });
 
-  test("留资链接失败只记日志，不影响这次登录", async () => {
+  test("a lead linking failure is only logged and doesn't affect this sign-in", async () => {
     const hook = await sessionHook();
     const user = account();
     const ctx = createCtx({ user });
@@ -710,7 +723,7 @@ describe("user.create.after", () => {
     return userAfter;
   }
 
-  test("归因、邀请绑定、留资链接按顺序执行，最后才排队发信", async () => {
+  test("runs attribution, referral binding, and lead linking in order, and queues emails last", async () => {
     const hook = await createHook();
     const order: string[] = [];
     mocks.registerAttribution.mockImplementation(async () => {
@@ -733,10 +746,11 @@ describe("user.create.after", () => {
     const ctx = createCtx({ user, headers: new Headers({ "x-locale": "en" }) });
     await hook(user, hookCtx(ctx));
 
-    // 同步部分：先记归因、再绑邀请、最后连留资。
+    // Synchronous part: record attribution, then bind the referral, then link the lead.
     expect(order).toEqual(["attribution", "referral", "leads"]);
 
-    // 邮件和转化事件排在响应之后：注册请求返回前不会发信。
+    // Emails and the conversion event are queued after the response: nothing is sent before the
+    // sign-up request returns.
     expect(mocks.sendEmail).not.toHaveBeenCalled();
     expect(mocks.trackServer).not.toHaveBeenCalled();
     expect(mocks.queued).toHaveLength(2);
@@ -751,7 +765,7 @@ describe("user.create.after", () => {
     ]);
   });
 
-  test("归因拿到写 cookie 的能力，邀请绑定和留资拿到同一份 headers", async () => {
+  test("attribution can write cookies, and referral binding and lead linking get the same headers", async () => {
     const hook = await createHook();
     const user = account();
     const headers = new Headers({ "x-locale": "en" });
@@ -767,13 +781,15 @@ describe("user.create.after", () => {
     expect(mocks.linkRegistration).toHaveBeenCalledWith(user, true);
   });
 
-  test("归因和邀请绑定用配置开关与同一个 secret 构造", async () => {
+  test("attribution and referral binding are built from the config flags and the same secret", async () => {
     const hook = await createHook();
     const user = account();
-    // service 是惰性取的（调用时才 createLeadService(db)），所以要先跑一次 hook。
+    // The service is created lazily (createLeadService(db) only runs on call), so run the hook once
+    // first.
     await hook(user, hookCtx(createCtx({ user })));
 
-    // 签名与验签必须是同一个 secret，否则注册时的上下文读不回来。
+    // Signing and signature verification must use the same secret, or the sign-up context can't be
+    // read back.
     const secret = env.BETTER_AUTH_SECRET;
     expect(mocks.createRegistrationAttribution).toHaveBeenCalledWith({
       enabled: siteConfig.acquisition.attribution.enabled,
@@ -787,11 +803,11 @@ describe("user.create.after", () => {
       bind: mocks.bind,
       warn: expect.any(Function),
     });
-    // 两个 service 都挂在同一个 db 上（mock 里就是那个空对象）。
+    // Both services sit on the same db (the empty object in the mock).
     expect(mocks.createLeadService).toHaveBeenCalledWith(expect.anything());
     expect(mocks.createReferralService).toHaveBeenCalledWith(expect.anything());
 
-    // 告警出口接的是结构化日志：两个模块内部的失败都会走到这里。
+    // The warning sink is the structured logger: internal failures in both modules end up here.
     const [registrationDeps] = mocks.createRegistrationAttribution.mock
       .calls[0] as unknown as [
       { warn: (event: string, fields: unknown) => void },
@@ -811,7 +827,7 @@ describe("user.create.after", () => {
     });
   });
 
-  test("ctx 缺失时不传 setCookie，也不影响注册", async () => {
+  test("passes no setCookie without a ctx, and sign-up still works", async () => {
     const hook = await createHook();
     const user = account();
     await expect(hook(user, null)).resolves.toBeUndefined();
@@ -822,14 +838,14 @@ describe("user.create.after", () => {
     );
   });
 
-  test("归因失败时能借 ctx 写下 24h 重试 cookie", async () => {
+  test("when attribution fails it can use ctx to write a 24h retry cookie", async () => {
     const hook = await createHook();
     const user = account();
     const ctx = createCtx({ user });
     await hook(user, hookCtx(ctx));
 
-    // server.ts 把 ctx.setCookie 包一层交给归因模块：只有它在 request 作用域里
-    // 才写得出 cookie（重试令牌），所以这层转发不能丢。
+    // server.ts wraps ctx.setCookie and hands it to the attribution module: only it can write
+    // cookies (the retry token) within the request scope, so this forwarding must stay.
     const setCookie = mocks.registerAttribution.mock.calls[0]?.[2] as
       | ((name: string, value: string, options: { maxAge: number }) => unknown)
       | undefined;
@@ -842,7 +858,7 @@ describe("user.create.after", () => {
     );
   });
 
-  test("留资链接失败只记日志，不影响注册", async () => {
+  test("a lead linking failure is only logged and doesn't affect sign-up", async () => {
     const hook = await createHook();
     const user = account();
     mocks.linkRegistration.mockRejectedValue(new Error("db down"));
@@ -854,11 +870,11 @@ describe("user.create.after", () => {
       "leads.registration_link_failed",
       { userId: user.id },
     );
-    // 失败也不该拦住欢迎邮件和转化事件。
+    // A failure also mustn't block the welcome email or the conversion event.
     expect(mocks.queued).toHaveLength(2);
   });
 
-  test("发欢迎邮件失败只记日志，任务不抛错", async () => {
+  test("a failed welcome email is only logged, and the task doesn't throw", async () => {
     const hook = await createHook();
     mocks.sendEmail.mockRejectedValue(new Error("resend 502"));
     const user = account();
@@ -873,7 +889,7 @@ describe("user.create.after", () => {
     );
   });
 
-  test("欢迎邮件用请求语言，名字缺省时传 undefined", async () => {
+  test("the welcome email uses the request locale and passes undefined when the name is missing", async () => {
     const hook = await createHook();
     const user = account({ name: "" });
     await hook(
@@ -895,7 +911,7 @@ describe("user.create.after", () => {
     });
   });
 
-  test("注册事件带访客 headers，用同一份来源统计", async () => {
+  test("the sign-up event carries the visitor headers for the same source attribution", async () => {
     const hook = await createHook();
     const user = account();
     const headers = new Headers({ "x-locale": "en" });
@@ -907,7 +923,7 @@ describe("user.create.after", () => {
     });
   });
 
-  test("留资链接用「未拒绝来源」推断是否继承渠道", async () => {
+  test('lead linking infers whether to inherit the channel from "source not declined"', async () => {
     const hook = await createHook();
     const declined = new Headers({ cookie: "source_preference=declined" });
     const user = account();

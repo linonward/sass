@@ -2,59 +2,60 @@ import { describe, expect, test } from "vitest";
 
 import { displayCurrency, formatMoney, formatMoneyList } from "./money";
 
-/** 和 next-intl 的 getFormatter() 同一形状：透传给 Intl.NumberFormat。 */
+/** Same shape as next-intl's getFormatter(): passes straight through to Intl.NumberFormat. */
 const format = {
   number: (value: number, options?: Intl.NumberFormatOptions) =>
     new Intl.NumberFormat("en-US", options).format(value),
 };
 
-describe("币种归一化", () => {
-  test("NULL 和空白用兜底币种，统一大写", () => {
+describe("currency normalization", () => {
+  test("NULL and blank use the fallback currency; everything is uppercased", () => {
     expect(displayCurrency(null, "USD")).toBe("USD");
     expect(displayCurrency("", "usd")).toBe("USD");
     expect(displayCurrency("  ", "USD")).toBe("USD");
     expect(displayCurrency("usd", "USD")).toBe("USD");
   });
 
-  test("没有兜底时保持为空", () => {
+  test("stays empty without a fallback", () => {
     expect(displayCurrency(null, null)).toBeNull();
   });
 });
 
-describe("金额格式化", () => {
-  test("NULL 币种用兜底币种，不显示成裸数字", () => {
+describe("amount formatting", () => {
+  test("a NULL currency uses the fallback currency instead of a bare number", () => {
     expect(formatMoney(format, 1250, null, "USD")).toBe("$12.50");
   });
 
-  test("小写币种和大写是同一种货币", () => {
+  test("lowercase and uppercase codes are the same currency", () => {
     expect(formatMoney(format, 1250, "usd", "USD")).toBe(
       formatMoney(format, 1250, "USD", "USD"),
     );
   });
 
-  // orders.currency 是自由文本列：坏数据不能让整页 500（Intl 对非法币种抛 RangeError）。
-  // 没有币种符号时沿用原样：`maximumFractionDigits: 2` 不补零（12.5 而不是 12.50）。
-  test("非法币种退回「数字 + 原代码」，不抛", () => {
+  // orders.currency is a free-text column: bad data must not 500 the whole page (Intl throws
+  // RangeError on invalid currencies). Without a currency symbol the number is kept as is:
+  // `maximumFractionDigits: 2` doesn't pad zeros (12.5, not 12.50).
+  test('an invalid currency falls back to "number + raw code" without throwing', () => {
     expect(formatMoney(format, 1250, "USDC", "USD")).toBe("12.5 USDC");
     expect(formatMoney(format, 1250, "US dollar", null)).toBe("12.5 US DOLLAR");
   });
 
-  test("没有兜底币种时只显示数字", () => {
+  test("shows only the number when there's no fallback currency", () => {
     expect(formatMoney(format, 1250, null, null)).toBe("12.5");
   });
 
-  test("整金额不带小数位", () => {
+  test("whole amounts have no decimals", () => {
     expect(formatMoney(format, 1200, "USD", "USD")).toBe("$12");
     expect(formatMoney(format, 1200, "USDC", null)).toBe("12 USDC");
   });
 });
 
-describe("一格多个币种", () => {
-  test("空的显示成破折号", () => {
+describe("multiple currencies in one cell", () => {
+  test("empty shows as a dash", () => {
     expect(formatMoneyList(format, [], "USD")).toBe("—");
   });
 
-  test("同一种货币的两种写法合并成一条，不拆行", () => {
+  test("two spellings of the same currency merge into one entry", () => {
     expect(
       formatMoneyList(
         format,
@@ -67,7 +68,7 @@ describe("一格多个币种", () => {
     ).toBe("$12");
   });
 
-  test("不同币种按金额从大到小排", () => {
+  test("different currencies are sorted by amount, largest first", () => {
     expect(
       formatMoneyList(
         format,
