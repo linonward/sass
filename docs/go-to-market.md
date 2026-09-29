@@ -4,6 +4,57 @@
 
 本文件是策略文档，不是执行任务卡。具体实施步骤拆分到对应阶段再落成任务。
 
+## 对外品牌与推广素材
+
+产品名统一写作 **OnwardKit**（O、K 大写），中文解释为「AI 产品出海启动套件」。中文传播保留英文名，便于跨平台搜索。
+
+- 英文标语：The starter kit for your AI business.
+- 中文标语：把你的 AI 产品，做成可以收费的生意。
+- 目标用户：希望将 AI 工具做成收费产品的独立开发者。
+- 核心主张：登录、支付、积分和 AI 已接好，开发者可以把时间留给产品。
+
+### 社交账号简介（可直接使用）
+
+**中文**
+
+OnwardKit｜AI 产品出海启动套件。登录、支付、积分与 AI 已接好，把时间留给你的产品。
+
+**English**
+
+OnwardKit — The starter kit for your AI business. Auth, payments, credits and AI, already connected. Built for independent makers.
+
+账号显示名建议用「OnwardKit」，中文平台可用「OnwardKit · AI 产品出海」。用户名候选为 onwardkit、useonwardkit；尚未确认可用或注册。域名与商标也尚未核验，不在文案中假定拥有某个地址。
+
+### 首次介绍文案（发布草稿）
+
+**中文**
+
+我在做 OnwardKit，一个面向独立开发者的 AI 产品出海启动套件。
+
+做 AI 产品，除了接模型，还要处理登录、收款、积分扣费和使用记录。OnwardKit 把这些基础能力接在一起，让你把时间留给自己的产品。
+
+基于 Next.js + TypeScript，支持 Creem、Stripe 和 Lemon Squeezy，提供中英文界面与可切换的品牌主题。
+
+接下来会分享产品演示和开发过程。你在做 AI 产品时，最想省掉哪一段重复工作？
+
+**English**
+
+Meet OnwardKit, a Next.js + TypeScript starter kit for your AI business.
+
+Auth, payments, credits and AI are already connected, so you can spend more time on your product. Includes Creem, Stripe and Lemon Squeezy integrations, English and Chinese interfaces, and configurable brand themes.
+
+I'll be sharing demos and the build process. What takes the most time when you turn an AI idea into a paid product?
+
+文案不承诺尚未确定的售价、上线时限、客户数量或终身更新。发布前补上实际演示链接；未确定链接时省略，不使用示例域名。
+
+### 官方演示与买家品牌的边界
+
+- README 和推广资料使用 OnwardKit；买家应用的默认名称仍是 Acme 占位值。
+- 官方演示在本地环境或部署环境设置 `SITE_NAME=OnwardKit`，重新构建／启动。导航、页脚、页面标题、分享图和邮件沿用现有站点配置读取名称，不在组件内写死品牌。
+- `SITE_DOMAIN`、`SITE_LEGAL_NAME`、`SITE_EMAIL_FROM` 分别填写实际域名、法律主体、已验证的发信地址；产品名不能替代法律主体。
+- 部署验收：检查中英首页标题、导航和页脚名称、`/opengraph-image`，并确认 375px 下名称、语言和主题按钮无挤压或横向溢出。
+- 仓库地址与更新清单中的 `sass-template` 保持原标识，避免破坏买家升级路径。
+
 ## 1. 竞争分析的核心结论
 
 竞品对比揭示了三件事：
