@@ -55,7 +55,11 @@ fs.writeFileSync(
 
 const run = (args: string[]) =>
   execFileSync("pnpm", args, { cwd: dest, stdio: "inherit" });
-run(["install", "--offline", "--frozen-lockfile"]);
+// 别把 --prefer-offline 改回 --offline：Ubuntu 26 的 runner 把 /tmp 挂成独立 tmpfs，
+// 而 pnpm 的默认 store 必须与项目同文件系统 —— 副本因此会用上另一个（空的）store，
+// --offline 立刻以 ERR_PNPM_NO_OFFLINE_TARBALL 失败。--prefer-offline 只是允许联网
+// 补缺：store 里有的照旧硬链接、不下载。
+run(["install", "--prefer-offline", "--frozen-lockfile"]);
 
 if (process.env.CI) {
   run(["build"]);

@@ -25,10 +25,13 @@ for (const file of [...new Set([...files, ".env.local"])]) {
   fs.mkdirSync(path.dirname(path.join(dest, file)), { recursive: true });
   fs.copyFileSync(from, path.join(dest, file));
 }
-// 依赖装到这份副本里（--offline 从 pnpm store 硬链接，不下载、不占额外磁盘，几秒钟）。
+// 依赖装到这份副本里。别把 --prefer-offline 改回 --offline：Ubuntu 26 的 runner 把 /tmp
+// 挂成独立 tmpfs，而 pnpm 的默认 store 必须与项目同文件系统 —— 副本因此会用上另一个
+// （空的）store，--offline 立刻以 ERR_PNPM_NO_OFFLINE_TARBALL 失败。--prefer-offline
+// 只是允许联网补缺：store 里有的照旧硬链接、不下载。
 // 试过把 node_modules 软链过来，Turbopack 直接拒绝启动：
 // "Symlink [project]/node_modules is invalid, it points out of the filesystem root"。
-execFileSync("pnpm", ["install", "--offline", "--frozen-lockfile"], {
+execFileSync("pnpm", ["install", "--prefer-offline", "--frozen-lockfile"], {
   cwd: dest,
   stdio: "inherit",
 });
