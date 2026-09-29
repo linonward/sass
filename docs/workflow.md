@@ -81,8 +81,12 @@ EMAIL_TRANSPORT=file E2E_PORT=3100 \
 
 ## 提交 PR
 
+开 PR 前先 rebase 到最新的 `main`：
+
 ```bash
-git push -u origin <type>/<topic>
+git fetch origin
+git rebase origin/main
+git push -u origin <type>/<topic>   # rebase 过已推送的分支用 --force-with-lease
 gh pr create --base main --title "<任务ID> <type>: <描述>" --body-file <说明文件>
 ```
 
@@ -95,22 +99,38 @@ PR 描述需要包含：
 
 **同一个 PR 里要把任务表中该任务的状态改成 `done`。**
 
+PR 挂着期间 `main` 往前走了（别的 worktree 先合入），合入前要再 rebase 一次，等 CI 在新基线上重新跑绿。两个原因：
+
+- 几乎每个 PR 都改 `docs/tasks/README.md` 的状态行，基于旧 `main` 的分支最容易在这里冲突。
+- 语义冲突：git 能自动合并、文本上没冲突，合进去行为却不对（比如对方改了你调用的函数）。只有在最新 `main` 上重跑 CI 才看得出来。
+
+分支保护开了「Require branches to be up to date」，落后 `main` 时合并按钮是灰的，这条由 GitHub 强制。
+
 ## 合入与清理
 
-- 用 squash merge，合入后删除远程分支。
-- 清理本地：
+- 用 squash merge，合入后删除远程分支。**`--subject` 必须写 PR 标题**：不写时 `gh` 会拿分支上的提交信息当 squash 提交的标题，`main` 上那条就丢了任务 ID（#169、#171 都是这样进去的）。
+
+```bash
+gh pr merge <PR 号> --squash --delete-branch --subject "<任务ID> <type>: <描述> (#<PR 号>)"
+```
+
+- 清理本地（先在 worktree 里 `git status` 确认没有未提交的改动）：
 
 ```bash
 cd ../sass
 git worktree remove ../sass-<topic>
-git branch -d <type>/<topic>
+git branch -D <type>/<topic>   # squash 后分支不是 main 的祖先，-d 会拒绝
 git pull --ff-only
 ```
 
 ## GitHub 仓库设置
 
-建好远程仓库后，对 `main` 开启分支保护：
+`main` 的分支保护（Settings → Branches，2026-09-30 起生效）：
 
-- 必须通过 PR 合入（Require a pull request before merging）
-- T101 合入后，要求 CI 通过（Require status checks: `ci`）
-- 禁止 force push
+- 必须通过 PR 合入（Require a pull request before merging），不要求 approval
+- 要求 CI 通过（Require status checks: `ci`）：只选 `ci` 这一个，它在其余 job 全部通过后才变绿
+- 合并前分支必须与 `main` 同步（Require branches to be up to date before merging）：至少选中一个状态检查它才生效
+- 禁止 force push、禁止删除
+- 不对管理员强制（Do not allow bypassing 未勾），仓库所有者仍可绕过，只在紧急修复时用
+
+核对当前设置：`gh api repos/linonward/sass/branches/main/protection/required_status_checks`，`checks` 里应该有 `ci`、`strict` 为 `true`。
