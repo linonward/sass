@@ -2,7 +2,7 @@ import { Button } from "react-email";
 
 import { emailBrand as brand } from "../brand";
 
-/** 品牌色主按钮。 */
+/** Primary button in the brand color. */
 export function EmailButton({
   href,
   children,

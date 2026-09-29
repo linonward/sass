@@ -6,9 +6,9 @@ import { EmailLayout, emailStyles } from "../components/email-layout";
 import { emailTranslator, type EmailT } from "../translator";
 
 export type WelcomeProps = {
-  /** 用户名；为空时用通用称呼。 */
+  /** User's name; a generic greeting is used when empty. */
   name?: string;
-  /** 按钮链接，默认是当前语言的站点首页。 */
+  /** Button link; defaults to the site home page for the current locale. */
   ctaUrl?: string;
 };
 

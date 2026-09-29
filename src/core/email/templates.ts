@@ -41,7 +41,8 @@ import WelcomeEmail, {
   type WelcomeProps,
 } from "./templates/welcome";
 import type { EmailT } from "./translator";
-// 业务模块的模板：组件放在模块自己的目录里，在这里登记。
+// Templates from feature modules: the component lives in the module's own directory and is
+// registered here.
 import DownloadReadyEmail, {
   downloadReadySubject,
   type DownloadReadyProps,
@@ -52,7 +53,10 @@ type TemplateDefinition<P> = {
   subject: (t: EmailT, props: P) => string;
 };
 
-/** 模板名 → 组件与 props 类型。新增模板时在这里登记，sendEmail 的参数会随之获得类型检查。 */
+/**
+ * Template name → component and props type. Register new templates here and sendEmail's arguments
+ * get type-checked accordingly.
+ */
 export const emailTemplates = {
   "lead-confirmation": {
     Component: LeadConfirmationEmail,
@@ -116,7 +120,7 @@ export type EmailTemplateProps = {
   "download-ready": DownloadReadyProps;
 };
 
-/** 按模板名取定义，props 类型随模板名收窄。 */
+/** Looks up a definition by template name; the props type narrows with the name. */
 export function getEmailTemplate<T extends EmailTemplateName>(
   name: T,
 ): TemplateDefinition<EmailTemplateProps[T]> {

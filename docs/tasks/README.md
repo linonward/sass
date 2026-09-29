@@ -179,7 +179,7 @@
 | **阶段 26：交付内容英文化** |                         |                                |                               |      |
 | T2600                       | english-plan            | `docs/english-plan`            | —                             | done |
 | T2601                       | english-core-billing    | `chore/english-core-billing`   | T2600                         | done |
-| T2602                       | english-core-identity   | `chore/english-core-identity`  | T2601、T2501                  | todo |
+| T2602                       | english-core-identity   | `chore/english-core-identity`  | T2601、T2501                  | done |
 | T2603                       | english-core-rest       | `chore/english-core-rest`      | T2601、T2501                  | todo |
 | T2604                       | english-app             | `chore/english-app`            | T2601、T2501                  | todo |
 | T2605                       | english-docs            | `docs/english-docs`            | T2602、T2603、T2604           | todo |

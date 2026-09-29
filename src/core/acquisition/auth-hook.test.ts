@@ -110,9 +110,11 @@ describe("configured Better Auth creation hook", () => {
       },
       context,
     );
-    // 注册身份由服务端给出；邀请人不在请求里，只在 cookie 的码里。
+    // The sign-up identity comes from the server; the inviter isn't in the request, only in the
+    // cookie's code.
     expect(bind).toHaveBeenCalledWith({ inviteeUserId: "new-user", code });
-    // 两条上下文各走各的：UTM 归因照旧落库，不被邀请覆盖。
+    // The two contexts stay separate: UTM attribution is stored as usual and not overwritten by the
+    // invite.
     expect(freeze).toHaveBeenCalledWith(
       "new-user",
       snapshot,
@@ -120,7 +122,7 @@ describe("configured Better Auth creation hook", () => {
     );
   });
 
-  test("没有邀请上下文时不写关系", async () => {
+  test("writes no relationship without a referral context", async () => {
     const headers = new Headers();
     await hook(
       {

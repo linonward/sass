@@ -12,7 +12,7 @@ export type PaymentFailedProps = {
   planName?: string;
   amount?: number;
   currency?: string;
-  /** 账单页：用户在这里打开客户门户更新付款方式。 */
+  /** Billing page, where the user opens the customer portal to update their payment method. */
   manageUrl: string;
 };
 

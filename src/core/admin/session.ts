@@ -6,7 +6,10 @@ import { getSession } from "@/core/auth/session";
 import { adminEnabled } from "./index";
 import { isAdmin } from "./roles";
 
-/** 当前请求的管理员 session；未登录、不是 admin 或 features.admin 关闭时为 null。 */
+/**
+ * The admin session for the current request; null when signed out, not an admin, or
+ * features.admin is off.
+ */
 export const getAdminSession = cache(async () => {
   if (!adminEnabled) return null;
   const session = await getSession();
@@ -14,8 +17,9 @@ export const getAdminSession = cache(async () => {
 });
 
 /**
- * 后台页面开头调用：不是管理员时返回 404（不暴露后台的存在，也不跳转登录页）。
- * layout 和 page 是并行渲染的，layout 里的检查挡不住 page，所以每个页面都要调用。
+ * Call at the top of admin pages: returns 404 for non-admins (doesn't reveal that the admin panel
+ * exists, and doesn't redirect to sign-in). Layout and page render in parallel, so a check in the
+ * layout can't guard the page — every page must call this.
  */
 export async function requireAdmin() {
   return (await getAdminSession()) ?? notFound();

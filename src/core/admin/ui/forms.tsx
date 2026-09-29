@@ -32,8 +32,8 @@ function useAdminMessage(state: AdminActionState, success?: string) {
 }
 
 /**
- * 调整积分。requestId 由服务端生成：第一次来自页面，之后每次成功由 action 返回新的，
- * 同一个 ID 重复提交只生效一次。
+ * Adjust credits. requestId is generated server-side: the first comes from the page, and each
+ * success returns a new one from the action; resubmitting the same ID takes effect only once.
  */
 export function AdjustCreditsForm({
   userId,
@@ -93,7 +93,7 @@ export function AdjustCreditsForm({
   );
 }
 
-/** 封禁（带可选原因）或解除封禁。 */
+/** Ban (with an optional reason) or lift a ban. */
 export function BanForm({
   userId,
   banned,

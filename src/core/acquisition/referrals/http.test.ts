@@ -43,9 +43,9 @@ const signed = (value: string) =>
     secret,
   );
 /**
- * POST 的返回类型是联合：正常路径是 `json()` 的 NextResponse，限流路径是
- * `rateLimitResponse()` 的 Response（共享套件不依赖 Next）。cookie 只在前者上，
- * 断言前收窄一下。
+ * POST returns a union: the normal path is a NextResponse from `json()`, the rate-limited path is a
+ * Response from `rateLimitResponse()` (the shared kit doesn't depend on Next). Cookies only exist
+ * on the former, so narrow before asserting.
  */
 const cookies = (response: Response) => (response as NextResponse).cookies;
 
@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 describe("referral API", () => {
-  test("模块关闭时返回 404，不查任何东西", async () => {
+  test("returns 404 when the module is off, without looking anything up", async () => {
     const response = await handlers(false).POST(
       request({ action: "accept", code }),
     );
@@ -67,7 +67,7 @@ describe("referral API", () => {
     expect(getUserId).not.toHaveBeenCalled();
   });
 
-  test("只接受同源 JSON，未知字段和坏码直接拒绝", async () => {
+  test("only accepts same-origin JSON; unknown fields and bad codes are rejected outright", async () => {
     expect(
       (
         await handlers().POST(
@@ -93,17 +93,17 @@ describe("referral API", () => {
       (await handlers().POST(request({ action: "accept", code, userId: "x" })))
         .status,
     ).toBe(400);
-    // 码格式不对时不查库：客户端塞不进任意字符串。
+    // A malformed code never hits the database: the client can't smuggle in arbitrary strings.
     const malformed = await handlers().POST(
       request({ action: "accept", code: "not-a-code" }),
     );
     expect(malformed.status).toBe(400);
     expect(resolveInviter).not.toHaveBeenCalled();
-    // 坏请求也不该消耗限流配额。
+    // Bad requests shouldn't consume rate limit quota either.
     expect(limit).not.toHaveBeenCalled();
   });
 
-  test("按客户端 IP 限流：被拒时 429 + Retry-After，且不查库", async () => {
+  test("rate limits by client IP: rejected with 429 + Retry-After, without a database lookup", async () => {
     limit.mockResolvedValue({ ok: false, reason: "limited", retryAfter: 42 });
     const response = await handlers().POST(request({ action: "accept", code }));
     expect(response.status).toBe(429);
@@ -112,7 +112,7 @@ describe("referral API", () => {
     expect(resolveInviter).not.toHaveBeenCalled();
   });
 
-  test("Redis 不可用时 503（自托管漏配），不静默放行", async () => {
+  test("503 when Redis is unavailable (self-hosted misconfiguration), rather than silently allowing", async () => {
     limit.mockResolvedValue({
       ok: false,
       reason: "unavailable",
@@ -124,7 +124,7 @@ describe("referral API", () => {
     expect(resolveInviter).not.toHaveBeenCalled();
   });
 
-  test("限流按 XFF 第一跳计数；decline 与已有上下文都不计数", async () => {
+  test("rate limit counts by the first XFF hop; decline and an existing context don't count", async () => {
     await handlers().POST(
       new Request(url, {
         method: "POST",
@@ -142,7 +142,8 @@ describe("referral API", () => {
     await handlers().POST(request({ action: "decline" }));
     expect(limit).not.toHaveBeenCalled();
 
-    // 已经有邀请上下文时直接回旧码，不需要再查库，自然也不该占配额。
+    // With an existing referral context the old code is returned directly, no database lookup is
+    // needed, and so it shouldn't use quota either.
     await handlers().POST(
       request(
         { action: "accept", code },
@@ -152,7 +153,7 @@ describe("referral API", () => {
     expect(limit).not.toHaveBeenCalled();
   });
 
-  test("未知或已封禁的邀请人一律 invalid，不写 cookie", async () => {
+  test("unknown or banned inviters are always invalid and no cookie is written", async () => {
     resolveInviter.mockResolvedValue(null);
     const response = await handlers().POST(request({ action: "accept", code }));
     expect(response.status).toBe(400);
@@ -160,7 +161,7 @@ describe("referral API", () => {
     expect(cookies(response).get(REFERRAL_COOKIE)).toBeUndefined();
   });
 
-  test("接受有效邀请：写 httpOnly lax cookie，读回来就是那个码", async () => {
+  test("accepting a valid invite writes an httpOnly lax cookie that reads back as that code", async () => {
     const response = await handlers().POST(request({ action: "accept", code }));
     expect(response.status).toBe(200);
     const cookie = cookies(response).get(REFERRAL_COOKIE);
@@ -169,21 +170,21 @@ describe("referral API", () => {
       sameSite: "lax",
       maxAge: REFERRAL_SECONDS,
     });
-    // 写进去的 cookie 能被服务端读回同一个码。
+    // The server reads the same code back from the written cookie.
     expect(
       referralFromHeaders(
         new Headers({ cookie: `${REFERRAL_COOKIE}=${cookie?.value}` }),
         secret,
       )?.code,
     ).toBe(code);
-    // 复制来的码容忍空白与大小写。
+    // Copied codes tolerate whitespace and case.
     const loose = await handlers().POST(
       request({ action: "accept", code: `  ${code.toUpperCase()} ` }),
     );
     expect(await loose.json()).toEqual({ accepted: true, code });
   });
 
-  test("首个已接受的邀请码胜出：已有上下文时不覆盖", async () => {
+  test("the first accepted code wins: an existing context isn't overwritten", async () => {
     const first = newReferralCode();
     const response = await handlers().POST(
       request(
@@ -196,7 +197,7 @@ describe("referral API", () => {
     expect(resolveInviter).not.toHaveBeenCalled();
   });
 
-  test("自邀和自己的账号都拒绝：客户端不能自己决定归属", async () => {
+  test("rejects self-referral and the user's own account: the client can't decide attribution", async () => {
     getUserId.mockResolvedValue(inviter.userId);
     const self = await handlers().POST(request({ action: "accept", code }));
     expect(self.status).toBe(400);
@@ -214,7 +215,7 @@ describe("referral API", () => {
     expect(cookies(bound).get(REFERRAL_COOKIE)).toBeUndefined();
   });
 
-  test("拒绝邀请会清掉上下文", async () => {
+  test("declining an invite clears the context", async () => {
     const response = await handlers().POST(
       request(
         { action: "decline" },

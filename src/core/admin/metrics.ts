@@ -23,12 +23,12 @@ import {
   type AiUsageKind,
 } from "@/core/db/schema";
 
-// /admin/metrics 的聚合查询。按天分组都用 UTC 日期。
+// Aggregate queries for /admin/metrics. All per-day grouping uses UTC dates.
 
 export const metricRanges = [7, 30, 90] as const;
 export type MetricRange = (typeof metricRanges)[number];
 
-/** 解析 ?range=：只接受 7 / 30 / 90，其他值按 30 天。 */
+/** Parses ?range=: only 7 / 30 / 90 are accepted; anything else means 30 days. */
 export function parseRange(value: unknown): MetricRange {
   const range = Number(typeof value === "string" ? value : undefined);
   return metricRanges.includes(range as MetricRange)
@@ -37,13 +37,13 @@ export function parseRange(value: unknown): MetricRange {
 }
 
 export type MetricWindow = {
-  /** 区间开始（含），为 UTC 零点。 */
+  /** Range start (inclusive), at UTC midnight. */
   since: Date;
-  /** 区间内的每一天（UTC，YYYY-MM-DD），最后一天是今天。 */
+  /** Every day in the range (UTC, YYYY-MM-DD); the last one is today. */
   days: string[];
 };
 
-/** 最近 range 天（含今天）的区间。 */
+/** The range covering the last `range` days (including today). */
 export function metricWindow(
   range: MetricRange,
   now = new Date(),
@@ -63,7 +63,7 @@ export function metricWindow(
 
 export type DailyPoint = { day: string; value: number };
 
-/** 把按天的查询结果补齐成区间内每天一个点，没有数据的天为 0。 */
+/** Fills per-day query results out to one point per day in the range; days without data are 0. */
 export function fillDays(
   days: string[],
   rows: { day: string; value: number }[],
@@ -75,7 +75,7 @@ export function fillDays(
 const dayOf = (column: AnyPgColumn) =>
   sql<string>`to_char(date_trunc('day', ${column}), 'YYYY-MM-DD')`;
 
-/** 用户：区间内新注册、累计用户、当前被封禁的用户，以及每天的注册数。 */
+/** Users: new sign-ups in the range, total users, currently banned users, and sign-ups per day. */
 export async function getUserMetrics(db: Database, window: MetricWindow) {
   const inWindow = gte(user.createdAt, window.since);
   const [[totals], daily] = await Promise.all([
@@ -100,38 +100,47 @@ export async function getUserMetrics(db: Database, window: MetricWindow) {
   };
 }
 
-// 收入口径：/admin/metrics 与 /admin/acquisition 共用下面的定义，买家的说明在
-// README 的「收入口径」一节。两页都从这里取条件，口径不会再各自漂移。
+// Revenue definition: /admin/metrics and /admin/acquisition share the definitions below; the
+// buyer-facing explanation is in the "Revenue definition" section of the README. Both pages take
+// their conditions from here, so the definitions can't drift apart.
 //
-// - 计入收入的订单（recognizedOrder）：状态是 collectedStatuses 之一，**且金额已知**。
-//   付款事件还没补齐的占位订单（典型是退款先到）金额不可信：既不算收入，也不算付费人数。
-// - 净收入（orderNet）：计入收入的订单按币种累计 amount − refunded_amount，退款按
-//   查询时的累计值扣，所以历史区间会随之后的退款变化。
-// - 付费人数（hasPositiveNet）：至少有一笔净收入为正的订单的用户数（去重）。全额退款的
-//   用户不算付费；同一用户多笔（含续费）只算一个。
-/** 有过实际收款的订单状态；退款金额在 refunded_amount 里扣除。 */
+// - Orders counted as revenue (recognizedOrder): status is one of collectedStatuses **and the
+//   amount is known**. Placeholder orders whose payment event hasn't arrived yet (typically when
+//   the refund arrives first) have untrustworthy amounts: they count neither as revenue nor toward
+//   paying users.
+// - Net revenue (orderNet): amount − refunded_amount summed per currency over recognized orders.
+//   Refunds are deducted at their cumulative value at query time, so historical ranges change as
+//   later refunds come in.
+// - Paying users (hasPositiveNet): distinct users with at least one order with positive net
+//   revenue. Fully refunded users don't count as paying; multiple orders from one user (including
+//   renewals) count once.
+/** Order statuses where money was actually collected; refunds are deducted via refunded_amount. */
 export const collectedStatuses = [
   "paid",
   "partially_refunded",
   "refunded",
 ] as const;
 
-/** 计入收入的状态与金额条件，不含时间区间；调用方自己 and 上窗口起点。 */
+/**
+ * Status and amount conditions for recognized revenue, without a time range; callers AND in the
+ * window start themselves.
+ */
 export const recognizedOrder: SQL[] = [
   inArray(orders.status, collectedStatuses),
   isNotNull(orders.amount),
 ];
 
-/** 单笔订单的净收入（金额都以最小货币单位计）。 */
+/** Net revenue of a single order (all amounts in the smallest currency unit). */
 export const orderNet = sql`coalesce(${orders.amount}, 0) - coalesce(${orders.refundedAmount}, 0)`;
 
-/** 付费人数按「有净收入为正的订单」判定。 */
+/** Paying users are determined by "has an order with positive net revenue". */
 export const hasPositiveNet = sql`${orderNet} > 0`;
 
 /**
- * 聚合金额用 bigint 读出：单笔金额受 int4 列约束，但累计值会超过 int4 上限
- * （2147483647 分），`::int` 会让整页 500。pg 把 int8 读成字符串，用 `toAmount`
- * 转回数字（金额在这里仍是「分」，精度不会丢）。
+ * Aggregated amounts are read as bigint: a single amount is bounded by its int4 column, but sums
+ * can exceed the int4 max (2147483647 cents), and `::int` would 500 the whole page. pg reads int8
+ * as a string, which `toAmount` converts back to a number (amounts here are still cents, so no
+ * precision is lost).
  */
 export const sumAmounts = (expression: SQL | AnyPgColumn) =>
   sql<string>`coalesce(sum(${expression}), 0)::bigint`;
@@ -141,13 +150,15 @@ export const toAmount = (value: string) => Number(value);
 export type Money = { currency: string; amount: number };
 
 /**
- * 收入（金额都以最小货币单位计，口径见文件开头的「收入口径」）：
- * - revenue：区间内计入收入的订单的净收入，按币种
- * - payingUsers：区间内有净收入为正的订单的用户数
- * - activeSubscriptions：当前状态为 active 的订阅数
- * - mrr：active 订阅按 site.config.ts 里的套餐原价折算的月收入（年付 ÷ 12），
- *   币种是 billing.currency。套餐已从配置删除的订阅计入 unpricedSubscriptions。
- * - daily：每天的净收入，只统计 billing.currency。
+ * Revenue (all amounts in the smallest currency unit; see "Revenue definition" at the top of the
+ * file):
+ * - revenue: net revenue of recognized orders in the range, per currency
+ * - payingUsers: users with an order with positive net revenue in the range
+ * - activeSubscriptions: subscriptions currently active
+ * - mrr: monthly revenue of active subscriptions at the list prices in site.config.ts (yearly ÷
+ *   12), in billing.currency. Subscriptions whose plan was removed from the config count toward
+ *   unpricedSubscriptions.
+ * - daily: net revenue per day, billing.currency only.
  */
 export async function getRevenueMetrics(
   db: Database,
@@ -186,7 +197,7 @@ export async function getRevenueMetrics(
       .groupBy(sql`1`),
   ]);
 
-  // 套餐价格以主币单位配置（19 表示 $19），换算成分再按月折算。
+  // Plan prices are configured in major units (19 means $19); convert to cents, then to monthly.
   let mrr = 0;
   let unpricedSubscriptions = 0;
   for (const row of active) {
@@ -200,7 +211,8 @@ export async function getRevenueMetrics(
   }
 
   return {
-    // 聚合读出来是 bigint 字符串（见 sumAmounts），在返回前转回数字。
+    // Aggregates come back as bigint strings (see sumAmounts); convert to numbers before
+    // returning.
     revenue: revenue
       .map((row) => ({
         currency: (row.currency ?? billing.currency).toUpperCase(),
@@ -222,7 +234,10 @@ export async function getRevenueMetrics(
   };
 }
 
-/** 积分：区间内发放（grant）、消耗（deduct，取正数）和退款（refund）的总量。 */
+/**
+ * Credits: totals granted (grant), consumed (deduct, as a positive number), and refunded (refund)
+ * in the range.
+ */
 export async function getCreditMetrics(db: Database, window: MetricWindow) {
   const sumOf = (type: string) =>
     sql<number>`coalesce(sum(abs(${creditTransactions.amount})) filter (where ${creditTransactions.type} = ${type}), 0)::int`;
@@ -243,11 +258,14 @@ export type AiModelMetrics = {
   calls: number;
   succeeded: number;
   failed: number;
-  /** 失败率 = failed ÷ 已结束的调用（succeeded + failed + aborted）；没有已结束的调用时为 null。 */
+  /**
+   * Failure rate = failed ÷ finished calls (succeeded + failed + aborted); null when no calls have
+   * finished.
+   */
   failureRate: number | null;
 };
 
-/** AI：区间内按类型和模型分组的调用次数与失败率，调用多的在前。 */
+/** AI: call counts and failure rates in the range grouped by kind and model, busiest first. */
 export async function getAiMetrics(db: Database, window: MetricWindow) {
   const byStatus = (status: string) =>
     count(sql`case when ${aiUsage.status} = ${status} then 1 end`);

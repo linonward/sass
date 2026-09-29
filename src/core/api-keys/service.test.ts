@@ -35,7 +35,8 @@ describe.skipIf(!url)("api key persistence", () => {
   });
 
   afterAll(async () => {
-    // key 挂在 user 上并级联删除，删掉用例创建的账号即可清干净。
+    // Keys belong to a user and cascade on delete, so deleting the accounts the tests created
+    // cleans everything up.
     if (created.length)
       await client.db.delete(user).where(inArray(user.id, created));
     await client.close();
@@ -54,7 +55,7 @@ describe.skipIf(!url)("api key persistence", () => {
     return value;
   }
 
-  test("新建返回一次性明文，库里只留哈希和前缀", async () => {
+  test("create returns one-time plaintext; only the hash and prefix are stored", async () => {
     const owner = await account();
     const result = await service.create(owner.id, "Production");
     expect(result.ok).toBe(true);
@@ -65,8 +66,9 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(result.key.revokedAt).toBeNull();
     expect(result.key.userId).toBe(owner.id);
 
-    // 明文没有落库：按明文查哈希查得到，按明文本身（不在任何列里）查不到。
-    // 鉴权路径用的就是这个哈希：按明文算出来的哈希能查到这把 key。
+    // The plaintext isn't stored: looking up by its hash works, looking up by the plaintext itself
+    // (not in any column) doesn't. The auth path uses exactly this hash: the hash computed from the
+    // plaintext finds this key.
     const found = await service.findByHash(hashApiKey(result.plaintext));
     expect(found?.id).toBe(result.key.id);
     const rows = await client.db
@@ -76,13 +78,13 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(JSON.stringify(rows)).not.toContain(result.plaintext);
     expect(rows[0]!.hashedKey).toMatch(/^[0-9a-f]{64}$/);
 
-    // 列表里也带不出明文。
+    // The list doesn't expose the plaintext either.
     const list = await service.listForUser(owner.id);
     expect(list.map((key) => key.id)).toEqual([result.key.id]);
     expect(JSON.stringify(list)).not.toContain(result.plaintext);
   });
 
-  test("同名只能有一把，重名不新建也不覆盖原来的", async () => {
+  test("only one key per name; a duplicate name neither creates a key nor overwrites the existing one", async () => {
     const owner = await account();
     const first = await service.create(owner.id, "Same name");
     expect(first.ok).toBe(true);
@@ -93,13 +95,13 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(list[0]!.id).toBe(first.ok ? first.key.id : "");
   });
 
-  test("不同账号可以用同一个名字", async () => {
+  test("different accounts can use the same name", async () => {
     const [a, b] = [await account(), await account()];
     expect((await service.create(a.id, "Shared")).ok).toBe(true);
     expect((await service.create(b.id, "Shared")).ok).toBe(true);
   });
 
-  test("名字为空或超长直接拒掉，不写库", async () => {
+  test("empty or too-long names are rejected without writing to the database", async () => {
     const owner = await account();
     for (const name of ["", " ".repeat(3), "x".repeat(API_KEY_NAME_MAX + 1)]) {
       expect(await service.create(owner.id, name)).toEqual({
@@ -108,13 +110,13 @@ describe.skipIf(!url)("api key persistence", () => {
       });
     }
     expect(await service.listForUser(owner.id)).toHaveLength(0);
-    // 上限本身是允许的。
+    // The limit itself is allowed.
     expect(
       (await service.create(owner.id, "x".repeat(API_KEY_NAME_MAX))).ok,
     ).toBe(true);
   });
 
-  test("列表新建的在前，且只含自己的 key", async () => {
+  test("list shows newest first and only the user's own keys", async () => {
     const [mine, other] = [await account(), await account()];
     await service.create(mine.id, "First");
     await service.create(other.id, "Not mine");
@@ -123,7 +125,7 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(list.map((key) => key.name)).toEqual(["Second", "First"]);
   });
 
-  test("撤销写 revokedAt、不删行，重复撤销不报错也不改时间", async () => {
+  test("revoke sets revokedAt without deleting the row; revoking again neither errors nor changes the time", async () => {
     const owner = await account();
     const made = await service.create(owner.id, "To revoke");
     expect(made.ok).toBe(true);
@@ -138,7 +140,8 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(row!.revokedAt).toBeInstanceOf(Date);
     const firstRevokedAt = row!.revokedAt;
 
-    // 幂等：第二次撤销返回 false，且不覆盖第一次的时间；行还在。
+    // Idempotent: the second revoke returns false and doesn't overwrite the first time; the row
+    // remains.
     expect(await service.revoke(owner.id, keyId)).toBe(false);
     const [again] = await client.db
       .select()
@@ -146,7 +149,8 @@ describe.skipIf(!url)("api key persistence", () => {
       .where(eq(userApiKeys.id, keyId));
     expect(again!.revokedAt).toEqual(firstRevokedAt);
 
-    // 撤销后仍然查得到（由中间件判定无效），列表里也看得到「已撤销」。
+    // After revoking it can still be looked up (the middleware decides it's invalid), and the list
+    // still shows it as revoked.
     const found = await service.findByHash(row!.hashedKey);
     expect(found).not.toBeNull();
     expect(apiKeyStatus(found!)).toBe("revoked");
@@ -155,7 +159,7 @@ describe.skipIf(!url)("api key persistence", () => {
     );
   });
 
-  test("不能撤销别人的 key", async () => {
+  test("cannot revoke someone else's key", async () => {
     const [owner, other] = [await account(), await account()];
     const made = await service.create(owner.id, "Mine");
     expect(made.ok).toBe(true);
@@ -168,7 +172,7 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(row!.revokedAt).toBeNull();
   });
 
-  test("过期的 key 仍然查得到，判定为已过期", async () => {
+  test("an expired key can still be looked up and is judged expired", async () => {
     const owner = await account();
     const made = await service.create(owner.id, "Expiring");
     expect(made.ok).toBe(true);
@@ -181,7 +185,7 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(apiKeyStatus(found!)).toBe("expired");
   });
 
-  test("touchLastUsed 写入最后一次使用时间", async () => {
+  test("touchLastUsed records the last usage time", async () => {
     const owner = await account();
     const made = await service.create(owner.id, "Used");
     expect(made.ok).toBe(true);
@@ -193,7 +197,7 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(list[0]!.lastUsedAt).toEqual(at);
   });
 
-  test("后台列表：按用户聚合数量与最后使用时间，不含明文和哈希", async () => {
+  test("admin list: counts and last usage per user, with no plaintext or hashes", async () => {
     const owner = await account();
     const quiet = await account();
     const kept = await service.create(owner.id, "Kept");
@@ -202,7 +206,8 @@ describe.skipIf(!url)("api key persistence", () => {
     if (!kept.ok || !revoked.ok) return;
     await service.revoke(owner.id, revoked.key.id);
     await service.touchLastUsed(kept.key.id, new Date("2026-03-04T05:06:07Z"));
-    // 另一个账号有 key 但没用过：lastUsedAt 为 null，也该出现在列表里。
+    // Another account has a key that was never used: lastUsedAt is null, and it should still be
+    // listed.
     await service.create(quiet.id, "Never used");
 
     const owners = await service.listOwners(500);
@@ -217,7 +222,8 @@ describe.skipIf(!url)("api key persistence", () => {
     expect(other).toMatchObject({ keyCount: 1, activeCount: 1 });
     expect(other!.lastUsedAt).toBeNull();
 
-    // 后台看不到敏感值：明文没入库，哈希也不在返回里。
+    // The admin can't see sensitive values: the plaintext isn't stored, and the hash isn't in the
+    // result.
     expect(Object.keys(mine!)).not.toContain("hashedKey");
     expect(JSON.stringify(owners)).not.toContain(kept.plaintext);
     expect(JSON.stringify(owners)).not.toContain(kept.key.prefix.slice(3));

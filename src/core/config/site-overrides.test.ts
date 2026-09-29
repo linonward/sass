@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-// site.config.ts 在导入时读环境变量：每个用例改完变量后重新导入一份。
+// site.config.ts reads environment variables at import time: each case re-imports it after
+// changing the variables.
 async function loadConfig() {
   vi.resetModules();
   return (await import("../../../site.config")).default;
@@ -10,8 +11,8 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("站点的套餐覆盖（SITE_PRICE_* / SITE_HIDDEN_PLANS）", () => {
-  test("不设变量时就是模板默认值", async () => {
+describe("site plan overrides (SITE_PRICE_* / SITE_HIDDEN_PLANS)", () => {
+  test("without the variables, the template defaults apply", async () => {
     vi.stubEnv("SITE_PRICE_LIFETIME", "");
     vi.stubEnv("SITE_HIDDEN_PLANS", "");
     const config = await loadConfig();
@@ -20,7 +21,7 @@ describe("站点的套餐覆盖（SITE_PRICE_* / SITE_HIDDEN_PLANS）", () => {
     expect(config.billing.plans.every((p) => !p.hidden)).toBe(true);
   });
 
-  test("覆盖标价、隐藏套餐；隐藏的套餐仍在配置里（已有订阅照常可查）", async () => {
+  test("overrides list prices and hides plans; hidden plans stay in the config (existing subscriptions still resolve)", async () => {
     vi.stubEnv("SITE_PRICE_LIFETIME", "99");
     vi.stubEnv("SITE_HIDDEN_PLANS", " pro , nope ");
     const config = await loadConfig();
@@ -32,7 +33,7 @@ describe("站点的套餐覆盖（SITE_PRICE_* / SITE_HIDDEN_PLANS）", () => {
     expect(getPlan("pro")).toMatchObject({ id: "pro", hidden: true });
   });
 
-  test("标价写错时启动即报错，不静默用默认价", async () => {
+  test("a malformed price fails at startup instead of silently using the default", async () => {
     vi.stubEnv("SITE_PRICE_LIFETIME", "ninety-nine");
     await expect(loadConfig()).rejects.toThrow(
       /SITE_PRICE_LIFETIME must be a non-negative number/,
@@ -40,15 +41,15 @@ describe("站点的套餐覆盖（SITE_PRICE_* / SITE_HIDDEN_PLANS）", () => {
   });
 });
 
-describe("卖可下载文件的开关（SITE_DOWNLOADS）", () => {
-  test("默认关闭：没有下载菜单", async () => {
+describe("downloadable files switch (SITE_DOWNLOADS)", () => {
+  test("off by default: no downloads menu item", async () => {
     vi.stubEnv("SITE_DOWNLOADS", "");
     const config = await loadConfig();
     expect(config.downloads.enabled).toBe(false);
     expect(config.dashboard.nav.map((i) => i.href)).not.toContain("/downloads");
   });
 
-  test("SITE_DOWNLOADS=1 打开：侧边栏出现下载页，产品都对应一次性套餐", async () => {
+  test("SITE_DOWNLOADS=1 turns it on: the sidebar shows downloads and every product maps to a one-time plan", async () => {
     vi.stubEnv("SITE_DOWNLOADS", "1");
     const config = await loadConfig();
     expect(config.downloads.enabled).toBe(true);

@@ -6,14 +6,17 @@ import { notificationLog } from "@/core/db/schema";
 type Executor = Database | DbTransaction;
 
 /**
- * 占用一次通知的发送名额：返回 true 表示这次应该发送，false 表示窗口内已发过。
- * - windowMs 为 null：同一 (kind, key) 只发一次；
- * - 否则距上次发送超过 windowMs 才会再次返回 true。
- * 用一条 upsert 判断，并发调用时只有一个能拿到名额。和业务写入放在同一个事务里，
- * 事务回滚时名额也一起回滚；邮件在事务提交后再发。
+ * Claims the send slot for a notification: true means send it this time, false means it was
+ * already sent within the window.
+ * - windowMs is null: each (kind, key) is sent only once;
+ * - otherwise it returns true again only once more than windowMs has passed since the last send.
+ * A single upsert decides, so only one of several concurrent callers gets the slot. Run it in the
+ * same transaction as the business write so the claim rolls back with it; send the email after the
+ * transaction commits.
  *
- * 占名额只表示「这次由我来发」，发送失败时用 releaseNotificationClaim 还回名额
- * （见 `./delivery.ts`）：否则一次失败的发送会永久占住 (kind, key)，邮件再也发不出去。
+ * A claim only means "I'm the one sending this time". When sending fails, return the slot with
+ * releaseNotificationClaim (see `./delivery.ts`): otherwise one failed send would hold
+ * (kind, key) forever and the email could never go out.
  */
 export async function claimNotification(
   executor: Executor,
@@ -45,7 +48,8 @@ export async function claimNotification(
           .onConflictDoUpdate({
             target: [notificationLog.kind, notificationLog.key],
             set: { lastSentAt: now, userId },
-            // 用 lte 让参数走列自己的编码（和写入时一致），避免 Date 按本机时区序列化后比较错位。
+            // lte encodes the parameter with the column's own encoding (same as on write), so a
+            // Date serialized in the machine's time zone doesn't skew the comparison.
             setWhere: lte(
               notificationLog.lastSentAt,
               new Date(now.getTime() - windowMs),
@@ -56,16 +60,20 @@ export async function claimNotification(
 }
 
 /**
- * 释放一次通知的发送名额：邮件最终发送失败时调用，让之后同 key 的尝试（服务商重放、
- * 人工补发、下一个窗口）能重新占用名额，把这封邮件真的发出去。
+ * Releases a notification's send slot: call it when the email ultimately fails to send, so later
+ * attempts with the same key (provider replays, manual resends, the next window) can claim the
+ * slot again and actually get the email out.
  *
- * `now` 必须是占名额时传给 claimNotification 的那个时间：只删除**仍然是这次尝试**的行。
- * 如果发送期间已经有别的路径重新占了名额（窗口过期后又发送成功），那行的 last_sent_at
- * 是新的时间，这里匹配不到，删不掉 —— 避免把别人的名额误删成重复轰炸。
- * 返回是否真的释放了名额（false 表示这行已经被更新的发送接管，或本来就不在了）。
+ * `now` must be the same time that was passed to claimNotification when claiming: only a row that
+ * **still belongs to this attempt** is deleted. If another path re-claimed the slot while sending
+ * (the window expired and that send succeeded), the row's last_sent_at is a newer time, so it
+ * doesn't match and isn't deleted — otherwise we'd wrongly delete someone else's claim and end up
+ * sending duplicates. Returns whether the slot was actually released (false means a newer send
+ * took over the row, or it was already gone).
  *
- * 语义上的取舍：失败的那次不算「已发送」，所以窗口（windowMs）从下一次成功发送重新起算。
- * 已送达的邮件仍然受窗口约束（同一窗口内不会重复发），失败的邮件则可以重试。
+ * The semantic tradeoff: a failed attempt doesn't count as "sent", so the window (windowMs)
+ * restarts from the next successful send. Delivered emails are still bound by the window (no
+ * repeats within one window), while failed ones can be retried.
  */
 export async function releaseNotificationClaim(
   executor: Executor,
@@ -77,7 +85,8 @@ export async function releaseNotificationClaim(
       and(
         eq(notificationLog.kind, kind),
         eq(notificationLog.key, key),
-        // 走列自己的编码（和写入时一致），避免 Date 按本机时区序列化后比较错位。
+        // Use the column's own encoding (same as on write), so a Date serialized in the
+        // machine's time zone doesn't skew the comparison.
         eq(notificationLog.lastSentAt, now),
       ),
     )

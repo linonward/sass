@@ -1,8 +1,9 @@
 const ORIGIN = "http://callback.invalid";
 
 /**
- * 清洗登录后的跳转地址，只接受站内相对路径，防止开放重定向。
- * 不合法、指向站外或指回登录页本身时返回 fallback。
+ * Sanitize the post-sign-in redirect target: accept only same-site relative paths, to prevent open
+ * redirects. Returns fallback when the value is invalid, points off-site, or points back at the
+ * sign-in page itself.
  */
 export function safeCallbackURL(
   value: string | null | undefined,

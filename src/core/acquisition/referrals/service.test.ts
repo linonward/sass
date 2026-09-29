@@ -33,7 +33,8 @@ describe.skipIf(!url)("referral persistence", () => {
   });
 
   afterAll(async () => {
-    // 码和关系都挂在 user 上并级联删除，删掉用例创建的账号即可清干净。
+    // Codes and relationships belong to a user and cascade on delete, so deleting the accounts the
+    // tests created cleans everything up.
     if (created.length)
       await client.db.delete(user).where(inArray(user.id, created));
     await client.close();
@@ -62,7 +63,7 @@ describe.skipIf(!url)("referral persistence", () => {
       .where(eq(referralRelationships.inviteeUserId, inviteeId));
   }
 
-  test("一人一码：重复调用返回同一个码，不同账号互不相同", async () => {
+  test("one code per user: repeated calls return the same code, and different accounts get different codes", async () => {
     const first = await account();
     const second = await account();
     const code = await service.ensureCode(first.id);
@@ -71,7 +72,7 @@ describe.skipIf(!url)("referral persistence", () => {
     expect(await service.ensureCode(second.id)).not.toBe(code);
   });
 
-  test("有效邀请人：未封禁才算，过期封禁算未封禁，删号与未知码都不算", async () => {
+  test("valid inviter: only if not banned (an expired ban counts as not banned); deleted accounts and unknown codes don't count", async () => {
     const live = await account();
     const expiredBan = await account({
       banned: true,
@@ -95,7 +96,7 @@ describe.skipIf(!url)("referral persistence", () => {
     expect(await service.resolveInviter("not-a-code")).toBeNull();
   });
 
-  test("并发注册、重复绑定只留一条关系，之后不能更换邀请人", async () => {
+  test("concurrent sign-ups and repeated binds leave one relationship, and the inviter can't be changed afterwards", async () => {
     const inviter = await account();
     const other = await account();
     const invitee = await account();
@@ -116,7 +117,7 @@ describe.skipIf(!url)("referral persistence", () => {
       code,
       status: "awaiting_payment",
     });
-    // 换一个邀请人的码再绑一次：关系不变，码也不变。
+    // Binding again with another inviter's code: the relationship and the code stay the same.
     expect(
       await service.bind({
         inviteeUserId: invitee.id,
@@ -129,7 +130,7 @@ describe.skipIf(!url)("referral persistence", () => {
     });
   });
 
-  test("自邀、无效码、封禁邀请人都建不了关系", async () => {
+  test("self-referral, invalid codes, and banned inviters can't create a relationship", async () => {
     const inviter = await account();
     const banned = await account({ banned: true, banExpires: null });
     const self = await account();
@@ -157,7 +158,7 @@ describe.skipIf(!url)("referral persistence", () => {
           inArray(referralRelationships.inviteeUserId, [self.id, inviter.id]),
         ),
     ).toHaveLength(0);
-    // 同一个邀请人仍然可以被别人正常绑定。
+    // The same inviter can still be bound normally by others.
     const invitee = await account();
     const code = await service.ensureCode(inviter.id);
     expect(await service.bind({ inviteeUserId: invitee.id, code })).toEqual({
@@ -166,7 +167,7 @@ describe.skipIf(!url)("referral persistence", () => {
     });
   });
 
-  test("邀请记录只回状态和时间，不向邀请人暴露受邀人身份", async () => {
+  test("invite records only return status and time, never exposing the invitee's identity to the inviter", async () => {
     const inviter = await account();
     const invitee = await account();
     const code = await service.ensureCode(inviter.id);
@@ -185,7 +186,7 @@ describe.skipIf(!url)("referral persistence", () => {
     expect(await service.relationshipFor(inviter.id)).toBeNull();
   });
 
-  test("列表截断时 total 仍是真实条数（页面据此说明只显示最近 N 条）", async () => {
+  test("total is still the real count when the list is truncated (the page uses it to say only the latest N are shown)", async () => {
     const inviter = await account();
     const code = await service.ensureCode(inviter.id);
     for (const _ of [1, 2, 3])
@@ -193,7 +194,7 @@ describe.skipIf(!url)("referral persistence", () => {
     const page = await service.listInvited(inviter.id, 2);
     expect(page.rows).toHaveLength(2);
     expect(page.total).toBe(3);
-    // 截断掉的永远是最早的那些：limit 扩大后前两条不变。
+    // Truncation always drops the oldest: with a larger limit the first two stay the same.
     const all = await service.listInvited(inviter.id, 10);
     expect(all.rows).toHaveLength(3);
     expect(all.total).toBe(3);

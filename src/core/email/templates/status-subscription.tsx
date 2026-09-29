@@ -7,7 +7,7 @@ import { EmailLayout, emailStyles } from "../components/email-layout";
 import { emailTranslator, type EmailT } from "../translator";
 
 export type StatusSubscriptionProps = {
-  /** 带令牌的确认地址。 */
+  /** Confirmation URL with a token. */
   confirmUrl: string;
 };
 
@@ -17,7 +17,7 @@ export function statusSubscriptionSubject(t: EmailT) {
   return t("statusSubscription.subject", { name: brand.name });
 }
 
-/** 双重确认：确认之后这个地址才会收到事件通知。 */
+/** Double opt-in: the address only receives incident notices after confirming. */
 export default function StatusSubscriptionEmail({
   t,
   locale,

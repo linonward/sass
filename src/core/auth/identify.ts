@@ -3,7 +3,7 @@ import { createAuthMiddleware } from "better-auth/api";
 
 import { identifyUser } from "@/core/observability/sentry";
 
-/** get-session 的返回值里取用户 ID；未登录或返回的是 Response 时为 null。 */
+/** Extract the user ID from get-session's return value; null when signed out or when it's a Response. */
 export function sessionUserId(returned: unknown): string | null {
   if (typeof returned !== "object" || returned === null) return null;
   const user = (returned as { user?: { id?: unknown } }).user;
@@ -11,8 +11,9 @@ export function sessionUserId(returned: unknown): string | null {
 }
 
 /**
- * 每次读取 session（页面、Server Action、API 里的 auth.api.getSession）后，把用户 ID 交给
- * 当前请求的 Sentry scope，之后这个请求里上报的错误都带上用户 ID。没开 Sentry 时什么也不做。
+ * After every session read (auth.api.getSession in pages, Server Actions, and APIs), pass the user
+ * ID to the current request's Sentry scope so every error reported later in that request carries
+ * the user ID. Does nothing when Sentry is not enabled.
  */
 export function identifySessionUser() {
   return {

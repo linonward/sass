@@ -1,48 +1,50 @@
 import type { RateLimitConfig } from "@/core/config/schema";
 import { logger, type LogFn } from "@/core/observability/logger";
 
-/** 调用方身份。每条策略分别按用户和按 IP 计数；缺少的一项不计数。 */
+/** Caller identity. Each policy counts per user and per IP separately; a missing one isn't counted. */
 export type RateLimitIdentifiers = {
   userId?: string | null;
   ip?: string | null;
   /**
-   * 额外的一路计数器键，原样使用（api-keys 的 per-key 限流传 `api_key:<keyId>`）。
-   * 和 `userId` / `ip` 同理：不传就不计这一路。
+   * An extra counter key, used as-is (api-keys' per-key limits pass `api_key:<keyId>`). Same as
+   * `userId` / `ip`: if omitted, this counter isn't used.
    */
   key?: string | null;
 };
 
 export type RateLimitResult =
   | { ok: true; retryAfter: 0 }
-  // limited：超过阈值，retryAfter 为距离窗口重置的秒数（至少 1）。
+  // limited: over the threshold; retryAfter is the seconds until the window resets (at least 1).
   | { ok: false; reason: "limited"; retryAfter: number }
-  // unavailable：Redis 出错且 failMode 为 closed。
+  // unavailable: Redis errored and failMode is closed.
   | { ok: false; reason: "unavailable"; retryAfter: number };
 
-/** 单个滑动窗口计数器，对应 @upstash/ratelimit 的 `limit()` 返回值中用到的字段。 */
+/** A single sliding-window counter: the fields we use from @upstash/ratelimit's `limit()` result. */
 export type WindowLimiter = {
   limit(identifier: string): Promise<{
     success: boolean;
-    // 窗口重置的时间戳（毫秒）。
+    // Timestamp when the window resets (milliseconds).
     reset: number;
-    // 请求超时时 @upstash/ratelimit 会直接放行并标记为 timeout。
+    // On a request timeout, @upstash/ratelimit lets the request through and marks it as timeout.
     reason?: string;
   }>;
 };
 
 export type RateLimiterDeps = {
   config: RateLimitConfig;
-  // 按策略创建计数器；返回 null 表示没有配置 Redis，跳过限流。
+  // Create a counter per policy; null means Redis isn't configured and rate limiting is skipped.
   createLimiter: (
     policy: string,
     options: RateLimitConfig["policies"][string],
   ) => WindowLimiter | null;
   /**
-   * 没有配置 Redis（`createLimiter` 返回 null）时怎么办：
-   * - `"allow"`（默认）：放行，只记一次日志。本地开发、测试、CI 和 Vercel 预览都走这条；
-   * - `"unavailable"`：返回 503（自托管生产漏配 Upstash 时用，见 `env.ts` 的
-   *   `missingRedisPolicy`）—— 静默关掉限流比接口暂时不可用更糟：AI / 上传是按次花钱的，
-   *   结账会在服务商侧真的建单。
+   * What to do when Redis isn't configured (`createLimiter` returns null):
+   * - `"allow"` (default): let requests through, logging only once. Local development, tests, CI,
+   *   and Vercel previews all take this path.
+   * - `"unavailable"`: return 503 (for self-hosted production with Upstash missing; see
+   *   `missingRedisPolicy` in `env.ts`) — silently turning off rate limiting is worse than the
+   *   endpoint being temporarily unavailable: AI / upload cost money per call, and checkout
+   *   really creates orders on the provider's side.
    */
   onMissingRedis?: "allow" | "unavailable";
   now?: () => number;
@@ -50,7 +52,7 @@ export type RateLimiterDeps = {
   logError?: LogFn;
 };
 
-// closed 模式下 Redis 不可用时，建议客户端多久后重试。
+// How long to tell clients to wait before retrying when Redis is unavailable in closed mode.
 const UNAVAILABLE_RETRY_AFTER = 30;
 
 export class RateLimitRedisTimeout extends Error {
@@ -80,9 +82,9 @@ export function createRateLimiter({
   }
 
   /**
-   * 按策略检查一次请求：用户和 IP 各计一次，任一超限即拒绝。
-   * 没有配置 Redis 时按 `onMissingRedis` 放行或返回 unavailable（只记一次日志）；
-   * Redis 出错时按 `failMode` 处理。
+   * Check one request against a policy: count once each for the user and the IP, and reject if
+   * either is over the limit. Without Redis, allow or return unavailable per `onMissingRedis`
+   * (logging only once); on Redis errors, follow `failMode`.
    */
   async function checkRateLimit(
     policy: string,
@@ -95,7 +97,8 @@ export function createRateLimiter({
         const fields = {
           reason: "UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set",
         };
-        // 漏配在生产里是故障（接口会开始 503），用 error 级；本地 / CI 只是提示。
+        // Missing config in production is an outage (endpoints start returning 503), so log at
+        // error level; locally / in CI it's only a heads-up.
         if (onMissingRedis === "unavailable") {
           logError("ratelimit.unconfigured", fields);
         } else {
@@ -149,8 +152,9 @@ export function createRateLimiter({
 }
 
 /**
- * 把被拒绝的检查结果转成 HTTP 响应：超限 429，Redis 不可用 503，都带 `Retry-After`（秒）。
- * 用法：`if (!result.ok) return rateLimitResponse(result);`
+ * Turn a rejected check result into an HTTP response: 429 when over the limit, 503 when Redis is
+ * unavailable, both with `Retry-After` (seconds).
+ * Usage: `if (!result.ok) return rateLimitResponse(result);`
  */
 export function rateLimitResponse(
   result: Extract<RateLimitResult, { ok: false }>,
@@ -165,8 +169,9 @@ export function rateLimitResponse(
 }
 
 /**
- * 取客户端 IP。Vercel 会覆盖 `x-forwarded-for`（首个地址为真实客户端），客户端伪造不了；
- * 部署到其他平台时，确认前面的代理同样会覆盖这个头。
+ * Get the client IP. Vercel overwrites `x-forwarded-for` (the first address is the real client),
+ * so clients can't spoof it; when deploying elsewhere, make sure the proxy in front also
+ * overwrites this header.
  */
 export function getClientIp(headers: Headers): string | null {
   const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();

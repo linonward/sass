@@ -2,7 +2,7 @@ import { Column, Row, Section, Text } from "react-email";
 
 import { emailBrand as brand } from "../brand";
 
-/** 键值明细（套餐、金额、日期等），值为空的行不显示。 */
+/** Key-value details (plan, amount, date, etc.). Rows with an empty value are hidden. */
 export function DetailRows({
   rows,
 }: {

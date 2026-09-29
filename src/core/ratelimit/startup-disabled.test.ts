@@ -1,9 +1,11 @@
 // @vitest-environment node
-// 限流整个关掉的那一支（features.rateLimit / ai / upload 全部关着，也没有 per-key 限流）：
-// 一个需要用限流的功能都没开，启动检查不该说话 —— 包括自托管生产里没配 Redis 的情况，
-// 那条 error 日志（见 startup.test.ts）只在真的有东西会用限流时才该出现。
-// 演示站上跑不到这一支（配置是开的），所以用配置替身测，写法照 startup.test.ts 和
-// src/core/changelog/disabled.test.ts 的 site.config 替身。
+// The branch where rate limiting is off entirely (features.rateLimit / ai / upload all off, and no
+// per-key limits): no feature that needs rate limiting is on, so the startup check must stay quiet —
+// including self-hosted production without Redis. That error log (see startup.test.ts) should only
+// appear when something will actually use rate limiting.
+// The demo site never reaches this branch (its config has these on), so it's tested with a config
+// stand-in, following the site.config stand-ins in startup.test.ts and
+// src/core/changelog/disabled.test.ts.
 import { describe, expect, test, vi } from "vitest";
 
 vi.mock("../../../site.config", async (original) => {
@@ -24,8 +26,8 @@ vi.mock("../../../site.config", async (original) => {
 
 import { warnIfRateLimitUnconfigured } from "./startup";
 
-describe("限流功能全部关闭", () => {
-  test("自托管生产、没配 Redis 也不打日志", () => {
+describe("all rate-limited features disabled", () => {
+  test("logs nothing even in self-hosted production without Redis", () => {
     const log = { warn: vi.fn(), error: vi.fn() };
 
     warnIfRateLimitUnconfigured({

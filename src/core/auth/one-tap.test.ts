@@ -5,8 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { signInWithOneTap } from "./one-tap";
 
-// 只把 createAuthClient 包一层壳，其余走真实实现：既能数它被调了几次（缓存），
-// 又测的是真实的插件行为（怎么初始化 GIS、拿到 credential 后 POST 什么）。
+// Wrap only createAuthClient and use the real implementation for everything else: this lets us count
+// how many times it was called (caching) while still testing the real plugin behavior (how GIS is
+// initialized and what gets POSTed once a credential arrives).
 vi.mock("better-auth/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("better-auth/react")>();
   return { ...actual, createAuthClient: vi.fn(actual.createAuthClient) };
@@ -15,7 +16,10 @@ vi.mock("better-auth/react", async (importOriginal) => {
 const read = (name: string) =>
   readFileSync(new URL(name, import.meta.url), "utf8");
 
-/** 把 GIS 换成假的 `window.google`：initialize 记下配置，prompt 立刻当成「用户点了头像」。 */
+/**
+ * Replace GIS with a fake `window.google`: initialize records the config, and prompt immediately
+ * acts as if the user clicked their avatar.
+ */
 function stubGoogle(credential = "fake-id-token") {
   type Config = { callback?: (response: { credential: string }) => void };
   let config: Config = {};
@@ -30,7 +34,8 @@ function stubGoogle(credential = "fake-id-token") {
   (window as unknown as { google: unknown }).google = {
     accounts: { id: { initialize, prompt } },
   };
-  // 让插件的懒加载直接返回，不真的插 <script>：jsdom 不加载外部脚本，会一直挂住。
+  // Make the plugin's lazy loader return right away instead of inserting a real <script>: jsdom
+  // doesn't load external scripts, so it would hang forever.
   (window as { googleScriptInitialized?: boolean }).googleScriptInitialized =
     true;
 
@@ -57,14 +62,16 @@ afterEach(() => {
 });
 
 /**
- * 这条守的是打包体积：`one-tap.ts` 被登录页的客户端组件引用，只要 import 了
- * `./env`（zod + t3-env）或 `site.config.ts`，整个配置 schema 就会进客户端 bundle，
- * 凭空多出约 92 KB gzip。改坏了要等构建之后才看得出来，这里让它单测就红。
+ * This guards bundle size: `one-tap.ts` is used by the sign-in page's client component, so as soon
+ * as it imports `./env` (zod + t3-env) or `site.config.ts`, the whole config schema lands in the
+ * client bundle, adding about 92 KB gzipped for nothing. A regression would otherwise only show up
+ * after a build; this makes the unit test fail instead.
  */
-describe("one-tap 是客户端叶子模块", () => {
-  it("不 import env 和配置", () => {
+describe("one-tap is a client leaf module", () => {
+  it("does not import env or config", () => {
     const source = read("./one-tap.ts");
-    // 只匹配真正的 import 语句：注释里提到 env.ts 是说明原因，不该被判违规。
+    // Match only real import statements: a comment mentioning env.ts explains why, and must not
+    // count as a violation.
     expect(source).not.toMatch(/^\s*import\s[^;]*from\s+"\.\/env"/m);
     expect(source).not.toMatch(/^\s*import\s[^;]*site\.config/m);
     expect(source).not.toMatch(/^\s*import\s[^;]*from\s+"@\/core\/config/m);
@@ -72,7 +79,7 @@ describe("one-tap 是客户端叶子模块", () => {
 });
 
 describe("signInWithOneTap", () => {
-  it("用 auto_select=false、context=signin 初始化，并只弹一次提示", async () => {
+  it("initializes with auto_select=false and context=signin, and prompts only once", async () => {
     const { initialize, prompt } = stubGoogle();
     stubFetch();
 
@@ -83,12 +90,14 @@ describe("signInWithOneTap", () => {
     });
 
     expect(initialize).toHaveBeenCalledTimes(1);
-    // 用 ?? [] 取值：CI 的类型检查比本地严（索引访问会带 undefined），两种设置下都成立。
+    // Read with ?? []: CI's type check is stricter than local (indexed access includes undefined),
+    // and this holds under both settings.
     const [config] = initialize.mock.calls[0] ?? [];
     expect(config).toMatchObject({
       client_id: "client-init",
-      // 登出后不能被 Google 会话静默送回登录态（本站登出走 Server Action，
-      // 插件里那条 FedCM preventSilentAccess 钩子不会触发）。
+      // After signing out, the Google session must not silently sign the user back in (sign-out
+      // here goes through a Server Action, so the plugin's FedCM preventSilentAccess hook never
+      // fires).
       auto_select: false,
       context: "signin",
       ux_mode: "popup",
@@ -96,7 +105,7 @@ describe("signInWithOneTap", () => {
     expect(prompt).toHaveBeenCalledTimes(1);
   });
 
-  it("拿到 credential 后 POST 到 /api/auth/one-tap/callback，带上 idToken 和 callbackURL", async () => {
+  it("POSTs idToken and callbackURL to /api/auth/one-tap/callback once it has a credential", async () => {
     stubGoogle("token-abc");
     const fetchMock = stubFetch();
 
@@ -111,12 +120,13 @@ describe("signInWithOneTap", () => {
     expect(String(url)).toContain("/api/auth/one-tap/callback");
     expect(JSON.parse(String(init?.body))).toMatchObject({
       idToken: "token-abc",
-      // callbackURL 必须一路传到服务端：插件靠它决定登录完跳哪儿，缺了会静默不跳转。
+      // callbackURL must reach the server: the plugin uses it to decide where to go after sign-in,
+      // and without it silently doesn't redirect.
       callbackURL: "/en/dashboard",
     });
   });
 
-  it("回调失败时把错误交给 onError（插件本身只是静默 return）", async () => {
+  it("passes callback failures to onError (the plugin itself just returns silently)", async () => {
     stubGoogle();
     stubFetch(400);
     const onError = vi.fn();
@@ -130,7 +140,7 @@ describe("signInWithOneTap", () => {
     expect(onError).toHaveBeenCalledTimes(1);
   });
 
-  it("同一个 clientId 只建一次客户端", async () => {
+  it("creates the client only once per clientId", async () => {
     stubGoogle();
     stubFetch();
     const createClient = vi.mocked(createAuthClient);

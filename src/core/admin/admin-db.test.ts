@@ -22,7 +22,7 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 
-describe.skipIf(!url)("后台：积分调整和查询", () => {
+describe.skipIf(!url)("admin: credit adjustments and queries", () => {
   let client: DbClient;
   let credits: Credits;
 
@@ -47,7 +47,7 @@ describe.skipIf(!url)("后台：积分调整和查询", () => {
     return { id, email };
   }
 
-  test("调整后余额正确，流水是 adjust 并记录原因和操作的管理员", async () => {
+  test("balance is correct after adjusting; the transaction is adjust and records the reason and acting admin", async () => {
     const admin = await newUser("admin");
     const target = await newUser();
 
@@ -85,7 +85,7 @@ describe.skipIf(!url)("后台：积分调整和查询", () => {
       "Goodwill credit",
     ]);
 
-    // 详情页能看到是谁操作的。
+    // The detail page shows who made the change.
     const detail = await getUserDetail(client.db, target.id);
     expect(detail!.balance).toBe(30);
     expect(detail!.transactions.map((tx) => tx.actorEmail)).toEqual([
@@ -94,7 +94,7 @@ describe.skipIf(!url)("后台：积分调整和查询", () => {
     ]);
   });
 
-  test("必须填写原因，金额必须是非零整数", async () => {
+  test("requires a reason and a non-zero integer amount", async () => {
     const admin = await newUser("admin");
     const target = await newUser();
     const base = { userId: target.id, requestId: randomUUID() };
@@ -112,7 +112,7 @@ describe.skipIf(!url)("后台：积分调整和查询", () => {
     expect(await credits.getBalance(target.id)).toBe(0);
   });
 
-  test("同一 requestId 重复提交只生效一次", async () => {
+  test("resubmitting the same requestId takes effect only once", async () => {
     const admin = await newUser("admin");
     const target = await newUser();
     const input = {
@@ -131,7 +131,7 @@ describe.skipIf(!url)("后台：积分调整和查询", () => {
     expect(await credits.getBalance(target.id)).toBe(5);
   });
 
-  test("负数调整不能让余额低于 0", async () => {
+  test("a negative adjustment can't take the balance below 0", async () => {
     const admin = await newUser("admin");
     const target = await newUser();
     await expect(
@@ -145,7 +145,7 @@ describe.skipIf(!url)("后台：积分调整和查询", () => {
     expect(await credits.getBalance(target.id)).toBe(0);
   });
 
-  test("管理员账户删除后，流水保留，操作者置空", async () => {
+  test("after the admin account is deleted, the transaction stays and the actor is nulled", async () => {
     const admin = await newUser("admin");
     const target = await newUser();
     await adjustUserCredits(credits, admin.id, {
@@ -164,7 +164,7 @@ describe.skipIf(!url)("后台：积分调整和查询", () => {
     });
   });
 
-  test("用户搜索按邮箱或名称匹配，通配符按字面处理", async () => {
+  test("user search matches email or name and treats wildcards literally", async () => {
     const tag = `find${randomUUID().slice(0, 8)}`;
     const a = await newUser(tag);
     await newUser(`${tag}_x`);
@@ -177,7 +177,7 @@ describe.skipIf(!url)("后台：积分调整和查询", () => {
     const byName = await listUsers(client.db, { query: tag });
     expect(byName.total).toBe(2);
 
-    // "_" 不能当成单字符通配符。
+    // "_" must not act as a single-character wildcard.
     const literal = await listUsers(client.db, { query: `${tag}_` });
     expect(literal.total).toBe(1);
 

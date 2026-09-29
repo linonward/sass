@@ -3,7 +3,7 @@ type Issue = {
   readonly path?: ReadonlyArray<PropertyKey | { readonly key: PropertyKey }>;
 };
 
-/** 把校验问题格式化为逐行的 `字段路径: 原因`，供配置和 env 报错共用。 */
+/** Formats validation issues as one `field.path: reason` per line; shared by config and env errors. */
 export function formatIssues(issues: readonly Issue[]): string {
   return issues
     .map((issue) => {

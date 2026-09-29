@@ -2,8 +2,9 @@ import { referralFromHeaders } from "../tokens";
 import type { createReferralService } from "./service";
 
 /**
- * 注册时绑定邀请人：只认浏览器里签名过的邀请上下文，码对应的邀请人由服务端再查一次
- * （存在且未被封禁）。绑定失败或上下文无效不能影响注册本身。
+ * Binds the inviter at sign-up: only a signed referral context from the browser counts, and the
+ * server looks up the code's inviter again (exists and isn't banned). A failed binding or an
+ * invalid context must never affect the sign-up itself.
  */
 export function createReferralBinding(deps: {
   enabled: boolean;
@@ -26,7 +27,8 @@ export function createReferralBinding(deps: {
           reason: result.reason,
         });
     } catch (error) {
-      // 关系只有这一次机会：失败留下告警，交给运维判断是否补偿。
+      // The relationship only gets this one chance: on failure leave a warning so an operator can
+      // decide whether to compensate.
       deps.warn("referrals.bind_failed", { error, userId });
     }
   };

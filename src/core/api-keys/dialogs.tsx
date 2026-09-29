@@ -30,8 +30,9 @@ const idleCreate: CreateKeyState = { status: "idle" };
 const idleRevoke: RevokeKeyState = { status: "idle" };
 
 /**
- * 复制一次性明文。和邀请链接同一套退路：复制不了（无剪贴板权限、非安全上下文）
- * 就选中输入框并提示按键，不假装已经复制成功 —— 这段明文只出现这一次。
+ * Copies the one-time plaintext. Same fallback as the referral link: if copying fails (no clipboard
+ * permission, insecure context), select the input and show a keyboard hint instead of pretending it
+ * was copied — this plaintext is only shown once.
  */
 function CopyPlaintext({ value }: { value: string }) {
   const t = useTranslations("ApiKeys.create");
@@ -144,10 +145,13 @@ function CreateKeyForm({ locale }: { locale: string }) {
   );
 }
 
-/** 「新建 key」入口。明文显示在同一个弹层里，关掉就没了。 */
+/**
+ * The "create key" entry point. The plaintext shows in the same dialog and is gone once it closes.
+ */
 export function CreateKeyDialog({ locale }: { locale: string }) {
   const t = useTranslations("ApiKeys.create");
-  // 关一次换一个 key 重挂载：下次打开回到空白表单，也丢掉上一次的明文。
+  // Each close changes the React key and remounts: the next open starts with a blank form and drops
+  // the previous plaintext.
   const [session, setSession] = useState(0);
 
   return (
@@ -167,7 +171,10 @@ export function CreateKeyDialog({ locale }: { locale: string }) {
   );
 }
 
-/** 撤销确认。撤销不可逆：明文已经不在库里，撤销后这把 key 永久失效。 */
+/**
+ * Revoke confirmation. Revoking is irreversible: the plaintext isn't in the database, so a revoked
+ * key is dead for good.
+ */
 export function RevokeKeyDialog({
   locale,
   keyId,

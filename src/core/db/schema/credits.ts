@@ -20,7 +20,10 @@ export const creditTransactionTypes = [
 ] as const;
 export type CreditTransactionType = (typeof creditTransactionTypes)[number];
 
-/** 余额缓存。真实来源是 credit_transactions，balance 恒等于该用户流水 amount 之和。 */
+/**
+ * Balance cache. The source of truth is credit_transactions; balance always equals the sum of the
+ * user's transaction amounts.
+ */
 export const userCredits = pgTable(
   "user_credits",
   {
@@ -33,15 +36,16 @@ export const userCredits = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  // 最后一道防线：即使代码有误，余额也不会变成负数。
+  // Last line of defense: even if the code has a bug, the balance can't go negative.
   (table) => [
     check("user_credits_balance_non_negative", sql`${table.balance} >= 0`),
   ],
 );
 
 /**
- * 积分流水。amount 带符号：grant / refund 为正，deduct 为负，adjust 可正可负。
- * (source, source_id) 唯一，重复写入同一来源的流水不生效，用于幂等。
+ * Credit transactions. amount is signed: positive for grant / refund, negative for deduct, either
+ * for adjust. (source, source_id) is unique, so writing a transaction for the same source again has
+ * no effect — this is what makes it idempotent.
  */
 export const creditTransactions = pgTable(
   "credit_transactions",
@@ -55,7 +59,8 @@ export const creditTransactions = pgTable(
     reason: text("reason"),
     source: text("source").notNull(),
     sourceId: text("source_id").notNull(),
-    // 手动调整（adjust）时操作的管理员。管理员账户删除后置空，流水本身保留。
+    // The admin who made a manual adjustment (adjust). Set to null if the admin account is deleted;
+    // the transaction itself is kept.
     actorId: text("actor_id").references(() => user.id, {
       onDelete: "set null",
     }),
@@ -70,14 +75,14 @@ export const creditTransactions = pgTable(
       table.userId,
       table.createdAt,
     ),
-    // 后台指标按时间区间统计积分。
+    // Admin metrics sum credits by time range.
     index("credit_transactions_created_idx").on(table.createdAt),
     check(
       "credit_transactions_type_valid",
       sql`${table.type} in ('grant', 'deduct', 'refund', 'adjust')`,
     ),
     check("credit_transactions_amount_non_zero", sql`${table.amount} <> 0`),
-    // 符号与类型一致，保证 sum(amount) 与余额的对应关系不被错误写入破坏。
+    // Sign matches type, so a bad write can't break the sum(amount) ↔ balance correspondence.
     check(
       "credit_transactions_amount_sign",
       sql`(${table.type} in ('grant', 'refund') and ${table.amount} > 0)

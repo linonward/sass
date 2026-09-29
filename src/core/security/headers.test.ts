@@ -17,19 +17,19 @@ function directives(csp: string) {
 }
 
 describe("contentSecurityPolicy", () => {
-  test("生产：不加 'unsafe-eval'，下发 upgrade-insecure-requests", () => {
+  test("production: no 'unsafe-eval', sends upgrade-insecure-requests", () => {
     const csp = contentSecurityPolicy({ runtimeEnv: {}, isDev: false });
     expect(csp).not.toContain("'unsafe-eval'");
     expect(directives(csp)["upgrade-insecure-requests"]).toEqual([]);
   });
 
-  test("开发：加 'unsafe-eval'，不下发 upgrade-insecure-requests", () => {
+  test("development: adds 'unsafe-eval', no upgrade-insecure-requests", () => {
     const csp = contentSecurityPolicy({ runtimeEnv: {}, isDev: true });
     expect(directives(csp)["script-src"]).toContain("'unsafe-eval'");
     expect(directives(csp)["upgrade-insecure-requests"]).toBeUndefined();
   });
 
-  test("R2_PUBLIC_URL 的源进图片、媒体和连接白名单", () => {
+  test("the R2_PUBLIC_URL origin goes into the image, media, and connect allowlists", () => {
     const csp = contentSecurityPolicy({
       runtimeEnv: { R2_PUBLIC_URL: "https://s3.example.com" },
       isDev: false,
@@ -38,7 +38,7 @@ describe("contentSecurityPolicy", () => {
     for (const name of ["img-src", "media-src", "connect-src"]) {
       expect(parsed[name]).toContain("https://s3.example.com");
     }
-    // 只取源，丢掉路径。
+    // Keep only the origin and drop the path.
     const withPath = contentSecurityPolicy({
       runtimeEnv: { R2_PUBLIC_URL: "https://s3.example.com/nested/path" },
       isDev: false,
@@ -47,7 +47,7 @@ describe("contentSecurityPolicy", () => {
     expect(withPath).not.toContain("/nested/path");
   });
 
-  test("没配或配错 R2_PUBLIC_URL 时不抛错，只是少一个白名单项", () => {
+  test("a missing or invalid R2_PUBLIC_URL doesn't throw; it just drops an allowlist entry", () => {
     for (const value of [undefined, "", "  ", "not-a-url"]) {
       const csp = contentSecurityPolicy({
         runtimeEnv: { R2_PUBLIC_URL: value },
@@ -58,7 +58,7 @@ describe("contentSecurityPolicy", () => {
     }
   });
 
-  test("关键指令都在，且是一行（响应头里不能有换行）", () => {
+  test("all key directives are present on one line (response headers can't contain newlines)", () => {
     const csp = contentSecurityPolicy({ runtimeEnv: {}, isDev: false });
     expect(csp).not.toMatch(/[\r\n]/);
     expect(csp).not.toMatch(/ {2}/);
@@ -70,7 +70,8 @@ describe("contentSecurityPolicy", () => {
       "frame-ancestors": ["'none'"],
       "font-src": ["'self'"],
     });
-    // Vercel Analytics / Speed Insights 的脚本域；Sentry 的 /monitoring 是同源，靠 'self'。
+    // The Vercel Analytics / Speed Insights script origin; Sentry's /monitoring is same-origin and
+    // covered by 'self'.
     expect(directives(csp)["script-src"]).toContain(
       "https://va.vercel-scripts.com",
     );
@@ -78,13 +79,13 @@ describe("contentSecurityPolicy", () => {
   });
 });
 
-describe("Google One Tap 的白名单", () => {
+describe("Google One Tap allowlist", () => {
   const credentials = {
     GOOGLE_CLIENT_ID: "123.apps.googleusercontent.com",
     GOOGLE_CLIENT_SECRET: "secret",
   };
 
-  test("启用时放行 GIS 的脚本、样式、服务端点和提示 iframe", () => {
+  test("when enabled, allows the GIS script, styles, service endpoints, and prompt iframe", () => {
     const parsed = directives(
       contentSecurityPolicy({ runtimeEnv: credentials, isDev: false }),
     );
@@ -95,22 +96,24 @@ describe("Google One Tap 的白名单", () => {
       "https://accounts.google.com/gsi/style",
     );
     expect(parsed["connect-src"]).toContain("https://accounts.google.com/gsi/");
-    // frame-src 一旦出现就取代 default-src 对 frame 的回落，所以必须带 'self'：
-    // e2e/security-headers.spec.ts 靠同源 iframe 真的被加载才能等到 X-Frame-Options 的拒绝。
+    // Once frame-src is present it replaces the default-src fallback for frames, so it must include
+    // 'self': e2e/security-headers.spec.ts relies on a same-origin iframe actually loading in order
+    // to see the X-Frame-Options refusal.
     expect(parsed["frame-src"]).toEqual([
       "'self'",
       "https://accounts.google.com/gsi/",
     ]);
   });
 
-  test("没配凭据时一条都不出现，frame-src 整条不下发", () => {
+  test("without credentials none of them appear, and frame-src isn't sent at all", () => {
     const csp = contentSecurityPolicy({ runtimeEnv: {}, isDev: false });
     expect(csp).not.toContain("accounts.google.com");
-    // 不下发才能在未启用时保持原有策略（frame 继续回落 default-src 'self'）。
+    // Not sending it keeps the original policy when disabled (frames keep falling back to
+    // default-src 'self').
     expect(directives(csp)["frame-src"]).toBeUndefined();
   });
 
-  test("预览部署，以及只填了 client ID 都算未启用", () => {
+  test("preview deployments and a client ID alone both count as disabled", () => {
     for (const runtimeEnv of [
       { ...credentials, VERCEL_ENV: "preview" },
       { GOOGLE_CLIENT_ID: credentials.GOOGLE_CLIENT_ID },
@@ -123,7 +126,7 @@ describe("Google One Tap 的白名单", () => {
 });
 
 describe("staticSecurityHeaders", () => {
-  test("四个固定头", () => {
+  test("the four static headers", () => {
     expect(staticSecurityHeaders()).toEqual([
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -135,7 +138,7 @@ describe("staticSecurityHeaders", () => {
     ]);
   });
 
-  test("不发 HSTS：域名定下来之前开会被浏览器记住（上线清单里手动开）", () => {
+  test("no HSTS: browsers would remember it before the domain is final (turned on manually in the launch checklist)", () => {
     expect(
       staticSecurityHeaders().map((header) => header.key.toLowerCase()),
     ).not.toContain("strict-transport-security");
@@ -143,7 +146,7 @@ describe("staticSecurityHeaders", () => {
 });
 
 describe("securityHeaders", () => {
-  test("固定头 + CSP，CSP 只有一条", () => {
+  test("static headers + CSP, with exactly one CSP", () => {
     const headers = securityHeaders({ runtimeEnv: {}, isDev: false });
     expect(
       headers.filter((h) => h.key === "Content-Security-Policy"),

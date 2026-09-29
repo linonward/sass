@@ -15,7 +15,7 @@ type FakeCtx = {
   };
 };
 
-/** 取出插件注册的 after 钩子，按真实 ctx 的形状喂它。 */
+/** Get the after hook the plugin registers, and feed it a ctx shaped like the real one. */
 function afterHook() {
   const hook = revokeSessionsOnEmailChange().hooks?.after?.[0];
   if (!hook) throw new Error("plugin registered no after hook");
@@ -52,10 +52,10 @@ function run({
 }
 
 describe("emailChangeSucceeded", () => {
-  test("只看端点的 success 字段", () => {
+  test("looks only at the endpoint's success field", () => {
     expect(emailChangeSucceeded({ success: true })).toBe(true);
     expect(emailChangeSucceeded({ success: false })).toBe(false);
-    // 端点出错时 after 钩子照样会跑，此时的 returned 是 APIError 或 undefined。
+    // The after hook still runs when the endpoint fails; returned is then an APIError or undefined.
     expect(emailChangeSucceeded(undefined)).toBe(false);
     expect(emailChangeSucceeded(new Error("boom"))).toBe(false);
     expect(emailChangeSucceeded(null)).toBe(false);
@@ -63,20 +63,22 @@ describe("emailChangeSucceeded", () => {
 });
 
 describe("revokeSessionsOnEmailChange", () => {
-  test("只在改邮箱端点成功后作废该用户的全部 session", async () => {
+  test("revokes all of the user's sessions only after the change-email endpoint succeeds", async () => {
     const deleteUserSessions = await run({ returned: { success: true } });
     expect(deleteUserSessions).toHaveBeenCalledTimes(1);
     expect(deleteUserSessions).toHaveBeenCalledWith("user-1");
   });
 
-  test("端点失败时不动 session", async () => {
-    // 输错验证码、新邮箱已被占用等都会走到这里；此时邮箱没改，session 不该被踢。
+  test("leaves sessions alone when the endpoint fails", async () => {
+    // A wrong verification code, a new email that's already taken, and so on all end up here; the
+    // email didn't change, so sessions must not be kicked out.
     expect(await run({ returned: { success: false } })).not.toHaveBeenCalled();
     expect(await run({ returned: undefined })).not.toHaveBeenCalled();
   });
 
-  test("别的端点不受影响", async () => {
-    // 登录、发验证码这些端点也返回 { success: true }，靠路径把它们排除在外。
+  test("other endpoints are unaffected", async () => {
+    // Endpoints such as sign-in and sending a code also return { success: true }; the path is
+    // what excludes them.
     expect(
       await run({
         path: "/email-otp/send-verification-otp",
@@ -85,7 +87,7 @@ describe("revokeSessionsOnEmailChange", () => {
     ).not.toHaveBeenCalled();
   });
 
-  test("读不到 session 时什么也不做", async () => {
+  test("does nothing when there is no session", async () => {
     expect(
       await run({ returned: { success: true }, userId: null }),
     ).not.toHaveBeenCalled();

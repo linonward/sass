@@ -1,12 +1,13 @@
 import { routing } from "../i18n/routing";
 
-/** 请求头里携带当前界面语言的字段，由 auth client 在每个请求上附带。 */
+/** The request header carrying the current UI locale; the auth client attaches it to every request. */
 export const LOCALE_HEADER = "x-locale";
 
 /**
- * better-auth 客户端的 `fetchOptions.onRequest`：把当前界面语言放到每个请求上，
- * 服务端据此选择验证码邮件和欢迎邮件的语言（见下面的 `resolveRequestLocale`）。
- * 共享客户端（`client.ts`）和 One Tap 的客户端（`one-tap.ts`）都要带，抽出来免得两边漂移。
+ * The better-auth client's `fetchOptions.onRequest`: put the current UI locale on every request so
+ * the server can pick the language of the verification code email and the welcome email (see
+ * `resolveRequestLocale` below). Both the shared client (`client.ts`) and the One Tap client
+ * (`one-tap.ts`) need it, so it's extracted here to keep them from drifting apart.
  */
 export function withLocaleHeader(context: { headers: Headers }) {
   if (typeof document !== "undefined") {
@@ -15,11 +16,13 @@ export function withLocaleHeader(context: { headers: Headers }) {
 }
 
 /**
- * 从请求头推断收件人的语言：先看 x-locale，再看 next-intl 的语言 cookie，最后用默认语言。
+ * Infer the recipient's locale from the request headers: x-locale first, then next-intl's locale
+ * cookie, and finally the default locale.
  *
- * cookie 的值可能被截断或被手工改坏，而 `decodeURIComponent` 遇到残缺的百分号编码会抛
- * URIError。解不出来就当作没写这条 cookie：调用方里有 `user.create.after` 这种不在 try
- * 里的路径，为一条坏 cookie 把整个注册弄失败不划算。
+ * The cookie value may be truncated or hand-edited into garbage, and `decodeURIComponent` throws
+ * URIError on malformed percent-encoding. If it can't be decoded, treat the cookie as absent:
+ * some callers, such as `user.create.after`, don't wrap this in a try, and failing an entire
+ * sign-up over one bad cookie isn't worth it.
  */
 export function resolveRequestLocale(headers: Headers | undefined): string {
   const locales: readonly string[] = routing.locales;
@@ -34,7 +37,7 @@ export function resolveRequestLocale(headers: Headers | undefined): string {
   return routing.defaultLocale;
 }
 
-/** 解出 cookie 里的语言；编码残缺时返回 undefined，不抛错。 */
+/** Decode the locale from the cookie; returns undefined instead of throwing on a malformed encoding. */
 function decodeLocaleCookie(value: string): string | undefined {
   try {
     return decodeURIComponent(value);

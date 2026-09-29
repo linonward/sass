@@ -2,14 +2,17 @@ import { createTranslator, hasLocale, type Messages } from "next-intl";
 
 import { routing } from "@/core/i18n/routing";
 
-/** 邮件模板使用的翻译函数，限定在 messages 的 `Email` 命名空间。 */
+/** Translation function for email templates, scoped to the `Email` namespace in messages. */
 export function emailTranslator(locale: string, messages: Messages) {
   return createTranslator({ locale, messages, namespace: "Email" });
 }
 
 export type EmailT = ReturnType<typeof emailTranslator>;
 
-/** 按语言加载 messages；未启用的语言会报错，避免静默发出默认语言的邮件。 */
+/**
+ * Loads messages for a locale. Locales that aren't enabled throw, so we never silently send an
+ * email in the default locale.
+ */
 export async function loadMessages(locale: string): Promise<Messages> {
   if (!hasLocale(routing.locales, locale)) {
     throw new Error(

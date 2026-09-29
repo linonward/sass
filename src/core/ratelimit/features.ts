@@ -1,11 +1,12 @@
 import siteConfig from "../../../site.config";
 
 /**
- * 限流是否在用：`features.rateLimit` 本身，或任何会调用限流的模块
- * （AI、上传、留资、API Key 的 per-key 限制）。
+ * Whether rate limiting is in use: `features.rateLimit` itself, or any module that calls the rate
+ * limiter (AI, upload, leads, API key per-key limits).
  *
- * `src/core/env.ts`（决定要不要强制要求 Upstash 变量）、限流的接线和启动检查都用它，
- * 免得这几处的判断漂移 —— 落下一处就会出现「变量按开了要，运行时却按没开处理」。
+ * `src/core/env.ts` (which decides whether to require the Upstash variables), the rate limit
+ * wiring, and the startup check all use it so their checks can't drift apart — missing one would
+ * mean the variables are required as if it's on while the runtime treats it as off.
  */
 export function rateLimitingEnabled() {
   const { features, acquisition, apiKeys } = siteConfig;
@@ -14,7 +15,8 @@ export function rateLimitingEnabled() {
     features.ai ||
     features.upload ||
     acquisition.leads.enabled ||
-    // 配了 per-key 阈值就是真的在限流，同样需要 Upstash 变量。
+    // A per-key threshold means rate limiting is really in use, so it needs the Upstash variables
+    // too.
     apiKeys.rateLimitPerKey !== undefined
   );
 }

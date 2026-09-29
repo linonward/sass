@@ -9,8 +9,8 @@ import type { DailyPoint, MetricRange } from "../metrics";
 import { metricRanges } from "../metrics";
 
 /**
- * 时间范围切换：一排链接，服务端按 ?range= 统计。
- * 链接要带上当前页面已有的筛选（`query`），切范围不该把来源筛选丢掉。
+ * Time range switcher: a row of links; the server aggregates by ?range=. Links carry the page's
+ * existing filters (`query`), since switching the range shouldn't drop the source filter.
  */
 export function RangeFilter({
   current,
@@ -38,7 +38,7 @@ export function RangeFilter({
             }}
             aria-current={active ? "page" : undefined}
             className={cn(
-              // 和 StatusFilter 同一套：激活是中性填充，未激活是 ghost。
+              // Same scheme as StatusFilter: active is a neutral fill, inactive is ghost.
               buttonVariants({
                 variant: active ? "secondary" : "ghost",
                 size: "sm",
@@ -80,7 +80,7 @@ export function StatGrid({ children }: { children: React.ReactNode }) {
   return <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">{children}</dl>;
 }
 
-/** 一个指标：标签、数值，可选一行说明。 */
+/** A single metric: label, value, and an optional one-line note. */
 export function StatTile({
   label,
   value,
@@ -95,7 +95,7 @@ export function StatTile({
   return (
     <div className="panel flex flex-col gap-1 p-4" data-testid={testId}>
       <dt className="text-muted-foreground text-sm">{label}</dt>
-      {/* data-numeric：轮询刷新时数字不跳。 */}
+      {/* data-numeric: digits don't jump when polling refreshes. */}
       <dd className="heading-display text-2xl" data-numeric>
         {value}
       </dd>
@@ -104,7 +104,7 @@ export function StatTile({
   );
 }
 
-/** 不小于 value 的「整齐」刻度：1 / 2 / 5 × 10^n。 */
+/** The smallest "nice" tick not less than value: 1 / 2 / 5 × 10^n. */
 export function niceCeil(value: number) {
   if (value <= 0) return 1;
   const magnitude = 10 ** Math.floor(Math.log10(value));
@@ -113,8 +113,8 @@ export function niceCeil(value: number) {
 }
 
 /**
- * 按天的柱状图（单一系列）：CSS 画柱子，悬停或聚焦显示当天的数值，
- * 下方可以展开数据表。
+ * Per-day bar chart (single series): bars drawn with CSS, hover or focus shows the day's value,
+ * and a data table can be expanded below.
  */
 export function DailyColumns({
   title,
@@ -134,7 +134,7 @@ export function DailyColumns({
     <figure className="panel flex flex-col gap-3 p-4">
       <figcaption className="heading-display text-sm">{title}</figcaption>
       <div className="flex gap-2">
-        {/* y 轴：只标 0 和最大刻度。 */}
+        {/* y axis: only 0 and the max tick are labeled. */}
         <div className="text-muted-foreground flex h-40 flex-col justify-between text-right text-xs tabular-nums">
           <span className="-translate-y-1/2">{formatValue(max)}</span>
           <span className="translate-y-1/2">{formatValue(0)}</span>

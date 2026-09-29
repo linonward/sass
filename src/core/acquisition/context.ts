@@ -16,8 +16,9 @@ const hostname = z
   );
 
 /**
- * 快照里的 source 可能是哪些值：utm_source、外部 hostname，或确实没有来源的 direct。
- * 后台报表按它筛选，用的是同一套规则；unknown 是「没有归因行 / 已撤回」那个桶。
+ * Possible values of source in the snapshot: utm_source, an external hostname, or direct when there
+ * really is no source. The admin report filters on it using the same rules; unknown is the bucket
+ * for "no attribution row / withdrawn".
  */
 export const sourceField = z.union([
   campaignField,

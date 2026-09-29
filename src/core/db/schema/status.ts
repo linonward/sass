@@ -16,18 +16,20 @@ export const statusEventStatuses = [
 ] as const;
 export type StatusEventStatus = (typeof statusEventStatuses)[number];
 
-/** 事件来源：管理员在后台开的，还是 auto 模式探测出来的。 */
+/** Event origin: opened by an admin in the admin panel, or detected by an auto-mode probe. */
 export const statusEventSources = ["manual", "auto"] as const;
 export type StatusEventSource = (typeof statusEventSources)[number];
 
 /**
- * 状态页的一条 incident / 公告。一行就是一条，`resolvedAt` 为 null 表示仍在进行中。
+ * One incident / announcement on the status page. One row each; `resolvedAt` null means it's still
+ * ongoing.
  *
- * - `component` 是 `site.config.ts` 里 `statusPage.components` 的 key；组件后来从配置里
- *   删掉了也不影响历史记录（展示时回退成这个 key 本身）。
- * - `status` 为 `operational` 的行用来发「没有影响的公告」，它不会把整体状态拉成异常。
- * - `notifiedAt` 是最近一次给订阅者发通知的时间，5 分钟内的创建/更新合并成一封
- *   （见 `src/core/status/notify.ts`）。
+ * - `component` is a key of `statusPage.components` in `site.config.ts`; removing the component
+ *   from the config later doesn't affect history (display falls back to the key itself).
+ * - Rows with `status` `operational` are for "no impact" announcements; they don't pull the
+ *   overall status into an abnormal state.
+ * - `notifiedAt` is when subscribers were last notified; creates / updates within 5 minutes are
+ *   merged into one email (see `src/core/status/notify.ts`).
  */
 export const statusEvents = pgTable(
   "status_events",
@@ -46,38 +48,42 @@ export const statusEvents = pgTable(
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
   },
   (table) => [
-    // 取某个组件的最近一条事件，以及按窗口算 uptime。
+    // Fetch a component's latest event, and compute uptime per window.
     index("status_events_component_idx").on(table.component, table.createdAt),
-    // 找「仍在进行中」的事件。
+    // Find events that are still ongoing.
     index("status_events_open_idx").on(table.component, table.resolvedAt),
   ],
 );
 
 /**
- * auto 模式的探测状态，每个组件一行。存在的意义是「连续两次失败才 degraded」：
- * 一次探测失败可能只是网络抖动，不该立刻把整体状态拉成异常。
+ * Probe state for auto mode, one row per component. It exists so that "degraded" needs two
+ * consecutive failures: a single failed probe may just be network jitter and shouldn't immediately
+ * pull the overall status into an abnormal state.
  */
 export const statusChecks = pgTable("status_checks", {
   component: text("component").primaryKey(),
   consecutiveFailures: integer("consecutive_failures").notNull().default(0),
   lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }).notNull(),
   lastOk: boolean("last_ok"),
-  /** 最近一次失败的原因，写进自动创建的 incident 便于排查。 */
+  /** Reason for the latest failure, written into the auto-created incident for debugging. */
   lastError: text("last_error"),
 });
 
 /**
- * 状态页的邮件订阅者。双重确认（确认邮件）之后才算订阅，未确认的行到期后可以被重新订阅覆盖。
+ * Email subscribers to the status page. Only counts as subscribed after double opt-in (a
+ * confirmation email); unconfirmed rows can be overwritten by a new subscription once expired.
  *
- * 没有 `userId`：订阅和登录无关，所以不复用 notification_log（那张表的 user_id 是外键）。
- * 也没有退订令牌列：退订链接是「地址 + 站点密钥」的签名，服务端不用记（见 status/subscribers.ts）。
+ * No `userId`: subscribing is unrelated to signing in, so notification_log isn't reused (its
+ * user_id is a foreign key). There's no unsubscribe-token column either: the unsubscribe link is a
+ * signature over "address + site secret", so the server doesn't need to store anything (see
+ * status/subscribers.ts).
  */
 export const statusSubscribers = pgTable(
   "status_subscribers",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull(),
-    /** 订阅时的语言，发通知时用它渲染文案。 */
+    /** Locale at subscription time; notifications render their copy in it. */
     locale: text("locale"),
     confirmHash: text("confirm_hash"),
     confirmExpiresAt: timestamp("confirm_expires_at", { withTimezone: true }),
@@ -87,7 +93,7 @@ export const statusSubscribers = pgTable(
       .notNull(),
   },
   (table) => [
-    // 一个地址一行；确认令牌的哈希唯一，反查时不必再扫全表。
+    // One row per address; the confirmation token hash is unique, so lookups don't scan the table.
     uniqueIndex("status_subscribers_email_idx").on(table.email),
     uniqueIndex("status_subscribers_confirm_hash_idx").on(table.confirmHash),
   ],

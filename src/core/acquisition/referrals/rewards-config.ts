@@ -9,12 +9,12 @@ export type RewardRule = {
   monthlyCapPerInviter?: number;
 };
 
-/** 奖励是否有效（至少一方有积分且正数）。 */
+/** Whether the reward is active (at least one side gets a positive number of credits). */
 export function isRewardActive(rule: RewardRule): boolean {
   return rule.inviterCredits > 0 || rule.inviteeCredits > 0;
 }
 
-/** 从 site config 读取当前奖励规则。 */
+/** Reads the current reward rule from the site config. */
 export function getRewardRule(config: {
   acquisition: SiteConfig["acquisition"];
 }): RewardRule {
@@ -22,9 +22,9 @@ export function getRewardRule(config: {
 }
 
 /**
- * 校验订单是否符合发放条件。
- * - 计划在 allowedPlans 内（未配置 = 全部允许）
- * - 支付金额 >= minPaymentByCurrency（按币种匹配）
+ * Checks whether an order qualifies for a grant.
+ * - The plan is in allowedPlans (not configured = all allowed)
+ * - The amount paid >= minPaymentByCurrency (matched by currency)
  */
 export function isOrderEligible(
   rule: RewardRule,

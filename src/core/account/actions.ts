@@ -34,7 +34,7 @@ async function requireSession(locale: string) {
   return session;
 }
 
-/** 修改显示名称。 */
+/** Update the display name. */
 export async function updateName(
   locale: string,
   _prev: ActionState,
@@ -49,7 +49,10 @@ export async function updateName(
   return { status: "success" };
 }
 
-/** 修改偏好语言，并跳到该语言下的设置页，让界面立即切换。 */
+/**
+ * Update the preferred locale and redirect to the settings page in that locale so the UI switches
+ * immediately.
+ */
 export async function updateLocale(
   locale: string,
   _prev: ActionState,
@@ -64,14 +67,16 @@ export async function updateLocale(
     headers: await headers(),
     body: { locale: next },
   });
-  // next-intl 按 cookie 记住界面语言；和语言切换器一样同步更新。
+  // next-intl remembers the UI locale in a cookie; update it too, the same way the locale switcher
+  // does.
   (await cookies()).set("NEXT_LOCALE", next, { path: "/", sameSite: "lax" });
   redirect(localizedPath(next, "/settings"));
 }
 
 /**
- * 删除当前账户。需要在确认框里输入自己的邮箱；任何 onUserDelete 钩子失败都会中止删除。
- * 成功后清除登录 cookie 并回到首页。
+ * Delete the current account. The user must type their own email into the confirmation box; if any
+ * onUserDelete hook fails, the deletion is aborted. On success, clear the auth cookies and go back
+ * to the home page.
  */
 export async function deleteAccount(
   locale: string,
@@ -102,13 +107,14 @@ export async function deleteAccount(
     return { status: "error", error: "generic" };
   }
 
-  // session 已随用户级联删除；再清掉浏览器里的登录 cookie。
+  // Sessions were cascade-deleted with the user; now clear the auth cookies in the browser.
   const { authCookies } = await auth.$context;
   const jar = await cookies();
   for (const name of [SOURCE_COOKIE, RETRY_COOKIE]) {
     if (jar.has(name)) jar.set(name, "", { ...cookieOptions, maxAge: 0 });
   }
-  // 沿用 Better Auth 的属性（__Secure- 前缀的 cookie 必须带 Secure 才能被覆盖）。
+  // Reuse Better Auth's attributes (a cookie with the __Secure- prefix can only be overwritten when
+  // Secure is set).
   for (const { name, attributes } of Object.values(authCookies)) {
     jar.set(name, "", {
       path: attributes.path,

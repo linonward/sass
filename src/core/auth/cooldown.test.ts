@@ -10,23 +10,24 @@ import {
 describe("remainingCooldown", () => {
   const now = new Date("2026-01-01T00:00:00Z");
 
-  test("没有记录或已过期时为 0", () => {
+  test("is 0 when there is no record or it has expired", () => {
     expect(remainingCooldown(undefined, now)).toBe(0);
     expect(remainingCooldown(new Date("2025-12-31T23:59:59Z"), now)).toBe(0);
   });
 
-  test("冷却中时向上取整到秒", () => {
+  test("rounds up to whole seconds during the cooldown", () => {
     expect(remainingCooldown(new Date("2026-01-01T00:00:59.200Z"), now)).toBe(
       60,
     );
     expect(remainingCooldown(new Date("2026-01-01T00:00:01Z"), now)).toBe(1);
   });
 
-  test("边界：刚好到期是 0，不足一秒也按一秒算", () => {
+  test("edge: exactly expired is 0, and less than a second counts as one second", () => {
     expect(remainingCooldown(new Date("2026-01-01T00:00:00.000Z"), now)).toBe(
       0,
     );
-    // 还剩 0.5 秒时不是 0：否则用户可以在冷却结束前重发。
+    // With 0.5 seconds left it must not be 0; otherwise the user could resend before the cooldown
+    // ends.
     expect(remainingCooldown(new Date("2026-01-01T00:00:00.500Z"), now)).toBe(
       1,
     );
@@ -35,20 +36,20 @@ describe("remainingCooldown", () => {
     );
   });
 
-  test("边界：长时间冷却不溢出、不变成小数", () => {
+  test("edge: long cooldowns don't overflow or turn fractional", () => {
     const remaining = remainingCooldown(new Date("2026-01-02T00:00:00Z"), now);
     expect(remaining).toBe(24 * 60 * 60);
     expect(Number.isInteger(remaining)).toBe(true);
   });
 });
 
-test("冷却记录按邮箱归一化，并与验证码记录区分", () => {
+test("cooldown records are keyed by normalized email and distinct from verification code records", () => {
   expect(cooldownIdentifier(" Ada@Example.com ")).toBe(
     "otp-resend-cooldown:ada@example.com",
   );
 });
 
-test("冷却记录的 identifier 与 emailOTP 插件的 <type>-otp-<email> 不重叠", () => {
+test("the cooldown identifier never overlaps the emailOTP plugin's <type>-otp-<email>", () => {
   const identifier = cooldownIdentifier("ada@example.com");
   for (const type of ["sign-in", "change-email", "email-verification"]) {
     expect(identifier).not.toBe(`${type}-otp-ada@example.com`);
@@ -56,7 +57,7 @@ test("冷却记录的 identifier 与 emailOTP 插件的 <type>-otp-<email> 不�
   expect(identifier.startsWith("otp-resend-cooldown:")).toBe(true);
 });
 
-/** 发送接口的 before-hook：直接调用 handler，跳过 better-auth 的中间件装配。 */
+/** The send endpoint's before-hook: call the handler directly, skipping better-auth's middleware wiring. */
 function sendHook({
   seconds = 60,
   now,
@@ -108,14 +109,14 @@ describe("otpResendCooldown", () => {
     body: { email: "ada@example.com" },
   };
 
-  test("只拦发送接口", () => {
+  test("only intercepts the send endpoint", () => {
     const matches = sendPathMatcher();
     expect(matches({ path: "/email-otp/send-verification-otp" })).toBe(true);
     expect(matches({ path: "/sign-in/email-otp" })).toBe(false);
     expect(matches({ path: "/get-session" })).toBe(false);
   });
 
-  test("没有冷却记录时放行并写下一条记录", async () => {
+  test("lets the request through and writes a record when there is no cooldown record", async () => {
     const store = adapter(undefined);
     await sendHook()({ ...send, context: store.context });
 
@@ -124,13 +125,13 @@ describe("otpResendCooldown", () => {
     expect(store.created[0]!.identifier).toBe(
       "otp-resend-cooldown:ada@example.com",
     );
-    // 记录的有效期就是冷却窗口。
+    // The record's expiry is the cooldown window.
     expect(store.created[0]!.expiresAt).toEqual(
       new Date("2026-01-01T00:01:00Z"),
     );
   });
 
-  test("冷却中时抛 TOO_MANY_REQUESTS 并给出 Retry-After", async () => {
+  test("throws TOO_MANY_REQUESTS with Retry-After during the cooldown", async () => {
     const store = adapter({ expiresAt: new Date("2026-01-01T00:00:30Z") });
     const error = await sendHook()({ ...send, context: store.context }).catch(
       (thrown: unknown) => thrown,
@@ -143,15 +144,15 @@ describe("otpResendCooldown", () => {
         message: "Please wait 30s before requesting a new code",
         retryAfter: 30,
       },
-      // 客户端读 Retry-After 来显示倒计时。
+      // The client reads Retry-After to show a countdown.
       headers: { "Retry-After": "30" },
     });
-    // 被拦下时什么都不写：不能把冷却窗口顺延。
+    // Write nothing when blocked: the cooldown window must not be extended.
     expect(store.created).toEqual([]);
     expect(store.deleted).toEqual([]);
   });
 
-  test("冷却过期后删掉旧记录再写新的（过期不算冷却）", async () => {
+  test("deletes the old record and writes a new one once expired (expired is not a cooldown)", async () => {
     const store = adapter({ expiresAt: new Date("2025-12-31T23:59:00Z") });
     await sendHook()({ ...send, context: store.context });
 
@@ -159,7 +160,7 @@ describe("otpResendCooldown", () => {
     expect(store.created).toHaveLength(1);
   });
 
-  test("邮箱不是字符串（body 被改过）时直接放行", async () => {
+  test("lets the request through when email is not a string (tampered body)", async () => {
     const store = adapter(undefined);
     await sendHook()({
       path: send.path,
@@ -170,7 +171,7 @@ describe("otpResendCooldown", () => {
     expect(store.deleted).toEqual([]);
   });
 
-  test("没有 body 时直接放行", async () => {
+  test("lets the request through when there is no body", async () => {
     const store = adapter(undefined);
     await sendHook()({
       path: send.path,
@@ -180,7 +181,7 @@ describe("otpResendCooldown", () => {
     expect(store.created).toEqual([]);
   });
 
-  test("seconds <= 0 时插件不生效（配置成 0 就是不冷却）", async () => {
+  test("does nothing when seconds <= 0 (configuring 0 disables the cooldown)", async () => {
     const create = vi.fn();
     const store = adapter(undefined);
     await sendHook({ seconds: 0 })({
@@ -195,7 +196,7 @@ describe("otpResendCooldown", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  test("冷却记录用邮箱归一化后的 key，大小写和空格不影响判定", async () => {
+  test("uses the normalized email as the key, so case and whitespace don't matter", async () => {
     const store = adapter({ expiresAt: new Date("2026-01-01T00:00:30Z") });
     await expect(
       sendHook()({

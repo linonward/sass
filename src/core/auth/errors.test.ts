@@ -9,24 +9,26 @@ const read = (name: string) =>
   readFileSync(new URL(name, import.meta.url), "utf8");
 
 /**
- * 这两个码是客户端和服务端共用的词汇表：服务端在 APIError 的 body.code 里抛出，
- * sign-in-form.tsx 按 code 分支决定提示语和倒计时。改名字等于改协议，两边必须一起改。
+ * These two codes are a vocabulary shared by client and server: the server throws them in the
+ * APIError's body.code, and sign-in-form.tsx branches on the code to pick the message and the
+ * countdown. Renaming one changes the protocol, so both sides must change together.
  */
-test("错误码是大写下划线常量，客户端按它 switch", () => {
+test("error codes are UPPER_SNAKE_CASE constants the client switches on", () => {
   for (const code of [RESEND_COOLDOWN, EMAIL_SEND_FAILED]) {
     expect(code).toMatch(/^[A-Z][A-Z0-9_]*$/);
   }
 });
 
-test("两个错误码互不相同（撞码会走错提示分支）", () => {
+test("the two error codes are distinct (a collision would show the wrong message)", () => {
   expect(RESEND_COOLDOWN).not.toBe(EMAIL_SEND_FAILED);
   expect(new Set([RESEND_COOLDOWN, EMAIL_SEND_FAILED]).size).toBe(2);
 });
 
 /**
- * 和 one-tap 那条一样守的是打包体积和分层：sign-in-form.tsx 是客户端组件，
- * 一旦 errors.ts 引了服务端模块（env / db / logger），整条依赖链就会进浏览器包。
+ * Like the one-tap test, this guards bundle size and layering: sign-in-form.tsx is a client
+ * component, so as soon as errors.ts imports a server module (env / db / logger), the whole
+ * dependency chain ends up in the browser bundle.
  */
-test("errors.ts 是叶子模块：没有任何 import", () => {
+test("errors.ts is a leaf module with no imports", () => {
   expect(read("./errors.ts")).not.toMatch(/^\s*import\s/m);
 });

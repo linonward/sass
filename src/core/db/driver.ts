@@ -1,4 +1,7 @@
-/** Neon 的连接地址走 WebSocket 驱动（支持交互式事务），其他 Postgres 走 node-postgres。 */
+/**
+ * Neon URLs use the WebSocket driver (which supports interactive transactions); any other Postgres
+ * uses node-postgres.
+ */
 export type DbDriver = "neon" | "pg";
 
 export function driverFor(url: string): DbDriver {

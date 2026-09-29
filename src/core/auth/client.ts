@@ -6,7 +6,8 @@ import { withLocaleHeader } from "./locale";
 export const authClient = createAuthClient({
   plugins: [emailOTPClient()],
   fetchOptions: {
-    // 带上当前界面语言，服务端据此选择验证码邮件和欢迎邮件的语言。
+    // Send the current UI locale; the server uses it to pick the language of the verification code
+    // email and the welcome email.
     onRequest: withLocaleHeader,
   },
 });

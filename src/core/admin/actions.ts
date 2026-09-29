@@ -29,10 +29,14 @@ export type AdminActionState =
   | { status: "success"; duplicate?: boolean; nextRequestId?: string }
   | { status: "error"; error: AdminErrorCode };
 
-// Server Action 可以绕过页面直接调用，所以每个 action 都重新校验管理员身份。
+// Server Actions can be called directly, bypassing the page, so every action re-checks admin
+// identity.
 const forbidden: AdminActionState = { status: "error", error: "forbidden" };
 
-/** 调整积分：金额可正可负，必须填写原因；流水记录操作的管理员。 */
+/**
+ * Adjust credits: the amount may be positive or negative and a reason is required; the transaction
+ * records the acting admin.
+ */
 export async function adjustCreditsAction(
   _prev: AdminActionState,
   form: FormData,
@@ -65,7 +69,8 @@ export async function adjustCreditsAction(
     return {
       status: "success",
       duplicate: result.status === "duplicate",
-      // 下一次调整用新的请求 ID；同一个 ID 重复提交（双击、重试）只生效一次。
+      // The next adjustment uses a new request ID; resubmitting the same ID (double click, retry)
+      // takes effect only once.
       nextRequestId: randomUUID(),
     };
   } catch (error) {
@@ -83,7 +88,10 @@ function authErrorCode(error: unknown): AdminErrorCode | undefined {
   return "generic";
 }
 
-/** 封禁用户：Better Auth 会撤销他的所有 session，之后无法再登录。原因可选。 */
+/**
+ * Ban a user: Better Auth revokes all their sessions and they can no longer sign in. The reason is
+ * optional.
+ */
 export async function banUserAction(
   _prev: AdminActionState,
   form: FormData,
@@ -110,7 +118,7 @@ export async function banUserAction(
   return { status: "success" };
 }
 
-/** 解除封禁。 */
+/** Lift a ban. */
 export async function unbanUserAction(
   _prev: AdminActionState,
   form: FormData,

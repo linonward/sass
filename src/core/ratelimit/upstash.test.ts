@@ -1,4 +1,5 @@
-// 用真实的 @upstash/ratelimit，只替换 Redis 的 HTTP 请求，确认它在出错和超时时的行为和 limiter.ts 的假设一致。
+// Uses the real @upstash/ratelimit and replaces only Redis's HTTP requests, to confirm that its
+// behavior on errors and timeouts matches what limiter.ts assumes.
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -28,8 +29,8 @@ function setup(failMode: "open" | "closed") {
 }
 
 const failures = {
-  连接失败: () => Promise.reject(new Error("ECONNREFUSED")),
-  无响应: () => new Promise<Response>(() => {}),
+  "connection refused": () => Promise.reject(new Error("ECONNREFUSED")),
+  "no response": () => new Promise<Response>(() => {}),
 };
 
 afterEach(() => {
@@ -37,7 +38,7 @@ afterEach(() => {
 });
 
 describe.each(Object.entries(failures))("Redis %s", (_, fetch) => {
-  test("closed 返回 unavailable", async () => {
+  test("closed returns unavailable", async () => {
     vi.stubGlobal("fetch", vi.fn(fetch));
     const { checkRateLimit } = setup("closed");
     expect(await checkRateLimit("ai", { userId: "u1" })).toMatchObject({
@@ -46,7 +47,7 @@ describe.each(Object.entries(failures))("Redis %s", (_, fetch) => {
     });
   });
 
-  test("open 放行", async () => {
+  test("open lets requests through", async () => {
     vi.stubGlobal("fetch", vi.fn(fetch));
     const { checkRateLimit } = setup("open");
     expect((await checkRateLimit("ai", { userId: "u1" })).ok).toBe(true);

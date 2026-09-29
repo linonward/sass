@@ -9,11 +9,14 @@ export type { StoredEmail };
 type EmailFilter = {
   to?: string;
   template?: EmailTemplateName;
-  /** 只看这个时间点之后发出的邮件，避免读到上一次测试留下的。 */
+  /** Only consider emails sent after this time, so leftovers from a previous test are ignored. */
   since?: Date;
 };
 
-/** 读取 `EMAIL_TRANSPORT=file` 写下的最新一封匹配的邮件；没有时返回 undefined。 */
+/**
+ * Reads the latest matching email written by `EMAIL_TRANSPORT=file`; returns undefined when there
+ * is none.
+ */
 export async function readLatestEmail(
   filter: EmailFilter = {},
   dir = EMAIL_OUTBOX_DIR,
@@ -36,7 +39,7 @@ export async function readLatestEmail(
   return undefined;
 }
 
-/** 轮询等待一封匹配的邮件，e2e 里提交表单后使用。 */
+/** Polls until a matching email arrives; used in e2e after submitting a form. */
 export async function waitForEmail(
   filter: EmailFilter = {},
   { timeout = 10_000, interval = 200, dir = EMAIL_OUTBOX_DIR } = {},
@@ -52,7 +55,7 @@ export async function waitForEmail(
   );
 }
 
-/** 清空发件箱目录。 */
+/** Empties the outbox directory. */
 export async function clearEmails(dir = EMAIL_OUTBOX_DIR): Promise<void> {
   await rm(dir, { recursive: true, force: true });
 }

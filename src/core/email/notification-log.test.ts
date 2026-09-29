@@ -23,12 +23,15 @@ const url = process.env.DATABASE_URL_TEST;
 if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
-if (!url) console.warn("跳过通知名额测试：未设置 DATABASE_URL_TEST");
+if (!url)
+  console.warn(
+    "Skipping notification claim tests: DATABASE_URL_TEST is not set",
+  );
 
 const HOUR = 3600 * 1000;
 const KIND = "test-notice";
 
-describe.skipIf(!url)("通知名额的占用与释放（真实 Postgres）", () => {
+describe.skipIf(!url)("notification claim and release (real Postgres)", () => {
   let client: DbClient;
   let db: DbClient["db"];
   let userId: string;
@@ -59,41 +62,42 @@ describe.skipIf(!url)("通知名额的占用与释放（真实 Postgres）", () 
     });
   });
 
-  test("发送失败释放名额后，同一 (kind, key) 可以重新占用并补发", async () => {
+  test("after a failed send releases the claim, the same (kind, key) can be claimed and resent", async () => {
     const at = new Date("2026-09-25T00:00:00.000Z");
 
     expect(await claim(at)).toBe(true);
-    // 名额被占用：同一个 key 再占一次拿不到（这就是防重复轰炸）。
+    // The slot is taken: claiming the same key again fails (this is what prevents duplicate spam).
     expect(await claim(at)).toBe(false);
 
-    // 发送失败 → 释放名额。
+    // Send fails → release the claim.
     expect(await release(at)).toBe(true);
     expect(await rows()).toHaveLength(0);
 
-    // 重试：重新拿到名额，邮件可以真的发出去。
+    // Retry: the claim succeeds again and the email can actually go out.
     expect(await claim(at)).toBe(true);
     expect(await rows()).toHaveLength(1);
   });
 
-  test("释放只删这次尝试占的行：已被新的发送接管的名额不动", async () => {
+  test("release only deletes this attempt's row: a claim taken over by a newer send is left alone", async () => {
     const first = new Date("2026-09-25T00:00:00.000Z");
-    const second = new Date(first.getTime() + 2 * HOUR); // 超过窗口，可以再发
+    const second = new Date(first.getTime() + 2 * HOUR); // past the window, can send again
 
     expect(await claim(first, HOUR)).toBe(true);
     expect(await claim(second, HOUR)).toBe(true);
 
-    // 第一次尝试的发送在第二次占名额之后才失败：不能把第二次的名额删掉，否则会重复轰炸。
+    // The first attempt fails only after the second one claimed the slot: the second claim must
+    // not be deleted, or we'd send duplicates.
     expect(await release(first)).toBe(false);
     expect(await rows()).toHaveLength(1);
     expect((await rows())[0]!.lastSentAt).toEqual(second);
 
-    // 第二次占的名额仍然有效：窗口内不再发。
+    // The second claim still holds: no more sends within the window.
     expect(await claim(new Date(second.getTime() + 10 * 60 * 1000), HOUR)).toBe(
       false,
     );
   });
 
-  test("没占过名额或已释放过：释放返回 false", async () => {
+  test("release returns false when never claimed or already released", async () => {
     const at = new Date("2026-09-25T00:00:00.000Z");
 
     expect(await release(at)).toBe(false);

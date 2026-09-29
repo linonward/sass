@@ -26,21 +26,25 @@ import { leads, orders, user, userAttribution } from "@/core/db/schema";
 
 import { campaignField, sourceField } from "./context";
 
-// /admin/acquisition 的渠道报表聚合。时间口径直接复用 /admin/metrics 的实现：
-// UTC 半开区间、7 / 30 / 90 天。收入口径同样与 /admin/metrics 共用（见 metrics.ts
-// 开头的「收入口径」，买家说明在 README 的「收入口径」一节）：收入按**订单归属期**
-// （区间内创建的订单）算，退款按查询时的累计值扣，所以历史区间会随之后的退款变化。
+// Channel report aggregation for /admin/acquisition. The time basis reuses /admin/metrics
+// directly: UTC half-open ranges of 7 / 30 / 90 days. The revenue basis is shared with
+// /admin/metrics as well (see "revenue basis" at the top of metrics.ts; the buyer-facing
+// explanation is the revenue basis section of the README): revenue is attributed to the **order's
+// period** (orders created within the range), and refunds are deducted at their cumulative value as
+// of query time, so historical ranges change as later refunds come in.
 
 /**
- * 「没有可用归因」的合成桶。没有归因行（功能开启前注册的老用户、跨设备）和已撤回
- * （快照为 null）都落在它上面。取值故意做成不可能出现在快照里的字符串（括号不在
- * context.ts 的白名单字符集里），所以真的把 utm_source 填成 `unknown` 的流量是**独立
- * 的一行**，不会和「没有归因」混在一起；筛选框里两个取值也都列得出来。
+ * Synthetic bucket for "no usable attribution". Users with no attribution row (existing users who
+ * signed up before the feature was on, cross-device) and withdrawn ones (null snapshot) both land
+ * here. The value is deliberately a string that can never appear in a snapshot (parentheses aren't
+ * in context.ts's allowed character set), so traffic that really sets utm_source to `unknown` gets
+ * **its own row** and never mixes with "no attribution"; both values also show up in the filter.
  */
 export const NO_SOURCE_BUCKET = "(none)";
 
 /**
- * 冻结来源（快照里的 source）。direct 是确实没有来源，和 NO_SOURCE_BUCKET 是两行。
+ * The frozen source (source in the snapshot). direct means there really was no source, and it's a
+ * separate row from NO_SOURCE_BUCKET.
  */
 const sourceOf = sql<string>`coalesce(${userAttribution.snapshot}->>'source', ${NO_SOURCE_BUCKET})`;
 const mediumOf = sql<string | null>`${userAttribution.snapshot}->>'utm_medium'`;
@@ -48,7 +52,10 @@ const campaignOf = sql<
   string | null
 >`${userAttribution.snapshot}->>'utm_campaign'`;
 
-/** 线索来源：从线索快照里取 source，和归因报告的 sourceOf 口径一致（含合成桶）。 */
+/**
+ * Lead source: source from the lead's snapshot, on the same basis as the attribution report's
+ * sourceOf (including the synthetic bucket).
+ */
 const leadSourceOf = sql<string>`coalesce(${leads.snapshot}->>'source', ${NO_SOURCE_BUCKET})`;
 
 export type ReportFilters = {
@@ -58,9 +65,10 @@ export type ReportFilters = {
 };
 
 /**
- * 解析 ?source= / ?medium= / ?campaign=：只接受能写进快照的取值（见 context.ts 的
- * 校验规则），其他值一律当作没传，不把它们带进查询。source 额外接受合成桶 ——
- * 它是表格里会出现的一行，筛选框必须能选它。
+ * Parses ?source= / ?medium= / ?campaign=: only values that could be written into a snapshot are
+ * accepted (see the validation rules in context.ts); anything else is treated as absent and never
+ * reaches the query. source also accepts the synthetic bucket — it's a row that shows up in the
+ * table, so the filter must be able to select it.
  */
 export function parseReportFilters(query: {
   source?: unknown;
@@ -84,21 +92,38 @@ export function parseReportFilters(query: {
 export type Money = { currency: string | null; amount: number };
 
 export type ReportRow = {
-  /** 标签里的 NO_SOURCE_BUCKET 是没有可用归因那一段；取值本身不是快照里的来源。 */
+  /**
+   * NO_SOURCE_BUCKET here is the segment with no usable attribution; the value itself is not a
+   * source from any snapshot.
+   */
   source: string;
   registrations: number;
-  /** 付费人数：区间内有净收入为正的订单的用户数，和 /admin/metrics 同一口径。 */
+  /**
+   * Paying users: users with an order in the range whose net revenue is positive, on the same basis
+   * as /admin/metrics.
+   */
   payingUsers: number;
-  /** 该渠道已确认的线索数（status = 'confirmed'）。撤销/删除会导致历史指标变化。 */
+  /**
+   * Confirmed leads for this channel (status = 'confirmed'). Withdrawals / deletions change
+   * historical numbers.
+   */
   confirmedLeads: number;
-  /** 注册转化率：confirmedLeads / registrations，百分数。未确认线索不计入分母。 */
+  /**
+   * Conversion rate: confirmedLeads / registrations, as a percentage. Unconfirmed leads aren't part
+   * of the denominator.
+   */
   conversionRate: number | null;
-  /** 净收入：区间内计入收入的订单金额减去这些订单截至查询时的累计退款，按币种。 */
+  /**
+   * Net revenue: the amount of orders in the range that count as revenue, minus those orders'
+   * cumulative refunds as of query time, per currency.
+   */
   revenue: Money[];
   /**
-   * 待核对：状态是收款、但金额未知（付款事件还没补齐）的订单，按币种列出这些订单
-   * 已经退掉的金额 —— 金额不可信，所以既不算收入也不算付费人数，单列在这里人工核对。
-   * 金额未知且还没有退款的订单列 0：那表示「还没有退款」，不表示这笔订单已经结清。
+   * Needs reconciling: orders in a collected status whose amount is unknown (the payment event
+   * hasn't been backfilled yet), listing per currency how much of them has already been refunded
+   * — the amount can't be trusted, so these count as neither revenue nor paying users and are
+   * listed separately here for manual reconciliation. An order with an unknown amount and no refund
+   * yet shows 0: that means "no refund yet", not that the order is settled.
    */
   pending: Money[];
 };
@@ -107,8 +132,9 @@ type Counted = { source: string; value: number };
 type Priced = Counted & { currency: string | null };
 
 /**
- * 四组聚合按来源合并成一行：在任一组里出现过就有一行，没出现的填 0。
- * 净收入为 0 的币种不列（全额退款的订单不该显示成一行「0」），待核对原样列出。
+ * Merges the aggregates into one row per source: a source that appears in any of them gets a row,
+ * and missing values are 0. Currencies with zero net revenue are omitted (a fully refunded order
+ * shouldn't show up as a "0" line); needs-reconciling amounts are listed as is.
  */
 export function mergeRows({
   registrations,
@@ -141,7 +167,7 @@ export function mergeRows({
   for (const item of payers) row(item.source).payingUsers = item.value;
   for (const item of confirmedLeads)
     row(item.source).confirmedLeads = item.value;
-  // 计算转化率：已确认线索 / 注册数。未确认线索不计入分母。
+  // Conversion rate: confirmed leads / registrations. Unconfirmed leads aren't in the denominator.
   for (const [, entry] of rows) {
     entry.conversionRate =
       entry.registrations > 0
@@ -175,7 +201,10 @@ export function mergeRows({
     );
 }
 
-/** 三个筛选都用快照字段上的表达式；source 也能筛合成桶（见 parseReportFilters）。 */
+/**
+ * All three filters use expressions on snapshot fields; source can also filter on the synthetic
+ * bucket (see parseReportFilters).
+ */
 function filterWhere(filters: ReportFilters) {
   const clauses: SQL[] = [];
   if (filters.source) clauses.push(sql`${sourceOf} = ${filters.source}`);
@@ -185,12 +214,14 @@ function filterWhere(filters: ReportFilters) {
 }
 
 /**
- * 区间内按冻结来源分组的注册数、付费人数、按币种的净收入与待核对退款。
+ * Registrations, paying users, net revenue per currency, and refunds needing reconciliation within
+ * the range, grouped by frozen source.
  *
- * 收入与付费人数用 /admin/metrics 的同一份口径（recognizedOrder / orderNet /
- * hasPositiveNet），两页在同一区间上给出相同的数字。金额未知的占位订单（退款先到、
- * 付款事件还没补齐）不进收入、也不算付费人数，只进待核对 —— 混进收入会把它当成
- * 零退款，净收入变成负数。
+ * Revenue and paying users use exactly the same basis as /admin/metrics (recognizedOrder /
+ * orderNet / hasPositiveNet), so both pages give the same numbers for the same range. Placeholder
+ * orders with an unknown amount (the refund arrived first and the payment event hasn't been
+ * backfilled) count as neither revenue nor paying users and only go into needs-reconciling — mixed
+ * into revenue they would be treated as zero minus the refund and turn net revenue negative.
  */
 export async function getAcquisitionReport(
   db: Database,
@@ -229,8 +260,9 @@ export async function getAcquisitionReport(
         .leftJoin(userAttribution, eq(userAttribution.userId, orders.userId))
         .where(recognized)
         .groupBy(sql`1`, orders.currency),
-      // 待核对：金额未知的收款订单都在这里，不管退款到没到（退款先到的是主力情形，
-      // 「付款事件还没补齐、也没有退款」的订单列 0，见 ReportRow 的说明）。
+      // Needs reconciling: every collected order with an unknown amount lands here, whether or not
+      // a refund has arrived (refund-first is the main case; an order whose payment event hasn't
+      // been backfilled and that has no refund shows 0, see the ReportRow docs).
       db
         .select({
           source: sourceOf,
@@ -248,7 +280,8 @@ export async function getAcquisitionReport(
           ),
         )
         .groupBy(sql`1`, orders.currency),
-      // 已确认线索数：按线索自身快照里的 source 分组，和归因报表共用同样的 source 筛选。
+      // Confirmed leads: grouped by source in the lead's own snapshot, sharing the same source
+      // filter as the attribution report.
       db
         .select({ source: leadSourceOf, value: count() })
         .from(leads)
@@ -279,20 +312,23 @@ export type FilterOptions = {
 };
 
 /**
- * 筛选框里的取值：表格里会出现的来源都要选得到。注册那一列来自用户（含没有归因行
- * 的合成桶），已确认线索那一列来自线索快照，只从 user_attribution 取会漏掉前两者。
- * medium / campaign 只在快照里出现过的取值里选。
+ * Filter options: every source that can appear in the table must be selectable. The registrations
+ * column comes from users (including the synthetic bucket for users without an attribution row) and
+ * the confirmed leads column comes from lead snapshots; reading only user_attribution would miss
+ * both. medium / campaign only offer values that have appeared in snapshots.
  *
- * 取值变化很慢（只在有新注册或线索状态变更时变），用 60s 模块级 TTL 避免默认视图
- * 每次渲染都跑 4 条全表查询。模块级缓存在所有部署环境都工作，不依赖特定框架 API。
+ * The values change slowly (only on new sign-ups or lead status changes), so a 60s module-level TTL
+ * keeps the default view from running 4 full-table queries on every render. A module-level cache
+ * works in every deployment environment and doesn't depend on any framework-specific API.
  */
 const _FILTER_OPTIONS_TTL_MS = 60_000;
 let _filterOptionsCache: { data: FilterOptions; ts: number } | null = null;
 
 async function _getFilterOptions(db: Database): Promise<FilterOptions> {
   const [sources, leadSources, mediums, campaigns] = await Promise.all([
-    // select distinct，不用 group by：合成桶是绑定参数，同一个表达式在 select 和
-    // group by 里会渲染成两个不同的位置参数，Postgres 不认它们相等（42803）。
+    // select distinct, not group by: the synthetic bucket is a bound parameter, so the same
+    // expression renders as two different positional parameters in select and group by, and
+    // Postgres doesn't consider them equal (42803).
     db
       .selectDistinct({ value: sourceOf })
       .from(user)
@@ -323,7 +359,10 @@ async function _getFilterOptions(db: Database): Promise<FilterOptions> {
   };
 }
 
-/** 带 60s TTL 的模块级缓存，避免默认视图每次渲染都跑 4 条全表查询。 */
+/**
+ * Module-level cache with a 60s TTL, so the default view doesn't run 4 full-table queries on every
+ * render.
+ */
 export async function getFilterOptions(db: Database): Promise<FilterOptions> {
   if (process.env.NODE_ENV === "test" || process.env.CI)
     return _getFilterOptions(db);

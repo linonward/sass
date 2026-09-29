@@ -14,9 +14,9 @@ import {
 import { user } from "./auth";
 
 /**
- * 已发送的通知，用于去重：(kind, key) 唯一，last_sent_at 记录最近一次发送时间。
- * 例如 credits-low 以用户为 key、24 小时内最多一次；subscription-canceled 以订阅为 key、只发一次。
- * 删除用户时级联删除。
+ * Sent notifications, for deduplication: (kind, key) is unique and last_sent_at records the most
+ * recent send. For example, credits-low is keyed by user and sent at most once per 24 hours;
+ * subscription-canceled is keyed by subscription and sent only once. Cascades on user deletion.
  */
 export const notificationLog = pgTable(
   "notification_log",
@@ -32,8 +32,9 @@ export const notificationLog = pgTable(
 );
 
 /**
- * 待发送状态：pending 等着发（或等下一次重试），sending 正在发（被某个进程抢到了），
- * sent 发出去了，failed 终态失败（重试用完、验证码过期、被新验证码取代）—— 保留，可人工补发。
+ * Outbox status: pending is waiting to send (or for the next retry), sending is in flight (claimed
+ * by some process), sent went out, and failed is a terminal failure (retries exhausted,
+ * verification code expired, or superseded by a newer code) — kept so it can be resent manually.
  */
 export const pendingNotificationStatuses = [
   "pending",
@@ -45,15 +46,19 @@ export type PendingNotificationStatus =
   (typeof pendingNotificationStatuses)[number];
 
 /**
- * 事务邮件的 outbox：关键邮件先在业务事务里写一行，提交后立即尝试发送；
- * 发不出去就留在这里，由恢复扫描按退避补发（见 src/core/email/outbox.ts）。
+ * Outbox for transactional email: critical emails first write a row inside the business
+ * transaction and try to send right after commit. If sending fails the row stays here and the
+ * recovery sweep resends it with backoff (see src/core/email/outbox.ts).
  *
- * - `kind` / `key`：和 notification_log 的去重名额同一对值（验证码没有去重名额，
- *   `key` 用来找到同一邮箱上一封还没发出的验证码并作废它）；
- * - `claimed_at`：占去重名额时的时间，终态失败时凭它释放名额（和 notification_log 同类型的列，
- *   比较时编码一致）；没有名额的邮件为 null；
- * - `props`：模板参数。验证码这类敏感内容加密后存放（`{ "enc": "..." }`），发出或作废后清空；
- * - `expires_at`：过期就不再发（验证码过了有效期，发出去也没用）。
+ * - `kind` / `key`: the same pair as the notification_log dedup slot (verification codes have no
+ *   dedup slot; there `key` is used to find the previous unsent code for the same email and
+ *   invalidate it).
+ * - `claimed_at`: when the dedup slot was claimed; on terminal failure the slot is released by it
+ *   (same column type as notification_log, so comparisons encode identically). Null for emails
+ *   without a slot.
+ * - `props`: template parameters. Sensitive content such as verification codes is stored encrypted
+ *   (`{ "enc": "..." }`) and cleared once sent or invalidated.
+ * - `expires_at`: not sent after expiry (an expired verification code is useless once delivered).
  */
 export const pendingNotifications = pgTable(
   "pending_notifications",
@@ -85,7 +90,8 @@ export const pendingNotifications = pgTable(
       .defaultNow(),
   },
   (table) => [
-    // 扫描只找待发的行；部分索引只收 pending / sending，正常情况下几乎是空的。
+    // The sweep only looks for rows waiting to send; the partial index holds only pending /
+    // sending and is nearly empty under normal conditions.
     index("pending_notifications_due_idx")
       .on(table.nextRetryAt)
       .where(sql`${table.status} in ('pending', 'sending')`),

@@ -6,9 +6,9 @@ import { EmailLayout, emailStyles } from "../components/email-layout";
 import { emailTranslator, type EmailT } from "../translator";
 
 export type SignInCodeProps = {
-  /** 6 位数字验证码。 */
+  /** 6-digit verification code. */
   code: string;
-  /** 有效期（分钟），与 Better Auth emailOTP 的 expiresIn 保持一致。 */
+  /** Validity in minutes; matches Better Auth emailOTP's expiresIn. */
   expiresInMinutes: number;
 };
 

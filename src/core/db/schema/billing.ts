@@ -1,6 +1,6 @@
-// 收款相关的表。只放与服务商无关的通用字段，服务商的原始数据存在 raw（jsonb）里。
-// 引用 user.id 的外键都是 cascade：删除账户前由 onUserDelete 钩子取消订阅，
-// 之后账单记录随用户一起删除。
+// Payment tables. Only provider-agnostic fields live here; the provider's raw data is stored in raw
+// (jsonb). Foreign keys to user.id all cascade: before an account is deleted the onUserDelete hook
+// cancels its subscriptions, and then the billing records are deleted along with the user.
 import {
   boolean,
   index,
@@ -32,7 +32,7 @@ const userId = () =>
     .notNull()
     .references(() => user.id, { onDelete: "cascade" });
 
-/** 用户在支付服务商那边的客户 ID。每个服务商下一个用户对应一个客户。 */
+/** The user's customer ID at the payment provider. One customer per user per provider. */
 export const billingCustomers = pgTable(
   "billing_customers",
   {
@@ -72,10 +72,12 @@ export const subscriptions = pgTable(
     status: text("status", { enum: subscriptionStatuses }).notNull(),
     currentPeriodStart: timestamp("current_period_start"),
     currentPeriodEnd: timestamp("current_period_end"),
-    // canceled 表示已取消续费；到 currentPeriodEnd 之前仍可使用，之后由 expired 结束。
+    // canceled means renewal was canceled; still usable until currentPeriodEnd, after which it ends
+    // as expired.
     canceledAt: timestamp("canceled_at"),
     endedAt: timestamp("ended_at"),
-    // 最近一次改变状态的事件时间，用来丢弃乱序到达的旧事件。
+    // Time of the event that last changed the status, used to discard stale events arriving out
+    // of order.
     lastEventAt: timestamp("last_event_at").notNull(),
     raw: jsonb("raw"),
     ...timestamps,
@@ -97,7 +99,10 @@ export const orderStatuses = [
 ] as const;
 export type OrderStatus = (typeof orderStatuses)[number];
 
-/** 一次付款：一次性购买，或者订阅的首付与每次续费。金额以最小货币单位（分）计。 */
+/**
+ * One payment: a one-time purchase, or a subscription's first payment or any renewal. Amounts are
+ * in the smallest currency unit (cents).
+ */
 export const orders = pgTable(
   "orders",
   {
@@ -119,12 +124,15 @@ export const orders = pgTable(
   (t) => [
     uniqueIndex("orders_provider_order_idx").on(t.provider, t.providerOrderId),
     index("orders_user_idx").on(t.userId),
-    // 后台指标按时间区间统计收入。
+    // Admin metrics sum revenue by time range.
     index("orders_created_idx").on(t.createdAt),
   ],
 );
 
-/** 已处理的 webhook 事件，(provider, event_id) 唯一，保证重复推送只处理一次。 */
+/**
+ * Processed webhook events. (provider, event_id) is unique, so a redelivered event is handled only
+ * once.
+ */
 export const webhookEvents = pgTable(
   "webhook_events",
   {
@@ -133,7 +141,8 @@ export const webhookEvents = pgTable(
     eventId: text("event_id").notNull(),
     type: text("type").notNull(),
     occurredAt: timestamp("occurred_at").notNull(),
-    // 事件到达时已有更新的状态，因此没有改动订阅或订单。
+    // A newer state already existed when the event arrived, so it didn't change the subscription or
+    // order.
     stale: boolean("stale").default(false).notNull(),
     processedAt: timestamp("processed_at").defaultNow().notNull(),
     raw: jsonb("raw"),
@@ -144,12 +153,14 @@ export const webhookEvents = pgTable(
 );
 
 /**
- * 最近一次创建的结账会话。用来给并发/重复的结账请求**去重**：同一个 (user, plan)
- * 在有效期内复用同一个会话 URL，不再向服务商建新单。
+ * The most recently created checkout session. Used to **dedupe** concurrent or repeated checkout
+ * requests: the same (user, plan) reuses one session URL while it's valid, instead of creating a
+ * new one at the provider.
  *
- * 为什么必须自己存：Creem 的 `request_id` 不是幂等键 —— 实测同一 request_id 连发两次
- * 会返回两个可分别支付的会话；而「刚建的结账会话」在订阅/订单表里没有痕迹（那要等支付
- * webhook），只靠查重挡不住双击。
+ * Why we have to store it ourselves: Creem's `request_id` is not an idempotency key — sending the
+ * same request_id twice in a row was observed to return two separately payable sessions. And a
+ * "just created checkout session" leaves no trace in the subscription / order tables (that waits
+ * for the payment webhook), so checking those alone can't stop a double click.
  */
 export const checkoutSessions = pgTable(
   "checkout_sessions",
@@ -160,7 +171,7 @@ export const checkoutSessions = pgTable(
     planId: text("plan_id").notNull(),
     providerSessionId: text("provider_session_id").notNull(),
     url: text("url").notNull(),
-    // 到期后不再复用，下次结账重新建单。
+    // Not reused after expiry; the next checkout creates a new session.
     expiresAt: timestamp("expires_at").notNull(),
     ...timestamps,
   },

@@ -9,20 +9,20 @@ import { formatDate, formatMoney } from "../format";
 import { emailTranslator, type EmailT } from "../translator";
 
 export type PaymentSucceededProps = {
-  /** 套餐的显示名称（已按收件人语言取好）。 */
+  /** Plan display name (already resolved for the recipient's locale). */
   planName: string;
-  /** subscription：订阅首期或续费；one_time：一次性购买。 */
+  /** subscription: first subscription period or a renewal; one_time: one-time purchase. */
   kind: "subscription" | "one_time";
-  /** 实付金额，最小货币单位。 */
+  /** Amount paid, in the smallest currency unit. */
   amount?: number;
   currency?: string;
-  /** 付款时间，ISO。 */
+  /** Payment time, ISO. */
   paidAt: string;
-  /** 订阅的下次续费时间，ISO。 */
+  /** Next subscription renewal time, ISO. */
   renewsAt?: string;
-  /** 这次到账的积分；0 或不传时不显示。 */
+  /** Credits granted by this payment; hidden when 0 or omitted. */
   credits?: number;
-  /** 账单页（管理订阅、查看积分）。 */
+  /** Billing page (manage the subscription, view credits). */
   manageUrl: string;
 };
 

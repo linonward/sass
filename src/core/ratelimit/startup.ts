@@ -11,16 +11,18 @@ import { rateLimitingEnabled } from "./features";
 type RuntimeEnv = Record<string, string | undefined>;
 
 /**
- * 服务启动时检查限流配置，生产运行时不配 Redis 就打一条显眼的 error 日志
- * （`ratelimit.unconfigured`）：这是自托管部署最容易漏的一步，漏了之后 AI / 上传 /
- * 结账都会返回 503，只从 5xx 反推原因太绕。`ALLOW_UNRATELIMITED` 显式放行时降为 warn ——
- * 限流确实是关着的，但那是操作者自己的选择。
+ * Check the rate limit config at server startup, and log a prominent error
+ * (`ratelimit.unconfigured`) when the production runtime has no Redis: it's the step self-hosted
+ * deployments most often miss, after which AI / upload / checkout all return 503, and working
+ * backward from 5xx errors to the cause is too roundabout. With `ALLOW_UNRATELIMITED` set
+ * explicitly it drops to a warn — rate limiting really is off, but that's the operator's choice.
  *
- * 放在 `instrumentation.ts` 的 `register()` 里调用（只在 Node runtime：Edge 上的
- * `process.env` 不完整，判定会失真）。
+ * Call it from `register()` in `instrumentation.ts` (Node runtime only: `process.env` is
+ * incomplete on Edge, which would skew the check).
  *
- * 故意不抛错中断启动：限流只挡 AI / 上传 / 结账这几个接口，为它们让整个站点（营销页、
- * 登录）起不来不划算，这些接口自己会返回 503，日志说明原因。
+ * Deliberately doesn't throw to abort startup: rate limiting only guards the AI / upload /
+ * checkout endpoints, and taking the whole site (marketing pages, sign-in) down for them isn't
+ * worth it; those endpoints return 503 themselves and the log explains why.
  */
 export function warnIfRateLimitUnconfigured({
   runtimeEnv = process.env,
@@ -45,7 +47,8 @@ export function warnIfRateLimitUnconfigured({
     return;
   }
 
-  // 生产运行时里显式设了 ALLOW_UNRATELIMITED：放行是有意的，但限流确实没在跑。
+  // ALLOW_UNRATELIMITED set explicitly in a production runtime: letting requests through is
+  // intentional, but rate limiting really isn't running.
   if (isSelfHostedProduction(runtimeEnv) && allowUnratelimited(runtimeEnv)) {
     log.warn("ratelimit.disabled", { reason: "ALLOW_UNRATELIMITED is set" });
   }

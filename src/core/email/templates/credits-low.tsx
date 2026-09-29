@@ -8,11 +8,11 @@ import { EmailLayout, emailStyles } from "../components/email-layout";
 import { emailTranslator, type EmailT } from "../translator";
 
 export type CreditsLowProps = {
-  /** 扣减后的余额。 */
+  /** Balance after the deduction. */
   balance: number;
-  /** 提醒阈值（site.config.ts 的 credits.lowBalanceThreshold）。 */
+  /** Alert threshold (credits.lowBalanceThreshold in site.config.ts). */
   threshold: number;
-  /** 充值或升级套餐的页面。 */
+  /** Page for topping up or upgrading the plan. */
   topUpUrl: string;
 };
 

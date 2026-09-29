@@ -6,14 +6,14 @@ const code = "482913";
 const expiresInMinutes = 5;
 
 describe("otpEmail", () => {
-  test("登录验证码用 sign-in-code 模板", () => {
+  test("uses the sign-in-code template for sign-in codes", () => {
     expect(otpEmail({ type: "sign-in", code, expiresInMinutes })).toEqual({
       template: "sign-in-code",
       props: { code, expiresInMinutes },
     });
   });
 
-  test("改邮箱的两个验证码都用 change-email-code，靠 forNewEmail 区分收件人", () => {
+  test("both change-email codes use change-email-code, with forNewEmail telling recipients apart", () => {
     expect(otpEmail({ type: "change-email", code, expiresInMinutes })).toEqual({
       template: "change-email-code",
       props: { code, expiresInMinutes, forNewEmail: true },
@@ -26,8 +26,8 @@ describe("otpEmail", () => {
     });
   });
 
-  test("没启用的类型不发信", () => {
-    // 本站没有密码登录，邮箱验证码也不走 forget-password。
+  test("sends nothing for types that aren't enabled", () => {
+    // There is no password sign-in, and email verification codes don't use forget-password.
     expect(otpEmail({ type: "forget-password", code, expiresInMinutes })).toBe(
       null,
     );

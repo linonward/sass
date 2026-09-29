@@ -15,7 +15,7 @@ import siteConfig from "../../../site.config";
 
 export type CreateKeyState =
   | { status: "idle" }
-  // 明文只在这一份返回值里出现一次，界面显示完就不再可得。
+  // The plaintext appears exactly once, in this return value; once the UI shows it, it's gone.
   | { status: "created"; plaintext: string; name: string }
   | { status: "error"; error: "invalid_name" | "duplicate" | "unavailable" };
 
@@ -24,7 +24,8 @@ export type RevokeKeyState =
   | { status: "success" }
   | { status: "error"; error: "invalid" | "unavailable" };
 
-// 主键是 uuid：先挡掉乱填的值，别把非 uuid 的字符串丢给 Postgres（那里会直接报错）。
+// The primary key is a uuid: reject junk values up front instead of passing non-uuid strings to
+// Postgres (which throws on them).
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -34,13 +35,14 @@ async function requireUserId(locale: string) {
   return session.user.id;
 }
 
-/** 新建一把 key，返回一次性明文。 */
+/** Creates a key and returns its one-time plaintext. */
 export async function createApiKey(
   locale: string,
   _prev: CreateKeyState,
   form: FormData,
 ): Promise<CreateKeyState> {
-  // 关闭模块后页面和表单都不存在；这里再挡一次，免得直接调 action 也能建 key。
+  // With the module disabled neither the page nor the form exists; check again here so calling the
+  // action directly can't create a key.
   if (!siteConfig.apiKeys.enabled) {
     return { status: "error", error: "unavailable" };
   }
@@ -48,8 +50,9 @@ export async function createApiKey(
   const name = String(form.get("name") ?? "").trim();
   const result = await createApiKeyService(getDb()).create(userId, name);
   if (!result.ok) return { status: "error", error: result.reason };
-  // 弹层背后的列表要立刻多出这一把（action 不会自己刷新页面，得显式说一声）。
-  // 刷新只重渲染服务端组件，弹层里的明文来自 action 返回值，照旧留着。
+  // The list behind the dialog should show the new key right away (actions don't refresh the page
+  // on their own, so ask explicitly). Refreshing only re-renders server components; the plaintext
+  // in the dialog comes from the action's return value and stays put.
   refresh();
   return {
     status: "created",
@@ -59,8 +62,8 @@ export async function createApiKey(
 }
 
 /**
- * 撤销一把 key。幂等：已经撤销过的（或不属于自己的）也返回成功 ——
- * 两个标签页同时撤销同一把 key 不该看到报错。
+ * Revokes a key. Idempotent: an already revoked key (or one that isn't yours) also returns
+ * success — revoking the same key from two tabs at once shouldn't show an error.
  */
 export async function revokeApiKey(
   locale: string,
@@ -73,10 +76,12 @@ export async function revokeApiKey(
   const userId = await requireUserId(locale);
   const keyId = String(form.get("keyId") ?? "");
   if (!UUID_PATTERN.test(keyId)) return { status: "error", error: "invalid" };
-  // 没改动任何行（已经撤销过、或这个 id 不属于当前用户）也返回成功：
-  // 两种情况下这把 key 都不可用，而按 keyId 静默失败只会让用户在两个标签页之间来回猜。
+  // Return success even when no row changed (already revoked, or the id isn't the current user's):
+  // either way the key is unusable, and failing per keyId would only leave the user guessing
+  // between two tabs.
   await createApiKeyService(getDb()).revoke(userId, keyId);
-  // 列表上的状态徽章由服务端渲染，撤销后要让页面重新渲染一次才能变成「已撤销」。
+  // The status badges in the list are server-rendered, so the page has to re-render once after
+  // revoking for the badge to switch to "revoked".
   refresh();
   return { status: "success" };
 }

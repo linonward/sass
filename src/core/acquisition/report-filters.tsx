@@ -17,8 +17,8 @@ import {
 } from "./report";
 
 /**
- * 渠道筛选：GET 表单，取值在 URL 里（可分享、可刷新），服务端按 context.ts 的
- * 规则重新校验（见 parseReportFilters）。
+ * Channel filters: a GET form with the values in the URL (shareable, survives a refresh), which
+ * the server re-validates using the rules in context.ts (see parseReportFilters).
  *
  * Uses selects rather than a row of links like the status filter: three dimensions
  * combined would be dozens of links, and it only matters when there are many values.
@@ -26,9 +26,10 @@ import {
  * value into the URL with the GET form.
  */
 /**
- * 合成桶（没有归因行 / 已撤回）显示成文案里的名字；快照里的取值原样显示 —— 真的把
- * utm_source 填成 unknown 的流量是独立的一行，不能和「没有归因」显示成同一个词。
- * direct 是快照里真实存在的一个取值（没有营销来源的访问），照旧给它文案里的名字。
+ * The synthetic bucket (no attribution row / withdrawn) is shown with its name from the messages;
+ * snapshot values are shown as is — traffic that really sets utm_source to unknown is its own row
+ * and must not display the same word as "no attribution". direct is a real snapshot value (visits
+ * with no marketing source), and it still gets its name from the messages.
  */
 export function sourceLabel(
   value: string,
@@ -59,8 +60,8 @@ export function ReportFilters({
       any: tFilter("allSources"),
       values: options.sources,
       value: current.source,
-      // 只有来源这一列有 unknown / direct 两个桶，medium / campaign 原样显示
-      //（一个叫 direct 的 utm_medium 不是那个桶）。
+      // Only the source column has the unknown / direct buckets; medium / campaign are shown as is
+      // (a utm_medium called direct is not that bucket).
       format: (value: string) => sourceLabel(value, labels),
     },
     {
@@ -93,11 +94,12 @@ export function ReportFilters({
     ],
   });
 
-  // 换了 searchParams 的客户端跳转不会重新挂载节点，React 也就不再把新的
-  // defaultValue 应用到 select 的当前值上（实测：同树更新后框里停在旧值，
-  // 只有重挂才会变），于是下拉显示的筛选和表格实际用的筛选会对不上。
-  // key 跟着 URL 走，两者就始终是同一份取值。留空 = 全部，空值由页面在服务端
-  // 从 URL 里收掉（parseReportFilters 本来就把空串当没传）。
+  // A client-side navigation that only changes searchParams doesn't remount the nodes, so React no
+  // longer applies the new defaultValue to the select's current value (verified: after an in-place
+  // update the select stays on the old value and only changes on remount), and the filter shown in
+  // the dropdown drifts from the one the table actually uses. Keying on the URL keeps them the same
+  // value. Empty = all; the page drops empty values from the URL on the server (parseReportFilters
+  // already treats an empty string as absent).
   const urlKey = JSON.stringify([
     range,
     current.source ?? "",
@@ -111,7 +113,7 @@ export function ReportFilters({
       action={action}
       className="flex flex-wrap items-end gap-3"
     >
-      {/* 30 天是默认值，不写进 URL（和 RangeFilter 一致）。 */}
+      {/* 30 days is the default and isn't written to the URL (same as RangeFilter). */}
       {range !== 30 && <input type="hidden" name="range" value={range} />}
       {fields.map(withItems).map((field) => (
         <div key={field.name} className="grid gap-1.5">
@@ -119,8 +121,8 @@ export function ReportFilters({
           <Select
             id={`filter-${field.name}`}
             name={field.name}
-            // 手写的 URL 里可能是一个当前数据里没有的取值：带上它，
-            // 框里才不会显示成「全部」而结果却是空的。
+            // A hand-written URL may carry a value that isn't in the current data: include it, so
+            // the select doesn't show "all" while the results are empty.
             defaultValue={field.value ?? ""}
             items={field.items}
           >
@@ -137,7 +139,7 @@ export function ReportFilters({
           </Select>
         </div>
       ))}
-      {/* 这一屏唯一的实心主操作。 */}
+      {/* The only solid primary action on this screen. */}
       <Button type="submit">{tFilter("apply")}</Button>
     </form>
   );

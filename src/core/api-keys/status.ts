@@ -1,9 +1,10 @@
-/** 一把 key 的状态。 */
+/** A key's status. */
 export type ApiKeyStatus = "active" | "revoked" | "expired";
 
 /**
- * 有效性判定只有这一处：中间件按它放行，界面按它显示状态徽章。
- * 两边各写一套的话，「已过期」迟早会一边放行一边标红。
+ * The only place validity is decided: the middleware uses it to allow requests, and the UI uses it
+ * for status badges. With two separate copies, sooner or later an "expired" key would be allowed on
+ * one side and flagged red on the other.
  */
 export function apiKeyStatus(
   key: { revokedAt: Date | null; expiresAt: Date | null },

@@ -2,23 +2,24 @@ import { describe, expect, test } from "vitest";
 
 import { revenueEnabled } from "./sections";
 
-/** 只关心判定用的字段，其余用不到（函数签名也只取 plans）。 */
+/** Only the fields the check uses; the rest is unused (the signature only takes plans anyway). */
 const withPrices = (...prices: number[]) => ({
   plans: prices.map((price) => ({ price })),
 });
 
-describe("收入区块的显隐判定", () => {
-  // 免费部署上收入永远是 0 /「—」，不该占位置（见 README 的「后台」一节）。
-  test("只有免费套餐时不显示", () => {
+describe("revenue section visibility", () => {
+  // On a free deployment revenue is always 0 / "—" and shouldn't take up space (see the "Admin"
+  // section of the README).
+  test("hidden when there are only free plans", () => {
     expect(revenueEnabled(withPrices(0))).toBe(false);
     expect(revenueEnabled(withPrices(0, 0))).toBe(false);
   });
 
-  test("没有套餐时不显示", () => {
+  test("hidden when there are no plans", () => {
     expect(revenueEnabled(withPrices())).toBe(false);
   });
 
-  test("有任何一个付费套餐就显示", () => {
+  test("shown when there's any paid plan", () => {
     expect(revenueEnabled(withPrices(0, 900))).toBe(true);
     expect(revenueEnabled(withPrices(2900))).toBe(true);
   });
