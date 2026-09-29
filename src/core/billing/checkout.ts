@@ -93,7 +93,8 @@ export async function startCheckout({
   if (!provider) return fail("billing_not_configured", 503);
 
   const plan = typeof planId === "string" ? getPlan(planId) : undefined;
-  if (!plan) return fail("invalid_plan", 400);
+  // 隐藏的套餐不能新购（已有订阅照常续费，那不走这里）。
+  if (!plan || plan.hidden) return fail("invalid_plan", 400);
   if (plan.price === 0) return fail("free_plan", 400);
   if (
     !plan.providerProductId ||

@@ -177,7 +177,7 @@
         },
         "payments": {
           "question": "能否更换支付服务商？",
-          "answer": "支持 Creem、Stripe 和 Lemon Squeezy，通过配置选择。切换时需要配置对应的产品和 webhook，已有订阅不会自动迁移。"
+          "answer": "支持 Creem、Stripe、Lemon Squeezy 和 Waffo Pancake，通过配置选择。切换时需要配置对应的产品和 webhook，已有订阅不会自动迁移。"
         },
         "customize": {
           "question": "如何定制自己的业务？",
@@ -206,9 +206,11 @@
     "delivery": {
       "title": "你拿到的，是完整的起点。",
       "description": "源码、配置、文档与示例，放在同一个项目里。",
-      "offer": "模板购买方案",
+      "offer": "OnwardKit 模板",
       "pending": "即将公布",
-      "terms": "价格、更新期限与支持范围待确认。",
+      "terms": "一次性付款，含 1 年内的全部更新和邮件支持。数字产品，交付后不退款。",
+      "termsPending": "价格、更新期限与支持范围待确认。",
+      "buy": "立即购买",
       "demo": "先体验演示",
       "items": {
         "source": {

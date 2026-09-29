@@ -9,7 +9,7 @@ export default defineLegalDocument({
   title: "Privacy Policy",
   description:
     "How we collect, use, share and protect your personal information.",
-  Content: ({ legal, site, email }) => (
+  Content: ({ legal, site, email, payments }) => (
     <>
       <p>
         This Privacy Policy explains how {legal.companyName} (&quot;we&quot;,
@@ -115,10 +115,13 @@ export default defineLegalDocument({
       )}
       <h3>Payment information</h3>
       <p>
-        Payments are processed by our reseller and Merchant of Record, Creem. We
-        do not receive or store your full card details. We receive limited
-        information from Creem, such as your order status, plan and billing
-        country.
+        Payments are processed by{" "}
+        {payments.merchantOfRecord
+          ? `our reseller and Merchant of Record, ${payments.name}`
+          : `our payment processor, ${payments.name}`}
+        . We do not receive or store your full card details. We receive limited
+        information from {payments.name}, such as your order status, plan and
+        billing country.
       </p>
 
       <h2>2. How we use information</h2>
@@ -149,8 +152,10 @@ export default defineLegalDocument({
       </p>
       <ul>
         <li>
-          <strong>Creem</strong> — payment processing and tax compliance as our
-          Merchant of Record;
+          <strong>{payments.name}</strong> —{" "}
+          {payments.merchantOfRecord
+            ? "payment processing and tax compliance as our Merchant of Record;"
+            : "payment processing;"}
         </li>
         <li>
           <strong>Google</strong> — sign-in, if you choose to sign in with

@@ -7,7 +7,7 @@ import { legalPages } from "@/core/legal/pages";
 export default defineLegalDocument({
   title: "Terms of Service",
   description: "The terms that govern your use of our service.",
-  Content: ({ legal, site, email }) => (
+  Content: ({ legal, site, email, payments }) => (
     <>
       <p>
         These Terms of Service (&quot;Terms&quot;) are an agreement between you
@@ -27,12 +27,20 @@ export default defineLegalDocument({
       </p>
 
       <h2>2. Purchases and billing</h2>
-      <p>
-        Our order process is conducted by our online reseller and Merchant of
-        Record, Creem, which handles payment processing, invoicing, and sales
-        tax or VAT. Creem&apos;s terms and privacy policy also apply to your
-        purchase.
-      </p>
+      {payments.merchantOfRecord ? (
+        <p>
+          Our order process is conducted by our online reseller and Merchant of
+          Record, {payments.name}, which handles payment processing, invoicing,
+          and sales tax or VAT. {payments.name}&apos;s terms and privacy policy
+          also apply to your purchase.
+        </p>
+      ) : (
+        <p>
+          Payments are processed by our payment processor, {payments.name}.{" "}
+          {payments.name}&apos;s terms and privacy policy also apply to your
+          payment.
+        </p>
+      )}
       <ul>
         <li>
           <strong>Subscriptions</strong> renew automatically at the end of each

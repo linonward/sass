@@ -77,6 +77,58 @@ describe("Landing", () => {
   });
 });
 
+type PlansInput = NonNullable<NonNullable<SiteConfigInput["billing"]>["plans"]>;
+
+describe("交付区块的购买卡片", () => {
+  function renderDelivery(plans?: (plans: PlansInput) => PlansInput) {
+    const input = siteConfig as SiteConfigInput;
+    const config = defineConfig({
+      ...input,
+      billing: {
+        ...input.billing,
+        plans: plans ? plans(input.billing?.plans ?? []) : input.billing?.plans,
+      },
+      landing: { ...input.landing, sections: ["delivery"] },
+    } as SiteConfigInput);
+    return render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <Landing config={config} />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  test("显示 purchasePlan 套餐的价格、条款和购买按钮", () => {
+    const view = renderDelivery((plans) =>
+      plans.map((p) => (p.id === "lifetime" ? { ...p, price: 99 } : p)),
+    );
+    const offer = view.getByTestId("delivery-offer");
+    expect(offer.textContent).toContain("$99");
+    expect(offer.textContent).toContain(messages.Landing.pricing.interval.once);
+    expect(offer.textContent).toContain(messages.Landing.delivery.terms);
+    expect(
+      view.getByRole("button", { name: messages.Landing.delivery.buy }),
+    ).toBeDefined();
+  });
+
+  test("套餐被隐藏或不存在时退回「即将公布」，没有购买按钮", () => {
+    for (const plans of [
+      (all: PlansInput) =>
+        all.map((p) => (p.id === "lifetime" ? { ...p, hidden: true } : p)),
+      (all: PlansInput) => all.filter((p) => p.id !== "lifetime"),
+    ]) {
+      const view = renderDelivery(plans);
+      expect(view.queryByTestId("delivery-offer")).toBeNull();
+      expect(view.container.textContent).toContain(
+        messages.Landing.delivery.pending,
+      );
+      expect(
+        view.queryByRole("button", { name: messages.Landing.delivery.buy }),
+      ).toBeNull();
+      view.unmount();
+    }
+  });
+});
+
 describe("landing / billing 配置", () => {
   test.each([
     ["landing.sections.1", { landing: { sections: ["hero", "blog"] } }],
