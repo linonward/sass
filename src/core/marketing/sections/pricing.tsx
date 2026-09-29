@@ -6,6 +6,7 @@ import type { Plan } from "@/core/config/schema";
 import { cn } from "@/core/lib/utils";
 
 import { bands, type Band } from "./band";
+import { formatPrice } from "./price";
 import { Section, SectionHeading } from "./section";
 
 export function Pricing({
@@ -70,11 +71,7 @@ export function Pricing({
                 data-numeric
                 className="heading-display text-4xl leading-none"
               >
-                {format.number(p.price, {
-                  style: "currency",
-                  currency,
-                  maximumFractionDigits: Number.isInteger(p.price) ? 0 : 2,
-                })}
+                {formatPrice(format, p.price, currency)}
               </span>
               <span className="text-muted-foreground text-sm">
                 {t(`interval.${p.interval}`)}

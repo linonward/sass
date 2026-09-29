@@ -73,6 +73,7 @@ function unique<T>(items: T[]) {
 
 export const landingSectionIds = [
   "hero",
+  "timesaved",
   "features",
   "testimonials",
   "pricing",
@@ -162,6 +163,22 @@ export const landingSchema = z.strictObject({
         .optional(),
     })
     .default({}),
+  // 用这套代码搭出来的真实站点（https）。配了之后首屏和结尾的次按钮是「看真实案例」，
+  // 新标签页打开；不配时次按钮是站内的 /demo。
+  showcaseUrl: z.url({ protocol: /^https$/ }).optional(),
+  // 「省掉的工时」区块：每项是模板里已经做好的一块活和估算的工时，合计自动算。
+  // 标题和说明在 Landing.timesaved.items.<key>；空数组自动隐藏整个区块。
+  timeSaved: z
+    .array(
+      z.strictObject({
+        key: messageKeySchema,
+        hours: z.number().positive(),
+      }),
+    )
+    .refine((items) => unique(items.map((i) => i.key)), {
+      message: "keys must not contain duplicates",
+    })
+    .default([]),
   // 每项的标题和描述在 Landing.features.items.<key>。
   features: z
     .array(

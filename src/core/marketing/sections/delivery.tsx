@@ -6,6 +6,7 @@ import type { Plan } from "@/core/config/schema";
 
 import { Link } from "@/core/i18n/navigation";
 import { bands, type Band } from "./band";
+import { formatPrice } from "./price";
 import { Section } from "./section";
 
 /**
@@ -43,11 +44,7 @@ export function Delivery({
                   data-numeric
                   className="heading-display text-4xl leading-none"
                 >
-                  {format.number(plan.price, {
-                    style: "currency",
-                    currency,
-                    maximumFractionDigits: Number.isInteger(plan.price) ? 0 : 2,
-                  })}
+                  {formatPrice(format, plan.price, currency)}
                 </span>
                 <span className="text-muted-foreground text-sm">
                   {tp(`interval.${plan.interval}`)}

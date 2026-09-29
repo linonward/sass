@@ -29,6 +29,18 @@ test("各区块内容来自配置与文案", async ({ page }) => {
     ).toHaveCount(1);
   }
 
+  // 有可买的套餐时，首屏主按钮直接卖：带价格，跳到交付区块的购买卡片。
+  const buy = page.locator("#hero").getByRole("link", {
+    name: new RegExp(`^${t.hero.buyCta.split(" ·")[0]}`),
+  });
+  await expect(buy).toBeVisible();
+  await expect(buy).toHaveAttribute("href", /#delivery$/);
+
+  const timesaved = page.locator("#timesaved");
+  await expect(timesaved.getByRole("listitem")).toHaveCount(
+    landing.timeSaved.length,
+  );
+
   const features = page.locator("#features");
   await expect(features.getByRole("listitem")).toHaveCount(
     landing.features.length,

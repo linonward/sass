@@ -92,7 +92,10 @@
         "detail1": "Connect your provider and start accepting payments.",
         "detail2": "Set credit rules and control usage costs.",
         "detail3": "Keep credit activity and usage in view."
-      }
+      },
+      "buyCta": "Buy now · {price}",
+      "showcaseCta": "See a live product",
+      "offerNote": "One-time payment · 1 year of updates · Delivered by email within 24 hours"
     },
     "features": {
       "title": "From the first payment to every request.",
@@ -194,6 +197,22 @@
         "services": {
           "question": "Which external services do I need?",
           "answer": "Deployment needs a database and email service. Configure payments, AI models, object storage and rate limiting for the features you enable. Local development supports substitutes."
+        },
+        "deliverables": {
+          "question": "What exactly do I get?",
+          "answer": "The complete source (auth, payments, credits, AI and admin), the starter guide and business examples. Download instructions are emailed to your payment address within 24 hours."
+        },
+        "costs": {
+          "question": "Are there any other costs?",
+          "answer": "The template is a one-time purchase. Neon, Resend and Vercel all have free tiers that usually cover the early days; AI models are billed per use by your model provider."
+        },
+        "updates": {
+          "question": "How long do I get updates?",
+          "answer": "Every release within one year of purchase is included, with email support during that time. After that, the code you already have keeps working."
+        },
+        "refund": {
+          "question": "Can I get a refund?",
+          "answer": "No. The template is a digital product that can’t be returned once delivered, so all sales are final. Try the demo and read the docs before buying; contact us about duplicate or unauthorized charges."
         }
       }
     },
@@ -201,14 +220,16 @@
       "title": "The foundation is ready.\nYour product comes next.",
       "subtitle": "Go from idea to paying customers in a day.",
       "button": "Explore demo",
-      "secondaryCta": "See what’s included"
+      "secondaryCta": "See what’s included",
+      "buyCta": "Buy now · {price}",
+      "showcaseCta": "See a live product"
     },
     "delivery": {
       "title": "A complete starting point.",
       "description": "Source code, configuration, documentation and examples, together in one project.",
       "offer": "OnwardKit template",
       "pending": "Coming soon",
-      "terms": "One-time payment, including all updates for one year and email support. Digital product — no refunds once delivered.",
+      "terms": "One-time payment, including all updates for one year and email support. Delivered by email within 24 hours of payment. Digital product — no refunds once delivered.",
       "termsPending": "Pricing, update period and support scope are to be confirmed.",
       "buy": "Buy now",
       "demo": "Explore the demo first",
@@ -266,6 +287,43 @@
         "build": {
           "quote": "“The core flows are connected, so <highlight>I can concentrate on the one feature that matters most.</highlight>”",
           "role": "AI app creator"
+        }
+      }
+    },
+    "timesaved": {
+      "title": "Work you won’t have to do again.",
+      "subtitle": "Each of these is already built and tested in the template. Hours are estimates for building it from scratch.",
+      "hours": "{hours, plural, one {# hour} other {# hours}}",
+      "total": "Total",
+      "result": "Launch today",
+      "items": {
+        "payments": {
+          "title": "Payment webhooks & idempotency",
+          "detail": "Four providers, with replays, out-of-order events and refunds handled"
+        },
+        "credits": {
+          "title": "Credit ledger & refunds on failure",
+          "detail": "Charge per use; credits return automatically when an AI call fails"
+        },
+        "email": {
+          "title": "Transactional email & retries",
+          "detail": "Queued in an outbox and resent automatically on failure"
+        },
+        "auth": {
+          "title": "Sign-in & roles",
+          "detail": "Google sign-in, email codes and admin roles"
+        },
+        "seo": {
+          "title": "SEO & social images",
+          "detail": "Sitemap, hreflang, structured data and Open Graph images"
+        },
+        "i18n": {
+          "title": "Internationalization",
+          "detail": "Localized routes and copy; add a language in config"
+        },
+        "admin": {
+          "title": "Admin & billing exceptions",
+          "detail": "Orders, users, discrepancies and an audit trail"
         }
       }
     }

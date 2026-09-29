@@ -67,6 +67,7 @@ describe("Landing", () => {
   test("文案全部解析成功，没有原样漏出来的 key", () => {
     const { textContent } = renderSections([
       "hero",
+      "timesaved",
       "features",
       "pricing",
       "delivery",
@@ -161,5 +162,133 @@ describe("landing / billing 配置", () => {
     expect(() =>
       defineConfig({ ...siteConfig, ...patch } as SiteConfigInput),
     ).toThrow(`- ${path}: `);
+  });
+});
+
+describe("首屏与结尾的按钮", () => {
+  function renderWith({
+    hidden = false,
+    showcaseUrl,
+  }: { hidden?: boolean; showcaseUrl?: string } = {}) {
+    const input = siteConfig as SiteConfigInput;
+    const config = defineConfig({
+      ...input,
+      billing: {
+        ...input.billing,
+        plans: input.billing?.plans?.map((p) =>
+          p.id === "lifetime" ? { ...p, price: 99, hidden } : p,
+        ),
+      },
+      landing: { ...input.landing, sections: ["hero", "cta"], showcaseUrl },
+    } as SiteConfigInput);
+    return render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <Landing config={config} />
+      </NextIntlClientProvider>,
+    );
+  }
+  const t = messages.Landing;
+
+  test("有可买的套餐：主按钮是「立即购买 · 价格」，跳到交付区块的购买卡片", () => {
+    const view = renderWith();
+    const buy = view.getAllByRole("link", { name: "Buy now · $99" });
+    expect(buy).toHaveLength(2);
+    for (const link of buy) {
+      expect(link.getAttribute("href")).toMatch(/#delivery$/);
+    }
+    expect(view.getByText(t.hero.offerNote)).toBeDefined();
+    // 没配真实案例时，次按钮是站内演示。
+    for (const link of view.getAllByRole("link", {
+      name: t.hero.primaryCta,
+    })) {
+      expect(link.getAttribute("href")).toMatch(/\/demo$/);
+    }
+  });
+
+  test("配了 showcaseUrl：次按钮在新标签页打开真实案例", () => {
+    const view = renderWith({ showcaseUrl: "https://shots.example.com" });
+    for (const link of view.getAllByRole("link", {
+      name: t.hero.showcaseCta,
+    })) {
+      expect(link.getAttribute("href")).toBe("https://shots.example.com");
+      expect(link.getAttribute("target")).toBe("_blank");
+    }
+    expect(view.queryByRole("link", { name: t.hero.primaryCta })).toBeNull();
+  });
+
+  test("套餐被隐藏：退回演示为主按钮，不显示价格说明", () => {
+    const view = renderWith({ hidden: true });
+    expect(view.queryByRole("link", { name: /Buy now/ })).toBeNull();
+    expect(view.queryByText(t.hero.offerNote)).toBeNull();
+    for (const link of view.getAllByRole("link", {
+      name: t.hero.primaryCta,
+    })) {
+      expect(link.getAttribute("href")).toMatch(/\/demo$/);
+    }
+  });
+
+  test("showcaseUrl 只接受 https", () => {
+    expect(() =>
+      defineConfig({
+        ...(siteConfig as SiteConfigInput),
+        landing: {
+          ...siteConfig.landing,
+          showcaseUrl: "http://shots.example.com",
+        },
+      } as SiteConfigInput),
+    ).toThrow(/showcaseUrl/);
+  });
+});
+
+describe("省掉的工时", () => {
+  function renderTimeSaved(timeSaved: { key: string; hours: number }[]) {
+    const config = defineConfig({
+      ...siteConfig,
+      landing: {
+        ...siteConfig.landing,
+        sections: ["hero", "timesaved", "features"],
+        timeSaved,
+      },
+    } as SiteConfigInput);
+    return render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <Landing config={config} />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  test("逐项列出工时，合计自动算", () => {
+    const view = renderTimeSaved(siteConfig.landing.timeSaved);
+    const items = view.container.querySelectorAll("#timesaved li");
+    expect(items).toHaveLength(siteConfig.landing.timeSaved.length);
+    const total = siteConfig.landing.timeSaved.reduce((n, i) => n + i.hours, 0);
+    expect(view.getByTestId("timesaved-total").textContent).toContain(
+      `${total} hours`,
+    );
+  });
+
+  test("空列表时整个区块不渲染", () => {
+    const view = renderTimeSaved([]);
+    expect(sectionIds(view.container)).toEqual(["hero", "features"]);
+  });
+
+  test("配置里的每个 key 在中英文案里都有", async () => {
+    const zh = (await import("../../../messages/zh.json")).default;
+    for (const { key } of siteConfig.landing.timeSaved) {
+      for (const m of [messages, zh]) {
+        expect(
+          m.Landing.timesaved.items[
+            key as keyof typeof m.Landing.timesaved.items
+          ],
+        ).toBeDefined();
+      }
+    }
+    for (const key of siteConfig.landing.faq) {
+      for (const m of [messages, zh]) {
+        expect(
+          m.Landing.faq.items[key as keyof typeof m.Landing.faq.items],
+        ).toBeDefined();
+      }
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import messages from "../messages/en.json";
 import siteConfig from "../site.config";
@@ -21,14 +21,18 @@ test("未知路径返回 404 页", async ({ page }) => {
   await expect(page).toHaveURL("/");
 });
 
+// 首屏主按钮：有可买的套餐时是「立即购买 · 价格」（CI 的配置卖 lifetime）。
+const heroPrimary = (page: Page) =>
+  page.locator("#hero").getByRole("link", {
+    name: new RegExp(`^${messages.Landing.hero.buyCta.split(" ·")[0]}`),
+  });
+
 test("主按钮使用配置里的品牌色", async ({ page }) => {
   await page.goto("/");
-  await expect(
-    page.locator("#hero").getByRole("link", {
-      name: messages.Landing.hero.primaryCta,
-      exact: true,
-    }),
-  ).toHaveCSS("background-color", hexToRgb(siteConfig.brand.primaryColor));
+  await expect(heroPrimary(page)).toHaveCSS(
+    "background-color",
+    hexToRgb(siteConfig.brand.primaryColor),
+  );
 });
 
 test("暗色模式切换并在刷新后保持", async ({ page }) => {
@@ -58,9 +62,7 @@ test("品牌色预览兼容亮暗和系统主题，离开首页后恢复配置",
   const indigo = colors.getByRole("radio", { name: /#4f46e5/ });
   await indigo.click();
   await expect(indigo).toHaveAttribute("aria-checked", "true");
-  const primary = page
-    .locator("#hero")
-    .getByRole("link", { name: messages.Landing.hero.primaryCta, exact: true });
+  const primary = heroPrimary(page);
   await expect(primary).toHaveCSS("background-color", hexToRgb("#4f46e5"));
   const background = () =>
     page.locator("body").evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -80,7 +82,11 @@ test("品牌色预览兼容亮暗和系统主题，离开首页后恢复配置",
     "true",
   );
   await indigo.click();
-  await primary.click();
+  // 离开首页：主按钮留在本页（跳交付区块），走首屏的演示入口。
+  await page
+    .locator("#hero")
+    .getByRole("link", { name: messages.Landing.hero.primaryCta, exact: true })
+    .click();
   await expect(page).toHaveURL("/demo");
   await expect
     .poll(() =>

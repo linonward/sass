@@ -167,7 +167,9 @@
 
 ## 10. Landing 产品叙事（T2401）
 
-默认顺序为 hero → features → testimonials → delivery → faq → cta。首屏左侧标题、演示与交付入口，右侧是标明「示例数据」的原生产品预览；产品摄影放 `public/landing/`，图片本身不包含 UI。特性用收款积分、AI 生成、使用记录三组交替图文行，避免重复卡片网格。交付区单独说明模板购买方案尚未公布；演示 SaaS 套餐继续放 `/pricing`。
+默认顺序为 hero → timesaved → features → testimonials → delivery → faq → cta。首屏左侧标题、演示与交付入口，右侧是标明「示例数据」的原生产品预览；产品摄影放 `public/landing/`，图片本身不包含 UI。特性用收款积分、AI 生成、使用记录三组交替图文行，避免重复卡片网格。交付区的购买卡片卖 `landing.purchasePlan`；演示 SaaS 套餐继续放 `/pricing`。
+
+首屏与结尾的按钮（T2407）：有可买的套餐时主按钮是「立即购买 · 价格」，跳交付区的购买卡片，不直接结账 —— 买家先看到条款；次按钮是真实案例（`landing.showcaseUrl`，新标签页）或 `/demo`。「省掉的工时」区块用浅色带和一张 `sticker-lg` 清单卡，工时右对齐等宽数字，合计行上方 2px 实线，结论用 `--primary-text`。不做倒计时、剩余份数和划线原价。
 
 新表面 `.landing-frame` 使用 `--edge: var(--primary-edge)` 的描边和 3px 硬唇边。中文主标题末句使用 `--primary-text`，英文允许自然换行。手机端单列，积分卡回到文档流。
 
