@@ -1,22 +1,27 @@
 #!/usr/bin/env node
 /**
- * 发布一个可下载版本（src/features/downloads/）：把文件传到私有 R2，再在 download_releases 记一行。
+ * Publishes a downloadable version (src/features/downloads/): uploads the file to private R2, then
+ * records a row in download_releases.
  *
- * 用法：pnpm downloads:publish <产品 id> <版本> <文件>
- *   例：pnpm downloads:publish template 1.0.0 dist/onwardkit-1.0.0.zip
+ * Usage: pnpm downloads:publish <product id> <version> <file>
+ *   e.g. pnpm downloads:publish template 1.0.0 dist/onwardkit-1.0.0.zip
  *
- * bucket 要保持私有（site.config.ts 的 upload.public 为 false，默认如此）。
+ * The bucket must stay private (upload.public in site.config.ts is false, the default).
  *
- * 读 .env.local（或当前环境）里的 DATABASE_URL 和 R2_ACCOUNT_ID / R2_ACCESS_KEY_ID /
- * R2_SECRET_ACCESS_KEY / R2_BUCKET —— 指向哪个库和 bucket，就发布到哪个站点。发生产版本时
- * 显式传生产的变量，脚本开头会打出目标库主机和 bucket，确认无误再往下看结果。
+ * Reads DATABASE_URL and R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET from
+ * .env.local (or the current environment) — whichever database and bucket they point to is the site
+ * you publish to. For a production release pass the production variables explicitly; the script
+ * prints the target database host and bucket first, so confirm those before reading on.
  *
- * 顺序是先传文件、后写库：写库失败时 bucket 里多一个没人引用的文件，不会出现
- * 「下载页有这个版本、点下去 404」。同一产品重发同一版本 = 覆盖文件、刷新大小，发布时间不变
- * （它决定哪些买家的更新期覆盖这个版本，不能因为重传而后移）。
+ * The file is uploaded before the row is written: if the database write fails, the bucket just has
+ * an unreferenced file, rather than "the download page lists this version and clicking it 404s".
+ * Republishing the same version of the same product = overwrite the file and refresh the size; the
+ * publish time stays the same (it decides which customers' update windows cover this version, so a
+ * re-upload must not push it later).
  *
- * 产品 id 要和 site.config.ts 的 downloads.products[].id 一致；脚本不读站点配置
- * （.mjs 加载不了 TS 配置），写错了下载页不会显示这个版本。
+ * The product id must match downloads.products[].id in site.config.ts; the script doesn't read the
+ * site config (a .mjs file can't load TS config), so with a typo the download page won't show this
+ * version.
  */
 import { createReadStream, existsSync, statSync } from "node:fs";
 import path from "node:path";
@@ -34,15 +39,18 @@ function die(message) {
 
 const [productId, version, file] = process.argv.slice(2);
 if (!productId || !version || !file) {
-  die("用法：pnpm downloads:publish <产品 id> <版本> <文件>");
+  die("Usage: pnpm downloads:publish <product id> <version> <file>");
 }
 if (!/^[A-Za-z][A-Za-z0-9]*$/.test(productId)) {
-  die(`产品 id 只能是字母和数字、以字母开头，收到 "${productId}"`);
+  die(
+    `Product id must be letters and digits, starting with a letter; got "${productId}"`,
+  );
 }
 if (!/^[0-9A-Za-z][0-9A-Za-z.+-]*$/.test(version)) {
-  die(`版本号只能包含字母、数字和 . + -，收到 "${version}"`);
+  die(`Version may only contain letters, digits and . + -; got "${version}"`);
 }
-if (!existsSync(file) || !statSync(file).isFile()) die(`找不到文件：${file}`);
+if (!existsSync(file) || !statSync(file).isFile())
+  die(`File not found: ${file}`);
 
 const {
   DATABASE_URL: databaseUrl,
@@ -60,22 +68,22 @@ const missing = Object.entries({
 })
   .filter(([, value]) => !value)
   .map(([name]) => name);
-if (missing.length) die(`缺少环境变量：${missing.join(", ")}`);
+if (missing.length) die(`Missing environment variables: ${missing.join(", ")}`);
 
 const size = statSync(file).size;
-// 路径里带一段随机串：bucket 万一被设成公开（upload.public）或绑了公开域名，
-// 文件也猜不到地址，只能经 /api/downloads 签名访问。
+// The path includes a random segment: even if the bucket is made public (upload.public) or bound to
+// a public domain, the file's URL can't be guessed and is only reachable via signed /api/downloads.
 const key = `downloads/${productId}/${version}-${crypto.randomUUID()}/${path.basename(file)}`;
 console.log(
-  `发布 ${productId} ${version}（${(size / 1024 / 1024).toFixed(1)} MB）\n` +
-    `  数据库：${new URL(databaseUrl).host}\n  bucket：${bucket}/${key}`,
+  `Publishing ${productId} ${version} (${(size / 1024 / 1024).toFixed(1)} MB)\n` +
+    `  database: ${new URL(databaseUrl).host}\n  bucket: ${bucket}/${key}`,
 );
 
 const s3 = new S3Client({
   region: "auto",
   endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
   credentials: { accessKeyId, secretAccessKey },
-  // 与 src/core/upload/storage.ts 一致：路径式地址，只在接口要求时计算校验和。
+  // Same as src/core/upload/storage.ts: path-style URLs, checksums only when the API requires them.
   forcePathStyle: true,
   requestChecksumCalculation: "WHEN_REQUIRED",
   responseChecksumValidation: "WHEN_REQUIRED",
@@ -106,7 +114,7 @@ try {
   );
   const [row] = rows;
   console.log(
-    `${row.inserted ? "已发布" : "已覆盖"}：${productId} ${version}，发布时间 ${row.published_at.toISOString()}`,
+    `${row.inserted ? "Published" : "Overwrote"}: ${productId} ${version}, published at ${row.published_at.toISOString()}`,
   );
 } finally {
   await client.end();

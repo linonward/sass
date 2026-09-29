@@ -1,11 +1,13 @@
 /**
- * 启动一个多语言版本的站点，供 e2e/i18n 使用。
+ * Starts a multi-locale build of the site for e2e/i18n.
  *
- * 模拟"新增一门语言"的真实步骤，除此之外不改任何代码：
- *   1. 把仓库（含未提交改动）复制到临时目录
- *   2. 在 src/core/i18n/locales.ts 的 locales 里加入测试语言
- *   3. 从 messages/en.json 生成伪翻译 messages/<locale>.json（每条加上 `[<locale>] ` 前缀）
- * 然后在副本里安装依赖并启动：CI 用生产构建，本地用 dev server。
+ * Mirrors the real steps for "adding a locale" and changes no other code:
+ *   1. Copy the repo (including uncommitted changes) to a temporary directory
+ *   2. Add the test locale to `locales` in src/core/i18n/locales.ts
+ *   3. Generate pseudo-translated messages/<locale>.json from messages/en.json (each message
+ *      prefixed with `[<locale>] `)
+ * Then install dependencies in the copy and start it: a production build in CI, the dev server
+ * locally.
  */
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -26,11 +28,12 @@ const files = execFileSync(
 )
   .split("\0")
   .filter(Boolean);
-// .env.local 被 gitignore，不在上面的列表里，但本地运行需要其中的变量（如 DATABASE_URL）。
+// .env.local is gitignored and not in the list above, but running locally needs its variables
+// (e.g. DATABASE_URL).
 files.push(".env.local");
 for (const file of files) {
   const from = path.join(root, file);
-  if (!fs.existsSync(from)) continue; // 已删除但未提交的文件
+  if (!fs.existsSync(from)) continue; // deleted but not yet committed
   fs.mkdirSync(path.dirname(path.join(dest, file)), { recursive: true });
   fs.copyFileSync(from, path.join(dest, file));
 }
@@ -42,7 +45,7 @@ const patched = config.replace(
   (_, list: string) => `export const locales = [${list}, "${TEST_LOCALE}"]`,
 );
 if (patched === config)
-  throw new Error("src/core/i18n/locales.ts 中找不到 locales");
+  throw new Error("could not find locales in src/core/i18n/locales.ts");
 fs.writeFileSync(configPath, patched);
 
 const en = JSON.parse(
@@ -55,10 +58,11 @@ fs.writeFileSync(
 
 const run = (args: string[]) =>
   execFileSync("pnpm", args, { cwd: dest, stdio: "inherit" });
-// 别把 --prefer-offline 改回 --offline：Ubuntu 26 的 runner 把 /tmp 挂成独立 tmpfs，
-// 而 pnpm 的默认 store 必须与项目同文件系统 —— 副本因此会用上另一个（空的）store，
-// --offline 立刻以 ERR_PNPM_NO_OFFLINE_TARBALL 失败。--prefer-offline 只是允许联网
-// 补缺：store 里有的照旧硬链接、不下载。
+// Don't change --prefer-offline back to --offline: the Ubuntu 26 runner mounts /tmp as its own
+// tmpfs, and pnpm's default store must live on the same filesystem as the project — so the copy
+// ends up with a different (empty) store, and --offline fails immediately with
+// ERR_PNPM_NO_OFFLINE_TARBALL. --prefer-offline only allows going online to fill gaps: whatever
+// is already in the store is still hard-linked, not downloaded.
 run(["install", "--prefer-offline", "--frozen-lockfile"]);
 
 if (process.env.CI) {

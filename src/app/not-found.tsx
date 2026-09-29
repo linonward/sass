@@ -10,28 +10,33 @@ import { buttonVariants } from "@/core/ui/button";
 import siteConfig from "../../site.config";
 import "./globals.css";
 
-// 根级 404：接住「页面渲染不出来」的那些路径。
+// Root-level 404: catches the paths whose page can't render at all.
 //
-// 为什么需要它：src/proxy.ts 的 matcher 跳过了带点的路径和 /api，这些请求不会被
-// next-intl 重写成 /<locale>/...，而是由 [locale] 动态段整个吞掉（/missing.png 的
-// locale 就是 "missing.png"）。[locale]/layout.tsx 的 hasLocale 校验失败后在那里抛
-// notFound()，而同段的 not-found.tsx 是那个 layout 的子节点，接不到 —— 于是退化成
-// 框架内置的默认 404 页（品牌色、主题、本地化、「回首页」全丢）。把文件放在 app 根
-// 下，它才是那个 layout 的父级边界。
+// Why it's needed: the matcher in src/proxy.ts skips paths containing a dot and /api, so those
+// requests aren't rewritten to /<locale>/... by next-intl; instead the [locale] dynamic segment
+// swallows them whole (the locale of /missing.png is "missing.png"). The hasLocale check in
+// [locale]/layout.tsx fails and throws notFound() there, but the not-found.tsx in the same segment is
+// a child of that layout and can't catch it — so it degrades to the framework's built-in default 404
+// page (brand color, theme, localization and "back to home" all lost). Placing this file at the app
+// root makes it the parent boundary of that layout.
 //
-// 实测要点（404 的两种形态与状态码约定见 README 的「错误与权限的边界」一节）：
-// 1. 这条路径不需要 experimental.globalNotFound —— 根级 not-found.tsx 就够了，
-//    且它渲染进的是框架给的 <html id="__next_error__"> 文档，不能再套 <html>。
-// 2. 这个文件会被预渲染进**每个页面**的 RSC payload（客户端 notFound 要用），
-//    所以它不能碰任何「请求作用域」的 next-intl API：这条路径的 request locale
-//    是坏的，next-intl 的 getConfig()（getMessages / useTranslations / 连
-//    NextIntlClientProvider 都会经它取 now、timeZone）会回落到 rootParams.locale()
-//    —— 于是 src/core/i18n/request.ts:12 再抛一次 notFound()，边界内容变成 error
-//    行，整页空白（生产环境实测就是这个现象）。所以这里只用默认语言的文案：
-//    照 request.ts 的写法直接读 messages/<defaultLocale>.json，绕开请求配置。
+// Verified in practice (the two forms of 404 and the status code conventions are covered in the
+// README section on error and permission boundaries):
+// 1. This path doesn't need experimental.globalNotFound — a root-level not-found.tsx is enough, and
+//    it renders into the framework's <html id="__next_error__"> document, so it must not wrap
+//    another <html>.
+// 2. This file is prerendered into the RSC payload of **every page** (client-side notFound needs
+//    it), so it must not touch any request-scoped next-intl API: the request locale on this path is
+//    broken, and next-intl's getConfig() (which getMessages / useTranslations / even
+//    NextIntlClientProvider go through to get now and timeZone) falls back to rootParams.locale()
+//    — so src/core/i18n/request.ts:12 throws notFound() again, the boundary content becomes an
+//    error row, and the whole page is blank (exactly what we observed in production). So this file
+//    uses only the default locale's messages, reading messages/<defaultLocale>.json directly the way
+//    request.ts does, bypassing the request config.
 //
-// 本地化文案的内联导致这里和 [locale]/not-found.tsx 有一小段重复 —— 那个文件是
-// layout 的子节点、走 useTranslations，两边的运行环境不同，共用不了。
+// Inlining the localized messages means a small overlap with [locale]/not-found.tsx — that file is
+// a child of the layout and uses useTranslations; the two run in different environments and can't
+// share code.
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const display = Bricolage_Grotesque({
@@ -41,22 +46,22 @@ const display = Bricolage_Grotesque({
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export default async function RootNotFound() {
-  // 这条路径没有语言前缀（/missing.png 这种），用默认语言。
+  // These paths have no locale prefix (like /missing.png), so use the default locale.
   const locale = routing.defaultLocale;
   const messages = (await import(`../../messages/${locale}.json`)).default;
   const t = messages.NotFound;
 
   return (
     <>
-      {/* [locale]/layout.tsx 注入的品牌色变量在这条路径上不存在，自己补一份。
-          这里在客户端边界内，<style> 必须给 href + precedence（React 只 hoist 带
-          precedence 的样式），否则客户端渲染时直接抛错。 */}
+      {/* The brand color variables injected by [locale]/layout.tsx don't exist on this path, so add
+          our own. We're inside a client boundary, so <style> needs href + precedence (React only hoists
+          styles with a precedence), otherwise client rendering throws. */}
       <style href="brand-colors" precedence="high">
         {brandCss(siteConfig.brand)}
       </style>
-      {/* 同理，layout 里挂到 <html> 上的字体变量和不在这里，挂在自己的容器上。
-          font-sans 也一并加上：globals.css 的 html { @apply font-sans } 依赖那组
-          变量，这条路径的 <html> 上没有。 */}
+      {/* Likewise, the font variables the layout puts on <html> aren't here either, so attach them to
+          our own container. Add font-sans too: globals.css's html { @apply font-sans } relies on those
+          variables, which this path's <html> doesn't have. */}
       <ThemeProvider>
         <main
           className={cn(
@@ -68,10 +73,11 @@ export default async function RootNotFound() {
           )}
         >
           <title>{t.title}</title>
-          {/* 和 [locale]/not-found.tsx 同一套语域：文字用 --primary-text 而不是
-              --primary（后者是配置原 hex，暗色画布上不够看），h1 走 display 面，
-              CTA 用营销面的 44px 贴纸按钮。这条路径穿不到营销面 layout，所以没有
-              Header / Footer —— 只接 /missing.png 这类带扩展名的请求。 */}
+          {/* Same register as [locale]/not-found.tsx: text uses --primary-text rather than --primary
+              (the latter is the raw configured hex, not legible enough on a dark canvas), the h1 uses the
+              display face, and the CTA is the marketing 44px sticker button. This path can't reach the
+              marketing layout, so there's no Header / Footer — it only catches requests with an extension,
+              like /missing.png. */}
           <p className="text-primary-text font-mono text-sm font-medium tracking-[0.2em]">
             404
           </p>
@@ -79,7 +85,7 @@ export default async function RootNotFound() {
           <p className="text-muted-foreground text-lg text-pretty">
             {t.description}
           </p>
-          {/* 不用 next-intl 的 Link：它要 NextIntlClientProvider 的 context。 */}
+          {/* Not next-intl's Link: it needs the NextIntlClientProvider context. */}
           <Link
             href="/"
             className={`${buttonVariants({ size: "marketing", tone: "primary" })} mt-4`}

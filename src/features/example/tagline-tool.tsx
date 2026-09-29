@@ -17,17 +17,18 @@ export function TaglineTool({
   quickCost,
   aiCost,
 }: {
-  /** 第一次提交用的请求 ID，由服务端生成；之后用 action 返回的新 ID。 */
+  /** Request ID for the first submit, generated on the server; later submits use the new ID the action returns. */
   requestId: string;
   quickCost: number;
-  /** AI 生成每次的积分成本；AI 未开启时为 null，不显示 AI 按钮。 */
+  /** Credit cost per AI generation; null when AI is off, in which case the AI button is hidden. */
   aiCost: number | null;
 }) {
   const t = useTranslations("Example");
   const [state, action, pending] = useActionState(generateTaglines, idle);
-  // 受控输入。action 返回后 React 会重置表单，非受控输入是被重置的那一方 —— 想让它
-  // 保留提交前的内容得靠 `defaultValue` 正好赶上那次重置，读起来像死代码。受控的
-  // 值不受重置影响，这里也就直接是「提交后还能接着改 product 再生成」。
+  // Controlled input. After the action returns React resets the form, and uncontrolled inputs are
+  // what gets reset — keeping their pre-submit content would rely on `defaultValue` happening to
+  // catch that reset, which reads like dead code. Controlled values aren't affected by the reset,
+  // so "tweak product after submitting and generate again" just works.
   const [product, setProduct] = useState("");
 
   return (
@@ -76,7 +77,7 @@ export function TaglineTool({
             className="divide-y rounded-lg border text-sm"
           >
             {state.taglines.map((line, index) => (
-              // 生成内容可能重复（AI 尤其容易），key 里带上位置才是唯一的。
+              // Generated output can repeat (especially from AI), so include the position to make the key unique.
               <li key={`${index}-${line}`} className="px-4 py-3">
                 {line}
               </li>

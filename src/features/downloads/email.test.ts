@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import { renderEmail } from "@/core/email/send";
 
-describe("download-ready 邮件", () => {
-  test("标题带产品名，正文有下载页链接和更新截止日期", async () => {
+describe("download-ready email", () => {
+  test("subject has the product name; body has the downloads page link and the updates-until date", async () => {
     const email = await renderEmail({
       to: "buyer@example.com",
       template: "download-ready",

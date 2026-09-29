@@ -6,7 +6,7 @@ import { legalPages } from "../src/core/legal/pages";
 
 const pages = Object.entries(legalPages) as [keyof typeof legalPages, string][];
 
-test("三个法律页返回 200，包含配置中的公司名，title 各不相同", async ({
+test("the three legal pages return 200, include the configured company name, and have distinct titles", async ({
   page,
 }) => {
   const titles = new Set<string>();
@@ -29,7 +29,7 @@ test("三个法律页返回 200，包含配置中的公司名，title 各不相�
   expect(titles.size).toBe(pages.length);
 });
 
-test("Footer 的法律链接可以跳转", async ({ page }) => {
+test("footer legal links navigate", async ({ page }) => {
   await page.goto("/");
   const footer = page.getByRole("navigation", { name: messages.Nav.legal });
   for (const [key, path] of pages) {
@@ -41,10 +41,10 @@ test("Footer 的法律链接可以跳转", async ({ page }) => {
   }
 });
 
-test.describe("375px 宽度", () => {
+test.describe("375px width", () => {
   test.use({ viewport: { width: 375, height: 740 } });
 
-  test("法律页不横向溢出", async ({ page }) => {
+  test("legal pages don't overflow horizontally", async ({ page }) => {
     for (const [, path] of pages) {
       await page.goto(path);
       const overflow = await page.evaluate(
@@ -55,7 +55,7 @@ test.describe("375px 宽度", () => {
   });
 });
 
-test("法律页使用统一的 SEO metadata", async ({ page }) => {
+test("legal pages use the shared SEO metadata", async ({ page }) => {
   await page.goto(legalPages.privacy);
   await expect(page).toHaveTitle(new RegExp(`\\| ${siteConfig.name}$`));
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(

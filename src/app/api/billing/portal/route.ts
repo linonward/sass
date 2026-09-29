@@ -3,7 +3,7 @@ import { openPortal } from "@/core/billing/checkout";
 import { getBillingProvider } from "@/core/billing/providers";
 import { getDb } from "@/core/db";
 
-/** 跳转到服务商的客户门户（管理订阅、付款方式、发票）。 */
+/** Redirect to the provider's customer portal (manage subscription, payment method, invoices). */
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) {
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     userId: session.user.id,
   });
   return result.ok
-    ? // 服务商可能返回站内相对地址（fake），补全成绝对地址。
+    ? // The provider may return a site-relative URL (fake); make it absolute.
       Response.redirect(new URL(result.url, request.url), 303)
     : Response.json({ error: result.error }, { status: result.status });
 }

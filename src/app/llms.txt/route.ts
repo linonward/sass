@@ -21,14 +21,18 @@ import { absoluteUrl, siteUrl } from "@/core/seo/urls";
 
 import siteConfig from "../../../site.config";
 
-// llms.txt 是根级的单文件（约定如此），所以固定用默认语言 —— 多语言站点也只有一个，
-// 用默认语言的 canonical 路径。带扩展名的路径不经过 proxy，不会被改写到 [locale] 下。
-// 内容全部来自配置、文案和构建期的博客数据，所以可以在构建时就定下来。
+// llms.txt is a single root-level file (by convention), so it always uses the default locale — a
+// multilingual site still has just one, with the default locale's canonical paths. Paths with an
+// extension skip the proxy and are never rewritten under [locale]. All content comes from config,
+// messages and build-time blog data, so it can be fixed at build time.
 export const dynamic = "force-static";
 
 const locale = routing.defaultLocale;
 
-/** 套餐价格。选项和营销页的定价区一致（整数不带小数位），数字才不会两边对不上。 */
+/**
+ * Plan price. Same options as the marketing pricing section (whole numbers without decimals), so the
+ * numbers never disagree between the two.
+ */
 function money(amount: number) {
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -42,12 +46,14 @@ export async function GET() {
   const tn = await getTranslations({ locale, namespace: "Nav" });
   const tp = await getTranslations({ locale, namespace: "Landing.pricing" });
   const url = (path: string) => absoluteUrl(locale, path);
-  // id / key 来自配置，由 messages 测试保证存在（和营销页的定价区同一个写法）。
+  // id / key come from config, and the messages tests guarantee they exist (same pattern as the
+  // marketing pricing section).
   const planName = (id: string) => tp(`plans.${id}.name` as "plans.free.name");
   const feature = (key: string) =>
     tp(`features.${key}` as "features.credits100");
 
-  // 需要账号的路径：侧边栏里那些（套件项 + 业务项 + 后台入口）外加登录页本身。
+  // Paths that need an account: everything in the sidebar (kit items + your items + the admin
+  // entry) plus the sign-in page itself.
   const { suite, business } = dashboardNav(siteConfig);
   const authPaths = [
     SIGN_IN_PATH,
@@ -71,8 +77,8 @@ export async function GET() {
         ...(blogEnabled
           ? [{ title: tn("blog"), url: url(blogPath), note: t("blogNote") }]
           : []),
-        // marketingRoutes 是「公开页面」的登记处（sitemap 也用这份）。新增页面只要登记过
-        // 就会出现在这里，没有单独文案的就用路径当标题。
+        // marketingRoutes is the registry of public pages (the sitemap uses it too). Any registered
+        // page shows up here; pages without their own copy use the path as the title.
         ...marketingRoutes
           .filter(
             (path) =>
@@ -91,8 +97,8 @@ export async function GET() {
       })),
     },
     /*
-     * 博客：列表页 + 最新几篇。全站文章都列进来的话这份文件会随内容一起膨胀，
-     * 而 sitemap.xml 已经能给出完整清单。
+     * Blog: the index page plus the latest few posts. Listing every post would bloat this file as
+     * content grows, and sitemap.xml already provides the full list.
      */
     ...(blogEnabled
       ? [
@@ -142,7 +148,7 @@ export async function GET() {
     {
       title: t("auth"),
       note: t("authNote"),
-      // 纯文字行：这些路径抓不到内容，写成链接会误导 agent。
+      // Plain-text lines: these paths have no crawlable content, and links would mislead agents.
       items: authPaths.map((path) => ({ title: path })),
     },
   ];

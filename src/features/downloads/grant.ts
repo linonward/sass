@@ -14,7 +14,10 @@ import { loadMessages } from "@/core/email/translator";
 import { productForPlan, updatesUntil } from "./access";
 import { downloadEntitlements } from "./schema";
 
-/** 产品在收件人语言里的名称（messages 的 Downloads.products.<id>.name），缺失时用 id。 */
+/**
+ * The product's name in the recipient's locale (Downloads.products.<id>.name in messages), falling
+ * back to the id.
+ */
 export async function productDisplayName(locale: string, productId: string) {
   const messages: Messages = await loadMessages(locale);
   const products = (messages.Downloads?.products ?? {}) as Record<
@@ -25,16 +28,18 @@ export async function productDisplayName(locale: string, productId: string) {
 }
 
 /**
- * 卖可下载文件的 onBillingEvent 钩子：
+ * onBillingEvent hook for selling downloadable files:
  *
- * | BillingEvent                                 | 动作                                         |
+ * | BillingEvent                                          | Action                                                        |
  * | -------------------------------------------- | -------------------------------------------- |
- * | checkout.completed（一次性、套餐对应某产品） | 记一条授权；新记的才发「可以下载了」邮件     |
- * | refund.created（订单已全额退款）             | 收回这笔订单的授权（部分退款不动）           |
+ * | checkout.completed (one-time, plan maps to a product) | Record a grant; only a new one sends the "ready" email        |
+ * | refund.created (order fully refunded)                 | Revoke this order's grant (partial refunds leave it alone)    |
  *
- * 授权和邮件的 outbox 记录与事件在同一个事务里提交；(provider, 订单, 产品) 唯一，
- * webhook 重放或补发时插不进去，也就不会再发一封。邮件在提交后立即发一次，
- * 没发出去由 outbox 的恢复扫描补发。乱序到达的旧事件（stale）照样授权：钱确实收到了。
+ * The grant and the email's outbox record are committed in the same transaction as the event;
+ * (provider, order, product) is unique, so a replayed or re-sent webhook can't insert again and no
+ * second email goes out. The email is sent once right after commit, and if that fails the outbox
+ * recovery sweep resends it. Stale events arriving out of order still grant: the money really was
+ * received.
  */
 export function createDownloadsHandler({
   config,
@@ -42,7 +47,7 @@ export function createDownloadsHandler({
   send = sendEmail,
 }: {
   config: SiteConfig["downloads"];
-  /** 提交后发送与记账用的数据库；默认全局连接。 */
+  /** Database used for sending and bookkeeping after commit; defaults to the global connection. */
   db?: DatabaseSource;
   send?: Parameters<typeof createOutbox>[0]["send"];
 }): OnBillingEventHandler {

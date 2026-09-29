@@ -33,7 +33,7 @@ export async function generateMetadata({
   });
 }
 
-/** AI 示例页，由 features.ai 控制。业务可以照着它写自己的 AI 功能页，或直接删掉。 */
+/** AI example page, gated by features.ai. Model your own AI pages on it, or just delete it. */
 export default async function PlaygroundPage({
   params,
 }: PageProps<"/[locale]/playground">) {
@@ -41,7 +41,8 @@ export default async function PlaygroundPage({
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Playground" });
   const userId = (await requirePageSession(locale)).user.id;
-  // 图片页和视频页共用的生成记录：这里查一次，交给 GenerationsProvider。
+  // Generation history shared by the image and video tabs: query it once here and hand it to
+  // GenerationsProvider.
   const mediaEnabled = aiImageEnabled || aiVideoEnabled;
   const [generations, pendingVideos] = mediaEnabled
     ? await Promise.all([listGenerations(userId), listPendingVideos(userId)])
@@ -54,7 +55,7 @@ export default async function PlaygroundPage({
         initialGenerations={generations}
         initialPendingVideos={pendingVideos}
       >
-        {/* 只传数据：内容组件在 PlaygroundTabs（客户端）里按需 import。 */}
+        {/* Pass data only: the content components are imported on demand inside PlaygroundTabs (client). */}
         <PlaygroundTabs
           tabs={[
             ...(aiModels.length > 0

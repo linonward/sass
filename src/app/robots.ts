@@ -8,15 +8,16 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       /*
-       * 只挡机器端点，不挡页面。
+       * Block machine endpoints only, not pages.
        *
-       * dashboard / admin 是 HTTP 页面，排除它们靠页面自己的 `noIndex`（两处都设了）
-       * —— 被 Disallow 挡住的路径爬虫抓不到，也就读不到那条 noindex，有外链时反而
-       * 可能以裸 URL 出现在结果里：两套封锁叠在一起是互相抵消。这些页面未登录时还会
-       * 307 到同样 noindex 的登录页（见 src/proxy.ts），爬虫本来也拿不到可收录的内容。
+       * dashboard / admin are HTML pages, excluded by the pages' own `noIndex` (set on both). A path
+       * blocked by Disallow can't be crawled, so the crawler never sees that noindex, and with inbound
+       * links it may show up in results as a bare URL: stacking both blocks makes them cancel out. When
+       * signed out these pages also 307 to the sign-in page, which is noindex too (see src/proxy.ts), so
+       * crawlers never get indexable content anyway.
        *
-       * /api 是 JSON，没有 <meta> 可写（未匹配的路径用 X-Robots-Tag 兜底，见
-       * src/app/api/[...rest]/route.ts）；这种没有 HTML 的端点才是 Disallow 的用武之地。
+       * /api is JSON with nowhere to put a <meta> (unmatched paths fall back to X-Robots-Tag, see
+       * src/app/api/[...rest]/route.ts); endpoints without HTML are exactly what Disallow is for.
        */
       disallow: ["/api"],
     },

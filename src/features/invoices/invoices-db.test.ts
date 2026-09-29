@@ -15,12 +15,14 @@ import { createInvoice, deleteInvoice, updateInvoice } from "./actions";
 import { listInvoices } from "./queries";
 import { invoices } from "./schema";
 
-// 真库测试：查询和三个写操作的归属校验都只有连着 Postgres 才测得准。
-// 没有 DATABASE_URL_TEST 时跳过（本地没配库、纯前端改动场景），CI 里必须配
-// （缺了会在下面直接抛错，不会静默跳过）。
+// Real-database tests: the queries and the ownership checks of the three writes can only be tested
+// properly against Postgres. Skipped without DATABASE_URL_TEST (no local database, frontend-only
+// changes); CI must set it (if it's missing there, the code below throws rather than silently
+// skipping).
 //
-// 这里能直接调 Server Action：refresh() 和登录态都被换成假实现，SQL 是真的。
-// 越权（改别人的发票）不是靠这段代码自觉，而是 where 里永远带着 user_id —— 测的就是它。
+// Server Actions can be called directly here: refresh() and the session are faked, the SQL is
+// real. Cross-user access (editing someone else's invoice) isn't prevented by the code being
+// careful, but by user_id always being in the where clause — that's what this tests.
 
 const url = process.env.DATABASE_URL_TEST;
 if (!url && process.env.CI) throw new Error("DATABASE_URL_TEST required");
@@ -47,13 +49,13 @@ describe.skipIf(!url)("invoices (DB)", () => {
   });
 
   afterAll(async () => {
-    // 发票挂在 user 上并级联删除，删掉用例创建的账号就清干净了。
+    // Invoices belong to a user and cascade on delete, so deleting the test accounts cleans up.
     if (createdUsers.length)
       await client.db.delete(user).where(inArray(user.id, createdUsers));
     await client.close();
   });
 
-  /** 建一个测试账号，返回它的 id。 */
+  /** Create a test account and return its id. */
   async function account() {
     const value = {
       id: randomUUID(),
@@ -67,7 +69,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
     return value;
   }
 
-  /** 直接插一行发票（绕开 action，测查询用）。 */
+  /** Insert an invoice row directly (bypassing the action, for query tests). */
   async function seed(
     userId: string,
     row: { customerName: string; amount?: number; createdAt?: Date },
@@ -98,7 +100,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
     return form;
   }
 
-  test("列表只返回自己的发票，搜索不区分大小写且通配符按字面匹配", async () => {
+  test("the list returns only your own invoices; search is case-insensitive and wildcards match literally", async () => {
     const owner = await account();
     const other = await account();
     await seed(owner.id, { customerName: "Acme Inc." });
@@ -115,7 +117,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
     });
     expect(searched.rows.map((row) => row.customerName)).toEqual(["Acme Inc."]);
 
-    // `%` 和 `_` 是 LIKE 的通配符：搜 `%100` 不该把两行都捞出来。
+    // `%` and `_` are LIKE wildcards: searching `%100` shouldn't pull up both rows.
     const literal = await listInvoices(client.db, {
       userId: owner.id,
       query: "%100",
@@ -125,7 +127,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
     ]);
   });
 
-  test("分页：每页 10 条、最新的在前，第二页只剩零头", async () => {
+  test("pagination: 10 per page, newest first, the second page holds the remainder", async () => {
     const owner = await account();
     const base = Date.UTC(2026, 0, 1);
     for (let i = 0; i < 12; i++) {
@@ -149,7 +151,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
     ]);
   });
 
-  test("创建归属当前登录用户；没登录或金额非法时不写库", async () => {
+  test("create belongs to the signed-in user; nothing is written when signed out or the amount is invalid", async () => {
     const owner = await account();
     session = { user: { id: owner.id, email: owner.email } };
 
@@ -172,7 +174,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
       status: "error",
       error: "unauthorized",
     });
-    // 两次被拒都没有新增行。
+    // Neither rejected attempt added a row.
     const rows = await client.db
       .select()
       .from(invoices)
@@ -180,7 +182,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
     expect(rows).toHaveLength(1);
   });
 
-  test("改不到别人的发票：越权按「查不到」处理，数据原样", async () => {
+  test("can't update someone else's invoice: cross-user access is treated as not found and data is untouched", async () => {
     const owner = await account();
     const attacker = await account();
     const target = await seed(owner.id, { customerName: "Acme Inc." });
@@ -202,7 +204,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
       .where(eq(invoices.id, target.id));
     expect(after!.customerName).toBe("Acme Inc.");
 
-    // 自己的才改得动。
+    // Only your own can be updated.
     session = { user: { id: owner.id, email: owner.email } };
     expect(
       await updateInvoice(
@@ -223,7 +225,7 @@ describe.skipIf(!url)("invoices (DB)", () => {
     expect(updated!.status).toBe("paid");
   });
 
-  test("删除只删自己的那一行", async () => {
+  test("delete removes only your own row", async () => {
     const owner = await account();
     const mine = await seed(owner.id, { customerName: "Mine" });
     const other = await seed(owner.id, { customerName: "Also mine" });
@@ -238,11 +240,11 @@ describe.skipIf(!url)("invoices (DB)", () => {
       .where(eq(invoices.userId, owner.id));
     expect(remaining.map((row) => row.id)).toEqual([other.id]);
 
-    // 删不存在的 id 同样是 not_found，不会静默成功。
+    // Deleting a nonexistent id is also not_found, not a silent success.
     expect(
       await deleteInvoice({ status: "idle" }, invoiceForm({ id: mine.id })),
     ).toEqual({ status: "error", error: "not_found" });
-    // id 不是 uuid 时连库都不碰。
+    // A non-uuid id doesn't even touch the database.
     expect(
       await deleteInvoice({ status: "idle" }, invoiceForm({ id: "nope" })),
     ).toEqual({ status: "error", error: "invalid" });

@@ -12,9 +12,9 @@ import { invoices } from "./schema";
 
 import siteConfig from "../../../site.config";
 
-// 示例业务模块的写操作：创建 / 更新 / 删除。三件事都按同一套来：
-// 模块开关 → 登录 → 校验 → 带 user_id 条件的 SQL → refresh()。
-// 列表页和表单见 ./page.tsx 和 ./dialogs.tsx。
+// Writes for the example business module: create / update / delete. All three follow the same
+// sequence: module switch → sign-in → validation → SQL scoped by user_id → refresh().
+// The list page and forms are in ./page.tsx and ./dialogs.tsx.
 
 export type InvoiceErrorCode =
   "invalid" | "unauthorized" | "not_found" | "unavailable";
@@ -34,12 +34,12 @@ const UNAUTHORIZED: InvoiceActionState = {
 const INVALID: InvoiceActionState = { status: "error", error: "invalid" };
 const NOT_FOUND: InvoiceActionState = { status: "error", error: "not_found" };
 
-/** 建一张发票，归属当前登录用户。 */
+/** Create an invoice owned by the signed-in user. */
 export async function createInvoice(
   _prev: InvoiceActionState,
   form: FormData,
 ): Promise<InvoiceActionState> {
-  // action 是公开端点：模块关掉之后页面 404 了，这里也要再挡一次。
+  // An action is a public endpoint: once the module is off the page 404s, but block it here too.
   if (!siteConfig.features.examples.invoices) return CANCELLED;
   const session = await getSession();
   if (!session) return UNAUTHORIZED;
@@ -49,12 +49,12 @@ export async function createInvoice(
   await getDb()
     .insert(invoices)
     .values({ userId: session.user.id, ...input.data });
-  // 列表是服务端渲染的，改完要让它重新渲染一次才看得到新行。
+  // The list is server-rendered; it has to render again after a change for the new row to show.
   refresh();
   return { status: "success" };
 }
 
-/** 改一张发票。id 不属于当前用户时按「查不到」处理，不动任何数据。 */
+/** Update an invoice. An id that isn't the current user's is treated as not found; no data changes. */
 export async function updateInvoice(
   _prev: InvoiceActionState,
   form: FormData,
@@ -71,14 +71,15 @@ export async function updateInvoice(
     .set(input.data)
     .where(and(eq(invoices.id, id.data), eq(invoices.userId, session.user.id)))
     .returning({ id: invoices.id });
-  // 一行都没改到 = 这张发票不存在，或者不是你的 —— 两种都不该改到别人的数据。
+  // No rows updated = the invoice doesn't exist or isn't yours — neither case may touch anyone
+  // else's data.
   if (updated.length === 0) return NOT_FOUND;
 
   refresh();
   return { status: "success" };
 }
 
-/** 删除一张发票。归属校验同上。 */
+/** Delete an invoice. Same ownership check as above. */
 export async function deleteInvoice(
   _prev: InvoiceActionState,
   form: FormData,

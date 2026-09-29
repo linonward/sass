@@ -7,7 +7,7 @@ export const alt = siteConfig.name;
 export const size = ogImageSize;
 export const contentType = "image/png";
 
-// 默认分享图：品牌色背景 + 站点名称与描述。构建时生成。
+// Default share image: brand-color background plus the site name and description. Generated at build time.
 export default function OpengraphImage() {
   return ogCard({
     title: siteConfig.name,

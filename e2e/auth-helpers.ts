@@ -7,37 +7,39 @@ import messages from "../messages/en.json";
 import { cooldownIdentifier } from "../src/core/auth/cooldown";
 import { waitForEmail } from "../src/core/email/testing";
 
-/** 每个用例用独立的邮箱，互不干扰。 */
+/** Each test uses its own email so tests don't interfere. */
 export function uniqueEmail(tag: string) {
   return `e2e-${tag}-${randomUUID().slice(0, 8)}@example.com`;
 }
 
 /**
- * 给页面固定一个随机的客户端 IP。生产构建会开启 Better Auth 的按 IP 限流，
- * 各用例使用不同 IP，避免并行时互相触发限流。
+ * Pin the page to a random client IP. Production builds enable Better Auth's per-IP rate limit,
+ * so each test uses a different IP to avoid tripping each other's limits when run in parallel.
  */
 export async function useRandomIp(page: Page) {
   const ip = `10.${randomInt(256)}.${randomInt(256)}.${randomInt(1, 255)}`;
-  // 设在 context 上，页面请求和 page.request 直接调接口都会带上。
+  // Set on the context so both page requests and direct page.request calls carry it.
   await page.context().setExtraHTTPHeaders({ "x-forwarded-for": ip });
 }
 
 /**
- * 把 GIS 脚本换成「浏览器上没有 Google 会话」的假实现。
+ * Replace the GIS script with a fake where "the browser has no Google session".
  *
- * 本地 `.env.local` 配了 Google 凭据时，登录页会真的去加载 `accounts.google.com` 的脚本
- * 并尝试弹 One Tap 提示。验证码相关的用例不关心它，stub 掉才能确定、且不依赖 Google 的
- * 可用性。真实的接线由 `e2e/sign-in-one-tap.spec.ts` 覆盖。
+ * With Google credentials in the local `.env.local`, the sign-in page really loads the
+ * `accounts.google.com` script and tries to show the One Tap prompt. Verification-code tests
+ * don't care about it; stubbing it out keeps them deterministic and independent of Google's
+ * availability. The real wiring is covered by `e2e/sign-in-one-tap.spec.ts`.
  */
 export async function stubGoogleOneTap(page: Page) {
   await page.route("https://accounts.google.com/gsi/client*", (route) =>
     route.fulfill({
-      // 必须是 JS 的 MIME：Playwright 默认 text/plain，会被 nosniff 挡下。
+      // Must be a JS MIME type: Playwright defaults to text/plain, which nosniff blocks.
       contentType: "application/javascript",
       body: `window.google = { accounts: { id: {
         initialize() {},
         prompt(notify) {
-          // 告诉插件提示没显示出来，让它收尾 —— 插件内部的并发标志只在收到通知时才复位。
+          // Tell the plugin the prompt wasn't displayed so it can wrap up — its internal
+          // in-flight flag only resets when it gets this notification.
           notify?.({ isNotDisplayed: () => true, getNotDisplayedReason: () => "opt_out_or_no_session" });
         },
       } } };`,
@@ -47,7 +49,7 @@ export async function stubGoogleOneTap(page: Page) {
 
 type Copy = typeof messages;
 
-/** 在登录页提交邮箱，并从 `.tmp/emails/` 取回验证码。 */
+/** Submit the email on the sign-in page and read the verification code from `.tmp/emails/`. */
 export async function requestCode(
   page: Page,
   email: string,
@@ -59,11 +61,13 @@ export async function requestCode(
 ) {
   const since = new Date(Date.now() - 1000);
   if (!page.url().includes("/sign-in")) await page.goto(signInPath);
-  // hydration 完成前填的值会被 React 重置，点击后只会提示邮箱无效（不会发出请求），
-  // 所以重复"填写并发送"，直到出现验证码输入框。
-  // 循环里的 click 要有界（理由同 openUserMenu）：提交按钮在水合完成前是禁用的，默认 30s 的
-  // click 会一直等按钮可用，把 toPass 的预算一把耗光 —— 慢水合的环境（i18n 副本、冷启动的
-  // dev server）上就变成失败。单轮快速失败，重试才有机会等到 hydration 完成。
+  // Values filled in before hydration finishes get reset by React, and clicking only reports an
+  // invalid email (no request is sent), so repeat "fill and send" until the code input appears.
+  // The click inside the loop must be bounded (same reason as openUserMenu): the submit button is
+  // disabled until hydration finishes, and the default 30s click would keep waiting for it to be
+  // enabled, burning the whole toPass budget — which turns into a failure in slow-hydrating
+  // environments (the i18n copy, a cold-started dev server). Fail each round fast so retries get a
+  // chance to wait out hydration.
   await expect(async () => {
     await page.getByLabel(copy.Auth.signIn.emailLabel).fill(email);
     await page
@@ -80,7 +84,7 @@ export async function requestCode(
   return { code: String(mail.props.code), mail };
 }
 
-/** 输入验证码（输满位数后自动提交）。 */
+/** Type the verification code (it auto-submits once all digits are entered). */
 export async function enterCode(
   page: Page,
   code: string,
@@ -89,7 +93,10 @@ export async function enterCode(
   await page.getByLabel(copy.Auth.signIn.codeLabel).fill(code);
 }
 
-/** 直连应用使用的数据库，用于构造"验证码已过期"等无法等待的状态。 */
+/**
+ * Connect directly to the app's database, to set up states you can't wait for, like "verification
+ * code expired".
+ */
 export async function withDatabase<T>(run: (client: pg.Client) => Promise<T>) {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
@@ -100,7 +107,7 @@ export async function withDatabase<T>(run: (client: pg.Client) => Promise<T>) {
   }
 }
 
-/** 完成一次验证码登录，停在登录后的页面。 */
+/** Complete a verification-code sign-in and stop on the post-sign-in page. */
 export async function signIn(
   page: Page,
   email: string,
@@ -108,11 +115,14 @@ export async function signIn(
 ) {
   const { code } = await requestCode(page, email, options);
   await enterCode(page, code, options.copy);
-  // 等跳转完成（session cookie 已写入）再继续。
+  // Wait for the redirect to finish (session cookie written) before continuing.
   await page.waitForURL((url) => !url.pathname.endsWith("/sign-in"));
 }
 
-/** 清掉某个邮箱的验证码重发冷却，让同一用例里可以马上再登录一次。 */
+/**
+ * Clear an email's verification-code resend cooldown so the same test can sign in again right
+ * away.
+ */
 export async function clearResendCooldown(email: string) {
   await withDatabase((client) =>
     client.query("delete from verification where identifier = $1", [
@@ -121,7 +131,7 @@ export async function clearResendCooldown(email: string) {
   );
 }
 
-/** 按邮箱查用户 id；不存在时为 undefined。 */
+/** Look up a user id by email; undefined if not found. */
 export async function findUserId(email: string) {
   return withDatabase(async (client) => {
     const { rows } = await client.query<{ id: string }>(
@@ -132,13 +142,14 @@ export async function findUserId(email: string) {
   });
 }
 
-/** 打开侧边栏里的用户菜单（移动端先展开抽屉）。 */
+/** Open the user menu in the sidebar (on mobile, open the drawer first). */
 export async function openUserMenu(page: Page, isMobile: boolean) {
   const d = messages.Dashboard;
-  // hydration 完成前点击没有反应，所以点到菜单真正出现为止。
-  // 循环里的每个动作都要有界：配置里没有 actionTimeout，一次落空的 click 会一直等到
-  // 用例超时（30s），把 toPass 的 10s 预算一把耗光 —— 于是整段不再重试，在 CI 上表现为
-  // 间歇性失败。单轮快速失败，重试才有机会等到 hydration 完成。
+  // Clicks do nothing before hydration finishes, so keep clicking until the menu really appears.
+  // Every action in the loop must be bounded: the config has no actionTimeout, so one missed click
+  // waits until the test times out (30s), burning toPass's whole 10s budget — the block then never
+  // retries, which shows up in CI as intermittent failures. Fail each round fast so retries get a
+  // chance to wait out hydration.
   await expect(async () => {
     if (isMobile) {
       const trigger = page.getByRole("button", { name: d.userMenu.open });

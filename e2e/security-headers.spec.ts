@@ -3,8 +3,9 @@ import { expect, test } from "@playwright/test";
 import type { APIResponse } from "@playwright/test";
 
 /**
- * 全站安全头（策略与白名单见 src/core/security/headers.ts）。
- * 这里只锁「头和关键指令在不在」，具体白名单由 src/core/security/headers.test.ts 单测覆盖。
+ * Site-wide security headers (policy and allowlists: see src/core/security/headers.ts).
+ * This only pins "are the headers and key directives present"; the exact allowlists are covered by
+ * the unit tests in src/core/security/headers.test.ts.
  */
 const REQUIRED_HEADERS: Record<string, string> = {
   "x-content-type-options": "nosniff",
@@ -17,7 +18,7 @@ const REQUIRED_HEADERS: Record<string, string> = {
 function expectSecurityHeaders(response: APIResponse, path: string) {
   const headers = response.headers();
   for (const [key, value] of Object.entries(REQUIRED_HEADERS)) {
-    expect(headers[key], `${path} 的 ${key}`).toBe(value);
+    expect(headers[key], `${path}: ${key}`).toBe(value);
   }
 
   const csp = headers["content-security-policy"] ?? "";
@@ -28,24 +29,27 @@ function expectSecurityHeaders(response: APIResponse, path: string) {
     "form-action 'self'",
     "frame-ancestors 'none'",
   ]) {
-    expect(csp, `${path} 的 CSP`).toContain(directive);
+    expect(csp, `CSP on ${path}`).toContain(directive);
   }
-  // 响应头里不能有换行，否则整条 CSP 会失效。
-  expect(csp, `${path} 的 CSP`).not.toMatch(/[\r\n]/);
+  // No newlines in the response header, or the whole CSP becomes invalid.
+  expect(csp, `CSP on ${path}`).not.toMatch(/[\r\n]/);
 
-  // One Tap 的 iframe 白名单：这条只在 Google 登录启用（配了 client ID）时才下发，所以写成
-  // 「出现就必须带 'self'」。frame-src 一旦出现就取代 default-src 对 frame 的回落，漏掉
-  // 'self' 连本站同源 iframe 都会被拦 —— 下面「/admin 不能被 iframe 嵌套」那条用例正是靠
-  // 同源 iframe 真的被加载、再被 X-Frame-Options 拒绝，才等得到那条控制台消息。
+  // The One Tap iframe allowlist: it's only sent when Google sign-in is enabled (client ID
+  // configured), so the check is "if present, it must include 'self'". Once frame-src is present it
+  // replaces the default-src fallback for frames, and without 'self' even same-origin iframes are
+  // blocked — the "/admin can't be embedded in an iframe" case below relies on a same-origin iframe
+  // actually loading and then being refused by X-Frame-Options to get its console message.
   const frameSrc = /(?:^|; )frame-src ([^;]+)/.exec(csp)?.[1];
-  if (frameSrc) expect(frameSrc, `${path} 的 frame-src`).toContain("'self'");
+  if (frameSrc) expect(frameSrc, `frame-src on ${path}`).toContain("'self'");
 
   return csp;
 }
 
-test("页面、静态文件与 API 都带全站安全头", async ({ request }) => {
-  // 首页经 proxy 重写到 /en；/api 和带扩展名的文件被 proxy 的 matcher 排除，
-  // 只经过 next.config.ts 的 headers()。
+test("pages, static files, and the API all carry the site-wide security headers", async ({
+  request,
+}) => {
+  // The home page is rewritten to /en by the proxy; /api and files with extensions are excluded by
+  // the proxy matcher and only go through headers() in next.config.ts.
   const cases = [
     { path: "/", status: 200 },
     { path: "/pricing", status: 200 },
@@ -64,20 +68,22 @@ test("页面、静态文件与 API 都带全站安全头", async ({ request }) =
   }
 });
 
-test("proxy 发出的重定向也带这些头", async ({ request }) => {
-  // 未登录访问 /dashboard：src/proxy.ts 按 cookie 直接跳登录页。
+test("redirects issued by the proxy carry these headers too", async ({
+  request,
+}) => {
+  // Signed-out visit to /dashboard: src/proxy.ts redirects straight to sign-in based on the cookie.
   const response = await request.get("/dashboard", { maxRedirects: 0 });
   expect(response.status()).toBe(307);
   expect(response.headers()["location"]).toContain("/sign-in");
   expectSecurityHeaders(response, "/dashboard");
 });
 
-test("/admin 不能被 iframe 嵌套", async ({ page, request }) => {
+test("/admin can't be embedded in an iframe", async ({ page, request }) => {
   const response = await request.get("/admin");
   expectSecurityHeaders(response, "/admin");
 
-  // 真在页面里插一个 iframe：浏览器应该按 X-Frame-Options / frame-ancestors 拒绝渲染，
-  // 并在控制台留下拒绝记录。
+  // Actually insert an iframe into the page: the browser should refuse to render it per
+  // X-Frame-Options / frame-ancestors and log the refusal to the console.
   await page.goto("/");
   const refused = page.waitForEvent("console", {
     predicate: (message) =>
@@ -92,14 +98,16 @@ test("/admin 不能被 iframe 嵌套", async ({ page, request }) => {
   await refused;
 });
 
-test("关键页面没有 CSP 违规", async ({ page }) => {
-  // CSP 拦掉的东西可能只是静默失败（图片变破图、脚本不执行），所以除了这条断言，
-  // 还要看 e2e/web-analytics.spec.ts 的脚本加载断言和 PR 里的真浏览器验证。
+test("key pages have no CSP violations", async ({ page }) => {
+  // Whatever the CSP blocks may just fail silently (broken images, scripts that don't run), so
+  // besides this assertion, also rely on the script-loading assertions in e2e/web-analytics.spec.ts
+  // and a manual check in a real browser.
   //
-  // 只认「带 Content Security Policy 字样」的行：`Refused to load/execute ...` 这类
-  // 拒绝信息里 MIME 不符（本地构建 /_vercel/insights/script.js 会 404 成 HTML，
-  // 撞上 X-Content-Type-Options: nosniff）也长这样，但它不是 CSP 违规 ——
-  // 那不是白名单能修的，用宽正则会把构建环境问题记成安全头回归。
+  // Only count lines that mention "Content Security Policy": `Refused to load/execute ...` messages
+  // for a MIME mismatch (in a local build /_vercel/insights/script.js 404s as HTML and hits
+  // X-Content-Type-Options: nosniff) look the same, but they aren't CSP violations — no allowlist
+  // can fix them, and a broad regex would record a build-environment issue as a security-header
+  // regression.
   const violations: string[] = [];
   page.on("console", (message) => {
     const text = message.text();
@@ -108,7 +116,8 @@ test("关键页面没有 CSP 违规", async ({ page }) => {
     }
   });
 
-  // 静态预渲染的营销页、博客、后台（404）、带语言前缀的路径、登录页。
+  // Statically prerendered marketing pages, the blog, admin (404), a locale-prefixed path, and
+  // sign-in.
   for (const path of [
     "/",
     "/pricing",

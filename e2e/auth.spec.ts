@@ -19,18 +19,19 @@ const { allowedAttempts, resendCooldown } = siteConfig.auth.emailOtp;
 
 test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
-  // 本地配了 Google 凭据时登录页会加载 GIS 脚本；本文件只关心验证码流程。
+  // With Google credentials configured locally, the sign-in page loads the GIS script; this file
+  // only cares about the verification-code flow.
   await stubGoogleOneTap(page);
 });
 
-test("验证码登录后落到引导页，dashboard 显示欢迎信息，首次注册收到欢迎邮件", async ({
+test("verification-code sign-in lands on onboarding, the dashboard shows a greeting, and first sign-up gets a welcome email", async ({
   page,
 }) => {
   const email = uniqueEmail("login");
   const { code } = await requestCode(page, email);
   await enterCode(page, code);
 
-  // 新用户注册后的第一落点是引导页（细节由 onboarding.spec.ts 覆盖）。
+  // A new user's first stop after sign-up is onboarding (details covered by onboarding.spec.ts).
   await expect(page).toHaveURL("/onboarding");
   await page.goto("/dashboard");
   await expect(page.getByTestId("signed-in-as")).toHaveText(
@@ -39,21 +40,22 @@ test("验证码登录后落到引导页，dashboard 显示欢迎信息，首次�
   const welcome = await waitForEmail({ to: email, template: "welcome" });
   expect(welcome.subject).toContain(siteConfig.name);
 
-  // 已登录时访问登录页会被送回 dashboard。
+  // Visiting the sign-in page while signed in sends you back to the dashboard.
   await page.goto("/sign-in");
   await expect(page).toHaveURL("/dashboard");
 });
 
-test("没有配置 Google 凭据时不显示 Google 按钮，也不加载 GIS 脚本", async ({
+test("without Google credentials, no Google button is shown and the GIS script isn't loaded", async ({
   page,
 }) => {
   test.skip(
     Boolean(process.env.GOOGLE_CLIENT_ID),
-    "本地配置了 Google 凭据时跳过",
+    "skipped when Google credentials are configured locally",
   );
 
-  // One Tap 与按钮同源（都由 Google client ID 驱动）：没凭据时连脚本都不该加载，
-  // CSP 白名单也跟着不放宽（见 src/core/security/headers.test.ts）。
+  // One Tap and the button share a source (both driven by the Google client ID): without
+  // credentials not even the script should load, and the CSP allowlist isn't widened either (see
+  // src/core/security/headers.test.ts).
   const googleRequests: string[] = [];
   page.on("request", (request) => {
     if (request.url().includes("accounts.google.com")) {
@@ -69,7 +71,7 @@ test("没有配置 Google 凭据时不显示 Google 按钮，也不加载 GIS �
   expect(googleRequests).toEqual([]);
 });
 
-test(`验证码输错 ${allowedAttempts} 次后，正确的验证码也失效`, async ({
+test(`after ${allowedAttempts} wrong verification codes, the correct one is invalid too`, async ({
   page,
 }) => {
   const email = uniqueEmail("attempts");
@@ -89,11 +91,11 @@ test(`验证码输错 ${allowedAttempts} 次后，正确的验证码也失效`, 
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test("验证码过期后失效", async ({ page }) => {
+test("verification code stops working after it expires", async ({ page }) => {
   const email = uniqueEmail("expired");
   const { code } = await requestCode(page, email);
 
-  // 不等真实的 5 分钟：把这条验证码的过期时间改到过去。
+  // Don't wait the real 5 minutes: move this code's expiry into the past.
   const updated = await withDatabase((db) =>
     db.query(
       "update verification set expires_at = now() - interval '1 minute' where identifier = $1",
@@ -103,8 +105,9 @@ test("验证码过期后失效", async ({ page }) => {
   expect(updated.rowCount).toBe(1);
 
   await enterCode(page, code);
-  // Better Auth 查询验证码时会顺带清理所有过期记录：记录还在时返回 OTP_EXPIRED，
-  // 已被其他请求清理掉时返回 INVALID_OTP。两种情况验证码都已失效。
+  // Better Auth cleans up all expired records while looking up a code: it returns OTP_EXPIRED if
+  // the record is still there, and INVALID_OTP if another request already cleaned it up. Either way
+  // the code is no longer valid.
   await expect(page.getByTestId("auth-error")).toHaveText(
     new RegExp(
       `^(${escape(t.errors.codeExpired)}|${escape(t.errors.invalidCode)})$`,
@@ -113,7 +116,9 @@ test("验证码过期后失效", async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test(`${resendCooldown} 秒内不能重发验证码`, async ({ page }) => {
+test(`can't resend a verification code within ${resendCooldown} seconds`, async ({
+  page,
+}) => {
   const email = uniqueEmail("cooldown");
   await requestCode(page, email);
 
@@ -121,7 +126,7 @@ test(`${resendCooldown} 秒内不能重发验证码`, async ({ page }) => {
   await expect(resend).toBeDisabled();
   await expect(resend).toHaveText(/Resend in \d+s/);
 
-  // 绕过界面直接调接口，服务端同样拒绝。
+  // Bypassing the UI and calling the endpoint directly, the server rejects it as well.
   const response = await page.request.post(
     "/api/auth/email-otp/send-verification-otp",
     { data: { email, type: "sign-in" } },
@@ -130,7 +135,8 @@ test(`${resendCooldown} 秒内不能重发验证码`, async ({ page }) => {
   expect(await response.json()).toMatchObject({ code: "RESEND_COOLDOWN" });
   expect(Number(response.headers()["retry-after"])).toBeGreaterThan(0);
 
-  // 换个邮箱再切回来，重新提交同一邮箱时直接显示冷却提示。
+  // Switch to another email and back; resubmitting the same email shows the cooldown message
+  // right away.
   await page.getByRole("button", { name: t.signIn.changeEmail }).click();
   await page.getByLabel(t.signIn.emailLabel).fill(email);
   await page.getByRole("button", { name: t.signIn.sendCode }).click();
@@ -138,7 +144,9 @@ test(`${resendCooldown} 秒内不能重发验证码`, async ({ page }) => {
   await expect(page.getByLabel(t.signIn.codeLabel)).toBeVisible();
 });
 
-test("未登录访问受保护页面时跳到登录页，登录后跳回原页面", async ({ page }) => {
+test("signed-out visit to a protected page redirects to sign-in, then back to the original page after sign-in", async ({
+  page,
+}) => {
   await page.goto("/dashboard?from=e2e");
   await expect(page).toHaveURL(
     `/sign-in?callbackURL=${encodeURIComponent("/dashboard?from=e2e")}`,
@@ -149,7 +157,7 @@ test("未登录访问受保护页面时跳到登录页，登录后跳回原页�
   await expect(page).toHaveURL("/dashboard?from=e2e");
 });
 
-test("站外的 callbackURL 被忽略", async ({ page }) => {
+test("off-site callbackURL is ignored", async ({ page }) => {
   await page.goto(
     `/sign-in?callbackURL=${encodeURIComponent("https://evil.example/")}`,
   );
@@ -158,13 +166,17 @@ test("站外的 callbackURL 被忽略", async ({ page }) => {
   await expect(page).toHaveURL("/dashboard");
 });
 
-// 关 JS = 「永远没水合」的极端情形。onSubmit 还没挂上时提交，走的是浏览器的原生表单 GET：
-// 地址栏会被整个换成 `/sign-in?email=…`，callbackURL 随之丢失，从受保护页面或邀请链接过来的
-// 用户登录后落到引导页而不是原目标页。真机上是慢网 / 移动端才会碰到，本地 dev 能稳定复现。
-test.describe("水合完成前登录表单不可提交（关 JS）", () => {
+// JS off = the extreme case of "never hydrates". Submitting before onSubmit is attached falls
+// back to the browser's native form GET: the whole URL is replaced with `/sign-in?email=…`, the
+// callbackURL is lost, and users coming from a protected page or a referral link land on
+// onboarding after sign-in instead of their original target. On real devices this only happens
+// on slow networks / mobile; local dev reproduces it reliably.
+test.describe("sign-in form can't be submitted before hydration (JS off)", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("提交邮箱不会冲掉 callbackURL", async ({ page }) => {
+  test("submitting the email doesn't wipe out callbackURL", async ({
+    page,
+  }) => {
     await page.goto(
       `/sign-in?callbackURL=${encodeURIComponent("/dashboard?from=e2e")}`,
     );
@@ -172,7 +184,8 @@ test.describe("水合完成前登录表单不可提交（关 JS）", () => {
       page.getByRole("button", { name: t.signIn.sendCode }),
     ).toBeDisabled();
 
-    // 回车是原生提交的另一条路径（表单的隐式提交），禁用提交按钮同样挡得住。
+    // Enter is the other native submission path (implicit form submission); disabling the submit
+    // button blocks it too.
     const email = page.getByLabel(t.signIn.emailLabel);
     await email.fill("hydration@example.com");
     await email.press("Enter");
@@ -181,11 +194,15 @@ test.describe("水合完成前登录表单不可提交（关 JS）", () => {
   });
 });
 
-test("从用户菜单退出登录后不能再访问 dashboard", async ({ page, isMobile }) => {
+test("after signing out from the user menu, the dashboard is no longer accessible", async ({
+  page,
+  isMobile,
+}) => {
   const { code } = await requestCode(page, uniqueEmail("signout"));
   await enterCode(page, code);
   await expect(page).toHaveURL("/onboarding");
-  // 引导页也有侧边栏，但退出登录的用例归 dashboard 管，先回去。
+  // Onboarding has a sidebar too, but the sign-out case belongs to the dashboard, so go back
+  // there first.
   await page.goto("/dashboard");
 
   await openUserMenu(page, isMobile);

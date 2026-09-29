@@ -9,48 +9,58 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# 所有 job 共用的环境变量。GitHub Actions 不支持 YAML anchor，共享变量只能提到这一层，
-# 否则拆成多个 job 之后要在每个 job 里各抄一遍，改一个变量得改五处。
-# `static` 那条也会拿到 DATABASE_URL（指向一个没起 postgres 的端口），无害：
-# 那条腿跑的全是只读文件的检查，没有任何一步会连库。
+# Environment variables shared by every job. GitHub Actions doesn't support YAML anchors, so shared
+# variables have to live at this level; otherwise, with multiple jobs, each job would need its own
+# copy and changing one variable would mean editing five places.
+# The `static` job also gets DATABASE_URL (pointing at a port with no postgres running), which is
+# harmless: that leg only runs read-only file checks, and no step connects to the database.
 env:
   DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
   DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/postgres
-  # 生产构建默认用 Resend 发信并要求 RESEND_API_KEY；CI 改为写文件，e2e 从 .tmp/emails/ 读取。
-  # e2e 跑在生产构建上（next start，NODE_ENV=production），生产运行时默认只允许 resend，
-  # 这里显式放行 console / file。
+  # Production builds send email through Resend by default and require RESEND_API_KEY; CI writes
+  # to files instead, and e2e reads them from .tmp/emails/.
+  # e2e runs against a production build (next start, NODE_ENV=production), where the production
+  # runtime only allows resend by default, so console / file are explicitly allowed here.
   EMAIL_TRANSPORT: file
   ALLOW_NON_RESEND_EMAIL: "1"
-  # 仅供 CI 使用的固定值；生产环境在 Vercel 上单独设置。
+  # Fixed value for CI only; production sets its own on Vercel.
   BETTER_AUTH_SECRET: ci-only-better-auth-secret-not-for-production
-  # 站点身份：出厂是占位值，生产构建会被占位哨兵拦下（src/core/config/sentinels.ts），
-  # CI 用一组明显的假值放行；生产环境在 Vercel 上设置真实值。
+  # Site identity: it ships with placeholder values, which the placeholder sentinel blocks in
+  # production builds (src/core/config/sentinels.ts). CI gets past it with obviously fake values;
+  # production sets the real values on Vercel.
   SITE_NAME: CI Site
   SITE_DOMAIN: ci.example.test
   SITE_LEGAL_NAME: CI Legal Entity
   SITE_EMAIL_FROM: noreply@ci.example.test
-  # e2e 用站内的 fake 支付服务商模拟结账和 webhook（Vercel 上会被 env 校验拒绝）。
+  # e2e uses the on-site fake payment provider to simulate checkout and webhooks (env validation
+  # rejects it on Vercel).
   BILLING_PROVIDER: fake
-  # site.config.ts 的付费套餐出厂是占位产品 ID，结账会被 plan_not_configured 挡下；
-  # CI 用一组非占位的假 ID 让结账流程能跑通。生产环境在 Vercel 上设置真实 ID。
+  # The paid plans in site.config.ts ship with placeholder product IDs, which checkout rejects with
+  # plan_not_configured; CI uses non-placeholder fake IDs so the checkout flow can run. Production
+  # sets the real IDs on Vercel.
   CREEM_PRODUCT_ID_PRO: prod_ci_fake_pro
   CREEM_PRODUCT_ID_LIFETIME: prod_ci_fake_lifetime
-  # 成功页等待 webhook 的时长，调短以便测试超时提示。
+  # How long the success page waits for the webhook; shortened so the timeout message can be tested.
   BILLING_SUCCESS_TIMEOUT_MS: 8000
-  # e2e 的管理员账号（每个 Playwright project 一个，含 acquisition / status / flags 套件的 project）。
+  # e2e admin accounts (one per Playwright project, including the acquisition / status / flags
+  # suite projects).
   ADMIN_EMAILS: e2e-admin-desktop@example.com,e2e-admin-mobile@example.com,e2e-admin-acquisition-desktop@example.com,e2e-admin-acquisition-mobile@example.com,e2e-admin-status-desktop@example.com,e2e-admin-status-mobile@example.com,e2e-admin-flags-desktop@example.com,e2e-admin-flags-mobile@example.com
-  # e2e 跑在生产构建上（next start，NODE_ENV=production），fake 服务商必须显式放行才可用。
+  # e2e runs against a production build (next start, NODE_ENV=production), so the fake provider
+  # must be explicitly allowed.
   ALLOW_FAKE_BILLING: "1"
-  # CI 没有 Upstash（也没有 VERCEL_ENV，看起来就是自托管生产）：限流那一层默认在漏配时
-  # 拒绝 AI / 上传 / 结账的请求，这里显式放行成「跳过限流」，和本地开发一致。
+  # CI has no Upstash (and no VERCEL_ENV, so it looks like self-hosted production): by default the
+  # rate-limit layer rejects AI / upload / checkout requests when Redis is missing, so this
+  # explicitly switches it to "skip rate limiting", same as local development.
   ALLOW_UNRATELIMITED: "1"
 
-# 为什么拆成多个 job：原来是一个 job 串行跑完，墙钟约 10 分钟，其中 e2e 四套合计占了 6 分钟
-# 左右，而它们彼此完全独立 —— 各自的端口、各自的临时副本、各自独立的 postgres 容器。
-# 拆开之后墙钟由最长的那条腿决定，约 4.7 分钟。
-# 仓库是公开的，Actions 分钟数不计费，所以这里只算墙钟账，不为省 runner 时间做取舍。
+# Why multiple jobs: this used to be one serial job taking about 10 minutes of wall-clock time, of
+# which the four e2e suites took around 6 minutes combined, even though they are completely
+# independent of each other — separate ports, separate temporary copies, separate postgres
+# containers. Split up, wall-clock time is set by the longest leg, about 4.7 minutes.
+# The repo is public and Actions minutes are free, so this only optimizes wall-clock time and
+# makes no tradeoffs to save runner time.
 jobs:
-  # 只读文件的静态检查。不连数据库，所以不需要 postgres service。
+  # Static checks that only read files. They don't connect to a database, so no postgres service.
   static:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -66,39 +76,48 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # 依赖漏洞闸门：拿 pnpm-lock.yaml 和 registry 的漏洞库比对，有 >= high 的直接挡下。
-      # 级别停在 high 而不是 moderate：dev 工具链里的 moderate 相当常见，其中一部分描述的
-      # 代码路径（例如 esbuild 的 dev server）本项目根本走不到，逼着修容易诱人写越界的
-      # override 去消音；high / critical 才是必须处理的那条线。开闸时基线是 0 —— 当时唯一
-      # 的 moderate（@esbuild-kit 链上的 esbuild）已用 overrides 修掉，见 pnpm-workspace.yaml。
-      # 不加 --ignore-registry-errors：闸门对 registry 抽风宁可 fail closed，重跑一次就好。
+      # Dependency vulnerability gate: compares pnpm-lock.yaml against the registry's advisory
+      # database and blocks anything >= high.
+      # The level is high rather than moderate: moderates are common in dev toolchains, some of
+      # them describe code paths this project never reaches (e.g. esbuild's dev server), and
+      # forcing fixes tempts people to write out-of-range overrides just to silence them; high /
+      # critical is the line that must be dealt with. The baseline was 0 when the gate was turned
+      # on — the only moderate at the time (esbuild in the @esbuild-kit chain) was fixed with
+      # overrides, see pnpm-workspace.yaml.
+      # No --ignore-registry-errors: when the registry flakes, the gate should rather fail
+      # closed; just rerun it.
       - run: pnpm audit --audit-level=high
 
       - run: pnpm lint
 
       - run: pnpm format:check
 
-      # THIRD-PARTY-NOTICES.md 是随产品交付的法律合规文件，写的是买家 pnpm install
-      # 之后实际装到的版本与许可。dependabot 每周动依赖而 TPN 不会自己跟着变，
-      # 这一步拿 pnpm-lock.yaml 和 pnpm licenses list 逐条比对，漂移就失败。
+      # THIRD-PARTY-NOTICES.md is a legal compliance file shipped with the product, listing the
+      # versions and licenses buyers actually get after pnpm install. Dependabot changes
+      # dependencies weekly and the notices file doesn't follow on its own, so this step compares
+      # it entry by entry against pnpm-lock.yaml and pnpm licenses list and fails on drift.
       - run: pnpm notices:check
 
-      # 发行物自检：凭据 / 卖家域名 / 内部文档零命中、必备文件齐全。
-      # 原来只在手动出包那一刻跑（防线等于没有），这里每次 PR 都跑一遍，
-      # 成本约一次 unzip + grep。
+      # Release package self-check: zero hits for credentials / seller domains / internal docs,
+      # and all required files present. It used to run only when a package was built by hand
+      # (which amounted to no safeguard at all); now it runs on every PR, at the cost of roughly
+      # one unzip + grep.
       - run: scripts/release-package.sh
 
       - run: pnpm typecheck
 
-      # 迁移元数据自检：idx 连续、when 严格递增、tag 不重号、快照链闭合。
-      # when 不递增的迁移在已有账本的库上会被静默跳过（2026-09 生产事故），
-      # 这一步挡住的是「仓库文件层面」的不自洽，成本约一次 JSON 解析。
+      # Migration metadata self-check: idx is contiguous, when is strictly increasing, tags aren't
+      # duplicated, and the snapshot chain is closed.
+      # A migration whose `when` doesn't increase is silently skipped on a database that already
+      # has a migration journal (this caused a production incident in 2026-09). This step catches
+      # inconsistencies at the repo file level, at the cost of roughly one JSON parse.
       - run: pnpm migrations:check
 
-  # 单元测试。要一个空库来执行迁移，所以带上 postgres service。
+  # Unit tests. They need an empty database to run migrations on, hence the postgres service.
   #
-  # db:migrate 现在每条碰库的腿各跑一次（这里 + 下面四条 e2e 腿）。原来只在整条流水线里
-  # 跑一次、四条 e2e 共用那一个库；拆开后每条腿有自己的 postgres 容器，各迁各的。
+  # db:migrate now runs once in every leg that touches the database (here + the four e2e legs
+  # below). It used to run once for the whole pipeline, with the four e2e suites sharing that one
+  # database; after the split, each leg has its own postgres container and migrates it itself.
   unit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -126,25 +145,27 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # 在空库上执行迁移，验证迁移文件可用。
+      # Run migrations on an empty database to verify the migration files work.
       - run: pnpm db:migrate
 
-      # `--coverage` 要直接跟在 `pnpm test` 后面（`pnpm test --coverage`）：写成
-      # `pnpm test -- --coverage` 的话 pnpm 展开成 `vitest run -- --coverage`，那个 `--`
-      # 会把 flag 变成无关参数，覆盖率静默不采集、阈值全部形同虚设（实测：跑完没有覆盖率表）。
+      # `--coverage` must follow `pnpm test` directly (`pnpm test --coverage`): written as
+      # `pnpm test -- --coverage`, pnpm expands it to `vitest run -- --coverage`, and that `--`
+      # turns the flag into an unrelated argument, so coverage is silently not collected and all
+      # thresholds become meaningless (verified: the run ends without a coverage table).
       - run: pnpm test --coverage
 
-  # e2e：四条腿并行，各跑一套。
+  # e2e: four legs in parallel, one suite each.
   #
-  # name 不写的话，GitHub 会把 matrix 的每个字段都拼进 check 名
-  # （`e2e (main, pnpm test:e2e, 1, playwright-report)`），PR 上很吵。
-  # 只影响显示，needs 引用的是 job id（`e2e`），不受这行影响。
+  # Without `name`, GitHub puts every matrix field into the check name
+  # (`e2e (main, pnpm test:e2e, 1, playwright-report)`), which is noisy on PRs.
+  # It only affects display; `needs` refers to the job id (`e2e`), which this line doesn't change.
   e2e:
     name: e2e (${{ matrix.suite }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # 卖可下载文件（src/features/downloads/）只在主套件打开，由 e2e/downloads.spec.ts 覆盖；
-    # 别的腿留空（envOverride 把空值当没设置），保持出厂默认的关闭。
+    # Selling downloadable files (src/features/downloads/) is only turned on in the main suite,
+    # covered by e2e/downloads.spec.ts; the other legs leave it empty (envOverride treats an empty
+    # value as unset), keeping the default off.
     env:
       SITE_DOWNLOADS: ${{ matrix.downloads }}
     services:
@@ -160,15 +181,18 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     strategy:
-      # 一条腿挂了不要掐掉其他腿：失败时最需要的是其余套件的诊断信息。
+      # Don't cancel the other legs when one fails: diagnostics from the other suites are exactly
+      # what you need when something fails.
       fail-fast: false
       matrix:
-        # build=1 只有主套件需要。另外三套的 serve.ts 会把仓库拷到临时目录、打补丁改
-        # site.config.ts，然后自己 `pnpm build`（见 e2e/<suite>/serve.ts 里 `if (process.env.CI)`
-        # 那两行），根部的 .next 它们根本不读 —— 给它们跑一遍根部构建纯属浪费约 45s，
-        # 还会往被拷贝的目录里塞一份用不上的 .next。
-        # artifact 按腿区分：主套件用 html reporter（playwright-report/），三个子套件用的是
-        # `reporter: "list"`，没有 html 报告，失败时的 trace 落在各自的 test-results/<suite>/。
+        # Only the main suite needs build=1. The other three suites' serve.ts copies the repo to a
+        # temporary directory, patches site.config.ts, and runs `pnpm build` itself (see the two
+        # `if (process.env.CI)` lines in e2e/<suite>/serve.ts); they never read the root .next —
+        # running a root build for them would just waste about 45s and put an unused .next into
+        # the copied directory.
+        # Artifacts differ per leg: the main suite uses the html reporter (playwright-report/),
+        # while the three sub-suites use `reporter: "list"` with no html report, and their failure
+        # traces land in their own test-results/<suite>/.
         include:
           - suite: main
             script: pnpm test:e2e
@@ -202,7 +226,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # 主套件的 webServer 是 `pnpm start`，跑的就是这份构建产物。
+      # The main suite's webServer is `pnpm start`, which serves this build output.
       - if: matrix.build == '1'
         run: pnpm build
 
@@ -212,8 +236,9 @@ jobs:
 
       - run: ${{ matrix.script }}
 
-      # 子套件的 trace 原来从来没上传过（旧版只传根部的 playwright-report/，而那三套
-      # 根本不产 html 报告），失败时等于没有现场。这里按腿传各自的产物目录补上。
+      # Sub-suite traces used to never get uploaded (the old version only uploaded the root
+      # playwright-report/, and those three suites produce no html report), leaving nothing to
+      # inspect after a failure. This uploads each leg's own output directory.
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -221,25 +246,27 @@ jobs:
           path: ${{ matrix.artifact }}
           retention-days: 7
 
-  # 汇总闸门。拆成多个 job 之后，PR 上需要一个统一的绿/红信号，而不是逐个看六条。
-  # 名字必须保持 `ci`：README 的「### 5. GitHub」与 docs/workflow.md 都让买家把它配成
-  # main 的必需检查，改了名字，照文档配置的 PR 会被永久卡在一个再也不会出现的检查上。
+  # Aggregate gate. With multiple jobs, PRs need a single green/red signal instead of checking
+  # six of them one by one.
+  # The name must stay `ci`: the GitHub section of the README launch checklist tells buyers to
+  # make it a required check on main. If it's renamed, PRs configured per the docs get stuck
+  # forever waiting on a check that will never appear.
   #
-  # 用 `always()` 让它在任何情况下都跑起来、在 step 里失败，而不是用 `if:` 让 job 被 skip：
-  # 被 skip 的必需检查会挡住 PR。
+  # `always()` makes it run no matter what and fail inside a step, rather than using `if:` and
+  # letting the job be skipped: a skipped required check blocks the PR.
   ci:
     if: always()
     needs: [static, unit, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: 汇总上游结果
+      - name: Summarize upstream results
         run: |
           echo "static=${{ needs.static.result }}"
           echo "unit=${{ needs.unit.result }}"
           echo "e2e=${{ needs.e2e.result }}"
           if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] ||
              [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
-            echo "有上游 job 失败或被取消。" >&2
+            echo "An upstream job failed or was cancelled." >&2
             exit 1
           fi

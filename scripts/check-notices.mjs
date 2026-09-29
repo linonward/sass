@@ -1,36 +1,46 @@
 #!/usr/bin/env node
-// 检查 THIRD-PARTY-NOTICES.md（下称 TPN）有没有和实际依赖漂移。
+// Checks whether THIRD-PARTY-NOTICES.md (TPN below) has drifted from the actual dependencies.
 //
-// 为什么需要它：TPN 是随付费产品一起交给买家的法律合规文件，它声明的是「买家
-// `pnpm install` 之后**实际**装到的版本与许可」。dependabot 每周开依赖 PR，TPN
-// 不会自己跟着变 —— 文件末尾写着「改依赖后重跑 pnpm licenses list」，但没有任何
-// 东西会提醒，于是声明的版本和实际装到的版本越差越远。这个脚本就是那个提醒：
-// CI 每个 PR 都跑，漂移直接失败。
+// Why this exists: TPN is a legal compliance file shipped to buyers with the paid product; it states
+// "the versions and licenses **actually** installed after the buyer runs `pnpm install`". Dependabot
+// opens dependency PRs every week and TPN doesn't follow along by itself — the end of the file says
+// "rerun pnpm licenses list after changing dependencies", but nothing reminds anyone, so the declared
+// versions drift further and further from the installed ones. This script is that reminder: CI runs
+// it on every PR and fails on drift.
 //
-// 两段检查：
+// Two checks:
 //
-//   1. 版本表 ↔ pnpm-lock.yaml（离线、确定性、与平台无关）
-//      「直接依赖明细」里每个包的版本必须等于锁文件给直接依赖解析出的版本，
-//      依赖类型（prod / dev）也要对得上；两个方向都查 —— 表里少了包、多了包
-//      （删依赖后没清理）都算漂移。锁文件与 package.json 不同步也在这里挡下。
+//   1. Version table ↔ pnpm-lock.yaml (offline, deterministic, platform-independent)
+//      Every package version in the direct-dependency section must equal the version the lockfile
+//      resolves for that direct dependency, and the dependency type (prod / dev) must match too.
+//      Both directions are checked — a package missing from the table or an extra one (not cleaned
+//      up after removing a dependency) both count as drift. A lockfile out of sync with
+//      package.json is also caught here.
 //
-//   2. 许可 ↔ `pnpm licenses list`（需要 node_modules，CI 已装）
-//      只校验两件与平台无关的事：
-//        - 报出来的许可标识必须在两张分布表里各占一行 —— 冒出没写过的许可就得
-//          有人来补一行并交代它有没有义务，而不是静悄悄过去；
-//        - 没有 GPL / AGPL / SSPL 这类强 copyleft（文件里明写了「没有」）。
-//          只查不带 `AND` / `OR` 的单一许可标识：`(A OR B)` 这种双许可可以挑
-//          宽松的那支，不是本脚本能替人做的判断，交给人工。
+//   2. Licenses ↔ `pnpm licenses list` (needs node_modules; CI has them installed)
+//      Only two platform-independent things are verified:
+//        - every reported license identifier must have a row in both distribution tables — a license
+//          nobody has documented yet needs someone to add a row and explain whether it carries
+//          obligations, instead of slipping through silently;
+//        - no strong copyleft such as GPL / AGPL / SSPL (the file explicitly says there is none).
+//          Only single license identifiers without `AND` / `OR` are checked: a dual license like
+//          `(A OR B)` may allow picking the permissive branch, which is a judgment this script can't
+//          make for a person, so it's left to a human.
 //
-//      **故意不比对**两张分布表的包数：那个数字按当前平台装上的可选依赖计
-//      （`@swc/core-*`、`@img/sharp-libvips-*`、`lightningcss-*` …），在 macOS
-//      上生成的数字在 Linux CI 上必然对不上（例如 `@swc/core-darwin-arm64` 是
-//      `Apache-2.0 AND MIT`，Linux 对应包不是）。包数只作为参考打印出来。
+//      The package counts in the two distribution tables are **deliberately not compared**: those
+//      numbers depend on the optional dependencies installed for the current platform
+//      (`@swc/core-*`, `@img/sharp-libvips-*`, `lightningcss-*` …), so numbers generated on macOS
+//      will never match on Linux CI (e.g. `@swc/core-darwin-arm64` is `Apache-2.0 AND MIT`, its Linux
+//      counterpart isn't). The counts are only printed for reference.
 //
-// 用法：node scripts/check-notices.mjs      等同 pnpm notices:check
+// Usage: node scripts/check-notices.mjs      same as pnpm notices:check
 //
-// 改依赖后怎么修：跑一次 `pnpm licenses list`（全量）和 `pnpm licenses list --prod`
-// 更新两张分布表，再按打印出来的漂移逐条改「直接依赖明细」的版本，最后重跑本脚本。
+// How to fix after changing dependencies: run `pnpm licenses list` (full) and
+// `pnpm licenses list --prod` to update the two distribution tables, then fix the versions in the
+// direct-dependency section one by one per the printed drift, and finally rerun this script.
+//
+// The section headings and the count sentence matched below are literal text from TPN (currently
+// in Chinese); when TPN's wording changes, update the matching strings here in the same change.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -42,7 +52,8 @@ const read = (file) => readFileSync(join(root, file), "utf8");
 
 const NOTICES = "THIRD-PARTY-NOTICES.md";
 
-// 强 copyleft 黑名单：TPN 的「没有 GPL、AGPL、SSPL 这类强 copyleft 许可」说的就是这些。
+// Strong-copyleft denylist: this is what TPN means by "no strong copyleft licenses such as GPL, AGPL
+// or SSPL".
 const STRONG_COPYLEFT =
   /^(A?GPL-|SSPL-|OSL-|CPL-|CPAL-|EUPL-|BUSL-|Commons-Clause|RPL-|QPL-)/i;
 
@@ -50,11 +61,12 @@ const failures = [];
 const fail = (message) => failures.push(message);
 
 // ---------------------------------------------------------------------------
-// 直接依赖：package.json + pnpm-lock.yaml
+// Direct dependencies: package.json + pnpm-lock.yaml
 
-// 锁文件是「多文档」YAML（`---` 分隔）：第一份是 pnpm 自己那棵树（pnpm 版本、
-// @pnpm/exe.*），最后一份才是本项目的。`importers` / `packages` 这类顶层键只
-// 出现在各自文档里，所以逐份扫描、按下标缩进归属即可，不必上 YAML 解析器。
+// The lockfile is multi-document YAML (separated by `---`): the first document is pnpm's own tree
+// (pnpm version, @pnpm/exe.*), and only the last one belongs to this project. Top-level keys such as
+// `importers` / `packages` only appear inside their own document, so scanning each document and
+// attributing by indentation is enough — no YAML parser needed.
 const LOCK_SECTIONS = new Map([
   ["dependencies", "prod"],
   ["devDependencies", "dev"],
@@ -64,7 +76,8 @@ const LOCK_SECTIONS = new Map([
 const unquote = (value) =>
   /^'.*'$/.test(value) || /^".*"$/.test(value) ? value.slice(1, -1) : value;
 
-// `version: 1.2.3(react@19.3.0)` —— 括号里是 peer 组合，不是版本的一部分。
+// `version: 1.2.3(react@19.3.0)` — the parenthesized part is the peer combination, not part of the
+// version.
 const cleanVersion = (value) =>
   unquote(value.trim()).replace(/\(.*$/, "").trim();
 
@@ -82,7 +95,7 @@ function lockfileDirectDeps() {
       const line = lines[i];
       if (line.trim() === "") continue;
       const indent = line.length - line.trimStart().length;
-      if (indent === 0) break; // 下一节（packages: / settings: …）
+      if (indent === 0) break; // next section (packages: / settings: …)
       const entry = /^([^:]+):\s*(.*)$/.exec(line.trim());
       if (!entry) continue;
       const key = unquote(entry[1]);
@@ -99,7 +112,8 @@ function lockfileDirectDeps() {
         name = key;
       } else if (indent === 8 && name && key === "version") {
         const type = LOCK_SECTIONS.get(section);
-        // 只认根 importer（`.`）的三个依赖段；configDependencies 之类直接跳过。
+        // Only the root importer's (`.`) three dependency sections count; skip configDependencies and the
+        // like.
         if (importer === "." && type) {
           found.set(name, { version: cleanVersion(value), type });
         }
@@ -125,32 +139,35 @@ function packageJsonDirectDeps() {
 }
 
 // ---------------------------------------------------------------------------
-// TPN：「直接依赖明细」的三张表
+// TPN: the three tables in the direct-dependency section
 
 function noticesDirectDeps(md) {
   const start = md.indexOf("## 直接依赖明细");
   if (start === -1) {
     fail(
-      `在 ${NOTICES} 里找不到「## 直接依赖明细」一节 —— 章节改名了就把本脚本一起改。`,
+      `Could not find the "## 直接依赖明细" (direct dependencies) section in ${NOTICES} — if the heading was renamed, update this script too.`,
     );
     return new Map();
   }
   const found = new Map();
-  // 表格会按列宽补空格，所以每格都按可选空白匹配。
+  // Tables are padded with spaces to column width, so every cell matches optional whitespace.
   const row = /^\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|\s*(prod|dev)\s*\|/;
   for (const line of md.slice(start).split("\n")) {
     const match = row.exec(line);
     if (!match) continue;
     const [, name, version, type] = match;
     if (found.has(name))
-      fail(`${NOTICES} 的「直接依赖明细」里 ${name} 出现了两次。`);
+      fail(
+        `${NOTICES}: ${name} appears twice in the direct-dependency section.`,
+      );
     found.set(name, { version: version.trim(), type });
   }
   return found;
 }
 
-// 表头写的「N 个 dependencies + M 个 devDependencies，共 K 个」是给人看的，
-// 但没人会记得改，所以一并核对（措辞变了就报错，别让检查悄悄失效）。
+// The "N dependencies + M devDependencies, K total" sentence above the table is for humans, but
+// nobody remembers to update it, so it's verified too (a wording change is an error, so the check
+// can't silently stop working).
 function checkDeclaredCounts(md, pkg) {
   const match =
     /(\d+)\s*个\s*`dependencies`\s*\+\s*(\d+)\s*个\s*`devDependencies`，共\s*(\d+)\s*个/.exec(
@@ -158,7 +175,7 @@ function checkDeclaredCounts(md, pkg) {
     );
   if (!match) {
     fail(
-      `在 ${NOTICES} 的「直接依赖明细」里找不到「N 个 \`dependencies\` + M 个 \`devDependencies\`」那句 —— 措辞改了就把本脚本一起改。`,
+      `Could not find the "N 个 \`dependencies\` + M 个 \`devDependencies\`" sentence in the direct-dependency section of ${NOTICES} — if the wording changed, update this script too.`,
     );
     return;
   }
@@ -173,14 +190,14 @@ function checkDeclaredCounts(md, pkg) {
     total !== actual[0] + actual[1]
   ) {
     fail(
-      `${NOTICES} 写的是 ${deps} 个 dependencies + ${devDeps} 个 devDependencies（共 ${total} 个），` +
-        `package.json 是 ${actual[0]} + ${actual[1]}（共 ${actual[0] + actual[1]}）。`,
+      `${NOTICES} says ${deps} dependencies + ${devDeps} devDependencies (${total} total), ` +
+        `but package.json has ${actual[0]} + ${actual[1]} (${actual[0] + actual[1]} total).`,
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// 许可
+// Licenses
 
 function pnpmLicenses(args) {
   try {
@@ -188,13 +205,13 @@ function pnpmLicenses(args) {
       cwd: root,
       encoding: "utf8",
       maxBuffer: 64 * 1024 * 1024,
-      // Windows 上 pnpm 是 .cmd 垫片，得走 shell。
+      // On Windows pnpm is a .cmd shim, so it has to go through a shell.
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     });
   } catch (error) {
     fail(
-      `跑 \`pnpm licenses list ${args.join(" ")}\` 失败 —— 先 \`pnpm install --frozen-lockfile\`。\n` +
+      `\`pnpm licenses list ${args.join(" ")}\` failed — run \`pnpm install --frozen-lockfile\` first.\n` +
         String(error.stderr ?? error.message).trim(),
     );
     return null;
@@ -213,8 +230,9 @@ function licenseDistribution(json) {
   return { ids, entries, versions };
 }
 
-// 两张分布表第一列列出来的许可标识。只认第二列是数字的行（表头写的是「包数」，
-// 合计行的第一列是 `**合计**`），免得把标题和合计当成许可。
+// License identifiers listed in the first column of the two distribution tables. Only rows whose
+// second column is a number count (the header row holds the column title, and the totals row's first
+// column is bold), so headers and totals aren't mistaken for licenses.
 function documentedLicenses(md) {
   const ids = new Set();
   for (const [from, to] of [
@@ -225,7 +243,7 @@ function documentedLicenses(md) {
     const end = md.indexOf(to, start + from.length);
     if (start === -1 || end === -1) {
       fail(
-        `在 ${NOTICES} 里找不到「${from}」到「${to}」之间的一节 —— 章节改名了就把本脚本一起改。`,
+        `${NOTICES}: could not find the section between "${from}" and "${to}" — if a heading was renamed, update this script too.`,
       );
       continue;
     }
@@ -247,32 +265,34 @@ function checkLicenses(md) {
   const onlyProd = licenseDistribution(prod);
 
   for (const [label, dist] of [
-    ["全量", all],
+    ["full", all],
     ["--prod", onlyProd],
   ]) {
     for (const id of dist.ids) {
       if (!documented.has(id)) {
         fail(
-          `${label}依赖树里出现了 ${NOTICES} 两张分布表里没有的许可「${id}」——` +
-            `在「全量依赖树」/「生产依赖树」表里补一行，并在「需要单独说明的许可」里说明它有没有义务。`,
+          `The ${label} dependency tree has a license missing from both distribution tables of ${NOTICES}: "${id}" — ` +
+            `add a row to both the full and the production dependency-tree tables, and explain in the licenses-needing-notes section whether it carries obligations.`,
         );
       }
-      // 双许可（`A AND B` / `A OR B`）能不能挑宽松的那支是人的判断，这里不代做。
+      // Whether a dual license (`A AND B` / `A OR B`) allows picking the permissive branch is a human
+      // judgment; this script doesn't make it.
       if (/[(]|[)]|\s(?:AND|OR)\s/.test(id)) continue;
       if (STRONG_COPYLEFT.test(id)) {
         fail(
-          `${label}依赖树里出现了强 copyleft 许可「${id}」，而 ${NOTICES} 明写「没有 GPL、AGPL、SSPL 这类强 copyleft 许可」。` +
-            `要么换掉这个依赖，要么由人来重新评估并改写那句话。`,
+          `The ${label} dependency tree has strong-copyleft license "${id}", but ${NOTICES} explicitly says there are no strong copyleft licenses such as GPL, AGPL or SSPL. ` +
+            `Either replace this dependency, or have a person reassess and rewrite that sentence.`,
         );
       }
     }
   }
 
-  // 包数按平台可选依赖计，只打印不比对（见文件开头）。
+  // Package counts depend on platform-specific optional dependencies; print only, don't compare (see
+  // the top of this file).
   console.log(
-    `许可（本机实测，参考用）：全量 ${all.entries} 条 / ${all.versions} 个版本，` +
-      `${all.ids.size} 种许可；--prod ${onlyProd.entries} 条 / ${onlyProd.versions} 个版本，` +
-      `${onlyProd.ids.size} 种许可。`,
+    `Licenses (measured on this machine, for reference): full ${all.entries} entries / ${all.versions} versions, ` +
+      `${all.ids.size} licenses; --prod ${onlyProd.entries} entries / ${onlyProd.versions} versions, ` +
+      `${onlyProd.ids.size} licenses.`,
   );
 }
 
@@ -280,7 +300,7 @@ function checkLicenses(md) {
 
 const md = read(NOTICES);
 
-// --- 1. 版本表 ↔ 锁文件 ---
+// --- 1. Version table ↔ lockfile ---
 const locked = lockfileDirectDeps();
 const declaredPkg = packageJsonDirectDeps();
 const declaredTpn = noticesDirectDeps(md);
@@ -293,27 +313,29 @@ const onlyInPackageJson = [...declaredPkg.keys()].filter(
 );
 if (onlyInLockfile.length > 0 || onlyInPackageJson.length > 0) {
   fail(
-    "package.json 与 pnpm-lock.yaml 的直接依赖对不上 —— 先跑 `pnpm install --frozen-lockfile`，" +
-      "锁文件确实该更新时再跑 `pnpm install` 并提交新的 pnpm-lock.yaml。\n" +
-      `  只在锁文件里：${onlyInLockfile.join(", ") || "（无）"}\n` +
-      `  只在 package.json 里：${onlyInPackageJson.join(", ") || "（无）"}`,
+    "Direct dependencies in package.json and pnpm-lock.yaml don't match — run `pnpm install --frozen-lockfile` first; " +
+      "if the lockfile really should change, run `pnpm install` and commit the new pnpm-lock.yaml.\n" +
+      `  only in the lockfile: ${onlyInLockfile.join(", ") || "(none)"}\n` +
+      `  only in package.json: ${onlyInPackageJson.join(", ") || "(none)"}`,
   );
 }
 
 for (const [name, { version, type }] of locked) {
   const declared = declaredTpn.get(name);
   if (!declared) {
-    fail(`${name} 是直接依赖，但 ${NOTICES} 的「直接依赖明细」里没有它。`);
+    fail(
+      `${name} is a direct dependency, but it's missing from the direct-dependency section of ${NOTICES}.`,
+    );
     continue;
   }
   if (declared.version !== version) {
     fail(
-      `${name}：${NOTICES} 写 ${declared.version}，pnpm-lock.yaml 是 ${version}。`,
+      `${name}: ${NOTICES} says ${declared.version}, pnpm-lock.yaml has ${version}.`,
     );
   }
   if (declared.type !== type) {
     fail(
-      `${name}：${NOTICES} 标成 ${declared.type}，package.json 里是 ${type}。`,
+      `${name}: ${NOTICES} marks it ${declared.type}, package.json has it as ${type}.`,
     );
   }
 }
@@ -321,28 +343,30 @@ for (const [name, { version, type }] of locked) {
 for (const name of declaredTpn.keys()) {
   if (!locked.has(name)) {
     fail(
-      `${name} 在 ${NOTICES} 的「直接依赖明细」里，但已经不是直接依赖了 —— 删掉这一行。`,
+      `${name} is in the direct-dependency section of ${NOTICES} but is no longer a direct dependency — remove that row.`,
     );
   }
 }
 
 checkDeclaredCounts(md, JSON.parse(read("package.json")));
 
-// --- 2. 许可 ↔ pnpm licenses list ---
+// --- 2. Licenses ↔ pnpm licenses list ---
 checkLicenses(md);
 
 // ---------------------------------------------------------------------------
 
 if (failures.length > 0) {
-  console.error(`${NOTICES} 与实际依赖漂移了 ${failures.length} 处：\n`);
+  console.error(
+    `${NOTICES} has drifted from the actual dependencies in ${failures.length} place(s):\n`,
+  );
   for (const message of failures) console.error(`- ${message}`);
   console.error(
-    `\n改法见 ${NOTICES} 末尾的「复现与维护」一节；改完再跑一次 \`pnpm notices:check\`。`,
+    `\nSee the reproduce-and-maintain section at the end of ${NOTICES} for how to fix; then rerun \`pnpm notices:check\`.`,
   );
   process.exit(1);
 }
 
 console.log(
-  `${NOTICES} 与 pnpm-lock.yaml 一致：${locked.size} 个直接依赖的版本与依赖类型都对得上，` +
-    "许可也都是文件里写过的、没有强 copyleft。",
+  `${NOTICES} matches pnpm-lock.yaml: versions and dependency types of all ${locked.size} direct dependencies line up, ` +
+    "and every license is documented in the file with no strong copyleft.",
 );

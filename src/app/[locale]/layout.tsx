@@ -17,18 +17,19 @@ import { Toaster } from "@/core/ui/sonner";
 import siteConfig from "../../../site.config";
 import "../globals.css";
 
-// 正文与界面文字：中性、克制，让 display 面单独发声。
+// Body and UI text: neutral and restrained, so the display face gets to speak on its own.
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
-// 标题字体。选它而不是参考站点的 Gasoek One：Bricolage 的可变字重让它在小字号
-// 也撑得住（卡片标题、套餐名都要用），不是只能看大标题的纯 display 面；
-// 而且它是模板，不该直接套另一个品牌的字体身份。
+// Heading font. Chosen over the reference site's Gasoek One: Bricolage's variable weights hold up
+// at small sizes too (card titles and plan names use it), so it isn't a display-only face that
+// works just for big headlines; and this is a template, so it shouldn't borrow another brand's
+// type identity.
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--font-display",
 });
 
-// mock UI 里的终端和结账台用等宽字体。
+// Monospace for the terminal and checkout counter in the mock UI.
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export async function generateMetadata({ params }: LayoutProps<"/[locale]">) {
@@ -50,7 +51,7 @@ export default async function RootLayout({
   const messages = pickClientMessages(await getMessages({ locale }));
 
   return (
-    // next-themes 在客户端给 <html> 加 class，需要忽略这一处的 hydration 差异。
+    // next-themes adds a class to <html> on the client, so ignore the hydration mismatch here.
     <html
       lang={locale}
       className={cn(

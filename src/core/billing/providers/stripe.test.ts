@@ -303,7 +303,7 @@ describe("parseStripeEvent: mapping of the official sample payloads", () => {
     ["past_due", "payment.failed"],
     ["unpaid", "payment.failed"],
     ["canceled", "subscription.canceled"],
-  ])("customer.subscription.updated（status=%s）→ %s", (status, type) => {
+  ])("customer.subscription.updated (status=%s) → %s", (status, type) => {
     const sample = stripeSample("customer.subscription.updated");
     (sample.data.object as { status: string }).status = status;
     const event = parseStripeEvent(sample);

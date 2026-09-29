@@ -33,11 +33,12 @@ export async function generateMetadata({ params }: Props) {
   );
 }
 
-/** 用户详情：资料、封禁、积分调整和流水、订阅和订单。 */
+/** User detail: profile, ban, credit adjustments and transactions, subscriptions and orders. */
 export default async function AdminUserPage({ params }: Props) {
   const session = await requireAdmin();
   const { locale, id } = await params;
-  // 详情查询和四份文案互不依赖，一次并发发出；仍在渲染 JSX 之前 notFound()。
+  // The detail query and the four message sets don't depend on each other, so fire them
+  // concurrently; notFound() still runs before any JSX renders.
   const [detail, t, tb, tp, format] = await Promise.all([
     getUserDetail(getDb(), id),
     getTranslations({ locale, namespace: "Admin" }),
@@ -110,7 +111,7 @@ export default async function AdminUserPage({ params }: Props) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* 状态变化时重新挂载，清掉上一次提交的结果。 */}
+            {/* Remount when the status changes to clear the previous submit result. */}
             <BanForm
               key={String(user.banned)}
               userId={user.id}
@@ -121,7 +122,7 @@ export default async function AdminUserPage({ params }: Props) {
       )}
 
       {creditsEnabled && (
-        // #credits：异常台的「积分流水」链接直接落到这里。
+        // #credits: the exceptions page's "credit transactions" link lands right here.
         <Card id="credits" className="scroll-mt-20">
           <CardHeader>
             <CardTitle>{t("user.creditsTitle")}</CardTitle>
@@ -175,7 +176,8 @@ export default async function AdminUserPage({ params }: Props) {
                       <span
                         className={cn(
                           "shrink-0 tabular-nums",
-                          // 进账用语义色，扣减保持中性：花积分是常态，标红太吵。
+                          // Credits in get the semantic color; deductions stay neutral: spending credits is normal, and red
+                          // would be too loud.
                           tx.amount > 0
                             ? "text-success"
                             : "text-muted-foreground",

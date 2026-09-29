@@ -8,15 +8,15 @@ import { logger } from "@/core/observability/logger";
 const MAX_EXPORT_ROWS = 10_000;
 
 /**
- * 把一行数据转成 CSV 的一个字段，安全处理：
- * - 包含逗号、引号或换行的字段用双引号包裹
- * - 首字符是 = + - @ 时前面加单引号防公式注入
- * - null / undefined → 空
+ * Turn a value into one CSV field, safely:
+ * - fields containing commas, quotes or newlines are wrapped in double quotes
+ * - a leading = + - @ gets a single quote prepended to prevent formula injection
+ * - null / undefined → empty
  */
 function csvField(value: unknown): string {
   if (value == null) return "";
   const s = String(value);
-  // 防公式注入：前导字符前加单引号
+  // Prevent formula injection: prefix the leading character with a single quote
   const safe = /^[=+\-@]/.test(s) ? `'${s}` : s;
   if (/[",\n\r]/.test(safe)) {
     return `"${safe.replace(/"/g, '""')}"`;

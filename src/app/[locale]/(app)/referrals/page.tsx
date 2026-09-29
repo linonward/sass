@@ -31,7 +31,10 @@ export async function generateMetadata({
   });
 }
 
-/** 邀请页：专属邀请码与可复制链接、自己作为受邀人的关系、奖励记录、以及已接受的邀请记录。 */
+/**
+ * Referrals page: your referral code and copyable link, who referred you (if anyone), reward history,
+ * and accepted referrals.
+ */
 export default async function ReferralsPage({
   params,
 }: PageProps<"/[locale]/referrals">) {
@@ -44,7 +47,8 @@ export default async function ReferralsPage({
   ]);
   const userId = session.user.id;
   const service = createReferralService(getDb());
-  // 邀请码在首次进入这一页时生成，之后一直复用；查询互不依赖，并行发出。
+  // The referral code is created on the first visit to this page and reused after that; the queries
+  // are independent, so fire them in parallel.
   const [code, relationship, invited, rewards, inviterRewards, debts] =
     await Promise.all([
       service.ensureCode(userId),
@@ -77,7 +81,7 @@ export default async function ReferralsPage({
               {code}
             </span>
           </p>
-          {/* 奖励由站点运营者配置；没配置就不承诺任何回报。 */}
+          {/* Rewards are configured by the site operator; with none configured, promise nothing. */}
           <p className="text-muted-foreground text-sm text-pretty">
             {t("rewardsOff")}
           </p>
@@ -242,13 +246,13 @@ export default async function ReferralsPage({
             />
           ) : (
             <div className="flex flex-col gap-2">
-              {/* 列表只取最近一批，说清楚这个数字和列表的关系。 */}
+              {/* The list shows only the latest batch, so spell out how this number relates to it. */}
               {invited.total > invited.rows.length && (
                 <p className="text-muted-foreground text-sm">
                   {t("invitedShown", { shown: invited.rows.length })}
                 </p>
               )}
-              {/* 只展示状态和时间：受邀人的身份不出现在邀请人的界面上。 */}
+              {/* Show status and time only: the referred user's identity never appears in the referrer's UI. */}
               <ul className="divide-y text-sm" data-testid="referral-invited">
                 {invited.rows.map((row, index) => (
                   <li

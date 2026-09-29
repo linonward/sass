@@ -11,11 +11,14 @@ import {
 } from "./schema";
 
 export type DownloadEntry = DownloadEntitlement & {
-  /** 这份授权能下的版本，新的在前。 */
+  /** Versions this grant can download, newest first. */
   releases: DownloadRelease[];
 };
 
-/** 用户的全部授权（新买的在前），每份带上它能下的版本。查询永远带 user_id。 */
+/**
+ * All of a user's grants (newest purchase first), each with the versions it can download. Queries
+ * always filter by user_id.
+ */
 export async function listDownloads(
   db: Database,
   userId: string,
@@ -44,8 +47,9 @@ export async function listDownloads(
 }
 
 /**
- * 用户能下的某个版本；版本不存在、没有授权、授权被收回或版本在更新期之后，一律 null。
- * 不区分这几种情况：对外只说「没有」，不透露别人买了什么、发过哪些版本。
+ * A version the user can download; null if the version doesn't exist, there's no grant, the grant
+ * was revoked or the version came after the updates period. These cases aren't distinguished: the
+ * outside only hears "no", without revealing what others bought or which versions were released.
  */
 export async function findDownload(
   db: Database,

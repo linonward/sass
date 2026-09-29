@@ -2,7 +2,10 @@ import { getBillingProvider } from "@/core/billing/providers";
 import { STRIPE_PROVIDER_ID } from "@/core/billing/providers/stripe";
 import { processWebhook } from "@/core/billing/webhook";
 
-/** Stripe webhook：校验签名后交给 handleBillingEvent。在 Stripe 后台（或 `stripe listen`）配置为 https://<domain>/api/webhooks/stripe。 */
+/**
+ * Stripe webhook: verifies the signature, then hands off to handleBillingEvent. Configure it in the
+ * Stripe dashboard (or `stripe listen`) as https://<domain>/api/webhooks/stripe.
+ */
 export async function POST(request: Request) {
   const provider = getBillingProvider();
   if (!provider || provider.id !== STRIPE_PROVIDER_ID) {

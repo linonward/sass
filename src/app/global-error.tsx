@@ -4,7 +4,8 @@ import { useEffect } from "react";
 
 import { captureError } from "@/core/observability/sentry";
 
-// 根布局出错时替换整个文档，拿不到 globals.css 和主题，只用内联样式。
+// Replaces the whole document when the root layout fails, so globals.css and the theme aren't
+// available; inline styles only.
 export default function GlobalError({
   error,
   retry,
@@ -18,9 +19,10 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    // lang 和文案都写死英文：这个文件替换整个 root layout，拿不到 NextIntlClientProvider，
-    // 是框架约束不是懒。今天与 site.config.ts 的 locales: ["en"] 一致；买家新增语言后
-    // 这一页要自己处理（例如按 Accept-Language 选 lang 和文案），否则全局错误页不跟着变。
+    // lang and copy are hard-coded in English: this file replaces the whole root layout and can't reach
+    // NextIntlClientProvider — a framework constraint, not laziness. That matches locales: ["en"] in
+    // site.config.ts today; if you add locales, handle this page yourself (e.g. pick lang and copy from
+    // Accept-Language), or the global error page won't follow.
     <html lang="en">
       <body
         style={{

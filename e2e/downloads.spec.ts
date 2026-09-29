@@ -7,11 +7,12 @@ import siteConfig from "../site.config";
 import { waitForEmail } from "../src/core/email/testing";
 import { signIn, uniqueEmail, useRandomIp, withDatabase } from "./auth-helpers";
 
-// 卖可下载文件的完整流程：买对应套餐 → 成功页指向下载页 → 邮件 → 下载页列出版本 → 下载接口。
-// 需要 SITE_DOWNLOADS=1（CI 的主套件已设置）和 fake 服务商。
+// Full flow for selling downloadable files: buy the plan → success page points to the downloads
+// page → email → downloads page lists releases → download endpoint.
+// Requires SITE_DOWNLOADS=1 (set by the main CI suite) and the fake provider.
 test.skip(
   !siteConfig.downloads.enabled || process.env.BILLING_PROVIDER !== "fake",
-  "需要 SITE_DOWNLOADS=1 和 BILLING_PROVIDER=fake",
+  "requires SITE_DOWNLOADS=1 and BILLING_PROVIDER=fake",
 );
 
 const d = messages.Downloads;
@@ -25,12 +26,14 @@ const r2Configured = Boolean(
 );
 
 test.beforeEach(async ({ page, isMobile }) => {
-  test.skip(isMobile, "购买流程只在桌面端跑一遍");
+  test.skip(isMobile, "the purchase flow only runs once, on desktop");
   await useRandomIp(page);
 });
 
-test("买下载套餐：成功页 → 邮件 → 下载页 → 下载接口", async ({ page }) => {
-  // 先发布一个版本（等同于 pnpm downloads:publish，只是不传文件）。
+test("buy the downloads plan: success page → email → downloads page → download endpoint", async ({
+  page,
+}) => {
+  // Publish a release first (same as pnpm downloads:publish, just without uploading a file).
   const version = `e2e-${randomUUID().slice(0, 8)}`;
   await withDatabase((client) =>
     client.query(
@@ -56,7 +59,7 @@ test("买下载套餐：成功页 → 邮件 → 下载页 → 下载接口", as
   await page.getByRole("button", { name: "Pay" }).click();
   await page.waitForURL(/\/billing\/success\?/);
 
-  // 成功页：提示邮件已发，主按钮换成下载页。
+  // Success page: says the email was sent, and the primary button becomes the downloads page.
   await expect(page.getByText(d.successNote)).toBeVisible({ timeout: 20_000 });
   const mail = await waitForEmail({ to: email, template: "download-ready" });
   expect(mail.html).toMatch(/href="[^"]*\/downloads"/);
@@ -70,7 +73,8 @@ test("买下载套餐：成功页 → 邮件 → 下载页 → 下载接口", as
     .filter({ hasText: version });
   await expect(row).toBeVisible();
 
-  // 下载接口：登录的买家拿到跳转（本地 / CI 没配 R2 时是 503），未登录 401。
+  // Download endpoint: a signed-in buyer gets a redirect (503 locally / in CI without R2), signed
+  // out gets 401.
   const href = await row.getByRole("link").getAttribute("href");
   expect(href).toMatch(/^\/api\/downloads\//);
   const download = await page.request.get(href!, { maxRedirects: 0 });
@@ -83,7 +87,8 @@ test("买下载套餐：成功页 → 邮件 → 下载页 → 下载接口", as
   expect(unauthenticated.status()).toBe(401);
   await anonymous.close();
 
-  // 版本表不挂在用户上：删掉这条，免得本地开发库的下载页越积越多。
+  // The releases table isn't tied to a user: delete this row so the downloads page in the local
+  // dev database doesn't keep piling up.
   await withDatabase((client) =>
     client.query(
       "delete from download_releases where product_id = $1 and version = $2",
@@ -92,7 +97,9 @@ test("买下载套餐：成功页 → 邮件 → 下载页 → 下载接口", as
   );
 });
 
-test("没买过：下载页是空状态", async ({ page }) => {
+test("never purchased: the downloads page shows the empty state", async ({
+  page,
+}) => {
   await signIn(page, uniqueEmail("downloads-empty"));
   await page.goto("/downloads");
   await expect(page.getByText(d.empty)).toBeVisible();

@@ -18,7 +18,8 @@ import { PageHeader } from "@/core/ui/page-header";
 import { TaglineTool } from "./tagline-tool";
 import { QUICK_COST } from "./taglines";
 
-// 路由文件 src/app/[locale]/(app)/example/page.tsx 只是转发到这里，业务代码都在 src/features/example/。
+// The route file src/app/[locale]/(app)/example/page.tsx just forwards here; all the business code
+// lives in src/features/example/.
 
 export async function generateMetadata({
   params,

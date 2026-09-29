@@ -25,8 +25,10 @@ const param = (value: string | string[] | undefined) =>
   typeof value === "string" && value ? value : undefined;
 
 /**
- * 结账回跳页。支付回跳不依赖 webhook 已到：页面按回跳附带的订阅或订单 ID 轮询状态，
- * webhook 未到时显示"处理中"。状态只以数据库为准，回跳参数（含签名）不作为付款成功的依据。
+ * Checkout return page. It doesn't rely on the webhook having arrived: the page polls status using
+ * the subscription or order ID on the return URL and shows "processing" until the webhook lands.
+ * Only the database is authoritative; return-URL params (signature included) are never taken as
+ * proof of payment.
  */
 export default async function CheckoutSuccessPage({
   params,
@@ -36,7 +38,8 @@ export default async function CheckoutSuccessPage({
   const query = await searchParams;
   const subscriptionId = param(query.subscription_id);
   const orderId = param(query.order_id);
-  // 服务商回跳不带 ID 时的兜底：结账时站内加的套餐 + 下单时间（见 core/billing/checkout.ts）。
+  // Fallback when the provider's redirect carries no ID: the plan plus order time we add at checkout
+  // (see core/billing/checkout.ts).
   const planId = param(query.plan);
   const since = param(query.since);
   const t = await getTranslations({ locale, namespace: "Billing.success" });
@@ -70,7 +73,8 @@ export default async function CheckoutSuccessPage({
     ]),
   );
 
-  // 卖可下载文件的套餐（site.config.ts 的 downloads）：成功页提示邮件已发、主按钮换成下载页。
+  // Plans that sell downloadable files (downloads in site.config.ts): the success page says the email
+  // was sent and the primary button goes to the downloads page instead.
   const td = await getTranslations({ locale, namespace: "Downloads" });
   const nextSteps = siteConfig.downloads.enabled
     ? Object.fromEntries(

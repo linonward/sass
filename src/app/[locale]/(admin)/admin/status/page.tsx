@@ -31,10 +31,10 @@ export function generateMetadata({ params }: Props) {
 }
 
 /**
- * 状态页的后台：开 / 改 / 恢复 incident，外加订阅者名单。
+ * Admin for the status page: open / update / resolve incidents, plus the subscriber list.
  *
- * 非管理员由 requireAdmin 拦成 404（不暴露后台的存在）；`statusPage.enabled` 关闭时
- * 整个页面 404，菜单里也不会出现入口。
+ * requireAdmin turns non-admins into a 404 (without revealing the admin exists). With
+ * `statusPage.enabled` off the whole page is a 404 and the menu has no entry for it.
  */
 export default async function AdminStatusPage({ params }: Props) {
   if (!statusPageEnabled) notFound();
@@ -43,10 +43,10 @@ export default async function AdminStatusPage({ params }: Props) {
   const config = siteConfig.statusPage;
 
   const db = getDb();
-  // 文案、格式化和两组查询互不依赖，一次并发发出。
+  // Messages, formatters and the two queries don't depend on each other, so fire them concurrently.
   const [t, tStatus, format, board, subscribers] = await Promise.all([
     getTranslations({ locale, namespace: "Admin.statusPage" }),
-    // 影响级别的名字和状态页上的徽章共用一处文案（`Status.statusLabel`）。
+    // Impact level names share their messages with the status page badges (`Status.statusLabel`).
     getTranslations({ locale, namespace: "Status" }),
     getFormatter({ locale }),
     getStatusBoard(db, config),
@@ -61,7 +61,8 @@ export default async function AdminStatusPage({ params }: Props) {
     componentLabel(config.components, component);
   const open = board.incidents.filter((incident) => !incident.resolvedAt);
 
-  // 库里存的是 UTC 墙钟，按 UTC 显示：服务端不能拿自己的时区当默认值。
+  // The database stores UTC wall-clock times, so display them in UTC: the server must not assume its
+  // own time zone.
   const date = (value: Date) =>
     format.dateTime(value, {
       dateStyle: "medium",

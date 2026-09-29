@@ -7,13 +7,16 @@ import { EmailLayout, emailStyles } from "@/core/email/components/email-layout";
 import { formatDate } from "@/core/email/format";
 import type { EmailT } from "@/core/email/translator";
 
-/** 「可以下载了」邮件：付款成功、授权记好之后发，链接到站内下载页（登录后下载）。 */
+/**
+ * "Ready to download" email: sent after payment succeeds and the grant is recorded; links to the
+ * downloads page on the site (download after signing in).
+ */
 export type DownloadReadyProps = {
-  /** 产品的显示名称（已按收件人语言取好）。 */
+  /** The product's display name (already resolved in the recipient's locale). */
   productName: string;
-  /** 站内下载页的绝对地址。 */
+  /** Absolute URL of the downloads page on the site. */
   downloadsUrl: string;
-  /** 包含的更新截止时间，ISO。 */
+  /** When included updates end, ISO. */
   updatesUntil: string;
 };
 

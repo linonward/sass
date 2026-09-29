@@ -2,15 +2,15 @@ import { existsSync } from "node:fs";
 
 import { defineConfig, devices } from "@playwright/test";
 
-// 本地读取 .env.local（不覆盖已有变量）：dev server、i18n 副本和需要直连数据库的用例都用它。
-// CI 通过 workflow 的 env 提供。
+// Locally, read .env.local (without overwriting existing variables): the dev server, the i18n copy,
+// and tests that connect to the database directly all use it. In CI the workflow env provides them.
 for (const file of [".env.local", ".env"]) {
   if (existsSync(file)) process.loadEnvFile(file);
 }
 
 const port = Number(process.env.E2E_PORT ?? 3000);
 const baseURL = `http://localhost:${port}`;
-// 多语言副本（见 e2e/i18n/serve.ts）单独监听一个端口。
+// The multi-locale copy (see e2e/i18n/serve.ts) listens on its own port.
 const i18nPort = port + 1;
 const i18nBaseURL = `http://localhost:${i18nPort}`;
 
@@ -43,7 +43,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // CI 先执行 `pnpm build`，这里直接启动生产构建；本地用开发服务器。
+      // CI runs `pnpm build` first, so this starts the production build directly; locally it uses
+      // the dev server.
       command: process.env.CI ? `pnpm start -p ${port}` : `pnpm dev -p ${port}`,
       url: baseURL,
       reuseExistingServer: !process.env.CI,

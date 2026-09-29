@@ -1,7 +1,7 @@
 // @vitest-environment node
-// instrumentation-client.ts 顶层读 process.env.OBSERVABILITY_SENTRY，加载 SDK 是异步的
-// （void import().then()），所以每个用例都 resetModules 后重新 import，
-// 把「模块工厂有没有跑」和「跑在什么时机」当作断言对象。
+// instrumentation-client.ts reads process.env.OBSERVABILITY_SENTRY at the top level and loads the
+// SDK asynchronously (void import().then()), so every test does resetModules and re-imports, and
+// asserts on whether the module factory ran and when.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
@@ -15,7 +15,7 @@ const sentryClientModule = () => ({
 
 type SentryClientModule = ReturnType<typeof sentryClientModule>;
 
-/** SDK 加载成功时记一笔；用例可以换成延迟/失败的工厂。 */
+/** Records an entry when the SDK loads; tests can swap in a delayed or failing factory. */
 function mockSentryClient(
   factory: () => SentryClientModule | Promise<SentryClientModule> = () => {
     state.loads.push("sentry.client");
@@ -30,7 +30,7 @@ async function loadClient() {
   return import("./instrumentation-client");
 }
 
-/** 跑完已排队的宏任务（动态 import 的 .then 在宏任务之后才轮到）。 */
+/** Flush queued macrotasks (a dynamic import's .then only runs after the macrotask). */
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeEach(() => {
@@ -45,7 +45,7 @@ afterEach(() => {
 });
 
 describe("instrumentation-client", () => {
-  test("OBSERVABILITY_SENTRY 不是 true：不加载 SDK，调用也不炸", async () => {
+  test("OBSERVABILITY_SENTRY isn't true: the SDK isn't loaded and calls don't blow up", async () => {
     mockSentryClient();
 
     const { onRouterTransitionStart } = await loadClient();
@@ -56,7 +56,7 @@ describe("instrumentation-client", () => {
     expect(state.captureRouterTransitionStart).not.toHaveBeenCalled();
   });
 
-  test("开关在模块加载时读一次：之后再改 env 也不会补加载", async () => {
+  test("the flag is read once at module load: changing env later doesn't load it after the fact", async () => {
     mockSentryClient();
 
     const { onRouterTransitionStart } = await loadClient();
@@ -68,7 +68,7 @@ describe("instrumentation-client", () => {
     expect(state.captureRouterTransitionStart).not.toHaveBeenCalled();
   });
 
-  test("OBSERVABILITY_SENTRY=true：异步加载 SDK，就绪后转发路由切换", async () => {
+  test("OBSERVABILITY_SENTRY=true: loads the SDK asynchronously and forwards route transitions once ready", async () => {
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     mockSentryClient();
 
@@ -83,9 +83,9 @@ describe("instrumentation-client", () => {
     );
   });
 
-  test("SDK 还没到位就路由切换：跳过但不抛错，到位后照常转发", async () => {
+  test("a route transition before the SDK is ready is skipped without throwing, and forwarded normally once ready", async () => {
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
-    // 卡住 SDK 的加载，模拟「Sentry 初始化之前的路由切换」。
+    // Stall the SDK load to simulate a route transition before Sentry initializes.
     const gate = Promise.withResolvers<void>();
     mockSentryClient(async () => {
       await gate.promise;

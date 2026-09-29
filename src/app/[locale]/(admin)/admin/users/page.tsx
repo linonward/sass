@@ -32,7 +32,7 @@ export default async function AdminUsersPage({ params, searchParams }: Props) {
   const query = typeof search.q === "string" ? search.q : "";
   const page = parsePage(search.page);
 
-  // 文案、格式化和列表查询互不依赖，一次并发发出。
+  // Messages, formatters and the list query don't depend on each other, so fire them concurrently.
   const [t, format, data] = await Promise.all([
     getTranslations({ locale, namespace: "Admin.users" }),
     getFormatter({ locale }),

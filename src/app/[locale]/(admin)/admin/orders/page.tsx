@@ -23,9 +23,10 @@ import {
 type Props = PageProps<"/[locale]/admin/orders">;
 
 /**
- * 状态色只标异常。paid 是绝大多数行，用中性填充；退款和失败才值得一眼看见。
- * 之前只有 paid 特殊（secondary）、其余全落 outline，refunded 和 failed 分不出来。
- * 全部 `flat`：产品语域没有唇边（见 docs/design.md 的两个语域）。
+ * Status colors mark only exceptions. paid is the vast majority of rows, so it gets a neutral fill;
+ * only refunds and failures deserve to stand out at a glance. Previously only paid was special
+ * (secondary) and everything else fell to outline, so refunded and failed looked the same. All
+ * `flat`: the product register has no lips (see the two registers in docs/design.md).
  */
 const statusVariant = {
   paid: "secondary",
@@ -45,7 +46,7 @@ export default async function AdminOrdersPage({ params, searchParams }: Props) {
   const status = parseOrderStatus(search.status);
   const page = parsePage(search.page);
 
-  // 文案、格式化和列表查询互不依赖，一次并发发出。
+  // Messages, formatters and the list query don't depend on each other, so fire them concurrently.
   const [t, tp, format, data] = await Promise.all([
     getTranslations({ locale, namespace: "Admin" }),
     getTranslations({ locale, namespace: "Landing.pricing" }),

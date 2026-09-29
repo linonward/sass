@@ -26,7 +26,8 @@ export async function generateMetadata({
   });
 }
 
-// 空状态首页。业务项目在这里放自己的概览，或把 dashboard.nav 的第一项作为主入口。
+// Empty-state home. Your product puts its own overview here, or makes the first dashboard.nav item
+// the main entry point.
 export default async function DashboardPage({
   params,
 }: PageProps<"/[locale]/dashboard">) {
@@ -54,7 +55,7 @@ export default async function DashboardPage({
           title={t("emptyTitle", { name: siteConfig.name })}
           description={t("emptyDescription")}
         >
-          {/* 一屏一个实心主操作：空状态的下一步就这一个。 */}
+          {/* One solid primary action per screen: this is the single next step from the empty state. */}
           <Link href="/settings" className={buttonVariants()}>
             {t("emptyCta")}
           </Link>
@@ -63,7 +64,7 @@ export default async function DashboardPage({
       {siteConfig.features.upload && (
         <UploadExample accept={siteConfig.upload.allowedMimeTypes} />
       )}
-      {/* 总开关关着时整段不渲染（和 upload 示例同一写法）。 */}
+      {/* Not rendered at all when the master switch is off (same pattern as the upload example). */}
       {flagsEnabled() && <FlagExample />}
     </div>
   );

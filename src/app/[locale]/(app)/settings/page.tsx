@@ -60,7 +60,7 @@ export default async function SettingsPage({
         </CardContent>
       </Card>
 
-      {/* 危险区：面板默认是中性描边，这里换成语义描边（平描边，没有唇边）。 */}
+      {/* Danger zone: panels default to a neutral outline; this one uses the semantic outline (flat, no lip). */}
       <Card className="border-[var(--destructive-edge)]">
         <CardHeader>
           <CardTitle>{t("danger.title")}</CardTitle>

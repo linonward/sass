@@ -11,8 +11,8 @@ import {
   QUICK_CREDIT_SOURCE,
 } from "./taglines";
 
-describe("快速生成（deductCredits）", () => {
-  test("按请求 ID 扣 QUICK_COST 积分后返回 3 条", async () => {
+describe("quick generation (deductCredits)", () => {
+  test("deducts QUICK_COST credits by request ID, then returns 3 taglines", async () => {
     const deductCredits = vi.fn().mockResolvedValue({});
     const result = await generateQuick(
       { deductCredits },
@@ -35,7 +35,7 @@ describe("快速生成（deductCredits）", () => {
     });
   });
 
-  test("余额不足时返回 insufficient_credits", async () => {
+  test("returns insufficient_credits when the balance is too low", async () => {
     const deductCredits = vi
       .fn()
       .mockRejectedValue(new InsufficientCreditsError("u1", QUICK_COST));
@@ -48,7 +48,7 @@ describe("快速生成（deductCredits）", () => {
   });
 });
 
-describe("AI 生成（runAI）", () => {
+describe("AI generation (runAI)", () => {
   function success(text: Promise<string>): RunAIResult {
     return {
       ok: true,
@@ -59,7 +59,7 @@ describe("AI 生成（runAI）", () => {
     } as RunAIResult;
   }
 
-  test("解析模型回复，并把记账交给 after", async () => {
+  test("parses the model reply and hands bookkeeping to after", async () => {
     const runAI = vi
       .fn()
       .mockResolvedValue(
@@ -84,7 +84,7 @@ describe("AI 生成（runAI）", () => {
     [429, "rate_limited"],
     [503, "ai_unavailable"],
     [400, "failed"],
-  ] as const)("runAI 返回 %i 时报 %s", async (status, error) => {
+  ] as const)("runAI returning %i reports %s", async (status, error) => {
     const runAI = vi.fn().mockResolvedValue({
       ok: false,
       status,
@@ -98,7 +98,7 @@ describe("AI 生成（runAI）", () => {
     ).toEqual({ ok: false, error });
   });
 
-  test("模型报错时返回 failed（runAI 负责退款）", async () => {
+  test("returns failed when the model errors (runAI handles the refund)", async () => {
     const runAI = vi
       .fn()
       .mockResolvedValue(success(Promise.reject(new Error("boom"))));
@@ -111,7 +111,7 @@ describe("AI 生成（runAI）", () => {
   });
 });
 
-test("parseTaglines 去掉序号和引号，最多 3 条", () => {
+test("parseTaglines strips numbering and quotes, keeping at most 3", () => {
   expect(parseTaglines("\n1) “Alpha”\n* Beta\n\n3. Gamma\n4. Delta")).toEqual([
     "Alpha",
     "Beta",

@@ -9,21 +9,25 @@ import { buildMetadata } from "@/core/seo/metadata";
 import { buttonVariants } from "@/core/ui/button";
 
 /**
- * 标题要写两份——metadata 导出 + React `<title>`——少一份就有一条路径是错的，别删任何一个。
+ * The title is written twice — a metadata export plus a React `<title>` — and dropping either one
+ * breaks one of the paths, so don't delete either.
  *
- * - metadata 导出决定**静态 HTML**里的 `<title>`，即关 JS 的浏览器和只抓 HTML 的爬虫看到的
- *   那份。Next 对 not-found 有专门的采集路径：HTTP access fallback 时 errorType 记为
- *   `'not-found'`，按 'not-found' convention 取本文件的导出，并排在 layout 之后覆盖它。
- *   path 传 `null`：404 没有自己的规范地址，canonical / hreflang / og:url 都得显式清掉，
- *   否则会继承 layout 那份指向首页的（见 src/core/seo/metadata.ts 的注释）。
- *   noindex 是**框架注入**的（app-render.js 的 NonIndex），按 pagePath === '/404' 和状态码
- *   判定，不经过这里 —— 所以别顺手传 noIndex 去「保住」它，那会多出一条 robots meta。
- * - React `<title>` 决定**水合后**的 DOM。404 的 fallback 由 client boundary 渲染，水合时
- *   client 树里只有 layout 那层的元数据，会把 `<title>` 改回站名；组件里再放一个 React
- *   `<title>`，React 会把它插到 head 里已有 title 的前面，浏览器取第一个，标题才对。
+ * - The metadata export sets the `<title>` in the **static HTML**, i.e. what browsers with JS off
+ *   and HTML-only crawlers see. Next has a dedicated collection path for not-found: on an HTTP
+ *   access fallback the errorType is recorded as `'not-found'`, this file's export is picked up
+ *   under the 'not-found' convention, and it's ordered after the layout so it overrides it.
+ *   path is `null`: a 404 has no canonical URL of its own, so canonical / hreflang / og:url must
+ *   be cleared explicitly, or they'd inherit the layout's, which point at the home page (see the
+ *   comments in src/core/seo/metadata.ts). noindex is **injected by the framework** (NonIndex in
+ *   app-render.js) based on pagePath === '/404' and the status code, not through here — so don't
+ *   pass noIndex to "keep it safe"; that would add a second robots meta.
+ * - The React `<title>` sets the DOM **after hydration**. The 404 fallback is rendered by a client
+ *   boundary, and on hydration the client tree only has the layout's metadata, which would reset
+ *   `<title>` to the site name; with a React `<title>` in the component, React inserts it into
+ *   head ahead of the existing title, browsers take the first one, and the title comes out right.
  *
- * 无 JS 时这一页 body 是空的（只有一个 `<div hidden>` 空壳）：这是 client 边界的固有
- * 行为，不是模板坏了，上面两项只能修 `<title>`，修不了 body。
+ * Without JS this page's body is empty (just an empty `<div hidden>` shell): that's inherent to
+ * client boundaries, not a broken template. The two measures above fix `<title>`, not the body.
  */
 export async function generateMetadata({
   params,
@@ -44,27 +48,28 @@ export default function NotFound() {
   const t = useTranslations("NotFound");
 
   return (
-    // 这一页挂在 [locale]/ 下、不在 (marketing) 组里，穿不到营销面的 layout，
-    // 所以 Header / Footer 在这里自己渲染一份 —— 404 也得有站内导航，
-    // 只有「Back to home」一个出路是不够的。
+    // This page lives under [locale]/, not in the (marketing) group, so it can't reach the marketing
+    // layout; Header / Footer are rendered here directly — a 404 needs site navigation too, and "Back
+    // to home" as the only way out isn't enough.
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
       <main className="container-marketing flex flex-1 items-center py-14 sm:py-20">
         <div className="max-w-2xl">
           <title>{t("title")}</title>
-          {/* 文字用 --primary-text 而不是 --primary：后者保留配置原 hex，
-              压在画布上暗色主题里不够看（design.md §2 的颜色分工）。 */}
+          {/* Text uses --primary-text rather than --primary: the latter keeps the raw configured hex,
+              which isn't legible enough on the canvas in the dark theme (color roles in design.md §2). */}
           <p className="text-primary-text font-mono text-sm font-medium tracking-[0.2em]">
             404
           </p>
-          {/* 全站的 h1 都走 display 面，这里以前漏了。 */}
+          {/* Every h1 on the site uses the display face; this one used to be missed. */}
           <h1 className="heading-display mt-4 text-4xl sm:text-5xl">
             {t("title")}
           </h1>
           <p className="text-muted-foreground mt-4 text-lg text-pretty">
             {t("description")}
           </p>
-          {/* 营销面的 CTA 是 44px 带唇边的贴纸；默认的 32px 也低于 design.md 的触控目标下限。 */}
+          {/* Marketing CTAs are 44px stickers with a lip; the default 32px is also below the touch-target
+              minimum in design.md. */}
           <Link
             href="/"
             className={`${buttonVariants({ size: "marketing", tone: "primary" })} mt-8`}

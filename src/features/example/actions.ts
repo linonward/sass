@@ -25,7 +25,7 @@ export type TaglineState =
       nextRequestId: string;
     });
 
-/** 表单提交：按 mode 选择快速生成（deductCredits）或 AI 生成（runAI）。 */
+/** Form submit: depending on mode, do a quick generation (deductCredits) or an AI generation (runAI). */
 export async function generateTaglines(
   _prev: TaglineState,
   form: FormData,
@@ -33,7 +33,7 @@ export async function generateTaglines(
   const done = (result: GenerateResult): TaglineState => ({
     ...result,
     status: "done",
-    // 下一次提交用新的请求 ID；同一个 ID 重复提交只扣一次积分。
+    // The next submit uses a new request ID; resubmitting the same ID deducts credits only once.
     nextRequestId: randomUUID(),
   });
 
@@ -65,7 +65,7 @@ export async function generateTaglines(
           },
         );
 
-  // 页面上的余额要跟着变。
+  // The balance shown on the page needs to update too.
   refresh();
   return done(result);
 }

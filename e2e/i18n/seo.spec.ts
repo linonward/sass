@@ -6,7 +6,7 @@ import { TEST_LOCALE } from "./test-locale";
 const origin = `https://${siteConfig.domain}`;
 const localized = `${origin}/${TEST_LOCALE}`;
 
-test("非默认语言页面的 canonical 与 hreflang", async ({ page }) => {
+test("canonical and hreflang on non-default-locale pages", async ({ page }) => {
   await page.goto(`/${TEST_LOCALE}`);
   const head = page.locator("head");
 
@@ -32,7 +32,9 @@ test("非默认语言页面的 canonical 与 hreflang", async ({ page }) => {
   );
 });
 
-test("sitemap 为每个语言列出一条并带 alternates", async ({ request }) => {
+test("sitemap lists one entry per locale with alternates", async ({
+  request,
+}) => {
   const xml = await (await request.get("/sitemap.xml")).text();
   expect(xml).toContain(`<loc>${origin}</loc>`);
   expect(xml).toContain(`<loc>${localized}</loc>`);
@@ -41,16 +43,18 @@ test("sitemap 为每个语言列出一条并带 alternates", async ({ request })
   );
 });
 
-test("带语言前缀的私有路径不进 robots，排除交给页面 noindex", async ({
+test("locale-prefixed private paths stay out of robots; exclusion is left to page noindex", async ({
   request,
 }) => {
   const text = await (await request.get("/robots.txt")).text();
-  // robots 只留没有 HTML 的机器端点：Disallow 挡住的页面爬虫读不到 meta noindex，
-  // 反而可能以裸 URL 进结果。所以这里连语言前缀的变体都不该出现。
+  // robots only lists machine endpoints with no HTML: crawlers can't read meta noindex on a page
+  // blocked by Disallow, so it may end up in results as a bare URL. That's why not even the
+  // locale-prefixed variants should appear here.
   expect(text).toContain("Disallow: /api\n");
   expect(text).not.toContain("/dashboard");
 
-  // 私有路径本身仍不可收录：未登录时 307 到**同一语言**的登录页（noindex）。
+  // The private paths themselves still can't be indexed: signed out, they 307 to the sign-in page
+  // in the **same locale** (noindex).
   const response = await request.get(`/${TEST_LOCALE}/dashboard`, {
     maxRedirects: 0,
   });

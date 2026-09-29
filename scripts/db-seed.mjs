@@ -1,22 +1,26 @@
 #!/usr/bin/env node
 /**
- * 灌一批演示数据：两个示例用户、一条订阅、两笔订单、一份积分流水。
+ * Seeds demo data: two sample users, their subscriptions, two orders and a set of credit
+ * transactions.
  *
- * 用法：ALLOW_DB_SEED=1 pnpm db:seed
- *      ALLOW_DB_SEED=1 DATABASE_URL=postgres://… pnpm db:seed
+ * Usage: ALLOW_DB_SEED=1 pnpm db:seed
+ *        ALLOW_DB_SEED=1 DATABASE_URL=postgres://… pnpm db:seed
  *
- * 给「刚 clone 下来想看看有数据长什么样」用：空库里 dashboard 一片空，跑完这个就有东西可看。
- * 幂等：所有写入都按自然键 upsert / 不覆盖已有值，重复执行不会报错也不会多出数据。
+ * For "I just cloned this and want to see what it looks like with data": on an empty database the
+ * dashboard is blank; after running this there is something to look at.
+ * Idempotent: every write is an upsert on a natural key / never overwrites existing values, so
+ * rerunning neither errors nor adds duplicate data.
  *
- * 演示数据挂在 demo-*@example.com 这两个邮箱下，想清掉直接删用户（外键是 cascade）：
+ * The demo data hangs off the demo-*@example.com emails; to clear it, delete the users (foreign
+ * keys cascade):
  *   delete from "user" where email like 'demo-%@example.com';
  *
- * 闸门：生产环境拒绝执行（演示数据不该出现在真实站点里）。判断口径和 src/core/billing/env.ts
- * 的 fakeBillingAllowed 一致 —— **NODE_ENV 没设置时按生产处理**，只有
- * NODE_ENV=development / test，或者显式 ALLOW_DB_SEED=1 才放行。
- * 闸门收紧前是 `NODE_ENV === "production"` 才拒绝，于是直接敲
- * `DATABASE_URL=… node scripts/db-seed.mjs`（shell 里没设 NODE_ENV）就会把演示数据
- * 灌进它指向的库，包括生产库。
+ * Gate: refuses to run in production (demo data must not show up on a real site). The rule matches
+ * fakeBillingAllowed in src/core/billing/env.ts — **an unset NODE_ENV counts as production**; only
+ * NODE_ENV=development / test, or an explicit ALLOW_DB_SEED=1, lets it through.
+ * Before the gate was tightened it only refused on `NODE_ENV === "production"`, so typing
+ * `DATABASE_URL=… node scripts/db-seed.mjs` (no NODE_ENV in the shell) would seed demo data into
+ * whatever database it pointed at, production included.
  */
 import { existsSync } from "node:fs";
 import process from "node:process";
@@ -29,7 +33,7 @@ const DEMO_USERS = [
     email: "demo@example.com",
     name: "Demo User",
     planId: "pro",
-    // 订阅：已用掉一段账期，20 天后续费。
+    // Subscription: partway through the billing period, renews in 20 days.
     subscription: {
       id: "seed-sub-demo",
       status: "active",
@@ -37,7 +41,8 @@ const DEMO_USERS = [
       periodEndDays: 20,
     },
     credits: {
-      // 余额必须等于流水之和（账本的不变式），下面几条流水加起来正好是 1730。
+      // The balance must equal the sum of the transactions (the ledger invariant); the entries below
+      // add up to exactly 1730.
       balance: 1730,
       entries: [
         {
@@ -80,7 +85,7 @@ const DEMO_USERS = [
     email: "demo-churn@example.com",
     name: "Demo Churn",
     planId: "pro",
-    // 已取消但还没到期的订阅：后台里能看到 canceledAt 与 currentPeriodEnd。
+    // A canceled subscription that hasn't expired yet: admin shows canceledAt and currentPeriodEnd.
     subscription: {
       id: "seed-sub-churn",
       status: "canceled",
@@ -144,39 +149,40 @@ function fail(message) {
 
 const daysFromNow = (days) => new Date(Date.now() + days * 86_400_000);
 
-// 先读 .env.local 再判断环境：顺序和 scripts/admin-demote.mjs 一致，免得
-// `.env.local` 里写了 NODE_ENV=production 时被这条闸门漏过去。
+// Load .env.local before checking the environment: same order as scripts/admin-demote.mjs, so a
+// NODE_ENV=production in `.env.local` can't slip past this gate.
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
-// 只有 development / test 算非生产运行时，名单和 src/core/billing/env.ts 的
-// nonProductionNodeEnvs 一致（脚本是 .mjs，import 不了 TS）。
+// Only development / test count as non-production runtimes; the list matches nonProductionNodeEnvs
+// in src/core/billing/env.ts (this script is .mjs and can't import TS).
 const nonProductionNodeEnvs = ["development", "test"];
-// `ALLOW_DB_SEED` 的合法取值：只有 1 / true 放行，0 / false 与不填等价。
+// Valid values of `ALLOW_DB_SEED`: only 1 / true let it through; 0 / false are the same as unset.
 const seedOptInValues = ["1", "true", "0", "false"];
 
 const nodeEnv = process.env.NODE_ENV;
 const optInValue = process.env.ALLOW_DB_SEED;
 const optIn = optInValue === "1" || optInValue === "true";
-// NODE_ENV 没设置时按生产处理（nodeEnv 未定义 → 不是非生产运行时）：
-// `next build` / `next start`、Docker、以及直接敲脚本的裸 shell 命令都没设 NODE_ENV，宁可拒绝。
+// An unset NODE_ENV counts as production (nodeEnv undefined → not a non-production runtime):
+// `next build` / `next start`, Docker, and bare shell commands running the script all leave NODE_ENV
+// unset, so refusing is the safer choice.
 const nonProductionRuntime =
   nodeEnv !== undefined && nonProductionNodeEnvs.includes(nodeEnv);
 
 if (!nonProductionRuntime && !optIn) {
   fail(
     [
-      `拒绝灌演示数据：NODE_ENV=${nodeEnv ?? "（未设置）"}，按生产处理。`,
-      // 写成 ALLOW_DB_SEED=yes 时会走到这里，顺手点出来，别让人对着「明明设了」发呆。
+      `Refusing to seed demo data: NODE_ENV=${nodeEnv ?? "(unset)"}, treated as production.`,
+      // ALLOW_DB_SEED=yes ends up here; point it out so nobody stares at "but I did set it".
       optInValue !== undefined && !seedOptInValues.includes(optInValue)
-        ? `ALLOW_DB_SEED=${optInValue} 不是有效值（只认 1 / true 放行，0 / false 关闭）。`
+        ? `ALLOW_DB_SEED=${optInValue} is not a valid value (only 1 / true allow it, 0 / false disable it).`
         : null,
-      "演示数据只该灌进独立的库：示例用户是 email_verified=true 的 example.com 保留域邮箱，",
-      "收不到验证码也接管不了，订阅/订单/积分流水却会真实计入 admin 后台、指标和收入统计。",
-      "确认 DATABASE_URL 指向的不是生产库后，任选一种方式放行：",
+      "Demo data belongs only in a separate database: the sample users are email_verified=true addresses on the reserved example.com domain,",
+      "which can't receive verification codes and can't be taken over, yet their subscriptions/orders/credit transactions count toward the admin, metrics and revenue figures.",
+      "After confirming DATABASE_URL does not point at production, allow it either way:",
       "  ALLOW_DB_SEED=1 pnpm db:seed",
       "  NODE_ENV=development pnpm db:seed",
-      // 已经灌进真实库时的补救手段。
-      "清掉已灌进去的数据：delete from \"user\" where email like 'demo-%@example.com';",
+      // The remedy if it already went into a real database.
+      "To clear seeded data: delete from \"user\" where email like 'demo-%@example.com';",
     ]
       .filter(Boolean)
       .join("\n"),
@@ -186,7 +192,7 @@ if (!nonProductionRuntime && !optIn) {
 const url = process.env.DATABASE_URL;
 if (!url) {
   fail(
-    "缺少 DATABASE_URL：先配好 .env.local，或用 `ALLOW_DB_SEED=1 DATABASE_URL=… pnpm db:seed`。",
+    "Missing DATABASE_URL: set up .env.local first, or run `ALLOW_DB_SEED=1 DATABASE_URL=… pnpm db:seed`.",
   );
 }
 
@@ -197,7 +203,8 @@ try {
   await client.query("begin");
 
   for (const user of DEMO_USERS) {
-    // 邮箱已存在时只更新名字（沿用已有 id），不覆盖其他字段。
+    // If the email already exists, only update the name (keeping the existing id); don't overwrite
+    // other fields.
     const { rows } = await client.query(
       `insert into "user" (id, name, email, email_verified, created_at, updated_at)
        values ($1, $2, $3, true, now(), now())
@@ -229,7 +236,7 @@ try {
       ],
     );
 
-    // 余额只在用户还没有余额记录时写入，不覆盖真实余额。
+    // Only write the balance when the user has no balance row yet; never overwrite a real balance.
     await client.query(
       `insert into user_credits (user_id, balance, updated_at)
        values ($1, $2, now())
@@ -238,7 +245,8 @@ try {
     );
 
     for (const entry of user.credits.entries) {
-      // id 交给数据库生成（这一列是 uuid），幂等靠 (source, source_id)。
+      // Let the database generate the id (the column is a uuid); idempotency comes from
+      // (source, source_id).
       await client.query(
         `insert into credit_transactions
            (user_id, type, amount, reason, source, source_id, created_at)
@@ -287,11 +295,11 @@ try {
 }
 
 console.log(
-  `演示数据就绪：${DEMO_USERS.length} 个用户、${ORDERS.length} 笔订单、2 条订阅、若干积分流水。`,
+  `Demo data ready: ${DEMO_USERS.length} users, ${ORDERS.length} orders, 2 subscriptions, and a set of credit transactions.`,
 );
 console.log(
-  "用 demo@example.com 登录（验证码会打到终端或邮件）就能看到填满数据的 dashboard。",
+  "Sign in as demo@example.com (the verification code goes to the terminal or email) to see a dashboard full of data.",
 );
 console.log(
-  "清掉它们：delete from \"user\" where email like 'demo-%@example.com';",
+  "To clear it: delete from \"user\" where email like 'demo-%@example.com';",
 );

@@ -3,15 +3,18 @@ import { z } from "zod";
 import type { RunAIInput, RunAIResult } from "@/core/ai";
 import { InsufficientCreditsError, type Credits } from "@/core/credits";
 
-// 示例业务模块：给产品写宣传语。演示业务代码怎么收积分：
-// - 「快速生成」是业务自己的收费，用 deductCredits 扣 QUICK_COST；
-// - 「AI 生成」交给 runAI，它按 site.config.ts 里模型的 creditCost 预扣，失败自动退回。
-// 这个文件不依赖 Next，便于单测；绑定真实依赖的是 ./actions.ts。
+// Example business module: write taglines for a product. It shows how business code charges
+// credits:
+// - "Quick generate" is the business's own charge: deductCredits takes QUICK_COST.
+// - "AI generate" goes through runAI, which reserves the model's creditCost from site.config.ts up
+//   front and refunds automatically on failure.
+// This file doesn't depend on Next, which keeps it unit-testable; ./actions.ts binds the real
+// dependencies.
 
-/** 快速生成每次扣的积分。 */
+/** Credits deducted per quick generation. */
 export const QUICK_COST = 1;
 
-/** 快速生成在积分流水里的来源名；sourceId 是每次提交的请求 ID。 */
+/** Source name for quick generation in credit transactions; sourceId is each submit's request ID. */
 export const QUICK_CREDIT_SOURCE = "example-taglines";
 
 export const productSchema = z.string().trim().min(3).max(200);
@@ -27,7 +30,7 @@ export type GenerateError =
 export type GenerateResult =
   { ok: true; taglines: string[] } | { ok: false; error: GenerateError };
 
-/** 不调用模型的模板生成：结果固定，适合演示和测试。 */
+/** Template generation without calling a model: deterministic output, good for demos and tests. */
 export function quickTaglines(product: string): string[] {
   const name = product.trim();
   return [
@@ -42,7 +45,7 @@ export function taglinePrompt(product: string) {
 Reply with one tagline per line, no numbering, no quotes.`;
 }
 
-/** 把模型的回复拆成最多 3 条：去掉序号、项目符号和引号。 */
+/** Split the model's reply into at most 3 taglines, stripping numbering, bullets and quotes. */
 export function parseTaglines(text: string): string[] {
   return text
     .split("\n")
@@ -58,8 +61,9 @@ export function parseTaglines(text: string): string[] {
 }
 
 /**
- * 快速生成：先扣积分再干活。同一个 requestId 只扣一次（重复提交、双击），
- * 余额不足时一分不扣，返回 insufficient_credits。
+ * Quick generation: deduct credits first, then do the work. A given requestId is charged only once
+ * (resubmits, double clicks); with an insufficient balance nothing is deducted and it returns
+ * insufficient_credits.
  */
 export async function generateQuick(
   deps: { deductCredits: Credits["deductCredits"] },
@@ -90,8 +94,9 @@ const aiErrors: Record<number, GenerateError> = {
 };
 
 /**
- * AI 生成：runAI 负责登录检查、限流、按模型预扣积分和失败退款，业务只管提示词和结果。
- * `after` 保证响应返回后记账（ai_usage、退款）还能跑完。
+ * AI generation: runAI handles the sign-in check, rate limiting, reserving credits per model and
+ * refunding on failure; business code only deals with the prompt and the result. `after` makes
+ * sure bookkeeping (ai_usage, refunds) still completes after the response is sent.
  */
 export async function generateWithAI(
   deps: {
@@ -114,7 +119,7 @@ export async function generateWithAI(
       ? { ok: true, taglines }
       : { ok: false, error: "failed" };
   } catch {
-    // 模型报错时 runAI 已经退回积分。
+    // When the model errors, runAI has already refunded the credits.
     return { ok: false, error: "failed" };
   }
 }

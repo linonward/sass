@@ -20,7 +20,7 @@
 # production
 /build
 
-# 买家分发包产物（scripts/release-package.sh）
+# Buyer release package output (scripts/release-package.sh)
 /dist/
 
 # misc

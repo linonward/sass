@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props) {
   });
 }
 
-/** 状态徽章：只有需要看一眼的状态上语义色，有效态是中性填充。 */
+/** Status badge: only states worth a glance get a semantic color; the active state is a neutral fill. */
 function StatusBadge({
   status,
   label,
@@ -55,8 +55,9 @@ function StatusBadge({
 }
 
 /**
- * API Key 管理页：列出自己的 key（明文和哈希都不经过这里）、新建、撤销。
- * 明文只在新建的那个弹层里出现一次，之后连本人都看不到。
+ * API key management: list your own keys (neither plaintext nor hashes pass through here), create,
+ * revoke. The plaintext appears once, in the creation dialog, and after that not even its owner can
+ * see it.
  */
 export default async function ApiKeysPage({ params }: Props) {
   if (!siteConfig.apiKeys.enabled) notFound();
@@ -111,7 +112,7 @@ export default async function ApiKeysPage({ params }: Props) {
                   >
                     {key.name}
                   </TableCell>
-                  {/* 只显示前缀：它够认出是哪把，不足以反推明文。 */}
+                  {/* Show only the prefix: enough to recognize the key, not enough to recover the plaintext. */}
                   <TableCell className="text-muted-foreground font-mono text-xs">
                     {key.prefix}…
                   </TableCell>
@@ -128,7 +129,7 @@ export default async function ApiKeysPage({ params }: Props) {
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    {/* 只有还能用的 key 才给撤销按钮：已撤销、已过期的撤销没有意义。 */}
+                    {/* Only usable keys get a revoke button: revoking a revoked or expired key is meaningless. */}
                     {status === "active" && (
                       <RevokeKeyDialog
                         locale={locale}

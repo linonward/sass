@@ -3,7 +3,7 @@ import type { ObjectStorage } from "@/core/upload/storage";
 
 import { findDownload } from "./queries";
 
-/** 下载地址的有效期：够浏览器开始下载，转发出去也很快失效。 */
+/** Lifetime of a download URL: long enough for the browser to start the download, short enough that a forwarded link dies quickly. */
 export const DOWNLOAD_URL_TTL_SECONDS = 5 * 60;
 
 export type DownloadRouteContext = {
@@ -14,8 +14,9 @@ export type DownloadRouteContext = {
 };
 
 /**
- * GET /api/downloads/<版本 id>：校验登录和授权，签一个 5 分钟的私有地址并跳过去。
- * 文件本身不经过我们的服务器；地址每次现签，下载页和邮件里的链接永远不会过期。
+ * GET /api/downloads/<version id>: checks sign-in and access, signs a private URL valid for 5
+ * minutes, and redirects to it. The file itself never passes through our server; the URL is signed
+ * fresh each time, so links on the downloads page and in emails never expire.
  */
 export async function handleDownload(
   request: Request,

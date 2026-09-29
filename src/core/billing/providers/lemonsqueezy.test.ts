@@ -264,7 +264,7 @@ describe("parseLemonSqueezyEvent: mapping of the official sample payloads", () =
     });
   });
 
-  test("subscription_created（on_trial）→ subscription.active", () => {
+  test("subscription_created (on_trial) → subscription.active", () => {
     const sample = withCustomData(lemonSqueezySample("subscription_created"), {
       userId: "user_1",
     });
@@ -290,7 +290,7 @@ describe("parseLemonSqueezyEvent: mapping of the official sample payloads", () =
     "subscription_updated",
     "subscription_resumed",
     "subscription_unpaused",
-  ])("%s（status=active）→ subscription.active", (sample) => {
+  ])("%s (status=active) → subscription.active", (sample) => {
     expect(parseLemonSqueezyEvent(lemonSqueezySample(sample))).toMatchObject({
       type: "subscription.active",
       subscriptionId: "1",

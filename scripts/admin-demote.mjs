@@ -1,26 +1,28 @@
 #!/usr/bin/env node
 /**
- * 撤销某个邮箱的 admin 角色。
+ * Revokes the admin role from an email address.
  *
- * `ADMIN_EMAILS` 只升不降：里面的邮箱在登录时会被写进用户表的 role 字段，
- * 之后从环境变量里删掉那个邮箱**不会**收回角色（见 src/core/admin/roles.ts）。
- * 这个脚本就是那条规则的手动补丁 —— 换管理员、或者某个邮箱不该再是管理员时用它。
+ * `ADMIN_EMAILS` only promotes, never demotes: emails listed there are written into the user table's
+ * role field at sign-in, and removing the email from the env var afterwards does **not** take the role
+ * back (see src/core/admin/roles.ts). This script is the manual patch for that rule — use it when
+ * admins change, or when an email should no longer be an admin.
  *
- * 用法：pnpm admin:demote <email>
- *      DATABASE_URL=postgres://… pnpm admin:demote someone@example.com
+ * Usage: pnpm admin:demote <email>
+ *        DATABASE_URL=postgres://… pnpm admin:demote someone@example.com
  *
- * 只从 role 字段里摘掉 admin，其他角色保留；用户本身、会话和任何数据都不动。
- * 数据库地址优先用环境变量，其次读 `.env.local`（和站点运行时一致）。
+ * Only strips admin from the role field and keeps other roles; the user, sessions and all data are
+ * left alone. The database URL comes from the environment first, then `.env.local` (same as the site
+ * runtime).
  */
 import { existsSync } from "node:fs";
 import process from "node:process";
 
 import pg from "pg";
 
-const usage = `用法：pnpm admin:demote <email>
+const usage = `Usage: pnpm admin:demote <email>
 
-撤销某个邮箱的 admin 角色（只摘掉 admin，其他角色保留）。
-数据库地址取 DATABASE_URL，没设时读 .env.local。`;
+Revokes the admin role from an email address (only admin is removed; other roles are kept).
+The database URL comes from DATABASE_URL, or .env.local when it is not set.`;
 
 function fail(message) {
   console.error(message);
@@ -35,7 +37,7 @@ if (!email) fail(usage);
 const url = process.env.DATABASE_URL;
 if (!url) {
   fail(
-    "缺少 DATABASE_URL：先配好 .env.local，或用 `DATABASE_URL=… pnpm admin:demote <email>`。",
+    "Missing DATABASE_URL: set up .env.local first, or run `DATABASE_URL=… pnpm admin:demote <email>`.",
   );
 }
 
@@ -46,7 +48,7 @@ try {
     'select id, role from "user" where lower(email) = $1',
     [email],
   );
-  if (rows.length === 0) fail(`没有这个邮箱的用户：${email}`);
+  if (rows.length === 0) fail(`No user with this email: ${email}`);
 
   const [user] = rows;
   const before = user.role ?? "";
@@ -57,25 +59,25 @@ try {
     .join(",");
 
   if (after === before) {
-    console.log(`${email} 本来就不是 admin，没有改动。`);
+    console.log(`${email} is not an admin; nothing changed.`);
   } else {
     await client.query('update "user" set role = $2 where id = $1', [
       user.id,
       after || null,
     ]);
     console.log(
-      `已撤销 ${email} 的 admin 角色（role: "${before}" → ${after ? `"${after}"` : "null"}）。`,
+      `Revoked the admin role from ${email} (role: "${before}" → ${after ? `"${after}"` : "null"}).`,
     );
   }
 
-  // 还留在 ADMIN_EMAILS 里的话，下次登录会被重新提上来 —— 这是最容易被忽略的一步。
+  // If it's still in ADMIN_EMAILS, the next sign-in promotes it again — the step most easily missed.
   const adminEmails = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
   if (adminEmails.includes(email)) {
     console.warn(
-      `注意：${email} 还在 ADMIN_EMAILS 里，下次登录会被重新提升为 admin。要彻底撤销，请先从环境变量里删掉它。`,
+      `Warning: ${email} is still in ADMIN_EMAILS and will be promoted to admin again on next sign-in. To revoke for good, remove it from the environment variable first.`,
     );
   }
 } finally {

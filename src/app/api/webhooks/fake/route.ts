@@ -4,7 +4,10 @@ import {
 } from "@/core/billing/providers";
 import { processWebhook } from "@/core/billing/webhook";
 
-/** fake 服务商的 webhook（只在 BILLING_PROVIDER=fake 时存在），和 Creem 走同一条 processWebhook 链路。 */
+/**
+ * Webhook for the fake provider (exists only when BILLING_PROVIDER=fake); goes through the same
+ * processWebhook path as Creem.
+ */
 export async function POST(request: Request) {
   const provider = getBillingProvider();
   if (!fakeBillingActive() || !provider) {

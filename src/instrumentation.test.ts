@@ -1,11 +1,13 @@
 // @vitest-environment node
-// 启动路径：instrumentation.ts 顶层读 site.config，调用时读 process.env，所以每个用例都
-// 先 resetModules 再重新 import 一份干净的模块（vi.doMock 换 site.config 替身）。
-// 断言的是「该不该加载、加载了哪一个模块」——@vercel/otel / Sentry 都 mock 成空实现，不真初始化。
+// Startup path: instrumentation.ts reads site.config at the top level and process.env when called,
+// so every test does resetModules and re-imports a clean module (vi.doMock swaps in a site.config
+// double). The assertions are about whether to load and which module gets loaded — @vercel/otel
+// and Sentry are mocked as no-ops and never really initialized.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const logged = vi.hoisted(() => {
-  // 模块工厂被执行的顺序即加载顺序（OTel 在 Sentry 之前，见 register() 里的注释）。
+  // The order the module factories run in is the load order (OTel before Sentry, see the comment in
+  // register()).
   const loaded: string[] = [];
   return {
     loaded,
@@ -18,8 +20,8 @@ const logged = vi.hoisted(() => {
   };
 });
 
-// 这些 mock 在 load() 里按用例重新注册：vi.mock 的工厂结果会被缓存，resetModules 之后
-// 也不会重跑，而「某个模块有没有被 import」正是这里要断言的东西。
+// These mocks are re-registered per test in load(): vi.mock factory results are cached and don't
+// rerun after resetModules, and whether a module got imported is exactly what's asserted here.
 vi.mock("@/core/observability/logger", () => ({
   logger: {
     error: logged.loggerError,
@@ -41,7 +43,7 @@ const site: SiteStub = {
   observability: { otel: false },
 };
 
-/** 每个用例重新 import 一份干净的模块：顶层读过 site.config，调用时读 process.env。 */
+/** Re-import a clean module per test: site.config is read at the top level, process.env on call. */
 async function load(overrides: Partial<SiteStub> = {}) {
   vi.resetModules();
   vi.doMock("../site.config", () => ({ default: { ...site, ...overrides } }));
@@ -74,7 +76,7 @@ const mocks = [
 beforeEach(() => {
   for (const mock of mocks) mock.mockClear();
   logged.loaded.length = 0;
-  // Next.js 在两种 runtime 各调一次 register()，用 NEXT_RUNTIME 区分。
+  // Next.js calls register() once per runtime, distinguished by NEXT_RUNTIME.
   vi.stubEnv("NEXT_RUNTIME", "nodejs");
   vi.stubEnv("OBSERVABILITY_SENTRY", "false");
 });
@@ -94,7 +96,7 @@ afterEach(() => {
 });
 
 describe("register", () => {
-  test("otel 开着：用站点名注册 OTel，然后才加载 Sentry（Node runtime）", async () => {
+  test("otel on: registers OTel with the site name, then loads Sentry (Node runtime)", async () => {
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     const { register } = await load({ observability: { otel: true } });
 
@@ -103,12 +105,12 @@ describe("register", () => {
     expect(logged.registerOTel).toHaveBeenCalledExactlyOnceWith({
       serviceName: "Instrumentation Test",
     });
-    // 顺序也是断言的一部分：同时开启时 Sentry 要沿用已注册的 tracer provider。
+    // The order is part of the assertion: with both on, Sentry must reuse the registered tracer provider.
     expect(logged.loaded).toEqual(["otel", "sentry.server"]);
     expect(logged.warnIfRateLimitUnconfigured).toHaveBeenCalledOnce();
   });
 
-  test("otel 关着：不碰 @vercel/otel，只加载 Sentry", async () => {
+  test("otel off: leaves @vercel/otel alone and loads only Sentry", async () => {
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     const { register } = await load();
 
@@ -118,7 +120,7 @@ describe("register", () => {
     expect(logged.loaded).toEqual(["sentry.server"]);
   });
 
-  test("features.observability 关着：otel 配了 true 也不注册，Sentry 只看环境变量", async () => {
+  test("features.observability off: otel isn't registered even when set to true; Sentry follows the env var only", async () => {
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     const { register } = await load({
       features: { observability: false },
@@ -128,12 +130,13 @@ describe("register", () => {
     await register();
 
     expect(logged.registerOTel).not.toHaveBeenCalled();
-    // OBSERVABILITY_SENTRY 是 next.config.ts 按 features.observability 在构建时写死的，
-    // 运行时不再重复判断 features —— 关掉时整段连同 SDK 都不在产物里。
+    // OBSERVABILITY_SENTRY is inlined by next.config.ts at build time from features.observability, so
+    // the runtime doesn't check features again — when off, the whole block and the SDK aren't in the
+    // bundle.
     expect(logged.loaded).toEqual(["sentry.server"]);
   });
 
-  test("Sentry 开着但没开 observability 的变量：整个 Sentry 段不加载", async () => {
+  test("Sentry on but the observability variable isn't set: the whole Sentry block isn't loaded", async () => {
     const { register } = await load({ observability: { otel: true } });
 
     await register();
@@ -142,7 +145,7 @@ describe("register", () => {
     expect(logged.loaded).toEqual(["otel"]);
   });
 
-  test("Edge runtime 加载 edge 那一份，不做限流判定", async () => {
+  test("the Edge runtime loads the edge config and skips the rate limit check", async () => {
     vi.stubEnv("NEXT_RUNTIME", "edge");
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     const { register } = await load();
@@ -150,11 +153,11 @@ describe("register", () => {
     await register();
 
     expect(logged.loaded).toEqual(["sentry.edge"]);
-    // Edge 上的 process.env 不完整，判定会把配好的部署误判成漏配。
+    // process.env on Edge is incomplete, so the check would flag a correctly configured deployment.
     expect(logged.warnIfRateLimitUnconfigured).not.toHaveBeenCalled();
   });
 
-  test("不认识的 runtime：两份 Sentry 都不加载，也不做限流判定", async () => {
+  test("unknown runtime: neither Sentry config loads and the rate limit check is skipped", async () => {
     vi.stubEnv("NEXT_RUNTIME", "browser");
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     const { register } = await load();
@@ -165,7 +168,7 @@ describe("register", () => {
     expect(logged.warnIfRateLimitUnconfigured).not.toHaveBeenCalled();
   });
 
-  test("缺 NEXT_RUNTIME 时不加载任何 runtime 专属模块", async () => {
+  test("without NEXT_RUNTIME no runtime-specific module is loaded", async () => {
     vi.stubEnv("NEXT_RUNTIME", "");
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     const { register } = await load();
@@ -192,7 +195,7 @@ const context = {
 } as const;
 
 describe("onRequestError", () => {
-  test("features.observability 关着：既不记日志也不上报，Sentry SDK 都不加载", async () => {
+  test("features.observability off: no logging, no reporting, and the Sentry SDK isn't loaded", async () => {
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     const { onRequestError } = await load({
       features: { observability: false },
@@ -205,7 +208,7 @@ describe("onRequestError", () => {
     expect(logged.loaded).not.toContain("@sentry/nextjs");
   });
 
-  test("Sentry 关着：只交给 logger，字段是请求上下文", async () => {
+  test("Sentry off: only the logger gets it, with the request context as fields", async () => {
     const { onRequestError } = await load();
     const error = new Error("boom");
 
@@ -225,7 +228,7 @@ describe("onRequestError", () => {
     });
   });
 
-  test("Sentry 开着：先转给 captureRequestError（带请求上下文），再记日志", async () => {
+  test("Sentry on: forwards to captureRequestError (with request context) first, then logs", async () => {
     vi.stubEnv("OBSERVABILITY_SENTRY", "true");
     const { onRequestError } = await load();
     const error = new Error("boom");
@@ -242,13 +245,13 @@ describe("onRequestError", () => {
     expect(logged.loggerError.mock.calls[0]?.[0]).toBe("request.error");
   });
 
-  test("path 只记路径：query 里的 token 不进日志", async () => {
+  test("path logs only the path: a token in the query stays out of the logs", async () => {
     const { onRequestError } = await load();
 
     for (const [path, expected] of [
       ["/dashboard?token=secret", "/dashboard"],
       ["/dashboard", "/dashboard"],
-      // 第二个 ? 之后也算 query（split 取第一段）。
+      // Anything after a second ? is also query (split keeps the first part).
       ["/a?b=1?c=2", "/a"],
       ["/search?q=a%3Fb", "/search"],
     ] as const) {

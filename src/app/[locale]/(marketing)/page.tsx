@@ -5,7 +5,8 @@ import { buildMetadata } from "@/core/seo/metadata";
 
 import siteConfig from "../../../../site.config";
 
-// 首页不能只用站点名当标题：搜索结果里只剩 "Acme"，看不出这页是做什么的。
+// The home page can't use the bare site name as its title: search results would show just "Acme"
+// with no hint of what the page is about.
 export async function generateMetadata({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Metadata" });

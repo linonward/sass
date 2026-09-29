@@ -2,8 +2,9 @@ import { PostPage, postMetadata, postParams } from "@/core/blog/pages";
 
 type Props = PageProps<"/[locale]/blog/[slug]">;
 
-// 构建时预渲染全部文章。其他 slug（含生产环境的草稿）由页面里的 notFound() 返回 404。
-// 不用 dynamicParams = false：它会让每个 404 在服务端日志里打一条 NoFallbackError。
+// Prerender every post at build time. Any other slug (including drafts in production) gets a 404
+// from notFound() in the page. We don't use dynamicParams = false: it logs a NoFallbackError on the
+// server for every 404.
 
 export function generateStaticParams({
   params,

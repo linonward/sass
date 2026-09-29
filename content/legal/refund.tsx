@@ -1,7 +1,10 @@
-// 模板仅供参考，不构成法律意见。上线前请结合你的业务和适用法律自行审阅，必要时咨询律师。
-// 变量来自 site.config.ts 的 `legal`；本文件归业务方所有，可自由修改。
-// 出厂政策是「数字产品售出不退款」（重复扣款 / 未授权付款除外）。卖实物或想给退款期的，按你的
-// 实际政策改写，并与支付平台的设置保持一致；「不退款」在部分地区需要买家购买时明确放弃撤回权。
+// This template is for reference only and is not legal advice. Before launch, review it against
+// your business and the applicable law, and consult a lawyer if needed.
+// Variables come from `legal` in site.config.ts; this file belongs to your app, so edit it freely.
+// The default policy is "no refunds on digital products once sold" (except duplicate charges /
+// unauthorized payments). If you sell physical goods or want a refund window, rewrite it to match
+// your actual policy and keep it consistent with your payment platform's settings. In some regions
+// a no-refund policy requires customers to explicitly waive their right of withdrawal at purchase.
 import { Link } from "@/core/i18n/navigation";
 import { defineLegalDocument } from "@/core/legal/document";
 import { legalPages } from "@/core/legal/pages";

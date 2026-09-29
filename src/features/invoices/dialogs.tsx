@@ -117,7 +117,10 @@ function InvoiceFields({
   );
 }
 
-/** 新建发票。成功后弹层里换成一张回执，关掉就能在列表里看到新行。 */
+/**
+ * Create an invoice. On success the dialog swaps to a receipt; close it and the new row is in the
+ * list.
+ */
 export function CreateInvoiceDialog({ currency }: { currency: string }) {
   const t = useTranslations("Invoices.create");
   const tc = useTranslations("Common");
@@ -126,9 +129,10 @@ export function CreateInvoiceDialog({ currency }: { currency: string }) {
   const error = useErrorMessage(state);
   const [pending, startTransition] = useTransition();
 
-  // 状态留在组件里，关掉就清空：重开是空白表单，不是上一次的回执。
-  // 不用 useActionState 的自动形式 —— 它的状态没法手动重置，只能靠 key 重挂载，
-  // 而重挂载会打断关闭动画，把遮罩留在页面上一直挡住点击（e2e 里踩到过）。
+  // State lives in the component and is cleared on close: reopening shows a blank form, not the last
+  // receipt. Not useActionState's automatic form — its state can't be reset manually, only by
+  // remounting with a key, and remounting interrupts the close animation, leaving the overlay on the
+  // page blocking clicks (we hit this in e2e).
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -190,7 +194,7 @@ export function CreateInvoiceDialog({ currency }: { currency: string }) {
   );
 }
 
-/** 编辑一行。表单一进来就是这一行的值。 */
+/** Edit a row. The form starts with this row's values. */
 export function EditInvoiceDialog({
   invoice,
   currency,
@@ -205,7 +209,8 @@ export function EditInvoiceDialog({
   const error = useErrorMessage(state);
   const [pending, startTransition] = useTransition();
 
-  // 同新建：关掉清空状态，重开回到带当前值的表单，不会停在上一次的回执上。
+  // Same as create: clear state on close, so reopening returns to the form with the current values
+  // instead of sticking on the last receipt.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -270,7 +275,10 @@ export function EditInvoiceDialog({
   );
 }
 
-/** 删除确认。删除不可逆：点确认才真的删，失败把错误留在用户眼前。 */
+/**
+ * Delete confirmation. Deletion is irreversible: nothing is deleted until confirm is clicked, and a
+ * failure keeps the error in front of the user.
+ */
 export function DeleteInvoiceDialog({ invoice }: { invoice: InvoiceDraft }) {
   const t = useTranslations("Invoices.delete");
   const te = useTranslations("Invoices.errors");

@@ -9,7 +9,9 @@ const localeName = new Intl.DisplayNames([TEST_LOCALE], {
   type: "language",
 }).of(TEST_LOCALE)!;
 
-test("切换语言后 URL 与文案都变化，并能切回默认语言", async ({ page }) => {
+test("switching locale changes both the URL and the copy, and can switch back to the default locale", async ({
+  page,
+}) => {
   await page.goto("/");
   const html = page.locator("html");
   const nav = page.getByRole("navigation", { name: messages.Header.main });
@@ -42,7 +44,9 @@ test("切换语言后 URL 与文案都变化，并能切回默认语言", async 
   await expect(html).toHaveAttribute("lang", "en");
 });
 
-test("直接访问带前缀的路径返回对应语言", async ({ page }) => {
+test("visiting a prefixed path directly serves that locale", async ({
+  page,
+}) => {
   const response = await page.goto(`/${TEST_LOCALE}`);
   expect(response?.status()).toBe(200);
   await expect(
@@ -52,12 +56,16 @@ test("直接访问带前缀的路径返回对应语言", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("默认语言带前缀时重定向到无前缀路径", async ({ page }) => {
+test("a prefixed default-locale path redirects to the unprefixed path", async ({
+  page,
+}) => {
   await page.goto("/en");
   await expect(page).toHaveURL("/");
 });
 
-test("非默认语言下的 404 页使用该语言文案", async ({ page }) => {
+test("the 404 page in a non-default locale uses that locale's copy", async ({
+  page,
+}) => {
   const response = await page.goto(`/${TEST_LOCALE}/does-not-exist`);
   expect(response?.status()).toBe(404);
   await expect(
@@ -65,13 +73,15 @@ test("非默认语言下的 404 页使用该语言文案", async ({ page }) => {
   ).toBeVisible();
 });
 
-// 上面那条断言的是水合后的 DOM。关 JS 再看一遍，锁的是 [locale]/not-found.tsx 的
-// generateMetadata：它之前这里是站名，而且证明标题真的跟着语言走，
-// 不是写死在英文上。
-test.describe("非默认语言下 404 的静态 HTML（关 JS）", () => {
+// The test above asserts on the hydrated DOM. Checking again with JS off pins down
+// generateMetadata in [locale]/not-found.tsx: this used to be the site name, and it proves the
+// title really follows the locale rather than being hard-coded in English.
+test.describe("static HTML of the 404 in a non-default locale (JS off)", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("标题是该语言的 404 标题，并带 noindex", async ({ page }) => {
+  test("the title is that locale's 404 title, with noindex", async ({
+    page,
+  }) => {
     const response = await page.goto(`/${TEST_LOCALE}/does-not-exist`);
     expect(response?.status()).toBe(404);
     await expect(page).toHaveTitle(
@@ -83,7 +93,9 @@ test.describe("非默认语言下 404 的静态 HTML（关 JS）", () => {
   });
 });
 
-test("非默认语言下法律页正文保持英文，外框本地化", async ({ page }) => {
+test("in a non-default locale, legal page body stays English while the chrome is localized", async ({
+  page,
+}) => {
   const response = await page.goto(`/${TEST_LOCALE}/privacy`);
   expect(response?.status()).toBe(200);
   await expect(page.locator("article")).toHaveAttribute("lang", "en");

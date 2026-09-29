@@ -1,12 +1,14 @@
 /**
- * /api 下未匹配的路径：返回机器可读的 JSON 404。
+ * Unmatched paths under /api: return a machine-readable JSON 404.
  *
- * 没有这个文件时，这些请求会被 [locale] 动态段吞掉（`/api/nope` 的 locale 是
- * "api"），最终落到 HTML 的 404 页 —— 调 API 的人拿到一整页 HTML。给 API 前缀
- * 一个明确的 JSON 形态，和 src/app/api/**\/route.ts 的 `{ error }` 约定一致。
+ * Without this file these requests are swallowed by the [locale] dynamic segment (the locale of
+ * `/api/nope` is "api") and end up on the HTML 404 page — an API caller gets a whole HTML page.
+ * This gives the API prefix an explicit JSON shape, matching the `{ error }` convention of
+ * src/app/api/**\/route.ts.
  *
- * 更具体的路由（/api/auth/[...all]、/api/billing/status 等）仍然优先匹配。
- * 状态码仍是真 404；JSON 响应里没有 <meta name="robots">，用 X-Robots-Tag 代替。
+ * More specific routes (/api/auth/[...all], /api/billing/status, etc.) still match first.
+ * The status code is still a real 404; a JSON response has no <meta name="robots">, so
+ * X-Robots-Tag is used instead.
  */
 
 const NOT_FOUND = () =>

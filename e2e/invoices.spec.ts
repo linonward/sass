@@ -4,15 +4,15 @@ import messages from "../messages/en.json";
 import { openUserMenu, signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
 import { chooseOption } from "./select-helpers";
 
-// 示例业务模块（src/features/invoices/）的端到端流程：登录 → 新建 → 出现在列表 →
-// 编辑 → 搜索 → 删除。删除示例时连同这个文件一起删掉。
+// End-to-end flow of the example business module (src/features/invoices/): sign in → create →
+// appears in the list → edit → search → delete. Delete this file along with the example.
 const inv = messages.Invoices;
 const d = messages.Dashboard;
 
 /**
- * 点开一个弹层并等它出现。hydration 完成前点击没有反应，所以点到真的出现为止
- * （同 auth-helpers 的 openUserMenu：循环里每个动作都要有界，一次落空的 click 会把
- * 整段预算耗光，重试就没机会了）。
+ * Open a dialog and wait for it to appear. Clicks do nothing before hydration finishes, so keep
+ * clicking until it really appears (same as openUserMenu in auth-helpers: every action in the loop
+ * must be bounded, or one missed click burns the whole budget and leaves no room to retry).
  */
 async function openDialog(trigger: Locator, dialog: Locator) {
   await expect(async () => {
@@ -22,7 +22,7 @@ async function openDialog(trigger: Locator, dialog: Locator) {
   return dialog;
 }
 
-/** 从侧边栏进发票页（移动端先展开抽屉）。 */
+/** Open the invoices page from the sidebar (on mobile, open the drawer first). */
 async function openInvoices(page: Page, isMobile: boolean) {
   if (isMobile) {
     await page.getByRole("button", { name: d.toggleSidebar }).click();
@@ -34,7 +34,10 @@ async function openInvoices(page: Page, isMobile: boolean) {
   await expect(page).toHaveURL("/invoices");
 }
 
-/** 走一遍新建弹层，返回那张「已创建」回执（关掉它列表才更新）。 */
+/**
+ * Go through the create dialog and return the "created" receipt (the list only updates once it's
+ * closed).
+ */
 async function createInvoice(
   page: Page,
   {
@@ -64,7 +67,7 @@ async function createInvoice(
   return created;
 }
 
-/** 在搜索框里查一个词并等结果回来。 */
+/** Search for a term in the search box and wait for the results. */
 async function search(page: Page, query: string) {
   await page.getByRole("searchbox", { name: inv.search }).fill(query);
   await page.getByRole("button", { name: inv.searchButton }).click();
@@ -75,20 +78,25 @@ test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
 });
 
-test("未登录访问发票页跳转登录，登录后回到发票页", async ({ page }) => {
+test("signed-out visit to invoices redirects to sign-in, then returns to invoices after sign-in", async ({
+  page,
+}) => {
   await page.goto("/invoices");
   await expect(page).toHaveURL(/\/sign-in\?callbackURL=%2Finvoices/);
   await signIn(page, uniqueEmail("invoices-callback"));
   await expect(page).toHaveURL("/invoices");
 });
 
-test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, isMobile }) => {
+test("from the sidebar: create, edit, search, delete", async ({
+  page,
+  isMobile,
+}) => {
   await signIn(page, uniqueEmail("invoices"));
   await openInvoices(page, isMobile);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(inv.title);
   await expect(page.getByText(inv.empty)).toBeVisible();
 
-  // 新建：回执出现即成功，关掉就能在列表里看到新行。
+  // Create: the receipt appearing means success; close it and the new row shows in the list.
   const created = await createInvoice(page, { customer: "Acme Inc." });
   await created.getByRole("button", { name: inv.create.done }).click();
 
@@ -100,7 +108,7 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
   );
   await expect(row).toContainText("$1,250.00");
 
-  // 编辑：表单带出当前值，保存后列表是新值。
+  // Edit: the form is prefilled with current values, and after saving the list shows the new ones.
   const edit = await openDialog(
     row.getByTestId("invoice-edit"),
     page.getByRole("dialog", {
@@ -125,7 +133,8 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
   );
   await expect(row).toContainText("$10.50");
 
-  // 搜索：命中只留一行，没命中给一条空提示（不是「还没有发票」）。
+  // Search: a hit leaves just one row, a miss shows an empty-results message (not "no invoices
+  // yet").
   const second = await createInvoice(page, {
     customer: "Initech",
     amount: "0.99",
@@ -151,7 +160,8 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
     "",
   );
 
-  // 删除：确认弹层点名是哪一张，确认后行消失、空提示回来。
+  // Delete: the confirm dialog names the invoice; after confirming the row disappears and the
+  // empty message comes back.
   await page.goto("/invoices");
   await expect(row).toHaveCount(2);
   const initech = row.filter({ hasText: "Initech" });
@@ -205,14 +215,17 @@ test("a rejected create keeps what was typed and marks nothing as saved", async 
   );
 });
 
-test("越权：别人的发票既看不到也删不掉", async ({ page, isMobile }) => {
+test("authorization: other users' invoices can be neither seen nor deleted", async ({
+  page,
+  isMobile,
+}) => {
   await signIn(page, uniqueEmail("invoices-owner"));
   await page.goto("/invoices");
   const created = await createInvoice(page, { customer: "Owner Only Inc." });
   await created.getByRole("button", { name: inv.create.done }).click();
   await expect(page.getByTestId("invoice-row")).toHaveCount(1);
 
-  // 换一个账号：列表是空的，页面上连客户名都不出现。
+  // Switch accounts: the list is empty, and not even the customer name appears on the page.
   await openUserMenu(page, isMobile);
   await page.getByRole("menuitem", { name: d.userMenu.signOut }).click();
   await expect(page).toHaveURL("/sign-in");
@@ -222,13 +235,16 @@ test("越权：别人的发票既看不到也删不掉", async ({ page, isMobile
   expect(await page.content()).not.toContain("Owner Only Inc.");
 });
 
-// 产品面在 375px 下不横向溢出（亮暗两套）。表格行里有一列操作按钮，最容易撑破，
-// 所以先建一张发票让它渲染出来，再量宽度。
-test.describe("375px 宽度", () => {
+// The product UI doesn't overflow horizontally at 375px (light and dark). Table rows have a
+// column of action buttons, the most likely to break out, so create an invoice first so it
+// renders, then measure.
+test.describe("375px width", () => {
   test.use({ viewport: { width: 375, height: 740 } });
 
   for (const theme of ["light", "dark"] as const) {
-    test(`${theme} 模式下发票页不横向溢出`, async ({ page }) => {
+    test(`${theme} mode: invoices page doesn't overflow horizontally`, async ({
+      page,
+    }) => {
       await page.emulateMedia({ colorScheme: theme });
       await signIn(page, uniqueEmail(`invoices-overflow-${theme}`));
       await page.goto("/invoices");

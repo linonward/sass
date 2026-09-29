@@ -21,9 +21,10 @@ for (const file of [...new Set([...files, ".env.local"])]) {
   fs.mkdirSync(path.dirname(path.join(dest, file)), { recursive: true });
   fs.copyFileSync(from, path.join(dest, file));
 }
-// 演示站点的总开关是 false（模板出厂不该渲染 flag），这里只把它打开 ——
-// 三个 flag 的定义、rollout、adminOnly 都用 site.config.ts 里的原样配置，
-// 所以这套 e2e 验证的就是买家自己打开时看到的行为。
+// The demo site's master switch is false (the template shouldn't render flags out of the box);
+// this only turns it on — the three flag definitions, rollout, and adminOnly all use the
+// site.config.ts config as-is, so this e2e suite verifies exactly what a buyer sees when they
+// turn it on.
 const config = path.join(dest, "site.config.ts");
 const before = fs.readFileSync(config, "utf8");
 const flags: [string, string][] = [
@@ -37,10 +38,11 @@ for (const [from] of flags)
   if (!before.includes(from))
     throw new Error(`Expected default flag off in site.config.ts: ${from}`);
 fs.writeFileSync(config, after);
-// 别把 --prefer-offline 改回 --offline：Ubuntu 26 的 runner 把 /tmp 挂成独立 tmpfs，
-// 而 pnpm 的默认 store 必须与项目同文件系统 —— 副本因此会用上另一个（空的）store，
-// --offline 立刻以 ERR_PNPM_NO_OFFLINE_TARBALL 失败。--prefer-offline 只是允许联网
-// 补缺：store 里有的照旧硬链接、不下载。
+// Don't change --prefer-offline back to --offline: the Ubuntu 26 runner mounts /tmp as its own
+// tmpfs, and pnpm's default store must live on the same filesystem as the project — so the copy
+// ends up with a different (empty) store, and --offline fails immediately with
+// ERR_PNPM_NO_OFFLINE_TARBALL. --prefer-offline only allows going online to fill gaps: whatever
+// is already in the store is still hard-linked, not downloaded.
 execFileSync("pnpm", ["install", "--prefer-offline", "--frozen-lockfile"], {
   cwd: dest,
   stdio: "inherit",

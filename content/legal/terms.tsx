@@ -1,5 +1,6 @@
-// 模板仅供参考，不构成法律意见。上线前请结合你的业务和适用法律自行审阅，必要时咨询律师。
-// 变量来自 site.config.ts 的 `legal`；本文件归业务方所有，可自由修改。
+// This template is for reference only and is not legal advice. Before launch, review it against
+// your business and the applicable law, and consult a lawyer if needed.
+// Variables come from `legal` in site.config.ts; this file belongs to your app, so edit it freely.
 import { Link } from "@/core/i18n/navigation";
 import { defineLegalDocument } from "@/core/legal/document";
 import { legalPages } from "@/core/legal/pages";

@@ -31,10 +31,13 @@ import siteConfig from "../../../../../../site.config";
 
 type Props = PageProps<"/[locale]/admin/acquisition">;
 
-/** 没有付费套餐时不出收入两列（和 /admin/metrics 的区块用同一个判定）。 */
+/** Hide the two revenue columns when there are no paid plans (same check as the /admin/metrics sections). */
 const sections = { revenue: revenueEnabled(siteConfig.billing) };
 
-/** 三个筛选框留空 = 全部，空值不该留在 URL 里（表单提交会带上 source=&medium=&campaign=）。 */
+/**
+ * An empty filter box means "all", and empty values shouldn't stay in the URL (the form submit adds
+ * source=&medium=&campaign=).
+ */
 const filterParams = ["source", "medium", "campaign"] as const;
 
 export function generateMetadata({ params }: Props) {
@@ -44,10 +47,12 @@ export function generateMetadata({ params }: Props) {
 }
 
 /**
- * 渠道报表：区间内按注册时冻结的来源分组，看注册、付费人数和净收入。
+ * Channel report: for the selected range, group sign-ups by the source frozen at sign-up time and
+ * show sign-ups, paying users and net revenue.
  *
- * 归因关闭时这里和其他获客入口一样 404（构建期常量，见 next.config.ts）；
- * 非管理员由 requireAdmin 拦成 404。统计全部直接查 Postgres，不依赖 Vercel 的浏览量。
+ * With attribution off this returns 404 like the other acquisition entry points (a build-time
+ * constant, see next.config.ts); requireAdmin turns non-admins into a 404. All stats are queried
+ * straight from Postgres, with no dependency on Vercel page-view analytics.
  */
 export default async function AdminAcquisitionPage({
   params,
@@ -60,9 +65,10 @@ export default async function AdminAcquisitionPage({
   const range = parseRange(search.range);
   const filters = parseReportFilters(search);
 
-  // 筛选框留空 = 全部，但表单提交会把空值写进 URL（source=&medium=&campaign=），
-  // 和服务端「空串当没传」的口径不一致。这里把地址栏收成规范形式，
-  // 和 RangeFilter 用 cleanQuery 拼的链接是同一份规范（同页只有一个规范 URL）。
+  // An empty filter box means "all", but the form submit writes empty values into the URL
+  // (source=&medium=&campaign=), which doesn't match the server treating an empty string as absent.
+  // Normalize the address bar here to the same canonical form RangeFilter builds with cleanQuery
+  // (one canonical URL per page).
   const param = (value: string | string[] | undefined) =>
     typeof value === "string" ? value : undefined;
   if (filterParams.some((key) => search[key] === "")) {
@@ -78,7 +84,7 @@ export default async function AdminAcquisitionPage({
     );
   }
 
-  // 文案、格式化和两组查询互不依赖，一次并发发出。
+  // Messages, formatters and the two queries don't depend on each other, so fire them concurrently.
   const db = getDb();
   const [t, format, options, rows] = await Promise.all([
     getTranslations({ locale, namespace: "Admin.acquisition" }),
@@ -98,7 +104,7 @@ export default async function AdminAcquisitionPage({
         title={t("title")}
         description={t("description", { days: range })}
       />
-      {/* 时间范围和渠道筛选各占一头，窄屏靠 flex-wrap 换行。 */}
+      {/* Date range and channel filters sit at opposite ends; on narrow screens flex-wrap wraps them. */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <RangeFilter
           current={range}
@@ -161,7 +167,7 @@ export default async function AdminAcquisitionPage({
                 </TableCell>
                 {sections.revenue && (
                   <>
-                    {/* 净收入会随后续退款变化，历史区间重看时数字可能不同。 */}
+                    {/* Net revenue changes with later refunds, so revisiting a past range may show different numbers. */}
                     <TableCell className="text-right tabular-nums">
                       {moneyList(row.revenue)}
                     </TableCell>

@@ -15,7 +15,7 @@ export function generateStaticParams() {
   );
 }
 
-// 每篇文章的分享图（1200×630），构建时生成。
+// Per-post share image (1200x630), generated at build time.
 export async function GET(
   _request: Request,
   { params }: RouteContext<"/[locale]/blog/[slug]/og">,
