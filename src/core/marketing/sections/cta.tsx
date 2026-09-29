@@ -1,13 +1,36 @@
-import { ArrowRightIcon, ArrowUpRightIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 
-import { Link } from "@/core/i18n/navigation";
+import type { Plan } from "@/core/config/schema";
 import { buttonVariants } from "@/core/ui/button";
 import { bands, type Band } from "./band";
+import { CtaLink, ctaTargets } from "./cta-buttons";
+import { formatPrice } from "./price";
 import { Section } from "./section";
 
-export function Cta({ waveFrom }: { waveFrom?: Band }) {
+export function Cta({
+  waveFrom,
+  plan,
+  currency,
+  showcaseUrl,
+}: {
+  waveFrom?: Band;
+  plan?: Plan;
+  currency: string;
+  showcaseUrl?: string;
+}) {
   const t = useTranslations("Landing.cta");
+  const format = useFormatter();
+  const price = plan ? formatPrice(format, plan.price, currency) : undefined;
+  const { primary, secondary } = ctaTargets({
+    price,
+    showcaseUrl,
+    labels: {
+      buy: t("buyCta", { price: price ?? "" }),
+      demo: t("button"),
+      delivery: t("secondaryCta"),
+      showcase: t("showcaseCta"),
+    },
+  });
   return (
     <Section id="cta" band={bands.cta} waveFrom={waveFrom}>
       <div className="mx-auto max-w-3xl text-center">
@@ -15,20 +38,15 @@ export function Cta({ waveFrom }: { waveFrom?: Band }) {
           {t("title")}
         </h2>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
-          <Link
-            href="/demo"
+          <CtaLink
+            target={primary}
             className={buttonVariants({ size: "marketing", tone: "primary" })}
-          >
-            {t("button")}
-            <ArrowUpRightIcon aria-hidden />
-          </Link>
-          <Link
-            href="/#delivery"
+          />
+          <CtaLink
+            target={secondary}
             className="text-primary-text inline-flex min-h-11 items-center gap-2 text-sm font-medium"
-          >
-            {t("secondaryCta")}
-            <ArrowRightIcon className="size-4" aria-hidden />
-          </Link>
+            iconClassName="size-4"
+          />
         </div>
       </div>
     </Section>

@@ -10,8 +10,16 @@ import { Features } from "./sections/features";
 import { Hero } from "./sections/hero";
 import { Pricing } from "./sections/pricing";
 import { Testimonials } from "./sections/testimonials";
+import { TimeSaved } from "./sections/timesaved";
 
 type Config = Pick<SiteConfig, "landing" | "billing" | "brand">;
+
+/** 购买卡片卖的套餐：不存在或被隐藏时为 undefined，各处退回「即将公布」/ 演示。 */
+function purchasePlan(config: Config) {
+  return config.billing.plans.find(
+    (p) => p.id === config.landing.purchasePlan && !p.hidden,
+  );
+}
 
 type SectionRenderer = (
   config: Config,
@@ -25,7 +33,13 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
       {...config.landing.hero}
       waveFrom={waveFrom}
       primaryColor={config.brand.primaryColor}
+      plan={purchasePlan(config)}
+      currency={config.billing.currency}
+      showcaseUrl={config.landing.showcaseUrl}
     />
+  ),
+  timesaved: (config, waveFrom) => (
+    <TimeSaved items={config.landing.timeSaved} waveFrom={waveFrom} />
   ),
   features: (config, waveFrom) => (
     <Features items={config.landing.features} waveFrom={waveFrom} />
@@ -43,23 +57,24 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
       waveFrom={waveFrom}
     />
   ),
-  delivery: (config, waveFrom) => {
-    // 购买卡片卖的套餐：不存在或被隐藏时传 undefined，卡片退回「即将公布」。
-    const plan = config.billing.plans.find(
-      (p) => p.id === config.landing.purchasePlan && !p.hidden,
-    );
-    return (
-      <Delivery
-        waveFrom={waveFrom}
-        plan={plan}
-        currency={config.billing.currency}
-      />
-    );
-  },
+  delivery: (config, waveFrom) => (
+    <Delivery
+      waveFrom={waveFrom}
+      plan={purchasePlan(config)}
+      currency={config.billing.currency}
+    />
+  ),
   faq: (config, waveFrom) => (
     <Faq items={config.landing.faq} waveFrom={waveFrom} />
   ),
-  cta: (_config, waveFrom) => <Cta waveFrom={waveFrom} />,
+  cta: (config, waveFrom) => (
+    <Cta
+      waveFrom={waveFrom}
+      plan={purchasePlan(config)}
+      currency={config.billing.currency}
+      showcaseUrl={config.landing.showcaseUrl}
+    />
+  ),
 };
 
 /** 按 `landing.sections` 的顺序渲染首页区块。 */
@@ -69,7 +84,8 @@ export function Landing({ config }: { config: Config }) {
   // Filter before computing adjacent bands, so an empty wall leaves no phantom wave.
   const visibleSections = config.landing.sections.filter(
     (id) =>
-      id !== "testimonials" || config.landing.testimonials.items.length > 0,
+      (id !== "testimonials" || config.landing.testimonials.items.length > 0) &&
+      (id !== "timesaved" || config.landing.timeSaved.length > 0),
   );
   return (
     <div className="landing-page">

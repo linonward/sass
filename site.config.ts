@@ -158,7 +158,15 @@ const config = defineConfig({
     effectiveDate: "2026-01-01",
   },
   landing: {
-    sections: ["hero", "features", "testimonials", "delivery", "faq", "cta"],
+    sections: [
+      "hero",
+      "timesaved",
+      "features",
+      "testimonials",
+      "delivery",
+      "faq",
+      "cta",
+    ],
     // 「交付」区块购买卡片卖的套餐：价格、结账都用它（被隐藏时卡片显示「即将公布」）。
     purchasePlan: "lifetime",
     // hero 不配 image 时，首屏右侧渲染用真实 DOM 拼出来的产品 mock
@@ -166,6 +174,18 @@ const config = defineConfig({
     // 想换回静态图片就在 hero 下加 image: { src, darkSrc?, width, height }，
     // 图片路径放 public/ 下，alt 文案在 messages 的 Landing.hero.imageAlt。
     hero: {},
+    // 用这套代码搭的真实站点上线后填这里（https），首屏次按钮会换成「看真实案例」。
+    // showcaseUrl: "https://…",
+    // 工时是估算，文案在 messages 的 Landing.timesaved.items.<key>；合计自动算。
+    timeSaved: [
+      { key: "payments", hours: 6 },
+      { key: "credits", hours: 8 },
+      { key: "email", hours: 3 },
+      { key: "auth", hours: 4 },
+      { key: "seo", hours: 3 },
+      { key: "i18n", hours: 3 },
+      { key: "admin", hours: 6 },
+    ],
     features: [
       { key: "billing", icon: "creditCard", preview: "billing" },
       { key: "ai", icon: "sparkles", preview: "ai" },
@@ -217,7 +237,16 @@ const config = defineConfig({
         },
       ],
     },
-    faq: ["fit", "services", "payments", "customize"],
+    faq: [
+      "deliverables",
+      "fit",
+      "services",
+      "costs",
+      "payments",
+      "customize",
+      "updates",
+      "refund",
+    ],
   },
   billing: {
     // 支付服务商。改这里之前先看 README 的「上线清单 → 支付」：各家需要的环境变量不同。

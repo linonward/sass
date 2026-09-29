@@ -1,29 +1,51 @@
 import {
   ArrowRightIcon,
-  ArrowUpRightIcon,
   DatabaseIcon,
   NotebookTextIcon,
   WalletCardsIcon,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import Image from "next/image";
 
-import type { LandingConfig } from "@/core/config/schema";
-import { Link } from "@/core/i18n/navigation";
+import type { LandingConfig, Plan } from "@/core/config/schema";
 import { cn } from "@/core/lib/utils";
 import { buttonVariants } from "@/core/ui/button";
 import { bands, type Band } from "./band";
 import { Section } from "./section";
 import { StudioPreview } from "./product-preview";
 import { ColorSwitcher } from "./color-switcher";
+import { CtaLink, ctaTargets } from "./cta-buttons";
+import { formatPrice } from "./price";
 import { Wave } from "./wave";
 
 export function Hero({
   image,
   waveFrom,
   primaryColor,
-}: LandingConfig["hero"] & { waveFrom?: Band; primaryColor: string }) {
+  plan,
+  currency,
+  showcaseUrl,
+}: LandingConfig["hero"] & {
+  waveFrom?: Band;
+  primaryColor: string;
+  /** 购买卡片卖的套餐；没有（未配置或被隐藏）时主按钮退回演示。 */
+  plan?: Plan;
+  currency: string;
+  showcaseUrl?: string;
+}) {
   const t = useTranslations("Landing.hero");
+  const format = useFormatter();
+  const price = plan ? formatPrice(format, plan.price, currency) : undefined;
+  const { primary, secondary } = ctaTargets({
+    price,
+    showcaseUrl,
+    labels: {
+      buy: t("buyCta", { price: price ?? "" }),
+      demo: t("primaryCta"),
+      delivery: t("secondaryCta"),
+      showcase: t("showcaseCta"),
+    },
+  });
   const title = t("title");
   const accent = t("titleAccent");
   const accentAt = title.lastIndexOf(accent);
@@ -61,18 +83,15 @@ export function Hero({
               {t("subtitle")}
             </p>
             <div className="mt-9 flex flex-wrap gap-4">
-              <Link
-                href="/demo"
+              <CtaLink
+                target={primary}
                 className={cn(
                   buttonVariants({ size: "marketing", tone: "primary" }),
                   "landing-button",
                 )}
-              >
-                {t("primaryCta")}
-                <ArrowUpRightIcon aria-hidden />
-              </Link>
-              <Link
-                href="/#delivery"
+              />
+              <CtaLink
+                target={secondary}
                 className={cn(
                   buttonVariants({
                     size: "marketing",
@@ -81,11 +100,13 @@ export function Hero({
                   }),
                   "landing-button bg-background",
                 )}
-              >
-                {t("secondaryCta")}
-                <ArrowRightIcon aria-hidden />
-              </Link>
+              />
             </div>
+            {price !== undefined && (
+              <p className="text-muted-foreground mt-4 text-sm">
+                {t("offerNote")}
+              </p>
+            )}
             <ColorSwitcher
               current={primaryColor}
               label={t("colorSwitcher.label")}
