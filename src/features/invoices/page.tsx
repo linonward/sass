@@ -1,18 +1,13 @@
-import { ChevronLeft, ChevronRight, ReceiptIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { ReceiptIcon } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { requirePageSession } from "@/core/auth/session";
 import { getDb } from "@/core/db";
-import { Link } from "@/core/i18n/navigation";
-import { cn } from "@/core/lib/utils";
+import { parsePage } from "@/core/lib/pagination";
 import { buildMetadata } from "@/core/seo/metadata";
-import { localizedPath } from "@/core/seo/urls";
 import { Badge } from "@/core/ui/badge";
-import { Button, buttonVariants } from "@/core/ui/button";
-import { EmptyState } from "@/core/ui/empty-state";
-import { Input } from "@/core/ui/input";
+import { EmptyRow, ListToolbar, Pagination } from "@/core/ui/list";
 import { PageHeader } from "@/core/ui/page-header";
 import {
   Table,
@@ -28,7 +23,7 @@ import {
   DeleteInvoiceDialog,
   EditInvoiceDialog,
 } from "./dialogs";
-import { listInvoices, parsePage } from "./queries";
+import { listInvoices } from "./queries";
 import type { InvoiceStatus } from "./schema";
 
 import siteConfig from "../../../site.config";
@@ -76,75 +71,6 @@ function StatusBadge({
   );
 }
 
-/** 只保留有值的查询参数，第 1 页不写 page。 */
-function cleanQuery(query: Record<string, string | undefined>) {
-  return Object.fromEntries(
-    Object.entries(query).filter(
-      ([key, value]) => value && !(key === "page" && value === "1"),
-    ),
-  ) as Record<string, string>;
-}
-
-/**
- * 上一页 / 下一页，保留搜索词。
- *
- * 抄自 core/admin/ui/list.tsx 的同名组件：业务模块去 import 后台的 UI 是反向依赖，
- * 而示例本来就该能整块删掉，所以这里留一份自己的（同 ./queries.ts 里的 likePattern）。
- */
-function Pagination({
-  query,
-  page,
-  totalPages,
-  total,
-}: {
-  query: Record<string, string | undefined>;
-  page: number;
-  totalPages: number;
-  total: number;
-}) {
-  const t = useTranslations("Invoices.pagination");
-  const link = (target: number) => ({
-    pathname: "/invoices",
-    query: cleanQuery({ ...query, page: String(target) }),
-  });
-  const disabled = "pointer-events-none opacity-50";
-
-  return (
-    <nav
-      aria-label={t("label")}
-      className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-sm"
-    >
-      <span>{t("summary", { page, totalPages, total })}</span>
-      <div className="flex gap-2">
-        <Link
-          href={link(page - 1)}
-          aria-disabled={page <= 1}
-          tabIndex={page <= 1 ? -1 : undefined}
-          className={cn(
-            buttonVariants({ variant: "outline", size: "sm" }),
-            page <= 1 && disabled,
-          )}
-        >
-          <ChevronLeft />
-          {t("previous")}
-        </Link>
-        <Link
-          href={link(page + 1)}
-          aria-disabled={page >= totalPages}
-          tabIndex={page >= totalPages ? -1 : undefined}
-          className={cn(
-            buttonVariants({ variant: "outline", size: "sm" }),
-            page >= totalPages && disabled,
-          )}
-        >
-          {t("next")}
-          <ChevronRight />
-        </Link>
-      </div>
-    </nav>
-  );
-}
-
 /**
  * 发票列表：只列当前登录用户自己的发票 —— 查询永远带 `user_id`（见 ./queries.ts）。
  * 金额按 site.config.ts 的 billing.currency 格式化，编辑和删除只在行上出现。
@@ -179,22 +105,12 @@ export default async function InvoicesPage({ params, searchParams }: Props) {
       <PageHeader title={t("title")} description={t("description")}>
         <CreateInvoiceDialog currency={siteConfig.billing.currency} />
       </PageHeader>
-      {/* GET 表单：搜索词在 URL 里，可以分享和刷新。 */}
-      <form
-        action={localizedPath(locale, "/invoices")}
-        role="search"
-        className="flex max-w-md gap-2"
-      >
-        <Input
-          name="q"
-          type="search"
-          data-testid="invoice-search"
-          defaultValue={query}
-          aria-label={t("search")}
-          placeholder={t("search")}
-        />
-        <Button type="submit">{t("searchButton")}</Button>
-      </form>
+      <ListToolbar
+        pathname="/invoices"
+        value={query}
+        label={t("search")}
+        submitLabel={t("searchButton")}
+      />
       <Table>
         <TableHeader>
           <TableRow>
@@ -207,16 +123,16 @@ export default async function InvoicesPage({ params, searchParams }: Props) {
         </TableHeader>
         <TableBody>
           {data.rows.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={5}>
-                {/* 标题标签由调用方指定：单元格里是一行文字，不该多出一个标题。 */}
-                <EmptyState
-                  size="sm"
-                  icon={<ReceiptIcon />}
-                  title={query ? t("noResults") : t("empty")}
-                />
-              </TableCell>
-            </TableRow>
+            <EmptyRow
+              colSpan={5}
+              icon={<ReceiptIcon />}
+              text={t("empty")}
+              filtered={
+                query
+                  ? { pathname: "/invoices", text: t("noResults") }
+                  : undefined
+              }
+            />
           )}
           {data.rows.map((invoice) => (
             <TableRow key={invoice.id} data-testid="invoice-row">
@@ -261,6 +177,7 @@ export default async function InvoicesPage({ params, searchParams }: Props) {
         </TableBody>
       </Table>
       <Pagination
+        pathname="/invoices"
         query={{ q: query }}
         page={data.page}
         totalPages={data.totalPages}

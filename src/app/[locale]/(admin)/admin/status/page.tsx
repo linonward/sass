@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { adminMetadata } from "@/core/admin/metadata";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow } from "@/core/admin/ui/list";
+import { EmptyRow } from "@/core/ui/list";
 import { MetricSection } from "@/core/admin/ui/metrics";
 import { getDb } from "@/core/db";
 import { componentLabel } from "@/core/status";

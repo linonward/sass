@@ -2,9 +2,10 @@ import { getFormatter, getTranslations } from "next-intl/server";
 
 import { adminMetadata } from "@/core/admin/metadata";
 import { planLabel } from "@/core/admin/plan-name";
-import { listOrders, parseOrderStatus, parsePage } from "@/core/admin/queries";
+import { listOrders, parseOrderStatus } from "@/core/admin/queries";
+import { parsePage } from "@/core/lib/pagination";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow, Pagination, StatusFilter } from "@/core/admin/ui/list";
+import { EmptyRow, Pagination, StatusFilter } from "@/core/ui/list";
 import { orderStatuses, type OrderStatus } from "@/core/db/schema";
 import { getDb } from "@/core/db";
 import { Link } from "@/core/i18n/navigation";
@@ -83,7 +84,11 @@ export default async function AdminOrdersPage({ params, searchParams }: Props) {
         </TableHeader>
         <TableBody>
           {data.rows.length === 0 && (
-            <EmptyRow colSpan={6} text={t("orders.empty")} />
+            <EmptyRow
+              colSpan={6}
+              text={t("orders.empty")}
+              filtered={status ? { pathname: "/admin/orders" } : undefined}
+            />
           )}
           {data.rows.map((order) => (
             <TableRow key={order.id}>

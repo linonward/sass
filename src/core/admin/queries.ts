@@ -25,12 +25,6 @@ export type Paged<T> = {
   totalPages: number;
 };
 
-/** 解析 ?page=：正整数，其他值按第 1 页。 */
-export function parsePage(value: unknown): number {
-  const page = Number(typeof value === "string" ? value : undefined);
-  return Number.isInteger(page) && page > 0 ? page : 1;
-}
-
 /** 解析状态筛选：不在取值范围内时视为不筛选。 */
 export function parseStatus<T extends string>(
   value: unknown,

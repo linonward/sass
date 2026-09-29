@@ -3,10 +3,10 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { buttonVariants } from "@/core/ui/button";
+import { cleanQuery } from "@/core/ui/list";
 
 import type { DailyPoint, MetricRange } from "../metrics";
 import { metricRanges } from "../metrics";
-import { cleanQuery } from "./list";
 
 /**
  * 时间范围切换：一排链接，服务端按 ?range= 统计。

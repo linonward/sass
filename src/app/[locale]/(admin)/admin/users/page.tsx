@@ -1,20 +1,14 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 
 import { adminMetadata } from "@/core/admin/metadata";
-import { listUsers, parsePage } from "@/core/admin/queries";
+import { listUsers } from "@/core/admin/queries";
 import { requireAdmin } from "@/core/admin/session";
-import {
-  EmptyRow,
-  Pagination,
-  RoleBadge,
-  UserStatusBadge,
-} from "@/core/admin/ui/list";
+import { RoleBadge, UserStatusBadge } from "@/core/admin/ui/badges";
 import { creditsEnabled } from "@/core/credits";
 import { getDb } from "@/core/db";
 import { Link } from "@/core/i18n/navigation";
-import { localizedPath } from "@/core/seo/urls";
-import { Button } from "@/core/ui/button";
-import { Input } from "@/core/ui/input";
+import { parsePage } from "@/core/lib/pagination";
+import { EmptyRow, ListToolbar, Pagination } from "@/core/ui/list";
 import { PageHeader } from "@/core/ui/page-header";
 import {
   Table,
@@ -49,22 +43,12 @@ export default async function AdminUsersPage({ params, searchParams }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("title")} description={t("description")} />
-      {/* GET 表单：搜索词在 URL 里，可以分享和刷新。 */}
-      <form
-        action={localizedPath(locale, "/admin/users")}
-        role="search"
-        className="flex max-w-md gap-2"
-      >
-        <Input
-          name="q"
-          type="search"
-          defaultValue={query}
-          aria-label={t("search")}
-          placeholder={t("search")}
-        />
-        {/* 这一屏唯一的实心主操作。 */}
-        <Button type="submit">{t("searchButton")}</Button>
-      </form>
+      <ListToolbar
+        pathname="/admin/users"
+        value={query}
+        label={t("search")}
+        submitLabel={t("searchButton")}
+      />
       <Table>
         <TableHeader>
           <TableRow>
@@ -81,7 +65,11 @@ export default async function AdminUsersPage({ params, searchParams }: Props) {
         </TableHeader>
         <TableBody>
           {data.rows.length === 0 && (
-            <EmptyRow colSpan={columns} text={t("empty")} />
+            <EmptyRow
+              colSpan={columns}
+              text={t("empty")}
+              filtered={query ? { pathname: "/admin/users" } : undefined}
+            />
           )}
           {data.rows.map((user) => (
             <TableRow key={user.id}>

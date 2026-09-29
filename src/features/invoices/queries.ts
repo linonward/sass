@@ -18,12 +18,6 @@ export type Paged<T> = {
   totalPages: number;
 };
 
-/** 解析 ?page=：正整数，其他值按第 1 页。 */
-export function parsePage(value: unknown): number {
-  const page = Number(typeof value === "string" ? value : undefined);
-  return Number.isInteger(page) && page > 0 ? page : 1;
-}
-
 /** LIKE 的通配符按字面匹配：搜 `100%` 时不该匹配到所有行。 */
 export function likePattern(query: string): string {
   return `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;

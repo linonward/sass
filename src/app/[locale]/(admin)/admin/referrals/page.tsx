@@ -2,9 +2,9 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { adminMetadata } from "@/core/admin/metadata";
-import { parsePage } from "@/core/admin/queries";
+import { parsePage } from "@/core/lib/pagination";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow, Pagination, StatusFilter } from "@/core/admin/ui/list";
+import { EmptyRow, Pagination, StatusFilter } from "@/core/ui/list";
 import {
   createReferralService,
   type ReferralStatus,
@@ -86,7 +86,13 @@ export default async function AdminReferralsPage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.rows.length === 0 && <EmptyRow colSpan={5} text={t("empty")} />}
+          {data.rows.length === 0 && (
+            <EmptyRow
+              colSpan={5}
+              text={t("empty")}
+              filtered={status ? { pathname: "/admin/referrals" } : undefined}
+            />
+          )}
           {data.rows.map((row) => (
             <TableRow key={row.inviteeUserId}>
               <TableCell className="max-w-40">

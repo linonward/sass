@@ -66,7 +66,7 @@ async function createInvoice(
 
 /** 在搜索框里查一个词并等结果回来。 */
 async function search(page: Page, query: string) {
-  await page.getByTestId("invoice-search").fill(query);
+  await page.getByRole("searchbox", { name: inv.search }).fill(query);
   await page.getByRole("button", { name: inv.searchButton }).click();
   await expect(page).toHaveURL(new RegExp(`/invoices\\?q=${query}`));
 }
@@ -141,6 +141,15 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
   await search(page, "nobody");
   await expect(row).toHaveCount(0);
   await expect(page.getByText(inv.noResults)).toBeVisible();
+  // No matches under a search offers a way back to the full list.
+  await page
+    .getByRole("link", { name: messages.Common.list.clearFilters })
+    .click();
+  await expect(page).toHaveURL("/invoices");
+  await expect(row).toHaveCount(2);
+  await expect(page.getByRole("searchbox", { name: inv.search })).toHaveValue(
+    "",
+  );
 
   // 删除：确认弹层点名是哪一张，确认后行消失、空提示回来。
   await page.goto("/invoices");
