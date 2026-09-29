@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { expect, test } from "vitest";
 
@@ -18,6 +18,8 @@ test("首页渲染 Hero 标题和主 CTA", () => {
     }),
   ).toBeDefined();
   expect(
-    screen.getByRole("link", { name: messages.Landing.hero.primaryCta }),
+    within(document.querySelector("#hero") as HTMLElement).getByRole("link", {
+      name: messages.Landing.hero.primaryCta,
+    }),
   ).toBeDefined();
 });

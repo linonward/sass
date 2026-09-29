@@ -75,6 +75,7 @@ export const landingSectionIds = [
   "hero",
   "features",
   "pricing",
+  "delivery",
   "faq",
   "cta",
 ] as const;
@@ -122,7 +123,11 @@ export const landingSchema = z.strictObject({
   // 每项的标题和描述在 Landing.features.items.<key>。
   features: z
     .array(
-      z.strictObject({ key: messageKeySchema, icon: z.enum(featureIcons) }),
+      z.strictObject({
+        key: messageKeySchema,
+        icon: z.enum(featureIcons),
+        preview: z.enum(["billing", "ai", "usage"]).optional(),
+      }),
     )
     .refine((items) => unique(items.map((i) => i.key)), {
       message: "keys must not contain duplicates",

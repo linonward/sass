@@ -1,6 +1,6 @@
 {
   "Nav": {
-    "features": "功能",
+    "features": "产品能力",
     "pricing": "定价",
     "faq": "常见问题",
     "blog": "博客",
@@ -9,13 +9,14 @@
     "legal": "法律",
     "privacy": "隐私政策",
     "terms": "服务条款",
-    "refund": "退款政策"
+    "refund": "退款政策",
+    "delivery": "交付内容"
   },
   "Header": {
     "main": "主导航",
     "mobile": "移动端",
     "openMenu": "打开菜单",
-    "cta": "免费开始"
+    "cta": "体验演示"
   },
   "Footer": {
     "tagline": "一天上线你的 SaaS。",
@@ -69,10 +70,10 @@
   "Landing": {
     "hero": {
       "badge": "Next.js SaaS 模板",
-      "title": "这个周末上线你的 SaaS",
-      "subtitle": "认证、支付、积分、AI 和 SEO 都已接好。改配置，写产品，发布。",
-      "primaryCta": "开始使用",
-      "secondaryCta": "查看功能",
+      "title": "把你的 AI 产品，做成可以收费的生意。",
+      "subtitle": "登录、收款、积分与 AI 已经接好。\n把时间留给你的产品。",
+      "primaryCta": "体验演示",
+      "secondaryCta": "查看交付内容",
       "demoCta": "查看演示",
       "deployToVercel": "部署到 Vercel",
       "imageAlt": "产品仪表盘预览",
@@ -81,24 +82,20 @@
         "prompt": "换个颜色 →",
         "switchTo": "将品牌色切换为 __HEX__"
       },
-      "mock": {
-        "terminalTitle": "终端",
-        "terminalCommand": "cd your-project && pnpm dev",
-        "terminalReady": "收银台就绪",
-        "terminalCredits": "付款后积分已发放",
-        "checkoutTitle": "收银台",
-        "checkoutCustomer": "客户",
-        "checkoutCustomerValue": "王小明",
-        "checkoutCountry": "账单国家",
-        "checkoutCountryValue": "德国",
-        "checkoutTotal": "今日应付",
-        "toastTitle": "已收到付款",
-        "toastBody": "订阅已生效"
+      "titleAccent": "收费的生意。",
+      "stack": "Next.js · TypeScript · 为独立开发者而建",
+      "steps": {
+        "step1": "接入收款",
+        "step2": "按次扣积分",
+        "step3": "查看使用记录",
+        "detail1": "支持主流支付方式，快速开启收款能力",
+        "detail2": "灵活设置积分规则，控制使用成本",
+        "detail3": "随时查看积分流水，使用情况清晰透明"
       }
     },
     "features": {
-      "title": "发货所需的一切",
-      "subtitle": "无聊的部分都做完了，你只管让你的产品与众不同。",
+      "title": "从第一次付款，到每一次使用。",
+      "subtitle": "关键流程已经接好，业务由你定义。",
       "items": {
         "auth": {
           "title": "用户认证",
@@ -106,9 +103,9 @@
           "detail": "角色：用户 | 管理员"
         },
         "billing": {
-          "title": "支付",
-          "description": "通过支付商无关的计费层支持订阅和一次性购买。",
-          "detail": "subscription.created → 2,000 积分"
+          "title": "收款之后，积分就位。",
+          "description": "订阅与一次性购买，接入同一套积分账本。",
+          "detail": "Creem / Stripe / Lemon Squeezy"
         },
         "i18n": {
           "title": "多语言",
@@ -116,9 +113,9 @@
           "detail": "英文 · 中文 · 日文"
         },
         "ai": {
-          "title": "AI 就绪",
-          "description": "通过 Vercel AI SDK 调用任意模型，按请求扣除积分。",
-          "detail": "streamText() → 积分扣减"
+          "title": "让 AI 成为你的产品。",
+          "description": "文字、图片、视频生成，接入积分扣费与用量记录。",
+          "detail": "模型调用失败时退回积分。"
         },
         "seo": {
           "title": "SEO 内置",
@@ -129,6 +126,11 @@
           "title": "默认飞快",
           "description": "静态渲染、字体和图片优化，客户端 bundle 极小。",
           "detail": "静态 · 默认零客户端 JS"
+        },
+        "operations": {
+          "title": "上线之后，看清发生了什么。",
+          "description": "查看订单、用户和使用记录，按需启用来源归因、留资与邀请奖励。",
+          "detail": "在同一个后台，了解产品的使用情况。"
         }
       }
     },
@@ -166,30 +168,65 @@
       }
     },
     "faq": {
-      "title": "常见问题",
+      "title": "开始之前，你可能想知道。",
       "items": {
         "stack": {
           "question": "用到了哪些技术？",
           "answer": "Next.js、TypeScript、Tailwind CSS 和 shadcn/ui，数据库为 Postgres。"
         },
         "payments": {
-          "question": "支持哪些支付商？",
-          "answer": "Creem 已内置支持。其他支付商可通过统一的计费接口接入。"
+          "question": "能否更换支付服务商？",
+          "answer": "支持 Creem、Stripe 和 Lemon Squeezy，通过配置选择。切换时需要配置对应的产品和 webhook，已有订阅不会自动迁移。"
         },
         "customize": {
-          "question": "如何自定义？",
-          "answer": "编辑 site.config.ts 修改品牌、板块和套餐，编辑 messages 修改文案。你的产品代码写在 core 文件夹之外。"
+          "question": "如何定制自己的业务？",
+          "answer": "通过配置调整品牌、页面与套餐，在业务目录编写功能，复用登录、积分和 AI 接口。上手文档提供了具体示例。"
         },
         "license": {
           "question": "可以用于商业项目吗？",
           "answer": "可以。个人和商业用途都覆盖。"
+        },
+        "fit": {
+          "question": "适合什么样的项目？",
+          "answer": "适合需要登录、收款与积分计费的 AI 工具。团队协作和多租户需要另行开发。"
+        },
+        "services": {
+          "question": "需要哪些外部服务？",
+          "answer": "部署需要数据库和邮件服务。按启用的功能配置支付商、AI 模型、对象存储及限流服务；本地启动可使用开发替代方案。"
         }
       }
     },
     "cta": {
-      "title": "准备好了吗？",
+      "title": "基础已就位，\n下一步是你的产品。",
       "subtitle": "从想法到付费用户，只需一天。",
-      "button": "开始构建"
+      "button": "体验演示",
+      "secondaryCta": "查看交付内容"
+    },
+    "delivery": {
+      "title": "你拿到的，是完整的起点。",
+      "description": "源码、配置、文档与示例，放在同一个项目里。",
+      "offer": "模板购买方案",
+      "pending": "即将公布",
+      "terms": "价格、更新期限与支持范围待确认。",
+      "demo": "先体验演示",
+      "items": {
+        "source": {
+          "title": "完整源码",
+          "description": "登录、支付、积分、AI 与后台"
+        },
+        "brand": {
+          "title": "配置与品牌",
+          "description": "替换文案与主色，建立自己的站点"
+        },
+        "docs": {
+          "title": "上手文档",
+          "description": "从本地启动到部署的操作说明"
+        },
+        "examples": {
+          "title": "业务示例",
+          "description": "参考现有实现，接入自己的功能"
+        }
+      }
     }
   },
   "Email": {
@@ -1378,5 +1415,40 @@
         "generic": "出了点问题。请稍后重试。"
       }
     }
+  },
+  "LandingPreview": {
+    "studio": "你的 AI 工作室",
+    "sample": "示例数据",
+    "generate": "生成",
+    "history": "历史记录",
+    "promptLabel": "描述你想生成的画面",
+    "prompt": "一款适合夏日发布的香水产品图",
+    "perfumeAlt": "AI 生成示意：香水、柠檬和薄荷色石台",
+    "skincareAlt": "AI 生成示意：琥珀色护肤瓶和浅色石台",
+    "completed": "已完成",
+    "cost": "本次消耗 5 积分",
+    "ledger": "积分流水",
+    "paymentTitle": "付款与积分",
+    "paid": "订单已支付",
+    "subscription": "订阅购买",
+    "purchase": "购买到账",
+    "deduction": "生成扣减",
+    "balance": "当前余额",
+    "usage": "使用记录",
+    "type": "类型",
+    "credits": "积分",
+    "status": "状态",
+    "textGeneration": "文字生成",
+    "imageGeneration": "图片生成",
+    "refunded": "已退回",
+    "aiTitle": "AI 生成",
+    "text": "文字",
+    "image": "图片",
+    "video": "视频",
+    "generations": "生成记录",
+    "textExample": "把夏日的清新，留在每一次呼吸里。",
+    "textNote": "香水宣传文案示例，不会调用模型或扣费。",
+    "videoExample": "从静态商品图，到动态产品故事。",
+    "videoNote": "支持文生视频和图生视频。此处为能力说明，不播放模拟生成视频。"
   }
 }

@@ -68,7 +68,6 @@ const config = defineConfig({
   description: "Ship your SaaS in a day.",
   brand: {
     primaryColor: "#0f766e",
-    logo: "/logo.svg",
   },
   // 语言清单的**值**在 src/core/i18n/locales.ts（那边不经过 zod，见该文件注释）；
   // 这里引进来交给 schema 校验，所以它仍然是唯一来源。改语言改那个文件。
@@ -96,7 +95,7 @@ const config = defineConfig({
   nav: {
     header: [
       { key: "features", href: "/#features" },
-      { key: "pricing", href: "/#pricing" },
+      { key: "delivery", href: "/#delivery" },
       { key: "faq", href: "/#faq" },
       // 关闭 features.blog 时把 Blog 链接一起删掉。
       { key: "blog", href: "/blog" },
@@ -106,7 +105,7 @@ const config = defineConfig({
         key: "product",
         links: [
           { key: "features", href: "/#features" },
-          { key: "pricing", href: "/#pricing" },
+          { key: "pricing", href: "/pricing" },
           { key: "faq", href: "/#faq" },
           { key: "blog", href: "/blog" },
           // 关掉 changelog.enabled 时这一项会自动隐藏（见 src/core/layout/footer-nav.ts），
@@ -132,21 +131,18 @@ const config = defineConfig({
     effectiveDate: "2026-01-01",
   },
   landing: {
-    sections: ["hero", "features", "pricing", "faq", "cta"],
+    sections: ["hero", "features", "delivery", "faq", "cta"],
     // hero 不配 image 时，首屏右侧渲染用真实 DOM 拼出来的产品 mock
-    // （终端 + 结账台 + 到账提示，报价取自下面 billing.plans 的高亮套餐）。
+    // （AI 工作室 + 积分流水，明确标记为示例数据，不触发模型调用）。
     // 想换回静态图片就在 hero 下加 image: { src, darkSrc?, width, height }，
     // 图片路径放 public/ 下，alt 文案在 messages 的 Landing.hero.imageAlt。
     hero: {},
     features: [
-      { key: "auth", icon: "shield" },
-      { key: "billing", icon: "creditCard" },
-      { key: "i18n", icon: "globe" },
-      { key: "ai", icon: "sparkles" },
-      { key: "seo", icon: "chart" },
-      { key: "fast", icon: "zap" },
+      { key: "billing", icon: "creditCard", preview: "billing" },
+      { key: "ai", icon: "sparkles", preview: "ai" },
+      { key: "operations", icon: "chart", preview: "usage" },
     ],
-    faq: ["stack", "payments", "customize", "license"],
+    faq: ["fit", "services", "payments", "customize"],
   },
   billing: {
     // 支付服务商。改这里之前先看 README 的「上线清单 → 支付」：各家需要的环境变量不同。

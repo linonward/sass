@@ -1,36 +1,30 @@
 import { useTranslations } from "next-intl";
-
 import { Link } from "@/core/i18n/navigation";
-
 import siteConfig from "../../../site.config";
 import { footerNav } from "./footer-nav";
 import { SiteLogo } from "./site-logo";
 
 export function SiteFooter() {
   const t = useTranslations();
-  // 导航 key 来自配置，运行时由 messages 测试保证存在。
   const nav = (key: string) => t(`Nav.${key}` as "Nav.features");
-
   return (
-    // 深色锚点带，两套主题下都保持深色。不用 bg-foreground 反相：
-    // 暗色主题下 foreground 是浅色，会把页脚翻成一片白。
-    <footer className="bg-footer text-footer-foreground">
-      {/* 用 flex + 换行而不是固定列数：footer 分组数量来自配置，写死列数会留空或挤行。 */}
-      <div className="container-marketing flex flex-col gap-10 py-14 sm:flex-row sm:justify-between sm:gap-16">
-        <div className="max-w-xs space-y-3">
-          <SiteLogo />
-          <p className="text-sm opacity-70">{t("Footer.tagline")}</p>
-        </div>
-        <div className="flex flex-wrap gap-12 sm:gap-16">
+    <footer className="bg-background border-t">
+      <div className="container-marketing flex flex-col gap-10 py-10 sm:flex-row sm:items-start sm:justify-between">
+        <SiteLogo />
+        <div className="grid grid-cols-2 gap-x-8 gap-y-8 sm:flex sm:flex-wrap sm:gap-x-16 lg:gap-x-24">
           {footerNav(siteConfig).map((group) => (
-            <nav key={group.key} aria-label={nav(group.key)}>
-              <h2 className="text-sm font-medium">{nav(group.key)}</h2>
-              <ul className="mt-4 space-y-2.5 text-sm">
+            <nav
+              key={group.key}
+              aria-label={nav(group.key)}
+              className="min-w-0"
+            >
+              <h2 className="mb-3 text-sm font-semibold">{nav(group.key)}</h2>
+              <ul className="flex flex-col text-sm">
                 {group.links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="inline-block opacity-70 transition-opacity hover:opacity-100"
+                      className="text-muted-foreground hover:text-primary-text inline-flex min-h-10 items-center"
                     >
                       {nav(link.key)}
                     </Link>
@@ -41,7 +35,7 @@ export function SiteFooter() {
           ))}
         </div>
       </div>
-      <div className="container-marketing border-t border-current/15 py-6 text-xs opacity-60">
+      <div className="container-marketing text-muted-foreground pb-6 text-xs">
         {t("Footer.copyright", {
           year: new Date().getFullYear(),
           name: siteConfig.name,

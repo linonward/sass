@@ -29,8 +29,17 @@ function sectionIds(container: HTMLElement) {
 describe("Landing", () => {
   test("按配置顺序渲染全部区块", () => {
     expect(
-      sectionIds(renderSections(["hero", "features", "pricing", "faq", "cta"])),
-    ).toEqual(["hero", "features", "pricing", "faq", "cta"]);
+      sectionIds(
+        renderSections([
+          "hero",
+          "features",
+          "delivery",
+          "pricing",
+          "faq",
+          "cta",
+        ]),
+      ),
+    ).toEqual(["hero", "features", "delivery", "pricing", "faq", "cta"]);
   });
 
   test("调整顺序后渲染顺序随之变化", () => {
@@ -60,6 +69,7 @@ describe("Landing", () => {
       "hero",
       "features",
       "pricing",
+      "delivery",
       "faq",
       "cta",
     ]);

@@ -273,3 +273,107 @@
     text-wrap: balance;
   }
 }
+
+/* Landing: editorial spacing, native product previews and hard-edge surfaces. */
+@layer components {
+  .landing-frame {
+    --edge: var(--primary-edge);
+    background: var(--card);
+    border: 1px solid var(--edge);
+    border-radius: 0.75rem;
+    --tw-shadow: 0 3px 0 0 var(--edge);
+    box-shadow: var(--tw-shadow);
+  }
+  .landing-headline {
+    font-family: var(--font-display);
+    font-size: clamp(2.75rem, 5vw, 4.25rem);
+    font-weight: 650;
+    line-height: 1.09;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  .landing-section-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3.2vw, 3.15rem);
+    font-weight: 600;
+    line-height: 1.18;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  :lang(zh) .landing-headline,
+  :lang(zh) .landing-section-title {
+    letter-spacing: 0;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  :lang(zh) .landing-headline .text-primary-text {
+    display: block;
+  }
+  .landing-button {
+    min-height: 3.25rem;
+    padding-inline: 1.5rem;
+  }
+  .landing-studio-wrap {
+    min-width: 0;
+  }
+  .landing-credit-receipt {
+    position: relative;
+    z-index: 1;
+    background: var(--primary-band);
+    width: min(15rem, 80%);
+    margin-top: -4.5rem;
+    margin-left: -2rem;
+  }
+  .landing-credit-receipt dl {
+    background: var(--background);
+    padding-inline: 0.75rem;
+    border-radius: 0.5rem;
+  }
+  .landing-credit-receipt > div {
+    margin-bottom: 0.75rem;
+  }
+  .landing-studio-hero {
+    position: relative;
+    padding-bottom: 0.5rem;
+  }
+  @media (min-width: 64rem) {
+    .landing-studio-hero .landing-credit-receipt {
+      position: absolute;
+      bottom: 1.5rem;
+      left: -2.75rem;
+      margin: 0;
+      width: 12.5rem;
+      padding: 1rem;
+    }
+    .landing-studio-hero .landing-credit-receipt dl > div {
+      padding-block: 0.5rem;
+    }
+    .landing-hero > .container-marketing {
+      padding-block: 4rem 2rem;
+    }
+  }
+  @media (max-width: 63.99rem) {
+    .landing-credit-receipt {
+      margin-left: 1rem;
+      margin-top: -1.5rem;
+    }
+    .landing-studio-hero {
+      max-width: 42rem;
+      margin-inline: auto;
+    }
+    .landing-headline {
+      max-width: 15ch;
+    }
+  }
+  @media (max-width: 39.99rem) {
+    .landing-headline {
+      font-size: 2.75rem;
+    }
+    .landing-credit-receipt {
+      width: calc(100% - 2rem);
+    }
+    .landing-button {
+      padding-inline: 1rem;
+    }
+  }
+}

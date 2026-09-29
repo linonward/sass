@@ -5,8 +5,11 @@ import siteConfig from "../../../site.config";
 
 export function SiteLogo() {
   return (
-    <Link href="/" className="flex items-center gap-2 font-semibold">
-      <BrandMark className="size-6" />
+    <Link
+      href="/"
+      className="font-display flex items-center gap-3 text-2xl font-bold"
+    >
+      <BrandMark className="size-9" />
       <span>{siteConfig.name}</span>
     </Link>
   );

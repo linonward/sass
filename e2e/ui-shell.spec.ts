@@ -23,10 +23,12 @@ test("未知路径返回 404 页", async ({ page }) => {
 
 test("主按钮使用配置里的品牌色", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Get started" })).toHaveCSS(
-    "background-color",
-    hexToRgb(siteConfig.brand.primaryColor),
-  );
+  await expect(
+    page.locator("#hero").getByRole("link", {
+      name: messages.Landing.hero.primaryCta,
+      exact: true,
+    }),
+  ).toHaveCSS("background-color", hexToRgb(siteConfig.brand.primaryColor));
 });
 
 test("暗色模式切换并在刷新后保持", async ({ page }) => {
@@ -45,6 +47,50 @@ test("暗色模式切换并在刷新后保持", async ({ page }) => {
   await page.getByRole("button", { name: "Toggle theme" }).click();
   await page.getByRole("menuitemradio", { name: "Light" }).click();
   await expect(html).not.toHaveClass(/\bdark\b/);
+});
+
+test("品牌色预览兼容亮暗和系统主题，离开首页后恢复配置", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  const colors = page.getByRole("radiogroup", {
+    name: messages.Landing.hero.colorSwitcher.label,
+  });
+  const indigo = colors.getByRole("radio", { name: /#4f46e5/ });
+  await indigo.click();
+  await expect(indigo).toHaveAttribute("aria-checked", "true");
+  const primary = page
+    .locator("#hero")
+    .getByRole("link", { name: messages.Landing.hero.primaryCta, exact: true });
+  await expect(primary).toHaveCSS("background-color", hexToRgb("#4f46e5"));
+  const background = () =>
+    page.locator("body").evaluate((el) => getComputedStyle(el).backgroundColor);
+  const light = await background();
+  await page.getByRole("button", { name: "Toggle theme" }).click();
+  await page.getByRole("menuitemradio", { name: "Dark", exact: true }).click();
+  await expect.poll(background).not.toBe(light);
+  await expect(primary).toHaveCSS("background-color", hexToRgb("#4f46e5"));
+  await page
+    .getByRole("menuitemradio", { name: "System", exact: true })
+    .click();
+  await expect.poll(background).toBe(light);
+  await page.keyboard.press("Escape");
+  await indigo.press("Home");
+  await expect(colors.getByRole("radio").first()).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await indigo.click();
+  await primary.click();
+  await expect(page).toHaveURL("/demo");
+  await expect
+    .poll(() =>
+      page
+        .locator("html")
+        .evaluate((el) =>
+          getComputedStyle(el).getPropertyValue("--primary").trim(),
+        ),
+    )
+    .toBe(siteConfig.brand.primaryColor);
 });
 
 test.describe("375px 宽度", () => {

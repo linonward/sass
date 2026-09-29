@@ -19,6 +19,7 @@ export const clientNamespaces = [
   "Header",
   "Invoices",
   "Locale",
+  "LandingPreview",
   "Leads",
   "Onboarding",
   "Playground",
