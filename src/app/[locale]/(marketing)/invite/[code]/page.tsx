@@ -26,7 +26,7 @@ export async function generateMetadata({
     path: null,
     title: t("metaTitle"),
     description: t("description"),
-    // 邀请链接是个人的，不进搜索索引。
+    // Referral links are personal; keep them out of search indexes.
     noIndex: true,
   });
 }
@@ -35,8 +35,9 @@ type View =
   "offer" | "accepted" | "other" | "self" | "bound" | "signedIn" | "invalid";
 
 /**
- * 邀请落地页：注册前展示邀请提示、条件与归属说明，接受与否由访客自己决定。
- * 这里只读邀请上下文，任何写入都走 `/api/acquisition/referrals`。
+ * Referral landing page: before sign-up, shows the invite, its terms and how attribution works;
+ * the visitor decides whether to accept. This page only reads referral context — every write goes
+ * through `/api/acquisition/referrals`.
  */
 export default async function InvitePage({
   params,
@@ -48,7 +49,8 @@ export default async function InvitePage({
   ]);
   const code = normalizeReferralCode(raw);
   const service = createReferralService(getDb());
-  // 码无效、邀请人不存在或被封禁时都按同一种「链接无效」处理，不区分原因。
+  // An invalid code, a missing referrer and a banned referrer are all treated as the same "invalid
+  // link", without saying which.
   const inviter = isReferralCode(code)
     ? await service.resolveInviter(code)
     : null;
@@ -116,7 +118,7 @@ export default async function InvitePage({
           <div className="mt-6 space-y-3">
             <h2 className="text-sm font-medium">{t("termsTitle")}</h2>
             <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
-              {/* 没有配置奖励就明说不承诺奖励。 */}
+              {/* With no reward configured, say explicitly that no reward is promised. */}
               <li>{t("rewardsOff")}</li>
               <li>{t("termsVoluntary")}</li>
               <li>{t("termsIdentity")}</li>

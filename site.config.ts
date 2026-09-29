@@ -10,31 +10,39 @@ import {
 import { defaultLocale, locales } from "./src/core/i18n/locales";
 
 /**
- * 站点配置。买家直接改这个文件里的字面量。
+ * Site configuration. Edit the literals in this file directly.
  *
- * 有六个字段可以额外用环境变量覆盖，写法都是「envOverride(变量名) ?? 占位字面量」：
- * `name`（`SITE_NAME`）、`domain`（`SITE_DOMAIN`）、`email.fromAddress`（`SITE_EMAIL_FROM`）、
- * `legal.companyName`（`SITE_LEGAL_NAME`）、两个套餐的 `providerProductId`
- * （变量名随生效的服务商走，见下面的 effectiveBillingProvider：creem 是
- * `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`，stripe 是
- * `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`，lemonsqueezy 是
- * `LEMONSQUEEZY_VARIANT_ID_PRO` / `LEMONSQUEEZY_VARIANT_ID_LIFETIME`）。
- * 模板里只留占位值，真实域名、名称和产品 ID 放在部署环境里；不设这些变量时就是占位配置。
+ * Six fields can also be overridden by environment variables. Each one is written as
+ * `envOverride(VAR_NAME) ?? placeholder literal`:
+ * `name` (`SITE_NAME`), `domain` (`SITE_DOMAIN`), `email.fromAddress` (`SITE_EMAIL_FROM`),
+ * `legal.companyName` (`SITE_LEGAL_NAME`), and the `providerProductId` of the two paid plans
+ * (the variable name follows the active payment provider, see effectiveBillingProvider below:
+ * creem uses `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`, stripe uses
+ * `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`, lemonsqueezy uses
+ * `LEMONSQUEEZY_VARIANT_ID_PRO` / `LEMONSQUEEZY_VARIANT_ID_LIFETIME`).
+ * The template only ships placeholder values; keep your real domain, name, and product IDs in
+ * the deployment environment. Without these variables you get the placeholder config.
  *
- * 另有两个「站点和模板默认不一样」时用的覆盖（例如卖家自己的站点只卖一部分套餐、换了价格，
- * 又不想改掉买家拿到的默认值）：`SITE_PRICE_<套餐 id 大写>` 覆盖标价（`SITE_PRICE_LIFETIME=99`），
- * `SITE_HIDDEN_PLANS` 逗号分隔地隐藏套餐（`SITE_HIDDEN_PLANS=pro`，见 plans 的 `hidden`），
- * `SITE_DOWNLOADS=1` 打开卖可下载文件（见 downloads）。
- * 没有对应变量的字段（颜色、文案）只能改这个文件。
+ * A few more overrides exist for when a deployed site should differ from the template defaults
+ * (for example, your own site sells only some plans or at a different price, and you don't want
+ * to change the defaults everyone else gets): `SITE_PRICE_<PLAN ID IN UPPERCASE>` overrides the
+ * list price (`SITE_PRICE_LIFETIME=99`), `SITE_HIDDEN_PLANS` hides a comma-separated list of
+ * plans (`SITE_HIDDEN_PLANS=pro`, see `hidden` on plans), and `SITE_DOWNLOADS=1` turns on
+ * selling downloadable files (see downloads).
+ * Fields without a matching variable (colors, copy) can only be changed in this file.
  */
 const envOverride = (name: string): string | undefined => {
-  // 空值按「没设置」处理，和 src/core/create-env.ts 的 emptyStringAsUndefined 一致：
-  // .env.example 里这几个变量出厂是留空的，复制成 .env.local 后不该把配置顶成空串。
+  // An empty value counts as "not set", matching emptyStringAsUndefined in src/core/create-env.ts:
+  // these variables ship empty in .env.example, and copying it to .env.local must not turn the
+  // config into empty strings.
   const value = process.env[name]?.trim();
   return value === "" ? undefined : value;
 };
 
-/** `SITE_PRICE_<套餐>`：覆盖标价（主币单位）。写了但不是非负数时启动即报错，不静默用默认价。 */
+/**
+ * `SITE_PRICE_<PLAN>`: overrides the list price (in major currency units). If it is set but is
+ * not a non-negative number, startup fails instead of silently falling back to the default price.
+ */
 const envPrice = (planId: string, fallback: number): number => {
   const name = `SITE_PRICE_${planId.toUpperCase()}`;
   const value = envOverride(name);
@@ -46,7 +54,10 @@ const envPrice = (planId: string, fallback: number): number => {
   return price;
 };
 
-/** `SITE_HIDDEN_PLANS`：逗号分隔的套餐 id，这些套餐不展示、不能新购（已有订阅不受影响）。 */
+/**
+ * `SITE_HIDDEN_PLANS`: comma-separated plan ids. These plans are not shown and cannot be newly
+ * purchased (existing subscriptions are unaffected).
+ */
 const hiddenPlans = new Set(
   (envOverride("SITE_HIDDEN_PLANS") ?? "")
     .split(",")
@@ -55,72 +66,83 @@ const hiddenPlans = new Set(
 );
 const isHidden = (planId: string) => hiddenPlans.has(planId);
 
-/** `SITE_DOWNLOADS=1`：打开卖可下载文件（downloads.enabled）。官方站用它交付模板，模板默认关闭。 */
+/**
+ * `SITE_DOWNLOADS=1`: turns on selling downloadable files (downloads.enabled). The official site
+ * uses it to deliver this template; it is off by default.
+ */
 const downloadsEnabled = envOverride("SITE_DOWNLOADS") === "1";
 
 /**
- * 用来收款的支付服务商。只能改这里的字面量（要改的是类型校验时的默认值）；
- * 运行时可以用 `BILLING_PROVIDER` 覆盖它，环境变量优先。
+ * The payment provider that takes payments. Change the literal here (this is also the default
+ * used for type checking); at runtime `BILLING_PROVIDER` overrides it, and the environment
+ * variable wins.
  */
 const billingProvider: BillingProviderName = "creem";
 
 /**
- * 生效的服务商：这里的 provider 可以被运行时的 `BILLING_PROVIDER` 覆盖，
- * 判断和 src/core/billing/env.ts 一致（fake 不是真实服务商，不参与；
- * 只有 creem / stripe / lemonsqueezy 会覆盖）。
+ * The active provider: the provider above can be overridden at runtime by `BILLING_PROVIDER`,
+ * using the same logic as src/core/billing/env.ts (fake is not a real provider and is ignored;
+ * only creem / stripe / lemonsqueezy / waffo override it).
  */
 const effectiveBillingProvider: BillingProviderName =
   billingProviderNames.find((name) => name === process.env.BILLING_PROVIDER) ??
   billingProvider;
 
 /**
- * 套餐产品 ID 的环境变量前缀，随生效的服务商走：换服务商时产品 ID 的变量名一起换，
- * 不用同时记住两套。creem 的 prod_*、stripe 的 price_* 和 Lemon Squeezy 的变体（variant）
- * 在各自后台里是不同的对象 —— LS 下 `providerProductId` 填的就是**变体** ID。
+ * Environment variable prefix for plan product IDs. It follows the active provider, so when you
+ * switch providers the product ID variable names switch too and you don't have to keep two sets
+ * in mind. Creem's prod_*, Stripe's price_* and Lemon Squeezy's variants are different objects in
+ * each dashboard — with Lemon Squeezy, `providerProductId` holds the **variant** ID.
  */
 const productIdEnvPrefix: Record<BillingProviderName, string> = {
   creem: "CREEM_PRODUCT_ID",
   stripe: "STRIPE_PRICE_ID",
   lemonsqueezy: "LEMONSQUEEZY_VARIANT_ID",
-  // Waffo Pancake 的产品 ID（`PROD_…`），test / prod 两套。
+  // Waffo Pancake product IDs (`PROD_…`); separate sets for test and prod.
   waffo: "WAFFO_PRODUCT_ID",
 };
 
 /**
- * 没配环境变量时的产品 ID 占位值。它是**与服务商无关的哨兵值**：`prod_placeholder_` 前缀会被
- * src/core/billing/checkout.ts 拦下，结账直接报错，不会拿假 ID 去调服务商。
+ * Placeholder product ID used when no environment variable is set. It is a **provider-agnostic
+ * sentinel**: src/core/billing/checkout.ts rejects the `prod_placeholder_` prefix, so checkout
+ * fails right away instead of calling the provider with a fake ID.
  */
 const placeholderProductId = (plan: string) => `prod_placeholder_${plan}`;
 
 const config = defineConfig({
   name: envOverride("SITE_NAME") ?? "Acme",
-  // 占位域名，改成自己的（不带协议）。演示站用 SITE_DOMAIN 覆盖。
+  // Placeholder domain; change it to your own (without the protocol). The demo site overrides it
+  // with SITE_DOMAIN.
   domain: envOverride("SITE_DOMAIN") ?? "example.com",
   description: "The starter kit for your AI business.",
   brand: {
     primaryColor: "#0f766e",
   },
-  // 语言清单的**值**在 src/core/i18n/locales.ts（那边不经过 zod，见该文件注释）；
-  // 这里引进来交给 schema 校验，所以它仍然是唯一来源。改语言改那个文件。
+  // The **values** of the locale list live in src/core/i18n/locales.ts (they don't go through zod,
+  // see the comment in that file). They are imported here so the schema validates them, so that
+  // file stays the single source. To change locales, edit that file.
   locales,
   defaultLocale,
   features: {
-    // 演示站点开启积分、AI、博客、文件上传和后台；积分按 billing.plans 的 credits 发放。
-    // 后台 /admin：用 ADMIN_EMAILS 里的邮箱登录即成为管理员。
-    // 博客文章放在 content/blog/<locale>/<slug>.mdx，字段见 content-collections.ts。
+    // The demo site turns on credits, AI, blog, file upload, and admin; credits are granted
+    // according to `credits` on billing.plans.
+    // Admin at /admin: sign in with an email listed in ADMIN_EMAILS to become an admin.
+    // Blog posts go in content/blog/<locale>/<slug>.mdx; see content-collections.ts for fields.
     credits: true,
     ai: true,
     blog: true,
     upload: true,
     admin: true,
-    // 策略见下面的 rateLimit。Redis 没配时：本地、CI 和 Vercel 预览放行（failMode open 兜底），
-    // 自托管生产（NODE_ENV=production 且不在 Vercel 上）拒绝请求并打 error 日志，
-    // 免得静默变成不限流；确实不要限流就设 ALLOW_UNRATELIMITED=1。
+    // Policies are in rateLimit below. When Redis is not configured: local, CI, and Vercel
+    // previews let requests through (failMode open as the fallback); self-hosted production
+    // (NODE_ENV=production and not on Vercel) rejects requests and logs an error, so it never
+    // silently becomes unlimited. If you really don't want rate limiting, set ALLOW_UNRATELIMITED=1.
     rateLimit: true,
-    // 结构化日志、追踪和分析，细项见下面的 observability。
+    // Structured logging, tracing, and analytics; details in observability below.
     observability: true,
-    // 示例业务模块：发票 CRUD（src/features/invoices/）。关掉后 /invoices 404、
-    // 侧边栏也没有入口；删除整个示例的清单见 src/features/invoices/schema.ts 末尾。
+    // Example business module: invoice CRUD (src/features/invoices/). When off, /invoices returns
+    // 404 and the sidebar has no entry; the checklist for deleting the whole example is at the
+    // end of src/features/invoices/schema.ts.
     examples: { invoices: true },
   },
   nav: {
@@ -128,7 +150,7 @@ const config = defineConfig({
       { key: "features", href: "/#features" },
       { key: "delivery", href: "/#delivery" },
       { key: "faq", href: "/#faq" },
-      // 关闭 features.blog 时把 Blog 链接一起删掉。
+      // Remove the Blog link as well when you turn off features.blog.
       { key: "blog", href: "/blog" },
     ],
     footer: [
@@ -139,8 +161,8 @@ const config = defineConfig({
           { key: "pricing", href: "/pricing" },
           { key: "faq", href: "/#faq" },
           { key: "blog", href: "/blog" },
-          // 关掉 changelog.enabled 时这一项会自动隐藏（见 src/core/layout/footer-nav.ts），
-          // 不用手删。
+          // Hidden automatically when changelog.enabled is off (see src/core/layout/footer-nav.ts);
+          // no need to delete it by hand.
           { key: "changelog", href: "/changelog" },
         ],
       },
@@ -154,7 +176,8 @@ const config = defineConfig({
       },
     ],
   },
-  // 法律页（content/legal/）里引用的主体信息，上线前改成你自己的。
+  // Company details referenced by the legal pages (content/legal/). Change them to your own
+  // before launch.
   legal: {
     companyName: envOverride("SITE_LEGAL_NAME") ?? "Acme Inc.",
     contactEmail: "support@example.com",
@@ -171,16 +194,19 @@ const config = defineConfig({
       "faq",
       "cta",
     ],
-    // 「交付」区块购买卡片卖的套餐：价格、结账都用它（被隐藏时卡片显示「即将公布」）。
+    // The plan sold by the purchase card in the "delivery" section: its price and checkout both
+    // use it (when the plan is hidden, the card shows "coming soon").
     purchasePlan: "lifetime",
-    // hero 不配 image 时，首屏右侧渲染用真实 DOM 拼出来的产品 mock
-    // （AI 工作室 + 积分流水，明确标记为示例数据，不触发模型调用）。
-    // 想换回静态图片就在 hero 下加 image: { src, darkSrc?, width, height }，
-    // 图片路径放 public/ 下，alt 文案在 messages 的 Landing.hero.imageAlt。
+    // Without an `image` on hero, the right side of the first screen renders a product mock built
+    // from real DOM (AI studio + credit transactions, clearly labeled as sample data, no model
+    // calls). To switch back to a static image, add image: { src, darkSrc?, width, height } under
+    // hero; put the image in public/, and the alt text lives in Landing.hero.imageAlt in messages.
     hero: {},
-    // 用这套代码搭的真实站点上线后填这里（https），首屏次按钮会换成「看真实案例」。
+    // Once a real site built with this code is live, put its URL here (https); the secondary hero
+    // button then becomes "see a real example".
     // showcaseUrl: "https://…",
-    // 工时是估算，文案在 messages 的 Landing.timesaved.items.<key>；合计自动算。
+    // Hours are estimates; the copy lives in Landing.timesaved.items.<key> in messages. The total
+    // is computed automatically.
     timeSaved: [
       { key: "payments", hours: 6 },
       { key: "credits", hours: 8 },
@@ -195,10 +221,13 @@ const config = defineConfig({
       { key: "ai", icon: "sparkles", preview: "ai" },
       { key: "operations", icon: "chart", preview: "usage" },
     ],
-    // 示例评价不是客户背书。换成已获授权的真实评价后，逐项移除 example。
-    // 改排序/关区块用 sections；清空 items 也会隐藏，不留下空白色带。
-    // 正文、身份和图片 alt 在 messages 的 Landing.testimonials.items.<key>。
-    // image/video 素材与头像放 public/；video 必须提供 poster、尺寸和字幕。
+    // Sample testimonials are not customer endorsements. After replacing them with real,
+    // authorized testimonials, remove `example` from each item.
+    // Reorder or turn off sections with `sections`; emptying `items` also hides the section
+    // without leaving an empty colored band.
+    // Body text, author identity, and image alt text live in Landing.testimonials.items.<key> in
+    // messages. Put image/video assets and avatars in public/; a video must have a poster,
+    // dimensions, and captions.
     testimonials: {
       items: [
         {
@@ -253,7 +282,8 @@ const config = defineConfig({
     ],
   },
   billing: {
-    // 支付服务商。改这里之前先看 README 的「上线清单 → 支付」：各家需要的环境变量不同。
+    // Payment provider. Before changing it, read the payments part of the launch checklist in the
+    // README: each provider needs different environment variables.
     provider: billingProvider,
     currency: "USD",
     plans: [
@@ -271,10 +301,12 @@ const config = defineConfig({
         interval: "month",
         features: ["credits2000", "coreFeatures", "prioritySupport"],
         highlighted: true,
-        // 服务商那边的产品 ID（见上面的 productIdEnvPrefix；Lemon Squeezy 下是变体 ID）。
-        // 占位值不允许结账（见 src/core/billing/checkout.ts）；换成自己的产品 ID，
-        // 或用上面 billingProvider 对应的变量覆盖。测试模式和生产模式的产品 ID 不同，
-        // 切换模式时一起换（见 README 上线清单）。
+        // The product ID on the provider's side (see productIdEnvPrefix above; with Lemon
+        // Squeezy it is the variant ID). The placeholder cannot be used for checkout (see
+        // src/core/billing/checkout.ts); replace it with your own product ID, or override it with
+        // the variable for the billingProvider above. Test mode and live mode have different
+        // product IDs, so switch them together when you switch modes (see the README launch
+        // checklist).
         providerProductId:
           envOverride(`${productIdEnvPrefix[effectiveBillingProvider]}_PRO`) ??
           placeholderProductId("pro"),
@@ -286,7 +318,7 @@ const config = defineConfig({
         hidden: isHidden("lifetime"),
         interval: "once",
         features: ["credits2000", "coreFeatures", "lifetimeUpdates"],
-        // 同上：一次性的产品，用 `..._LIFETIME` 覆盖。
+        // Same as above: a one-time product, overridden with `..._LIFETIME`.
         providerProductId:
           envOverride(
             `${productIdEnvPrefix[effectiveBillingProvider]}_LIFETIME`,
@@ -295,14 +327,17 @@ const config = defineConfig({
       },
     ],
   },
-  // 事务邮件（登录验证码、欢迎邮件等）的发件信息。发件域名需在 Resend 验证。
+  // Sender details for transactional email (sign-in verification codes, welcome email, etc.).
+  // The sending domain must be verified in Resend.
   email: {
     fromName: "Acme",
-    // 改成自己在 Resend 验证过的发件地址；演示站用 SITE_EMAIL_FROM 覆盖。
+    // Change to a sender address you have verified in Resend; the demo site overrides it with
+    // SITE_EMAIL_FROM.
     fromAddress: envOverride("SITE_EMAIL_FROM") ?? "noreply@example.com",
     replyTo: "support@example.com",
   },
-  // 邮箱验证码登录的参数（显式配置，不依赖插件默认值）。
+  // Settings for email verification-code sign-in (set explicitly rather than relying on plugin
+  // defaults). expiresIn and resendCooldown are in seconds.
   auth: {
     emailOtp: {
       length: 6,
@@ -310,72 +345,87 @@ const config = defineConfig({
       allowedAttempts: 3,
       resendCooldown: 60,
     },
-    // 改邮箱（`/email-otp/change-email` 等接口；设置页暂时没有入口）。verifyCurrentEmail
-    // 会往当前邮箱也发一个验证码，只有两个验证码都拿到才能改 —— 只偷到 session cookie
-    // 的人改不了邮箱，否则等于把账号交出去。改成功后该用户所有 session 立即失效
-    // （见 src/core/auth/session-invalidation.ts）。
+    // Changing email (`/email-otp/change-email` and related endpoints; the settings page has no
+    // entry for it yet). verifyCurrentEmail also sends a code to the current address, and the
+    // change only goes through with both codes — someone who has only stolen the session cookie
+    // can't change the email, which would otherwise mean handing over the account. After a
+    // successful change, all of that user's sessions are invalidated immediately
+    // (see src/core/auth/session-invalidation.ts).
     changeEmail: {
       enabled: true,
       verifyCurrentEmail: true,
     },
   },
-  // 登录后侧边栏里业务自己的菜单项，文案在 messages 的 Dashboard.nav.<key>。
-  // 例如 { key: "projects", href: "/projects", icon: "layers" }；这些路径自动需要登录。
-  // 不在侧边栏里的业务页面（放在 (app) 下）也会由 layout 校验登录，只是跳转登录页时不带回跳地址。
+  // Your own menu items in the signed-in sidebar; the labels live in Dashboard.nav.<key> in
+  // messages. For example { key: "projects", href: "/projects", icon: "layers" }; these paths
+  // require sign-in automatically. App pages that are not in the sidebar (placed under (app)) are
+  // also protected by the layout, but the redirect to sign-in doesn't carry a return URL.
   dashboard: {
     nav: [
-      // 下载页（src/features/downloads/）：只在 downloads.enabled 时出现。
+      // Downloads page (src/features/downloads/): only shown when downloads.enabled is on.
       ...(downloadsEnabled
         ? [{ key: "downloads", href: "/downloads", icon: "download" as const }]
         : []),
-      // 首次运行清单（src/core/onboarding/）：注册后自动落一次，之后从这里随时进。
-      // 是套件页，但入口和其它业务菜单排在一起，侧边栏的顺序就只有一个来源。
+      // First-run checklist (src/core/onboarding/): users land on it once after sign-up and can
+      // come back here anytime. It is a kit page, but its entry sits with the app menu items so
+      // the sidebar order has a single source.
       { key: "onboarding", href: "/onboarding", icon: "fileText" },
-      // 示例业务模块（src/features/example/）。删除示例时把这一项一起删掉。
+      // Example business module (src/features/example/). Remove this item when you delete the
+      // example.
       { key: "example", href: "/example", icon: "sparkles" },
     ],
   },
   credits: {
-    // 余额跌破这个值时提醒用户充值（credits-low 邮件）。
+    // When the balance drops below this value, the user is reminded to top up (credits-low email).
     lowBalanceThreshold: 100,
   },
-  // 更新日志。条目放在 content/changelog/<slug>.mdx，字段见 content-collections.ts。
-  // 关闭时 /changelog 和 /changelog/rss.xml 返回 404，页脚也不显示入口。
+  // Changelog. Entries go in content/changelog/<slug>.mdx; see content-collections.ts for fields.
+  // When disabled, /changelog and /changelog/rss.xml return 404 and the footer hides the link.
   changelog: {
     enabled: true,
   },
-  // 卖可下载文件（src/features/downloads/）。官方站用它交付模板：设 SITE_DOWNLOADS=1 打开；
-  // 买家不卖文件就保持关闭。新版本用 pnpm downloads:publish <产品 id> <版本> <文件> 发布。
+  // Selling downloadable files (src/features/downloads/). The official site uses it to deliver
+  // this template: set SITE_DOWNLOADS=1 to turn it on. Leave it off if you don't sell files.
+  // Publish a new version with pnpm downloads:publish <product id> <version> <file>.
   downloads: {
     enabled: downloadsEnabled,
     products: [{ id: "template", planId: "lifetime", updateMonths: 12 }],
   },
-  // 接口限流（AI、上传、结账），计数存 Upstash Redis。每条策略同时按用户和按 IP 计数。
+  // API rate limits (AI, upload, checkout), counted in Upstash Redis. Each policy counts both per
+  // user and per IP.
   rateLimit: {
-    // Redis 出错时：open 放行（积分扣减兜底），closed 返回 503。
-    // 这里是「Redis 在但请求失败」的行为；Redis 根本没配时见 features.rateLimit 的说明。
+    // When Redis errors: "open" lets requests through (credit deduction is the backstop),
+    // "closed" returns 503. This covers "Redis is configured but the request failed"; for Redis
+    // not being configured at all, see the note on features.rateLimit.
     failMode: "open",
     policies: {
       ai: { limit: 20, window: "1 m" },
       upload: { limit: 10, window: "1 m" },
-      // 结账会话：每次调用都会在服务商侧真实建单，防脚本循环创建（双击由幂等/互斥处理）。
+      // Checkout sessions: every call creates a real order on the provider's side, so this stops
+      // scripts from creating them in a loop (double clicks are handled by idempotency/locking).
       checkout: { limit: 5, window: "1 m" },
-      // 状态页的邮件订阅：每次提交都可能发一封确认信，按 IP 计数即可。
+      // Status page email subscriptions: each submission may send a confirmation email; counting
+      // per IP is enough.
       statusSubscribe: { limit: 5, window: "1 h" },
-      // 邀请链接的接受接口（未登录可访问）：每次只做一次按码的查询，按 IP 计数即可。
+      // Referral link accept endpoint (reachable without signing in): each call is just one
+      // lookup by code; counting per IP is enough.
       referralAccept: { limit: 30, window: "1 h" },
     },
   },
-  // 用户 API Key（src/core/api-keys/）：用户在 dashboard 里生成、命名、撤销自己的 key，
-  // API 路由用 `Authorization: Bearer sk_...` 鉴权识别用户。关闭后 /api-keys 页面、
-  // 后台页和 /api/api-keys/* 都返回 404，侧边栏也没有入口；库里的 key 不删。
+  // User API keys (src/core/api-keys/): users create, name, and revoke their own keys in the
+  // dashboard, and API routes identify the user via `Authorization: Bearer sk_...`. When
+  // disabled, the /api-keys page, the admin page, and /api/api-keys/* all return 404 and the
+  // sidebar has no entry; keys in the database are not deleted.
   apiKeys: {
-    // 演示站点开着；模板出厂的 schema 默认是 false，改成 false 即可整块下线。
+    // On for the demo site; the schema default in the template is false. Set it to false to turn
+    // the whole feature off.
     enabled: true,
-    // 每个 key 独立的滑动窗口限流（按 key 计数）。不填就是不限制；填了需要 Upstash Redis。
+    // A separate sliding-window rate limit per key (counted per key). Omit it for no limit;
+    // setting it requires Upstash Redis.
     // rateLimitPerKey: { limit: 60, window: "1 m" },
   },
-  // 文件上传（Cloudflare R2）。只在 features.upload 开启时生效；SVG、HTML 不在可选类型里。
+  // File upload (Cloudflare R2). Only takes effect when features.upload is on; SVG and HTML are
+  // not among the allowed types.
   upload: {
     allowedMimeTypes: [
       "image/png",
@@ -383,19 +433,25 @@ const config = defineConfig({
       "image/webp",
       "application/pdf",
     ],
-    // 单个文件的大小上限（字节）。
+    // Maximum size of a single file, in bytes.
     maxFileSize: 10 * 1024 * 1024,
-    // false（默认）：私有文件，只能通过有时效的签名地址访问；true：通过 R2_PUBLIC_URL 公开访问。
-    // 公开模式的代价：拿到 URL 的人都能访问，且撤不回（对象仍可枚举）；签名模式多一次跳转，
-    // 但用户上传的文件不该默认公开。真要做公开图床再打开，并把 R2_PUBLIC_URL 填成公开域名。
+    // false (default): private files, only reachable through time-limited signed URLs; true:
+    // publicly reachable through R2_PUBLIC_URL. The cost of public mode: anyone with the URL can
+    // access the file and you can't take that back (objects can still be enumerated); signed mode
+    // adds one redirect, but user uploads shouldn't be public by default. Only turn this on if
+    // you really are building public image hosting, and set R2_PUBLIC_URL to the public domain.
     public: false,
   },
-  // 系统状态页（/status）：公开告诉访客「现在系统怎么样」，以及过去 N 天的 incident。
-  // manual：管理员在 /admin/status 手动开/关 incident。auto：页面渲染时同时探测 healthUrl，
-  // 同一个组件连续两次探测失败自动记为 degraded，探测恢复后自动解决（需要 features.observability）。
-  // components 的 key 是存进 status_events.component 的内部 id，label 是访客看到的展示名。
+  // System status page (/status): tells visitors publicly how the system is doing right now and
+  // shows incidents from the last N days.
+  // manual: admins open/close incidents by hand at /admin/status. auto: rendering the page also
+  // probes healthUrl; two consecutive failed probes of the same component mark it degraded, and
+  // it resolves automatically once probes recover (requires features.observability).
+  // The keys of `components` are internal ids stored in status_events.component; `label` is the
+  // display name visitors see.
   statusPage: {
-    // 演示站点开着；模板出厂的 schema 默认是 false，改成 false 即可整块下线。
+    // On for the demo site; the schema default in the template is false. Set it to false to turn
+    // the whole feature off.
     enabled: true,
     mode: "manual",
     components: {
@@ -412,13 +468,14 @@ const config = defineConfig({
         description: "Model requests from the playground.",
       },
     },
-    // 状态页上展示最近多少天的 uptime 和 incident。
+    // How many days of uptime and incidents the status page shows.
     historyDays: 30,
   },
-  // 可观测性（features.observability 开启时生效）。开启后生产环境日志是单行 JSON，带 traceId。
-  // 获客能力按模块开启：渠道归因与邮箱留资见 README 的「渠道归因」「邮箱留资」两节。
-  // referrals 邀请链接与积分奖励。开启邀请链接需要 features.credits 同时开启；
-  // 积分奖励默认关闭（0 credits），由运营商显式配置。
+  // Acquisition features are turned on per module: see the attribution and lead capture sections
+  // of the README.
+  // referrals: referral links and credit rewards. Referral links require features.credits to be
+  // on as well; credit rewards are off by default (0 credits) and must be configured explicitly
+  // by the operator.
   acquisition: {
     attribution: { enabled: false },
     leads: { enabled: false },
@@ -427,30 +484,38 @@ const config = defineConfig({
       rewards: { inviterCredits: 0, inviteeCredits: 0 },
     },
   },
-  // 用户面 feature flag（灰度发布）：先把新功能给自己人看，再按百分比放量。
-  // 总开关关闭时 isEnabled() 恒为 false、<FeatureFlag> 不渲染 children、后台 /admin/flags 也 404。
-  // v1 纯配置驱动：flag 状态不在数据库里，改完这里要重新部署（页面只读，见 /admin/flags）。
-  // 评估逻辑与组件在 src/core/flags/；用法见 README 的「灰度开关」一节。
-  // 演示站点关闭总开关（e2e/flags 的临时副本会把它改成 true，用同一份定义验证打开后的行为）。
+  // User-facing feature flags (gradual rollout): show a new feature to your own team first, then
+  // roll it out by percentage.
+  // When the master switch is off, isEnabled() always returns false, <FeatureFlag> doesn't render
+  // its children, and the admin page /admin/flags returns 404.
+  // v1 is purely config-driven: flag state is not in the database, so changes here need a
+  // redeploy (the admin page is read-only, see /admin/flags).
+  // Evaluation logic and components live in src/core/flags/; usage is in the feature flags
+  // section of the README.
+  // The demo site keeps the master switch off (a temporary copy made by e2e/flags sets it to true
+  // to test the enabled behavior with the same definitions).
   userFlags: {
     enabled: false,
-    // 演示用的三个 flag；换成自己的功能开关即可，名字随便起（小写 + 短横线）。
+    // Three demo flags; replace them with your own feature flags. Name them however you like
+    // (lowercase + hyphens).
     definitions: {
-      // 灰度 50%：普通用户按分桶看到，admin 恒可见，未登录用户看不到。
+      // 50% rollout: regular users see it based on their bucket, admins always see it, signed-out
+      // users never do.
       "beta-dashboard": {
         description: "New dashboard layout, rolling out to half of the users.",
         enabled: true,
         rollout: 50,
         adminOnly: false,
       },
-      // 只给管理员看的预览版：rollout 0 是硬关闭，配 adminOnly 才有人能看到。
+      // Admin-only preview: rollout 0 is a hard off, so adminOnly is what lets anyone see it.
       "beta-preview": {
         description: "Preview build, admins only until it is ready.",
         enabled: true,
         rollout: 0,
         adminOnly: true,
       },
-      // 单个 flag 关掉：定义留在配置里，随时能开，不必改代码。
+      // A single flag turned off: the definition stays in the config and can be turned on anytime
+      // without code changes.
       "beta-soon": {
         description:
           "Not shipped yet; kept here as an example of a disabled flag.",
@@ -460,23 +525,32 @@ const config = defineConfig({
       },
     },
   },
+  // Observability (takes effect when features.observability is on). When on, production logs are
+  // single-line JSON with a traceId.
   observability: {
     logLevel: "info",
-    // OpenTelemetry 追踪：Vercel 上开启 Tracing 或 OTel 集成，其他环境填 OTEL_EXPORTER_OTLP_ENDPOINT。
+    // OpenTelemetry tracing: on Vercel, enable Tracing or the OTel integration; elsewhere set
+    // OTEL_EXPORTER_OTLP_ENDPOINT.
     otel: false,
-    // Sentry 错误上报：开启后填 NEXT_PUBLIC_SENTRY_DSN；再填 SENTRY_AUTH_TOKEN / SENTRY_ORG /
-    // SENTRY_PROJECT 会在构建时上传 source map。只发用户 ID，不发邮箱和 IP。
+    // Sentry error reporting: when on, set NEXT_PUBLIC_SENTRY_DSN; also setting SENTRY_AUTH_TOKEN /
+    // SENTRY_ORG / SENTRY_PROJECT uploads source maps at build time. Only the user ID is sent,
+    // never email or IP.
     sentry: false,
-    // Vercel Analytics（页面浏览和转化事件）与 Speed Insights，都要先在 Vercel 项目里开启。
-    // 自定义事件（sign_up、checkout_started、purchase）需要 Pro 计划，Hobby 只有页面浏览。
+    // Vercel Analytics (page views and conversion events) and Speed Insights; both must be enabled
+    // in your Vercel project first. Custom events (sign_up, checkout_started, purchase) require the
+    // Pro plan; Hobby only gets page views.
     analytics: true,
     speedInsights: true,
   },
-  // AI 模型（features.ai 开启时生效）。每次调用按 creditCost 预扣积分，失败退回。
-  // env 里只配了某几家的 key 时，其他服务商的模型调用返回 503；生产环境会要求这里用到的每家 key。
+  // AI models (take effect when features.ai is on). Each call reserves creditCost credits up
+  // front and refunds them on failure.
+  // If env only has keys for some providers, model calls to other providers return 503; in
+  // production, a key is required for every provider used here.
   ai: {
-    // 演示站点只用阿里云百炼（ALIBABA_API_KEY）；换成 OpenAI、Anthropic、Google 时改 provider 和 model。
-    // 百炼上的这些模型默认开思考，按次计费的轻量模型用 reasoning: "none" 关掉。
+    // The demo site only uses Alibaba Cloud Model Studio (ALIBABA_API_KEY); to use OpenAI,
+    // Anthropic, or Google instead, change provider and model.
+    // These models have thinking on by default on Model Studio; lightweight per-call models turn
+    // it off with reasoning: "none".
     models: [
       {
         id: "deepseek",
@@ -503,7 +577,8 @@ const config = defineConfig({
       },
     ],
     defaultModel: "deepseek",
-    // 图片模型（还需要 features.upload：结果存进 R2）。creditCost 按服务商的单张价格定。
+    // Image models (also require features.upload: results are stored in R2). Set creditCost
+    // based on the provider's per-image price.
     imageModels: [
       {
         id: "qwen-image",
@@ -519,7 +594,8 @@ const config = defineConfig({
       },
     ],
     defaultImageModel: "qwen-image",
-    // 视频模型（同样需要 features.upload）。异步生成，时长和分辨率固定，按次扣费。
+    // Video models (also require features.upload). Generated asynchronously with a fixed duration
+    // and resolution, charged per generation.
     videoModels: [
       {
         id: "wan-t2v",
@@ -544,8 +620,9 @@ const config = defineConfig({
   },
 });
 
-// 占位哨兵：生产构建直接失败，dev 打一行警告（见 src/core/config/sentinels.ts）。
-// 放在这里而不是某个组件里，是为了让 `next build` 也拦得住。
+// Placeholder sentinel: production builds fail outright, dev prints a one-line warning (see
+// src/core/config/sentinels.ts). It lives here rather than in a component so `next build` catches
+// it too.
 const sentinel = placeholderAction(
   placeholderIssues(config),
   process.env.NODE_ENV,

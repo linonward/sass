@@ -28,7 +28,7 @@ function renderTool() {
 }
 
 function submit() {
-  // product 是 required + minLength 3，先填上才过得了原生校验。
+  // product is required + minLength 3, so fill it in to pass native validation.
   fireEvent.change(screen.getByLabelText(/product/i), {
     target: { value: "Acme Invoices" },
   });
@@ -41,8 +41,9 @@ afterEach(() => {
 });
 
 describe("TaglineTool", () => {
-  // 这是给买家抄的示例：AI 生成重复 tagline 是很正常的事，key 冲突会在控制台刷警告。
-  test("重复的 tagline 不触发 React 的 key 警告", async () => {
+  // This is an example buyers copy: AI producing duplicate taglines is perfectly normal, and key
+  // collisions would flood the console with warnings.
+  test("duplicate taglines don't trigger React's key warning", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     generateTaglines.mockResolvedValue(done(["Same line", "Same line"]));
     renderTool();
@@ -54,7 +55,7 @@ describe("TaglineTool", () => {
     expect(error).not.toHaveBeenCalled();
   });
 
-  test("提交后输入框保留 product，可以改一改再生成", async () => {
+  test("after submit the input keeps product, so it can be tweaked and regenerated", async () => {
     generateTaglines.mockResolvedValue(done(["a", "b"]));
     renderTool();
     const input = screen.getByLabelText(/product/i) as HTMLInputElement;
@@ -63,8 +64,8 @@ describe("TaglineTool", () => {
     submit();
     await waitFor(() => expect(screen.getByText("a")).toBeDefined());
 
-    // React 会重置表单里的非受控输入；受控的值不受影响（非受控写法要额外把
-    // product 塞回 defaultValue 才活得下来）。
+    // React resets uncontrolled inputs in the form; controlled values are unaffected (an uncontrolled
+    // input would need product stuffed back into defaultValue to survive).
     expect(input.value).toBe("Acme Invoices");
   });
 });

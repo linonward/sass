@@ -6,7 +6,7 @@ import { checkRateLimit, getClientIp } from "@/core/ratelimit";
 
 import siteConfig from "../../../../../site.config";
 
-/** 创建结账会话。body：{ planId, locale? }；返回 { url }，由前端跳转。 */
+/** Create a checkout session. Body: { planId, locale? }; returns { url } for the client to redirect to. */
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) {

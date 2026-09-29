@@ -4,11 +4,12 @@ import messages from "../messages/en.json";
 import siteConfig from "../site.config";
 import { signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
 
-// 整条购买流程用站内的 fake 服务商模拟（BILLING_PROVIDER=fake，CI 已设置）：
-// 结账页是 /api/billing/fake/checkout，"付款"后按设定的延迟把 webhook 推给 /api/webhooks/fake。
+// The whole purchase flow is simulated with the on-site fake provider (BILLING_PROVIDER=fake, set
+// in CI): the checkout page is /api/billing/fake/checkout, and after "paying" it pushes the
+// webhook to /api/webhooks/fake after the configured delay.
 test.skip(
   process.env.BILLING_PROVIDER !== "fake",
-  "需要 BILLING_PROVIDER=fake",
+  "requires BILLING_PROVIDER=fake",
 );
 
 const b = messages.Billing;
@@ -21,11 +22,11 @@ const credits = (id: "pro" | "lifetime") =>
   siteConfig.billing.plans.find((p) => p.id === id)!.credits;
 
 test.beforeEach(async ({ page, isMobile }) => {
-  test.skip(isMobile, "购买流程只在桌面端跑一遍");
+  test.skip(isMobile, "the purchase flow only runs once, on desktop");
   await useRandomIp(page);
 });
 
-/** 在模拟结账页上"付款"。 */
+/** "Pay" on the simulated checkout page. */
 async function pay(
   page: Page,
   { delay = 0, webhook = true }: { delay?: number; webhook?: boolean } = {},
@@ -39,7 +40,10 @@ async function pay(
   await page.waitForURL(/\/billing\/success\?/);
 }
 
-/** 点击购买按钮：hydration 完成前点击没有反应，重试到页面开始跳转为止。 */
+/**
+ * Click the buy button: clicks do nothing before hydration finishes, so retry until the page
+ * starts navigating.
+ */
 async function buy(page: Page, id: "pro" | "lifetime") {
   const from = page.url();
   const button = planCard(page, id).getByRole("button", { name: choose(id) });
@@ -53,20 +57,21 @@ function planCard(page: Page, id: string) {
   return page.locator(`[data-plan="${id}"]`);
 }
 
-test("未登录从定价页购买：登录 → 继续结账 → webhook 延迟 → 成功 → 账单页", async ({
+test("signed-out purchase from pricing: sign in → continue checkout → delayed webhook → success → billing page", async ({
   page,
 }) => {
   await page.goto("/pricing");
   await buy(page, "pro");
 
-  // 先去登录，登录后回到 /pricing?plan=pro 并自动继续结账。
+  // Sign in first; afterwards it returns to /pricing?plan=pro and continues checkout
+  // automatically.
   await expect(page).toHaveURL(
     `/sign-in?callbackURL=${encodeURIComponent("/pricing?plan=pro")}`,
   );
   await signIn(page, uniqueEmail("buy-pro"));
   await pay(page, { delay: 3000 });
 
-  // webhook 还没到：显示处理中，页面不报错；到了之后变成成功。
+  // Webhook not here yet: shows processing without erroring; once it arrives it becomes success.
   await expect(
     page.getByRole("heading", { name: b.success.processingTitle }),
   ).toBeVisible();
@@ -93,13 +98,13 @@ test("未登录从定价页购买：登录 → 继续结账 → webhook 延迟 �
   ).toHaveCount(1);
   await expect(page.getByRole("link", { name: b.page.manage })).toBeVisible();
 
-  // 已订阅：/pricing 上显示"管理订阅"。
+  // Subscribed: /pricing shows "Manage subscription".
   await page.goto("/pricing");
   await expect(
     planCard(page, "pro").getByRole("link", { name: b.actions.manage }),
   ).toBeVisible();
 
-  // 已订阅用户通过定价页的管理入口进入客户门户。
+  // Subscribed users reach the customer portal through the manage link on the pricing page.
   await planCard(page, "pro")
     .getByRole("link", { name: b.actions.manage })
     .click();
@@ -108,7 +113,7 @@ test("未登录从定价页购买：登录 → 继续结账 → webhook 延迟 �
   ).toBeVisible();
 });
 
-test("webhook 迟到超过等待时长：先提示联系支持，到账后自动变成成功", async ({
+test("webhook later than the wait window: first suggests contacting support, then turns into success once it lands", async ({
   page,
 }) => {
   await signIn(page, uniqueEmail("late-webhook"));
@@ -126,14 +131,16 @@ test("webhook 迟到超过等待时长：先提示联系支持，到账后自动
     page.getByRole("heading", { name: b.success.completeTitle }),
   ).toBeVisible({ timeout: 20_000 });
 
-  // 一次性套餐买过之后，/pricing 上显示"已购买"。
+  // After buying a one-time plan, /pricing shows "Purchased".
   await page.goto("/pricing");
   await expect(
     planCard(page, "lifetime").getByRole("link", { name: b.actions.purchased }),
   ).toBeVisible();
 });
 
-test("webhook 一直不到：成功页停在联系支持，不报错", async ({ page }) => {
+test("webhook never arrives: success page stays on contact support without erroring", async ({
+  page,
+}) => {
   await signIn(page, uniqueEmail("no-webhook"));
   await page.goto("/pricing");
   await buy(page, "lifetime");
@@ -150,7 +157,9 @@ test("webhook 一直不到：成功页停在联系支持，不报错", async ({ 
   ).toHaveCount(0);
 });
 
-test("免费套餐直接进入 dashboard，未登录时先登录", async ({ page }) => {
+test("free plan goes straight to the dashboard, signing in first when signed out", async ({
+  page,
+}) => {
   await page.goto("/pricing");
   await planCard(page, "free")
     .getByRole("link", { name: choose("free") })
@@ -160,7 +169,9 @@ test("免费套餐直接进入 dashboard，未登录时先登录", async ({ page
   );
 });
 
-test("fake 结账页拒绝伪造的 token，只能替自己付款", async ({ page }) => {
+test("fake checkout page rejects forged tokens; you can only pay for yourself", async ({
+  page,
+}) => {
   const bad = await page.request.get("/api/billing/fake/checkout?token=x.y");
   expect(bad.status()).toBe(400);
 
@@ -172,7 +183,7 @@ test("fake 结账页拒绝伪造的 token，只能替自己付款", async ({ pag
   ).json();
   const token = new URL(url, "http://x").searchParams.get("token")!;
 
-  // 换一个用户提交同一个 token：拒绝。
+  // A different user submitting the same token: rejected.
   await page.context().clearCookies();
   await signIn(page, uniqueEmail("fake-intruder"));
   const response = await page.request.post("/api/billing/fake/checkout", {

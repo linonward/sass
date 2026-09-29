@@ -69,10 +69,11 @@ export const checkLeadLimit: typeof liveLeadLimit = async () => ({ ok: true, ret
 export const checkLeadActionLimit: typeof liveActionLimit = async () => ({ ok: true, retryAfter: 0 });
 `,
 );
-// 别把 --prefer-offline 改回 --offline：Ubuntu 26 的 runner 把 /tmp 挂成独立 tmpfs，
-// 而 pnpm 的默认 store 必须与项目同文件系统 —— 副本因此会用上另一个（空的）store，
-// --offline 立刻以 ERR_PNPM_NO_OFFLINE_TARBALL 失败。--prefer-offline 只是允许联网
-// 补缺：store 里有的照旧硬链接、不下载。
+// Don't change --prefer-offline back to --offline: the Ubuntu 26 runner mounts /tmp as its own
+// tmpfs, and pnpm's default store must live on the same filesystem as the project — so the copy
+// ends up with a different (empty) store, and --offline fails immediately with
+// ERR_PNPM_NO_OFFLINE_TARBALL. --prefer-offline only allows going online to fill gaps: whatever
+// is already in the store is still hard-linked, not downloaded.
 execFileSync("pnpm", ["install", "--prefer-offline", "--frozen-lockfile"], {
   cwd: dest,
   stdio: "inherit",

@@ -4,9 +4,10 @@ import { creditsEnabled, getBalance } from "@/core/credits";
 import { getDb } from "@/core/db";
 
 /**
- * 成功页轮询：GET /api/billing/status?subscription_id=...|order_id=...（服务商回跳时附带的参数），
- * 或 ?plan=...&since=...（结账时站内自己加在成功地址上的兜底定位，服务商不带 ID 时用）。
- * 只查当前登录用户自己的记录；返回 { status: pending | complete | failed, planId?, balance? }。
+ * Success-page polling: GET /api/billing/status?subscription_id=...|order_id=... (params the provider
+ * appends on redirect), or ?plan=...&since=... (a fallback locator we add to the success URL at
+ * checkout, used when the provider doesn't pass an ID). Only looks up the signed-in user's own
+ * records; returns { status: pending | complete | failed, planId?, balance? }.
  */
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });

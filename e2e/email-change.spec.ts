@@ -18,10 +18,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 /**
- * 直接调 auth 的接口，并断言 HTTP 层成功（失败时把响应体带进断言信息）。
+ * Call an auth endpoint directly and assert HTTP-level success (on failure, the response body goes
+ * into the assertion message).
  *
- * 带 cookie 的请求会过 Better Auth 的 CSRF 校验：`page.request` 不是浏览器发的，没有
- * `Origin` 头，所以这里显式补一个 —— 不然会拿到 MISSING_OR_NULL_ORIGIN。
+ * Requests with cookies go through Better Auth's CSRF check: `page.request` isn't sent by the
+ * browser and has no `Origin` header, so add one explicitly here — otherwise you get
+ * MISSING_OR_NULL_ORIGIN.
  */
 async function post(
   page: Page,
@@ -37,15 +39,17 @@ async function post(
   return response;
 }
 
-/** 从发件箱取改邮箱流程的验证码。 */
+/** Read the email-change flow's verification code from the outbox. */
 async function changeEmailCode(to: string, since: Date) {
   const mail = await waitForEmail({ to, template: "change-email-code", since });
   return { code: String(mail.props.code), mail };
 }
 
-// 改邮箱接口目前没有设置页入口（见 docs/plan.md 的会话失效决策），所以这里直接调接口。
-// 改邮箱是安全敏感操作：改完之后，改之前建立的 session（包括当前这个）必须全部失效。
-test("改邮箱成功后旧 session 立即失效，新邮箱可以重新登录", async ({
+// The email-change endpoint currently has no entry point in settings (see the session
+// invalidation decision in docs/plan.md), so this calls the endpoint directly. Changing email is
+// security-sensitive: afterwards, every session created before the change (including the current
+// one) must be invalidated.
+test("after a successful email change old sessions are invalidated immediately and the new email can sign in", async ({
   page,
   baseURL,
 }) => {
@@ -54,13 +58,15 @@ test("改邮箱成功后旧 session 立即失效，新邮箱可以重新登录",
   const newEmail = uniqueEmail("email-changed");
 
   await signIn(page, email);
-  // 新用户注册后的第一落点是引导页；这一例测的是会话失效，先回 dashboard 再往下走。
+  // A new user's first stop after sign-up is onboarding; this case tests session invalidation, so
+  // go back to the dashboard before continuing.
   await expect(page).toHaveURL("/onboarding");
   await page.goto("/dashboard");
   const userId = await findUserId(email);
   expect(userId).toBeTruthy();
 
-  // 1) 当前邮箱的验证码（changeEmail.verifyCurrentEmail 要求的第二步）。
+  // 1) Verification code for the current email (the second step required by
+  // changeEmail.verifyCurrentEmail).
   await clearResendCooldown(email);
   const sinceCurrent = new Date(Date.now() - 1000);
   await post(
@@ -70,10 +76,11 @@ test("改邮箱成功后旧 session 立即失效，新邮箱可以重新登录",
     origin,
   );
   const current = await changeEmailCode(email, sinceCurrent);
-  // 发往当前邮箱的那封是"确认是你发起的变更"。
+  // The email to the current address is "confirm you requested this change".
   expect(current.mail.props.forNewEmail).toBe(false);
 
-  // 2) 用它换新邮箱的验证码（新邮箱已被占用时这一步不发信）。
+  // 2) Exchange it for the new email's verification code (no email is sent at this step if the
+  // new address is already taken).
   const sinceChange = new Date(Date.now() - 1000);
   await post(
     page,
@@ -83,10 +90,10 @@ test("改邮箱成功后旧 session 立即失效，新邮箱可以重新登录",
   );
   const next = await changeEmailCode(newEmail, sinceChange);
   expect(next.mail.props.forNewEmail).toBe(true);
-  // 两封信措辞不同，收件人分得清自己在确认哪一步。
+  // The two emails are worded differently so recipients can tell which step they're confirming.
   expect(next.mail.subject).not.toBe(current.mail.subject);
 
-  // 3) 提交新邮箱的验证码，邮箱改成新地址。
+  // 3) Submit the new email's verification code; the email changes to the new address.
   const changed = await post(
     page,
     "/email-otp/change-email",
@@ -95,12 +102,14 @@ test("改邮箱成功后旧 session 立即失效，新邮箱可以重新登录",
   );
   expect(await changed.json()).toEqual({ success: true });
 
-  // 旧 session 立刻失效：浏览器里的 cookie 还在，但已经不是有效 session。
+  // Old session invalidated immediately: the cookie is still in the browser, but it's no longer
+  // a valid session.
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/sign-in/);
   await expect(page.getByLabel(a.emailLabel)).toBeVisible();
 
-  // 数据库里该用户的 session 一行不剩，邮箱已换成新地址；旧地址不再是任何账户的邮箱。
+  // Not a single session row is left for the user in the database, the email is the new address,
+  // and the old address no longer belongs to any account.
   const left = await withDatabase(async (client) => ({
     sessions: Number(
       (
@@ -120,9 +129,10 @@ test("改邮箱成功后旧 session 立即失效，新邮箱可以重新登录",
   expect(left.emails).toEqual([{ email: newEmail }]);
   expect(await findUserId(email)).toBeUndefined();
 
-  // 新邮箱能登录，而且进的是同一个账户。
-  // 这次登录前浏览器里还留着已经失效的 cookie，/dashboard 会由页面自己送去不带
-  // callbackURL 的 /sign-in（带 cookie 时 proxy 不插手），所以还是先落引导页。
+  // The new email can sign in, and it's the same account.
+  // Before this sign-in the browser still holds the invalidated cookie, so /dashboard is sent by
+  // the page itself to /sign-in without a callbackURL (the proxy stays out of it when a cookie is
+  // present), which is why it still lands on onboarding first.
   await useRandomIp(page);
   await signIn(page, newEmail);
   await expect(page).toHaveURL("/onboarding");

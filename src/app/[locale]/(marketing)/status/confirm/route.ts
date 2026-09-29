@@ -8,12 +8,13 @@ import {
   subscriberToken,
 } from "@/core/status/subscribers";
 
-// 确认要写库，不能预渲染。
+// Confirming writes to the database, so this can't be prerendered.
 export const dynamic = "force-dynamic";
 
 /**
- * 确认订阅：邮件里的链接直接打到这里，成功或失败都跳回状态页并带一个一次性提示。
- * 令牌无效、过期、已用过都算失败 —— 已用过的令牌在 confirmSubscription 里返回 true。
+ * Confirm a subscription: the link in the email lands here, and success or failure both redirect
+ * back to the status page with a one-time notice. Invalid or expired tokens count as failure — an
+ * already-used token returns true from confirmSubscription.
  */
 export async function GET(
   request: Request,

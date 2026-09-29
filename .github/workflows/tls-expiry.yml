@@ -1,18 +1,19 @@
 name: tls-expiry
 
-# 每天检查一次站点证书的剩余有效期：不足 30 天就开 issue，并让这次运行失败。
-# 告警本身不依赖任何外部服务，续期后运行会自动转绿。
+# Checks the remaining validity of the site's TLS certificate once a day: if under 30 days, it
+# opens an issue and fails the run. The alert itself depends on no external service, and the run
+# turns green on its own once the certificate is renewed.
 on:
   schedule:
-    # 01:00 UTC = 09:00 北京时间。
+    # 01:00 UTC daily.
     - cron: "0 1 * * *"
   workflow_dispatch:
     inputs:
       hosts:
-        description: 要检查的主机，逗号分隔；留空则用 site.config.ts 里的 domain
+        description: Hosts to check, comma-separated; leave empty to use the domain from site.config.ts
         required: false
       days:
-        description: 剩余不足多少天算告警
+        description: Alert when fewer than this many days remain
         required: false
         default: "30"
   pull_request:
@@ -39,13 +40,14 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      # 脚本只用 Node 内置模块，不需要装依赖。
-      - name: 检查证书剩余有效期
+      # The script only uses Node built-in modules, so no dependency install is needed.
+      - name: Check remaining certificate validity
         id: check
         env:
           SSL_CHECK_HOSTS: ${{ inputs.hosts }}
           SSL_CHECK_DAYS: ${{ inputs.days }}
-          # site.config.ts 用 SITE_DOMAIN 覆盖域名时（演示站），这里要设成同一个值。
+          # When site.config.ts overrides the domain with SITE_DOMAIN (the demo site), set the same
+          # value here.
           SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
         run: |
           set +e
@@ -54,35 +56,35 @@ jobs:
           set -e
           echo "status=$status" >> "$GITHUB_OUTPUT"
 
-      # PR 里只跑检查，不动 issue。
-      - name: 开 issue 提醒
+      # On PRs, only run the check; don't touch issues.
+      - name: Open a reminder issue
         if: steps.check.outputs.status != '0' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          title="TLS 证书剩余有效期不足 30 天"
+          title="TLS certificate expires in less than 30 days"
           open=$(gh issue list --state open --limit 100 --search "$title in:title" --json number --jq 'length')
           if [ "$open" != "0" ]; then
-            echo "已经有开着的提醒 issue，不再重复创建。"
+            echo "A reminder issue is already open; not creating another one."
             exit 0
           fi
           {
-            echo "每天定时检查（\`.github/workflows/tls-expiry.yml\`）发现证书快到期了："
+            echo "The daily check (\`.github/workflows/tls-expiry.yml\`) found a certificate that is about to expire:"
             echo
             echo '```'
             cat /tmp/tls-report.txt
             echo '```'
             echo
-            echo "先在服务商侧确认证书是否已经续期（Vercel 托管的证书是自动续期的）。"
-            echo "续期后这个工作流会自动转绿，本 issue 就可以关掉；如果连续几天都是失败的，说明续期卡住了。"
+            echo "First confirm with your hosting provider whether the certificate has been renewed (certificates managed by Vercel renew automatically)."
+            echo "Once renewed, this workflow turns green on its own and you can close this issue. If it keeps failing for several days, the renewal is stuck."
             echo
-            echo "本次运行：$RUN_URL"
+            echo "This run: $RUN_URL"
           } > /tmp/issue-body.md
           gh issue create --title "$title" --body-file /tmp/issue-body.md
 
-      - name: 失败退出
+      - name: Fail the run
         if: steps.check.outputs.status != '0'
         run: |
-          echo "证书剩余有效期不足，或至少有一个主机连不上。" >&2
+          echo "A certificate is close to expiry, or at least one host could not be reached." >&2
           exit 1

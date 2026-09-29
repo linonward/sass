@@ -36,7 +36,8 @@ import siteConfig from "../../../../../../site.config";
 
 type Props = PageProps<"/[locale]/admin/metrics">;
 
-// 模块关闭时对应区块不显示；没有付费套餐时不显示收入（和 /admin/acquisition 同一判定）。
+// Sections for disabled modules are hidden; revenue is hidden when there are no paid plans (same
+// check as /admin/acquisition).
 const sections = {
   revenue: revenueEnabled(siteConfig.billing),
   credits: siteConfig.features.credits,
@@ -69,7 +70,7 @@ export default async function AdminMetricsPage({
   ]);
 
   const number = (value: number) => format.number(value);
-  /** 币种可能缺失或非法（`orders.currency` 是自由文本列），一律走共用的兜底。 */
+  /** The currency may be missing or invalid (`orders.currency` is free text), so always use the shared fallback. */
   const money = (amount: number, currency: string | null) =>
     formatMoney(format, amount, currency, siteConfig.billing.currency);
   const percent = (value: number | null) =>
@@ -89,7 +90,7 @@ export default async function AdminMetricsPage({
         title={t("title")}
         description={t("description", { days: range })}
       />
-      {/* 和 orders / subscriptions 一样，筛选器自成一行，不塞进页头。 */}
+      {/* As on orders / subscriptions, the filters get their own row instead of going in the page header. */}
       <RangeFilter current={range} pathname="/admin/metrics" />
 
       <MetricSection title={t("users.title")}>

@@ -5,18 +5,20 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { registerSentry } from "@/core/observability/sentry";
 
 import messages from "../../../messages/en.json";
-// 别把默认导出叫 `Error`：会盖住全局 Error 构造器，之后 `new Error("boom")` 调用的是
-// 这个组件本体，React 报 "Invalid hook call"（useTranslations 在渲染外被调用）。
+// Don't name the default import `Error`: it would shadow the global Error constructor, so
+// `new Error("boom")` would call this component and React would report "Invalid hook call"
+// (useTranslations called outside rendering).
 import ErrorBoundary from "./error";
 
 /**
- * `[locale]/error.tsx` 这一层边界（[locale] 的 layout 之下、page/嵌套 layout 之上）。
+ * The `[locale]/error.tsx` boundary (below the [locale] layout, above pages and nested layouts).
  *
- * 为什么直接渲染组件而不是走 e2e 制造真崩溃：能故意抛错的测试钩子会以生产可见的形态
- * 留在模板里，买家买到的就是一个「访问某路径就 500」的开关；而 CI 的 e2e 跑的是生产
- * 构建（NODE_ENV=production），按环境变量分流的钩子在那里根本不可达。这里锁的是边界
- * 自身的行为（文案、Error ID、retry 回调、标题、上报），框架是否真的把它接上由审计时
- * 的生产构建探针人工验证（见 PR 说明）。
+ * Why render the component directly instead of causing a real crash in e2e: a test hook that can
+ * throw on purpose would stay in the template in a production-visible form, and buyers would get a
+ * "visit this path to get a 500" switch; and CI's e2e runs a production build (NODE_ENV=production),
+ * where a hook gated on an environment variable is unreachable anyway. This locks the boundary's
+ * own behavior (copy, Error ID, retry callback, title, reporting); whether the framework actually
+ * wires it up was verified manually with a production-build probe during review.
  */
 function renderBoundary(
   error: Error & { digest?: string },
@@ -30,12 +32,12 @@ function renderBoundary(
 }
 
 afterEach(() => {
-  // 上报器存在 globalThis 上，不注销会串到后面的用例。
+  // Reporters live on globalThis; without unregistering they leak into later tests.
   registerSentry(undefined);
 });
 
-describe("[locale] 段错误边界（error.tsx）", () => {
-  test("渲染本地化的标题、说明与重试按钮", () => {
+describe("[locale] segment error boundary (error.tsx)", () => {
+  test("renders the localized title, description and retry button", () => {
     renderBoundary(new Error("boom"));
 
     expect(
@@ -47,7 +49,7 @@ describe("[locale] 段错误边界（error.tsx）", () => {
     ).toBeDefined();
   });
 
-  test("有 digest 时显示 Error ID，客户报障时能对上服务端日志", () => {
+  test("shows the Error ID when there's a digest, so a user's report can be matched to server logs", () => {
     renderBoundary(Object.assign(new Error("boom"), { digest: "abc123" }));
 
     expect(
@@ -55,13 +57,13 @@ describe("[locale] 段错误边界（error.tsx）", () => {
     ).toBeDefined();
   });
 
-  test("没有 digest 时不显示 Error ID（客户端错误没有这个字段）", () => {
+  test("hides the Error ID without a digest (client errors don't have one)", () => {
     renderBoundary(new Error("boom"));
 
     expect(screen.queryByText(/Error ID:/)).toBeNull();
   });
 
-  test("点重试按钮触发 retry（不是刷新页面）", () => {
+  test("clicking retry calls retry (instead of reloading the page)", () => {
     const retry = vi.fn();
     renderBoundary(new Error("boom"), retry);
 
@@ -70,13 +72,13 @@ describe("[locale] 段错误边界（error.tsx）", () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  test("把标题写进 <title>：client 边界用不了 metadata 导出，出错时标题不能停在被替换掉的那页", () => {
+  test("writes the title into <title>: a client boundary can't export metadata, and the title mustn't stay on the replaced page", () => {
     renderBoundary(new Error("boom"));
 
     expect(document.title).toBe(messages.Error.title);
   });
 
-  test("上报错误（console + 已注册的上报器）", () => {
+  test("reports the error (console + registered reporters)", () => {
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});

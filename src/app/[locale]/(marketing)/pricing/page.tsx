@@ -25,8 +25,9 @@ export async function generateMetadata({
 }
 
 /**
- * 定价页。和落地页共用 Pricing 区块，但会按登录用户显示已订阅、已购买的状态；
- * 未登录用户点购买时先登录，登录后带着 ?plan=<id> 回到这里自动继续结账。
+ * Pricing page. Shares the Pricing section with the landing page, but shows subscribed/purchased
+ * state for the signed-in user. Signed-out visitors who click buy sign in first, then come back
+ * here with ?plan=<id> and checkout continues automatically.
  */
 export default async function PricingPage({
   searchParams,

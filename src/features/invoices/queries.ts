@@ -4,11 +4,12 @@ import type { Database } from "@/core/db/client";
 
 import { invoices } from "./schema";
 
-// 示例业务模块的读查询：列表 + 按客户名搜索 + 分页。写法照 src/core/admin/queries.ts
-// （同样的 `Promise.all` 双查询、同样的 Paged 形状），但留在这里 —— 业务模块去 import
-// 后台的查询和组件是反向依赖，而示例本来就该能整块删掉。
+// Read queries for the example business module: list + search by customer name + pagination.
+// Modeled on src/core/admin/queries.ts (the same `Promise.all` pair of queries, the same Paged
+// shape) but kept here — a business module importing admin queries and components would be a
+// reversed dependency, and the example should be deletable as a whole.
 
-/** 列表每页的条数。 */
+/** Rows per list page. */
 export const INVOICE_PAGE_SIZE = 10;
 
 export type Paged<T> = {
@@ -18,7 +19,7 @@ export type Paged<T> = {
   totalPages: number;
 };
 
-/** LIKE 的通配符按字面匹配：搜 `100%` 时不该匹配到所有行。 */
+/** LIKE wildcards are matched literally: searching for `100%` must not match every row. */
 export function likePattern(query: string): string {
   return `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
@@ -26,10 +27,11 @@ export function likePattern(query: string): string {
 const offsetOf = (page: number) => (page - 1) * INVOICE_PAGE_SIZE;
 
 /**
- * 一个用户的发票，按客户名搜索（不区分大小写），最新的在前。
+ * A user's invoices, searchable by customer name (case-insensitive), newest first.
  *
- * `user_id` 永远在 where 里 —— 发票 id 全局唯一，少了这个条件就能翻到别人的数据。
- * 行和总数一次并发发出（第二页之后总数不会变，但两条 SQL 形状一样，没必要缓存）。
+ * `user_id` is always in the where clause — invoice ids are globally unique, so without it you
+ * could page through someone else's data. Rows and total are fetched concurrently (the total
+ * doesn't change after page two, but both queries have the same shape, so caching isn't worth it).
  */
 export async function listInvoices(
   db: Database,

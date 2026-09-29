@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import messages from "../../../../messages/en.json";
 import Home from "./page";
 
-test("首页渲染 Hero 标题和主 CTA", () => {
+test("home page renders the hero title and primary CTA", () => {
   render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <Home />

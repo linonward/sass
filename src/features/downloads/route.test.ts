@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 describe("GET /api/downloads/<id>", () => {
-  test("有授权：现签一个 5 分钟的地址并 302 过去，不缓存", async () => {
+  test("with a grant: signs a fresh 5-minute URL and 302s to it, uncached", async () => {
     findDownload.mockResolvedValue(release);
     const { ctx, storage } = context();
     const response = await handleDownload(request, "rel_1", ctx);
@@ -60,7 +60,7 @@ describe("GET /api/downloads/<id>", () => {
     expect(findDownload).toHaveBeenCalledWith(expect.anything(), "u1", "rel_1");
   });
 
-  test("模块关闭 404、没登录 401，都不查库", async () => {
+  test("disabled module 404s and signed-out 401s, neither touching the database", async () => {
     expect(
       (await handleDownload(request, "rel_1", context({ enabled: false }).ctx))
         .status,
@@ -77,14 +77,14 @@ describe("GET /api/downloads/<id>", () => {
     expect(findDownload).not.toHaveBeenCalled();
   });
 
-  test("没有授权（或版本不存在）一律 404，不签地址", async () => {
+  test("no grant (or no such version) is always a 404, with no URL signed", async () => {
     findDownload.mockResolvedValue(null);
     const { ctx, storage } = context();
     expect((await handleDownload(request, "rel_1", ctx)).status).toBe(404);
     expect(storage.presignGet).not.toHaveBeenCalled();
   });
 
-  test("没配对象存储时 503", async () => {
+  test("503 when object storage isn't configured", async () => {
     findDownload.mockResolvedValue(release);
     expect(
       (

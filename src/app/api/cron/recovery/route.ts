@@ -5,12 +5,13 @@ import {
   runRecovery,
 } from "@/core/recovery";
 
-// 一次最多推进 CRON_RECOVERY_LIMIT 条任务，视频要下载转存；Vercel 上函数最长运行时间（秒）。
+// Advances at most CRON_RECOVERY_LIMIT jobs per run, and videos must be downloaded and re-stored;
+// maximum function duration on Vercel (seconds).
 export const maxDuration = 300;
 
 /**
- * 恢复入口：Vercel cron（vercel.json 的 crons）或任何调度器按 `Authorization: Bearer $CRON_SECRET`
- * 调用。没设 CRON_SECRET 时返回 404。
+ * Recovery sweep entry point: called by Vercel cron (`crons` in vercel.json) or any scheduler with
+ * `Authorization: Bearer $CRON_SECRET`. Returns 404 when CRON_SECRET is not set.
  */
 export async function GET(request: Request) {
   return handleCronRecovery(request, {

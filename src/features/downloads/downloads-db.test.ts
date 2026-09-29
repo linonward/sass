@@ -28,8 +28,9 @@ import { createDownloadsHandler } from "./grant";
 import { findDownload, listDownloads } from "./queries";
 import { downloadEntitlements, downloadReleases } from "./schema";
 
-// 真库测试：授权的唯一约束、和事件同事务提交的 outbox、退款收回，只有连着 Postgres 才测得准。
-// 没有 DATABASE_URL_TEST 时跳过；CI 里必须配。
+// Real-database tests: the grant unique constraint, the outbox committed in the same transaction as
+// the event, and refund revocation can only be tested properly against Postgres.
+// Skipped without DATABASE_URL_TEST; CI must set it.
 const url = process.env.DATABASE_URL_TEST;
 if (!url && process.env.CI) throw new Error("DATABASE_URL_TEST required");
 
@@ -38,13 +39,14 @@ const config = {
   products: [{ id: "template", planId: "lifetime", updateMonths: 12 }],
 };
 
-describe.skipIf(!url)("downloads（真实 Postgres）", () => {
+describe.skipIf(!url)("downloads (real Postgres)", () => {
   let client: DbClient;
   let db: DbClient["db"];
   let fake: FakeProvider;
   let userId: string;
   const sent: { template: string; props: Record<string, unknown> }[] = [];
-  // 每个用例一个产品 id，发布的版本互不串（版本表不挂在用户上）。
+  // One product id per test so released versions don't leak between tests (the versions table isn't
+  // tied to users).
   let productId: string;
 
   function useHandler(overrides: Partial<typeof config> = {}) {
@@ -117,7 +119,7 @@ describe.skipIf(!url)("downloads（真实 Postgres）", () => {
     useHandler();
   });
 
-  test("买了对应套餐：记一条授权（更新期 12 个月），发一封 download-ready", async () => {
+  test("buying the matching plan records a grant (12-month updates period) and sends a download-ready email", async () => {
     const orderId = `ord_${randomUUID()}`;
     await handle(buy(orderId));
 
@@ -140,7 +142,7 @@ describe.skipIf(!url)("downloads（真实 Postgres）", () => {
     expect((await outbox()).map((r) => r.status)).toEqual(["sent"]);
   });
 
-  test("同一笔订单换个事件 ID 再推一次：不多授权、不多发信", async () => {
+  test("the same order pushed again with another event ID: no extra grant, no extra email", async () => {
     const orderId = `ord_${randomUUID()}`;
     await handle(buy(orderId));
     await handle(buy(orderId));
@@ -149,7 +151,7 @@ describe.skipIf(!url)("downloads（真实 Postgres）", () => {
     expect(await outbox()).toHaveLength(1);
   });
 
-  test("别的套餐、订阅结账、模块关闭：都不授权", async () => {
+  test("other plans, subscription checkouts and a disabled module grant nothing", async () => {
     await handle(buy(`ord_${randomUUID()}`, { planId: "pro" }));
     await handle(
       buy(`ord_${randomUUID()}`, { subscriptionId: `sub_${randomUUID()}` }),
@@ -160,7 +162,7 @@ describe.skipIf(!url)("downloads（真实 Postgres）", () => {
     expect(sent).toHaveLength(0);
   });
 
-  test("全额退款收回授权；部分退款不动", async () => {
+  test("a full refund revokes the grant; a partial refund leaves it alone", async () => {
     const partial = `ord_${randomUUID()}`;
     const full = `ord_${randomUUID()}`;
     await handle(buy(partial));
@@ -183,7 +185,7 @@ describe.skipIf(!url)("downloads（真实 Postgres）", () => {
     expect(byOrder[full]!.revokedAt).not.toBeNull();
   });
 
-  test("下载页与下载接口：只给更新期内发布的版本，别人的授权不算", async () => {
+  test("downloads page and endpoint: only versions released in the updates period, and other users' grants don't count", async () => {
     await handle(buy(`ord_${randomUUID()}`));
     const [inWindow, afterWindow] = await db
       .insert(downloadReleases)

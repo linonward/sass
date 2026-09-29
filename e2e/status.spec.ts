@@ -19,47 +19,51 @@ const ad = messages.Admin.statusPage;
 const d = messages.Dashboard;
 
 /**
- * 管理员邮箱要写进 ADMIN_EMAILS（见 .github/workflows/ci.yml）。
- * 每个 project 用一个，而且和 admin.spec.ts 分开：同一邮箱同时跑两条用例时，
- * 一边的 `clearResendCooldown` 会让另一边手里的验证码作废（冷却只有 60s）。
+ * Admin emails must be listed in ADMIN_EMAILS (see .github/workflows/ci.yml).
+ * One per project, kept separate from admin.spec.ts: when two tests run at once with the same
+ * email, `clearResendCooldown` on one side invalidates the code the other side holds (the
+ * cooldown is only 60s).
  */
 const adminEmail = (project: string) =>
   `e2e-admin-status-${project}@example.com`;
 
 /**
- * 邮件里的链接指向 `site.config.ts` 的域名（本地是 example.com，CI 是 ci.example.test），
- * 都不是测试服务器，所以只取路径部分再访问。令牌在查询串里，search 不能丢。
+ * Links in emails point at the `site.config.ts` domain (example.com locally, ci.example.test in
+ * CI), neither of which is the test server, so only the path is used. The token is in the query
+ * string, so search must be kept.
  */
 const localLink = (raw: unknown) => {
   const url = new URL(String(raw));
   return url.pathname + url.search;
 };
 
-/** 带占位符的文案里 `{date}` 之前的部分，用来断言「有这一行」。 */
+/** The part of a message before its `{date}` placeholder, used to assert "this line exists". */
 const labelPrefix = (value: string) => value.split("{date}")[0] ?? value;
 
 const componentLabel = (key: string) => {
   const component = siteConfig.statusPage.components[key];
-  if (!component) throw new Error(`site.config.ts 里没有组件 ${key}`);
+  if (!component) throw new Error(`no component ${key} in site.config.ts`);
   return component.label;
 };
 
 async function newPage(browser: Browser) {
   const page = await (await browser.newContext()).newPage();
-  // useRandomIp 不是 React hook，只是名字以 use 开头。
+  // useRandomIp isn't a React hook; its name just starts with use.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   await useRandomIp(page);
   return page;
 }
 
-/** `/status` 上某个组件的那一行：组件行是页面里唯一带三级标题的列表项。 */
+/**
+ * A component's row on `/status`: component rows are the only list items on the page with an h3.
+ */
 function componentRow(page: Page, label: string) {
   return page
     .getByRole("listitem")
     .filter({ has: page.getByRole("heading", { name: label, level: 3 }) });
 }
 
-test("访客打开 /status：横幅、每个组件一行、底部有订阅入口", async ({
+test("visitor opens /status: banner, one row per component, subscribe form at the bottom", async ({
   page,
 }) => {
   const response = await page.goto("/status");
@@ -76,11 +80,13 @@ test("访客打开 /status：横幅、每个组件一行、底部有订阅入口
   ).toBeVisible();
 });
 
-test.describe("375px 宽度", () => {
+test.describe("375px width", () => {
   test.use({ viewport: { width: 375, height: 740 } });
 
   for (const theme of ["light", "dark"] as const) {
-    test(`${theme} 模式下 /status 不横向溢出`, async ({ page }) => {
+    test(`${theme} mode: /status doesn't overflow horizontally`, async ({
+      page,
+    }) => {
       await page.emulateMedia({ colorScheme: theme });
       await page.goto("/status");
       const overflow = await page.evaluate(
@@ -91,11 +97,12 @@ test.describe("375px 宽度", () => {
   }
 });
 
-test.describe("incident 从创建到恢复", () => {
-  // 同一个管理员邮箱只登录一次（验证码有重发冷却），用例按顺序共用这个页面。
+test.describe("incident from creation to recovery", () => {
+  // Sign in with the admin email only once (verification codes have a resend cooldown); the
+  // tests share this page in order.
   test.describe.configure({ mode: "serial" });
 
-  /** 每次跑用不同的说明，断言不会读到上一次留下的 incident。 */
+  /** A different description on each run, so assertions never pick up a previous run's incident. */
   const run = randomUUID().slice(0, 8);
   const message = `Elevated latency ${run}`;
   const updated = `Latency worse, investigating ${run}`;
@@ -104,13 +111,15 @@ test.describe("incident 从创建到恢复", () => {
   let admin: Page | undefined;
   let incidentMail: StoredEmail | undefined;
 
-  // 桌面端和移动端共用一个数据库：写状态的用例只在桌面端跑一遍。否则两个 project
-  // 并行时，一边还没恢复的 incident 会让另一边「全部正常」的断言失败（CI 上会变成
-  // 间歇性失败）。移动端的布局由上面那条用例覆盖。
-  const desktopOnly = "共享数据库，状态变更只在桌面端跑一遍";
+  // Desktop and mobile share one database: tests that write status only run once, on desktop.
+  // Otherwise, with both projects in parallel, one side's unresolved incident would fail the other
+  // side's "all operational" assertion (intermittent failures in CI). The mobile layout is covered
+  // by the test above.
+  const desktopOnly =
+    "shared database: status changes only run once, on desktop";
 
   function adminPage() {
-    if (!admin) throw new Error("管理员页面只在桌面端准备");
+    if (!admin) throw new Error("the admin page is only set up on desktop");
     return admin;
   }
 
@@ -118,11 +127,12 @@ test.describe("incident 从创建到恢复", () => {
     if (testInfo.project.name !== "desktop") return;
     const page = await newPage(browser);
     const account = adminEmail(testInfo.project.name);
-    // 失败重试时会在冷却期内再次登录。
+    // A retry after failure signs in again within the cooldown.
     await clearResendCooldown(account);
     await signIn(page, account);
     admin = page;
-    // 上一次跑挂在这里的 incident 会让「恢复后全部正常」失败。
+    // An incident left behind by a previous run that died here would fail "all operational after
+    // recovery".
     await withDatabase((db) => db.query("delete from status_events"));
   });
 
@@ -130,7 +140,7 @@ test.describe("incident 从创建到恢复", () => {
     await admin?.context().close();
   });
 
-  test("访客订阅：确认信 → 点确认 → 页面给回执，后台名单里是已确认", async ({
+  test("visitor subscribes: confirmation email → click confirm → page shows receipt, admin list shows confirmed", async ({
     browser,
     isMobile,
   }) => {
@@ -163,20 +173,21 @@ test.describe("incident 从创建到恢复", () => {
     await page.close();
   });
 
-  test("管理员开 incident：访客看到 degraded，订阅者收到通知", async ({
+  test("admin opens an incident: visitors see degraded, subscribers get notified", async ({
     browser,
     isMobile,
   }) => {
     test.skip(isMobile, desktopOnly);
     const admin = adminPage();
-    // dashboard 侧边栏里只有 Admin 一个入口，完整后台菜单在 /admin 里。
+    // The dashboard sidebar only has a single Admin entry; the full admin menu is under /admin.
     await admin.goto("/dashboard");
     await admin
       .getByRole("list", { name: d.adminNav })
       .getByRole("link", { name: d.nav.admin })
       .click();
     await expect(admin).toHaveURL("/admin/users");
-    // 状态页开启时后台菜单里才有这一项（关掉时页面 404，菜单也不该留入口）。
+    // The admin menu only has this item when the status page is enabled (when off, the page is a
+    // 404 and the menu shouldn't keep an entry).
     await admin
       .getByRole("list", { name: d.adminNav })
       .getByRole("link", { name: d.nav.adminStatus })
@@ -212,7 +223,7 @@ test.describe("incident 从创建到恢复", () => {
     ).toBeVisible();
     await expect(row).toContainText(message);
     await expect(row).toContainText(labelPrefix(s.since));
-    // 时间线里那条还在进行中。
+    // The timeline entry is still ongoing.
     await expect(
       visitor.getByRole("listitem").filter({ hasText: s.ongoing }),
     ).toContainText(message);
@@ -228,7 +239,7 @@ test.describe("incident 从创建到恢复", () => {
     await visitor.close();
   });
 
-  test("管理员改影响级别：访客看到 Major outage 和新的说明", async ({
+  test("admin changes the impact level: visitors see Major outage and the new description", async ({
     browser,
     isMobile,
   }) => {
@@ -239,7 +250,8 @@ test.describe("incident 从创建到恢复", () => {
     await chooseOption(panel.getByLabel(ad.open.status), s.statusLabel.outage);
     await panel.getByLabel(ad.open.message).fill(updated);
     await panel.getByRole("button", { name: ad.open.update }).click();
-    // 提交后这一行换了说明，原来的定位符不再匹配，按新说明重新找。
+    // After submitting, the row has a new description and the old locator no longer matches, so
+    // find it again by the new description.
     await expect(
       admin
         .getByRole("listitem")
@@ -261,7 +273,7 @@ test.describe("incident 从创建到恢复", () => {
     await visitor.close();
   });
 
-  test("管理员标记恢复：访客看到全部正常，退订后后台名单里不再有", async ({
+  test("admin marks resolved: visitors see all operational, and after unsubscribing the admin list no longer has them", async ({
     browser,
     isMobile,
   }) => {
@@ -273,7 +285,7 @@ test.describe("incident 从创建到恢复", () => {
       .filter({ hasText: updated })
       .getByRole("button", { name: ad.open.resolve })
       .click();
-    // 恢复之后它离开「进行中」，落到历史表里，并带上恢复时间。
+    // Once resolved it leaves "ongoing" and moves to the history table, with its resolution time.
     await expect(admin.getByText(ad.open.empty)).toBeVisible();
     const history = admin.getByRole("row").filter({ hasText: updated });
     await expect(history).not.toContainText(ad.ongoing);
@@ -294,7 +306,10 @@ test.describe("incident 从创建到恢复", () => {
       visitor.getByRole("listitem").filter({ hasText: updated }),
     ).toContainText(labelPrefix(s.resolvedAt));
 
-    if (!incidentMail) throw new Error("通知邮件在上一用例里没取到");
+    if (!incidentMail)
+      throw new Error(
+        "the notification email wasn't captured in the previous test",
+      );
     await visitor.goto(localLink(incidentMail.props.withdrawUrl));
     await expect(
       visitor.getByRole("status").filter({ hasText: s.notice.unsubscribed }),

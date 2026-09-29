@@ -1,6 +1,6 @@
 import { fakeBillingActive } from "@/core/billing/providers";
 
-// 模拟的客户门户（BILLING_PROVIDER=fake，只在本地和 CI 可用）。其他情况一律 404。
+// Simulated customer portal (BILLING_PROVIDER=fake, local and CI only). 404 in every other case.
 export async function GET(request: Request) {
   if (!fakeBillingActive()) return new Response("Not Found", { status: 404 });
   const customer = new URL(request.url).searchParams.get("customer") ?? "";

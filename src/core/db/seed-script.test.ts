@@ -24,12 +24,14 @@ import {
 const execFileAsync = promisify(execFile);
 const url = process.env.DATABASE_URL_TEST;
 
-// CI 必须提供测试库，不允许静默跳过。
+// CI must provide a test database; silently skipping is not allowed.
 if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过演示数据测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping demo data tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
 const DEMO_EMAILS = ["demo@example.com", "demo-churn@example.com"];
@@ -41,8 +43,10 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
   const script = path.resolve(__dirname, "../../../scripts/db-seed.mjs");
 
   /**
-   * 跑脚本。默认带 `NODE_ENV=test` —— 脚本按「NODE_ENV 未设置 = 生产」处理，不给就拒绝。
-   * `env` 里值为 undefined 的键会从子进程环境里删掉，用来验证「未设置」的场景。
+   * Runs the script. Passes `NODE_ENV=test` by default — the script treats "NODE_ENV unset" as
+   * production and refuses without it.
+   * Keys in `env` whose value is undefined are removed from the child process environment, to test
+   * the "unset" cases.
    */
   async function seed(env: Record<string, string | undefined> = {}) {
     const childEnv: Record<string, string | undefined> = {
@@ -58,7 +62,7 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
 
     try {
       const { stdout } = await execFileAsync(process.execPath, [script], {
-        // 上面删过键，NODE_ENV 可能已经不在（ProcessEnv 的类型要求它必填），断言回去。
+        // Keys were deleted above, so NODE_ENV may be gone (the ProcessEnv type requires it); assert it back.
         env: childEnv as NodeJS.ProcessEnv,
       });
       return { code: 0, stdout };
@@ -107,13 +111,14 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
   });
 
   afterAll(async () => {
-    // 测试库是共用的：留下的演示用户会影响其他用例的列表断言，跑完就删。
-    // 订阅、订单、积分流水都挂在 user 上（cascade），一起走。
+    // The test database is shared: leftover demo users would affect other tests' list assertions, so
+    // delete them afterwards.
+    // Subscriptions, orders and credit transactions all hang off the user (cascade) and go with it.
     await clean();
     await client?.close();
   });
 
-  test("空库跑一次：用户、订阅、订单、积分流水都有，账本自洽", async () => {
+  test("one run on an empty database: users, subscriptions, orders and credit transactions exist and the ledger is consistent", async () => {
     await clean();
 
     const result = await seed();
@@ -122,7 +127,7 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
     expect(await counts()).toEqual({
       users: 2,
       subscriptions: 2,
-      // demo 用户 4 条（1 发放 + 3 扣减）、churn 用户 2 条（1 发放 + 1 扣减）。
+      // 4 for the demo user (1 grant + 3 deductions), 2 for the churn user (1 grant + 1 deduction).
       transactions: 6,
       orders: 2,
     });
@@ -133,7 +138,7 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
       .where(eq(user.email, "demo@example.com"));
     expect(demo!.name).toBe("Demo User");
 
-    // 余额等于流水之和（账本的不变式），演示数据也不能破。
+    // Balance equals the sum of transactions (the ledger invariant); demo data must not break it either.
     const [balance] = await db
       .select({ balance: userCredits.balance })
       .from(userCredits)
@@ -144,7 +149,8 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
       .where(eq(creditTransactions.userId, demo!.id));
     expect(balance!.balance).toBe(sum!.total);
 
-    // dashboard 读的就是这两处：账单概览（订阅/已购）与积分流水。
+    // These are exactly what the dashboard reads: the billing overview (subscriptions / purchases) and
+    // credit transactions.
     const overview = await getBillingOverview({ db, userId: demo!.id });
     expect(overview.subscription).toMatchObject({
       planId: "pro",
@@ -153,13 +159,13 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
     const history = await listTransactions(demo!.id, { limit: 10, tx: db });
     expect(history).toHaveLength(4);
 
-    // 后台用户列表能看到演示用户并带上余额。
+    // The admin user list shows the demo users with their balances.
     const listed = await listUsers(db, { query: "demo@example.com" });
     expect(listed.rows.map((row) => row.email)).toContain("demo@example.com");
     expect(listed.rows[0]!.balance).toBe(balance!.balance);
   });
 
-  test("重复执行：不报错、不重复插入", async () => {
+  test("running again: no errors and no duplicate inserts", async () => {
     const before = await counts();
 
     const result = await seed();
@@ -168,21 +174,22 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
     expect(await counts()).toEqual(before);
   });
 
-  test("生产环境拒绝执行", async () => {
+  test("refuses to run in production", async () => {
     const result = await seed({ NODE_ENV: "production" });
 
     expect(result.code).not.toBe(0);
-    expect(result.stdout).toContain("拒绝灌演示数据");
+    expect(result.stdout).toContain("Refusing to seed demo data");
   });
 
-  test("NODE_ENV 未设置：按生产拒绝，一条数据都不写", async () => {
+  test("NODE_ENV unset: refuses as production and writes nothing", async () => {
     await clean();
 
     const result = await seed({ NODE_ENV: undefined });
 
     expect(result.code).not.toBe(0);
-    expect(result.stdout).toContain("拒绝灌演示数据");
-    // 拒绝时要说清怎么放行，否则只能靠翻源码猜（脚本里那句「请用一个独立的库」不够）。
+    expect(result.stdout).toContain("Refusing to seed demo data");
+    // When refusing, it must say how to allow it; otherwise people have to read the source to guess
+    // ("use a separate database" alone is not enough).
     expect(result.stdout).toContain("ALLOW_DB_SEED=1 pnpm db:seed");
     expect(await counts()).toEqual({
       users: 0,
@@ -192,7 +199,7 @@ describe.skipIf(!url)("scripts/db-seed.mjs", () => {
     });
   });
 
-  test("ALLOW_DB_SEED=1 显式放行：NODE_ENV 未设置也照常灌数据", async () => {
+  test("ALLOW_DB_SEED=1 explicitly allows it: seeds normally even with NODE_ENV unset", async () => {
     await clean();
 
     const result = await seed({ NODE_ENV: undefined, ALLOW_DB_SEED: "1" });

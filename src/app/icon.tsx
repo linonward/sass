@@ -1,17 +1,20 @@
 import { faviconImage, faviconSize } from "@/core/seo/favicon";
 
 /**
- * 标签页图标（favicon）。放在 `src/app/` 下，Next 会按 `icon` 文件约定在构建时生成一次，
- * 并把 `<link rel="icon">` 注入 `<head>` —— 不用手写标签，浏览器标签页也不会再是空白。
+ * Tab icon (favicon). Because it sits in `src/app/`, Next generates it once at build time under the
+ * `icon` file convention and injects `<link rel="icon">` into `<head>` — no hand-written tag, and
+ * the browser tab is never blank.
  *
- * 图本身在 `src/core/seo/favicon.tsx`：颜色取自 `site.config.ts` 的 `brand.primaryColor`，
- * 几何和顶栏的内联标记共用，所以换品牌色时 favicon 跟着变，不用改任何图。
+ * The image itself is in `src/core/seo/favicon.tsx`: its color comes from `brand.primaryColor` in
+ * `site.config.ts` and its geometry is shared with the inline mark in the top bar, so changing the
+ * brand color updates the favicon without editing any image.
  *
- * 换成自己的图标：把一张 `icon.svg` / `icon.png` 放进 `src/app/` 并**删掉这个文件**。
- * 两个同名的 icon 文件会各生成一个 `<link rel="icon">`，浏览器挑哪个不保证。
+ * To use your own icon: put an `icon.svg` / `icon.png` in `src/app/` and **delete this file**. Two
+ * icon files with the same name each generate a `<link rel="icon">`, and which one the browser picks
+ * isn't guaranteed.
  *
- * `/icon` 必须留在 `src/proxy.ts` 的 matcher 排除集里：注入的地址不带语言前缀，
- * 被 next-intl 改写成 `/<locale>/icon` 就会 404，标签页又变回空白。
+ * `/icon` must stay in the matcher exclusions in `src/proxy.ts`: the injected URL has no locale
+ * prefix, and if next-intl rewrites it to `/<locale>/icon` it 404s and the tab goes blank again.
  */
 export const size = faviconSize;
 

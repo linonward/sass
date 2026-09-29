@@ -3,7 +3,8 @@ import { withContentCollections } from "@content-collections/next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import createNextIntlPlugin from "next-intl/plugin";
 
-// 在 dev / build 启动时校验 site.config.ts 与环境变量，出错立即失败。
+// Validates site.config.ts and environment variables when dev / build starts, failing immediately
+// on errors.
 import siteConfig from "./site.config";
 import "./src/core/env";
 import { canUploadSourceMaps } from "./src/core/observability/env";
@@ -18,15 +19,18 @@ const sentryEnabled =
 const nextConfig: NextConfig = {
   env: {
     ACQUISITION_LEADS: String(siteConfig.acquisition.leads.enabled),
-    // 构建期常量，让默认关闭的获客控件连同客户端依赖被裁剪。
+    // Build-time constants, so acquisition widgets that are off by default are tree-shaken along
+    // with their client dependencies.
     ACQUISITION_ATTRIBUTION: String(siteConfig.acquisition.attribution.enabled),
     ACQUISITION_REFERRALS: String(siteConfig.acquisition.referrals.enabled),
-    // 构建时写死，instrumentation 按它决定是否加载 Sentry；关闭时 SDK 不会打进产物。
+    // Baked in at build time; instrumentation uses it to decide whether to load Sentry. When off,
+    // the SDK is not included in the bundle.
     OBSERVABILITY_SENTRY: String(sentryEnabled),
   },
-  // 全站安全响应头（含 CSP），策略见 src/core/security/headers.ts。
-  // 用 `/:path*` 覆盖所有路径：proxy.ts 的 matcher 排除了 /api、/_next、/monitoring
-  // 和带扩展名的静态文件，这些路径只经过这里。
+  // Site-wide security response headers (including CSP); the policy is in
+  // src/core/security/headers.ts.
+  // `/:path*` covers every path: the proxy.ts matcher excludes /api, /_next, /monitoring, and
+  // static files with an extension, and those paths only pass through here.
   headers() {
     return [
       {
@@ -40,7 +44,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-// 只在开启 observability.sentry 时套上 Sentry 的构建配置。
+// Wraps the config with Sentry's build config only when observability.sentry is on.
 function withSentry(config: NextConfig) {
   if (!sentryEnabled) return config;
   const uploadSourceMaps = canUploadSourceMaps(process.env);
@@ -48,18 +52,21 @@ function withSentry(config: NextConfig) {
     org: process.env.SENTRY_ORG,
     project: process.env.SENTRY_PROJECT,
     authToken: process.env.SENTRY_AUTH_TOKEN,
-    // 三个变量都填了才上传 source map；上传后从产物里删掉，不对外公开。
+    // Source maps are only uploaded when all three variables are set; after upload they are
+    // deleted from the build output so they are never public.
     sourcemaps: {
       disable: !uploadSourceMaps,
       deleteSourcemapsAfterUpload: true,
     },
     widenClientFileUpload: uploadSourceMaps,
-    // 浏览器事件经本站转发，减少被广告拦截插件拦掉。proxy.ts 的 matcher 要跳过这个路径。
+    // Browser events are relayed through this site so ad blockers drop fewer of them. The proxy.ts
+    // matcher must skip this path.
     tunnelRoute: SENTRY_TUNNEL_ROUTE,
     silent: !process.env.CI,
     telemetry: false,
   });
 }
 
-// withContentCollections 返回 Promise，必须放在最外层。它在 dev / build 时生成 content/blog 的文章数据。
+// withContentCollections returns a Promise, so it must be the outermost wrapper. It generates the
+// content/blog post data during dev / build.
 export default withContentCollections(withSentry(withNextIntl(nextConfig)));

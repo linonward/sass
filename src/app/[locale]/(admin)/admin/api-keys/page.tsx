@@ -25,10 +25,12 @@ export function generateMetadata({ params }: Props) {
 }
 
 /**
- * API Key 报表：谁在用 API、有多少把、最后一次用是什么时候。
+ * API key report: who is using the API, how many keys they hold, and when each was last used.
  *
- * 只看数量和时间 —— 明文和哈希都不出后台（明文库里根本没有，哈希对运营也没有意义）。
- * 关闭 apiKeys 模块时和其他模块入口一样 404；非管理员由 requireAdmin 拦成 404。
+ * Counts and timestamps only — neither plaintext nor hashes leave the admin (the plaintext is never
+ * stored, and the hash means nothing to an operator).
+ * With the apiKeys module off this returns 404 like every other module entry; requireAdmin turns
+ * non-admins into a 404 too.
  */
 export default async function AdminApiKeysPage({ params }: Props) {
   if (!siteConfig.apiKeys.enabled) notFound();

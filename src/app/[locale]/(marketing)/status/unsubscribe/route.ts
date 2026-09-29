@@ -5,12 +5,13 @@ import { localizedPath } from "@/core/seo/urls";
 import { statusPageEnabled } from "@/core/status";
 import { withdrawSubscription } from "@/core/status/subscribers";
 
-// 退订要写库，不能预渲染。
+// Unsubscribing writes to the database, so this can't be prerendered.
 export const dynamic = "force-dynamic";
 
 /**
- * 退订：通知邮件底部那条永久链接打到这里。签名不对时不删任何东西，
- * 但对外仍然是「已退订」—— 这个人的诉求就是别再收到邮件。
+ * Unsubscribe: the permanent link at the bottom of notification emails lands here. With a bad
+ * signature nothing is deleted, but the response still says "unsubscribed" — all this person wants
+ * is to stop getting emails.
  */
 export async function GET(
   request: Request,

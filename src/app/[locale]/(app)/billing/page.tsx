@@ -30,12 +30,16 @@ export async function generateMetadata({
   });
 }
 
-/** 账单页：当前套餐、一次性购买、积分余额和最近 20 条流水。发票等由服务商的客户门户提供。 */
+/**
+ * Billing page: current plan, one-time purchases, credit balance and the 20 most recent credit
+ * transactions. Invoices and the like come from the provider's customer portal.
+ */
 export default async function BillingPage({
   params,
 }: PageProps<"/[locale]/billing">) {
   const { locale } = await params;
-  // 文案、格式化器和会话校验互不依赖，一次并发发出；会话的 userId 到下一段才用得上。
+  // Messages, formatters and the session check don't depend on each other, so fire them
+  // concurrently; the session's userId isn't needed until the next block.
   const [t, tp, format, session] = await Promise.all([
     getTranslations({ locale, namespace: "Billing.page" }),
     getTranslations({ locale, namespace: "Landing.pricing" }),
@@ -43,7 +47,7 @@ export default async function BillingPage({
     requirePageSession(locale),
   ]);
   const userId = session.user.id;
-  // 账单状态、余额和流水互不依赖，并行查询。
+  // Billing state, balance and credit transactions are independent; query them in parallel.
   const [
     { subscription, purchasedPlanIds, hasCustomer },
     balance,
@@ -96,7 +100,7 @@ export default async function BillingPage({
           )}
           <div className="flex flex-wrap gap-2">
             {hasCustomer && (
-              // 客户门户是服务端重定向，要整页跳转。
+              // The customer portal is a server-side redirect, so it needs a full-page navigation.
               // eslint-disable-next-line @next/next/no-html-link-for-pages
               <a href="/api/billing/portal" className={buttonVariants()}>
                 {t("manage")}
@@ -156,7 +160,8 @@ export default async function BillingPage({
                     <span
                       className={cn(
                         "shrink-0 tabular-nums",
-                        // 进账用语义色，扣减保持中性：花积分是常态，标红太吵。
+                        // Credits in get the semantic color; deductions stay neutral: spending credits is normal, and red
+                        // would be too loud.
                         tx.amount > 0
                           ? "text-success"
                           : "text-muted-foreground",

@@ -1,7 +1,8 @@
 import { StatusPage, statusPageMetadata } from "@/core/status/status-page";
 
-// 状态页每次渲染都要读库（auto 模式下还要重跑探测），不能进构建期预渲染：
-// `next build` 不连数据库（见 src/core/db/index.ts 的说明）。
+// The status page reads the database on every render (and reruns probes in auto mode), so it can't
+// be prerendered at build time: `next build` doesn't connect to the database (see the notes in
+// src/core/db/index.ts).
 export const dynamic = "force-dynamic";
 
 type Props = PageProps<"/[locale]/status">;
@@ -12,8 +13,8 @@ export async function generateMetadata({ params }: Props) {
 }
 
 /**
- * 确认 / 退订跳回来时的一次性提示。
- * 退订的链接即使签名不对也显示成功：那个人本来就不该再收到邮件。
+ * One-time notice after being redirected back from confirm / unsubscribe. An unsubscribe link shows
+ * success even with a bad signature: that person shouldn't get more emails either way.
  */
 function parseNotice(query: Record<string, string | string[] | undefined>) {
   if (query.subscribed === "1") return "subscribed" as const;

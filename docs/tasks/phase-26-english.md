@@ -127,16 +127,21 @@
 - 分支 / worktree：`docs/english-docs` → `../sass-english-docs`
 - 依赖：T2602、T2603、T2604（文档里引用的脚本输出和配置说明以英文版为准）
 
-**范围**：`README.md`、`UPGRADING.md`、`docs/starter-guide.md`、`docs/agent-guide.md`、`docs/design.md`、`docs/i18n.md`、`docs/billing.md`、`THIRD-PARTY-NOTICES.md`。
+**范围**：`README.md`、`UPGRADING.md`、`docs/starter-guide.md`、`docs/agent-guide.md`、`docs/design.md`、`docs/i18n.md`、`docs/billing.md`、`docs/testimonials.md`、`THIRD-PARTY-NOTICES.md`（`docs/testimonials.md` 随包但原卡漏列，T2604 盘点时补上）。
 
 - 直接替换为英文，不保留中文版。
 - 锚点会变（例如 README 里的 `#10-分钟从零到上线`）：全仓 grep 旧锚点，包括代码注释和 UI 里指向文档的链接。
 - `docs/agent-guide.md` 是买家的 AI 编码助手读的指引，补一句「代码、注释和文档用英文」，让买家项目沿用同一规则。
+- T2601–T2604 留下的衔接点（翻译文档时逐条对上）：
+  - `scripts/check-notices.mjs` 按中文标题解析 `THIRD-PARTY-NOTICES.md`（`## 直接依赖明细`、`## 全量依赖树`、`## 生产依赖树`、`## 需要单独说明的许可`，以及「N 个 `dependencies` + M 个 `devDependencies`，共 K 个」这句的正则）。两边在同一个 PR 里一起改，改完跑 `pnpm notices:check`。
+  - `scripts/apply-template-update.sh` 的冲突标记标签已改为 `yours (current)` / `template (previous)` / `template (new)`；`UPGRADING.md` 里展示冲突标记的示例要跟着改。
+  - 代码注释已经按英文名指向 README 的章节，README 的英文标题要对得上（或回头改注释）：Payments（`billing/providers/stripe.ts`）、error and permission boundaries（`auth/routes.ts`、`app/not-found.tsx`）、revenue basis / Revenue definition（`acquisition/report.ts`、`admin/metrics.ts`）、recovery sweep（`email/outbox.ts`）、Admin、Configuration、launch checklist 及其中的 GitHub、payments 小节（`admin/sections.ts`、`config/schema.ts`、`.github/workflows/ci.yml`）、feature flags、Google sign-in、attribution and lead capture。翻完 grep 一遍 `README` 在代码里的引用。
 
 **验收**
 
 - [ ] 范围内文件不含中文（示例里展示中文界面的片段除外）
 - [ ] 随包文档之间、代码指向文档的链接和锚点全部可达
+- [ ] `scripts/check-notices.mjs` 不再含中文，`pnpm notices:check` 绿
 - [ ] `pnpm format:check` 绿
 
 ---
@@ -153,7 +158,8 @@
 **做**
 
 - 加一个检查脚本（挂成 `pnpm` 命令并进 CI 的 `static` job）：扫描**随包文件集合**（与 `scripts/release-package.sh` 的排除清单同源，不另写一份），发现汉字即失败，输出文件和行号。
-- 白名单尽量窄：`messages/zh.json`、中文 locale 的内容目录、以及显式标注的行（例如断言中文界面的 e2e 期望值）。标注方式在脚本开头说明。
+- 白名单尽量窄：`messages/zh.json`、中文 locale 的内容目录、以及显式标注的行。标注方式在脚本开头说明。T2601–T2604 实际留下、需要白名单的只有这些：`drizzle/0000_init.sql`（已执行过的迁移，不改）、`src/core/blog/blog.test.ts` 与 `src/core/blog/posts.ts` 的非 ASCII 标签样例 `中文`、`src/core/i18n/locale-switcher.tsx` 的自称样例、`src/core/marketing/sections/hero.tsx` 按全角逗号切中文标题的那一行、`src/features/invoices/invoices.test.ts` 的全角数字输入。
+- 扫描要按 Unicode 读文件并跳过二进制（`public/` 下的图片会让逐行解码报错；T2604 盘点时就因此漏掉过一批文件）。
 - 对脚本本身写单测：随包文件里的中文会被抓到、白名单生效、不随包的文件不扫。
 - `docs/workflow.md` 的提交前检查补上这一条。
 

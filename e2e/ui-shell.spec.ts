@@ -11,7 +11,7 @@ function hexToRgb(hex: string) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-test("未知路径返回 404 页", async ({ page }) => {
+test("unknown paths return the 404 page", async ({ page }) => {
   const response = await page.goto("/this-page-does-not-exist");
   expect(response?.status()).toBe(404);
   await expect(
@@ -21,13 +21,14 @@ test("未知路径返回 404 页", async ({ page }) => {
   await expect(page).toHaveURL("/");
 });
 
-// 首屏主按钮：有可买的套餐时是「立即购买 · 价格」（CI 的配置卖 lifetime）。
+// The hero's primary button: with a purchasable plan it's "Buy now · price" (the CI config sells
+// lifetime).
 const heroPrimary = (page: Page) =>
   page.locator("#hero").getByRole("link", {
     name: new RegExp(`^${messages.Landing.hero.buyCta.split(" ·")[0]}`),
   });
 
-test("主按钮使用配置里的品牌色", async ({ page }) => {
+test("primary button uses the configured brand color", async ({ page }) => {
   await page.goto("/");
   await expect(heroPrimary(page)).toHaveCSS(
     "background-color",
@@ -35,7 +36,7 @@ test("主按钮使用配置里的品牌色", async ({ page }) => {
   );
 });
 
-test("暗色模式切换并在刷新后保持", async ({ page }) => {
+test("dark mode toggles and persists after reload", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
   const html = page.locator("html");
@@ -53,7 +54,9 @@ test("暗色模式切换并在刷新后保持", async ({ page }) => {
   await expect(html).not.toHaveClass(/\bdark\b/);
 });
 
-test("品牌色预览兼容亮暗和系统主题，离开首页后恢复配置", async ({ page }) => {
+test("brand color preview works with light, dark, and system themes, and reverts to config after leaving the home page", async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
   const colors = page.getByRole("radiogroup", {
@@ -82,7 +85,8 @@ test("品牌色预览兼容亮暗和系统主题，离开首页后恢复配置",
     "true",
   );
   await indigo.click();
-  // 离开首页：主按钮留在本页（跳交付区块），走首屏的演示入口。
+  // Leave the home page: the primary button stays on this page (jumps to the delivery section),
+  // so use the hero's demo link.
   await page
     .locator("#hero")
     .getByRole("link", { name: messages.Landing.hero.primaryCta, exact: true })
@@ -99,11 +103,13 @@ test("品牌色预览兼容亮暗和系统主题，离开首页后恢复配置",
     .toBe(siteConfig.brand.primaryColor);
 });
 
-test.describe("375px 宽度", () => {
+test.describe("375px width", () => {
   test.use({ viewport: { width: 375, height: 740 } });
 
   for (const theme of ["light", "dark"] as const) {
-    test(`${theme} 模式下页面不横向溢出`, async ({ page }) => {
+    test(`${theme} mode: page doesn't overflow horizontally`, async ({
+      page,
+    }) => {
       await page.emulateMedia({ colorScheme: theme });
       await page.goto("/");
       const overflow = await page.evaluate(
@@ -113,7 +119,7 @@ test.describe("375px 宽度", () => {
     });
   }
 
-  test("移动端菜单可以打开并导航", async ({ page }) => {
+  test("mobile menu opens and navigates", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Open menu" }).click();
     const menu = page.getByRole("navigation", { name: "Mobile" });
@@ -126,8 +132,10 @@ test.describe("375px 宽度", () => {
   });
 });
 
-test.describe("有两门语言时", () => {
-  test("显示语言切换器并可切换到中文", async ({ page }) => {
+test.describe("with two locales", () => {
+  test("shows the locale switcher and can switch to Chinese", async ({
+    page,
+  }) => {
     await page.goto("/");
     await expect(
       page.getByRole("button", { name: "Toggle theme" }),
@@ -136,7 +144,7 @@ test.describe("有两门语言时", () => {
       page.getByRole("button", { name: messages.Locale.switch }),
     ).toBeVisible();
 
-    // 切换到中文
+    // Switch to Chinese
     await page.getByRole("button", { name: messages.Locale.switch }).click();
     const zhName = new Intl.DisplayNames(["zh"], { type: "language" }).of(
       "zh",
@@ -146,11 +154,12 @@ test.describe("有两门语言时", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "zh");
   });
 
-  test("未启用的语言前缀返回 404", async ({ page }) => {
+  test("a locale prefix that isn't enabled returns 404", async ({ page }) => {
     const response = await page.goto("/de");
     expect(response?.status()).toBe(404);
-    // 这条走 [locale]（proxy 把 /zh 当成无前缀路径重写），由 [locale]/not-found.tsx 接住。
-    // 只断状态码会漏掉「退化成框架默认页」这种回归 —— 文案是客户端渲染的，curl 也看不到。
+    // This goes through [locale] (the proxy rewrites /zh as an unprefixed path) and is caught by
+    // [locale]/not-found.tsx. Asserting only the status code would miss a regression like "degraded
+    // to the framework's default page" — the copy is client-rendered, so curl can't see it either.
     await expect(
       page.getByRole("heading", { level: 1, name: messages.NotFound.title }),
     ).toBeVisible();
@@ -159,23 +168,27 @@ test.describe("有两门语言时", () => {
     ).toHaveAttribute("href", "/");
   });
 
-  test("被 proxy 跳过的带扩展名路径也返回 404", async ({ page }) => {
+  test("paths with extensions that the proxy skips also return 404", async ({
+    page,
+  }) => {
     const response = await page.goto("/missing.png");
     expect(response?.status()).toBe(404);
-    // 这条路径不经过 [locale]，由根级 app/not-found.tsx 接住 —— 只断状态码会漏掉
-    // 「退化成框架默认页」这种回归（文案是客户端渲染的，curl 也看不到）。
+    // This path doesn't go through [locale]; it's caught by the root app/not-found.tsx — asserting
+    // only the status code would miss a regression like "degraded to the framework's default page"
+    // (the copy is client-rendered, so curl can't see it either).
     await expect(
       page.getByRole("heading", { level: 1, name: "Page not found" }),
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Back to home" }),
     ).toHaveAttribute("href", "/");
-    // 根级 not-found 的 React <title>：静态 HTML 里没有 title（它在 client 边界里，
-    // 水合后才进 head），所以只有水合后这一条能锁住「别退化成站名」。
+    // The root not-found's React <title>: the static HTML has no title (it's inside a client
+    // boundary and only enters the head after hydration), so only this post-hydration check can pin
+    // down "don't degrade to the site name".
     await expect(page).toHaveTitle(messages.NotFound.title);
   });
 
-  test("未匹配的 API 路径返回 JSON 404", async ({ request }) => {
+  test("unmatched API paths return a JSON 404", async ({ request }) => {
     const response = await request.get("/api/nope");
     expect(response.status()).toBe(404);
     expect(response.headers()["content-type"]).toContain("application/json");
@@ -183,25 +196,27 @@ test.describe("有两门语言时", () => {
   });
 });
 
-// 404 的元数据。关 JS 是为了只测**服务端产出的那份 HTML**：水合之后 title 由 client 边界
-// 决定，是另一条路径（见上面 /missing.png 里的水合断言）。
+// 404 metadata. JS is off so this tests only **the HTML the server produces**: after hydration
+// the title is decided by the client boundary, which is a different path (see the hydration
+// assertion in /missing.png above).
 //
-// 这里的 noindex 是**框架注入**的（app-render.js 的 NonIndex + client 边界的
-// http-access-fallback 各注入一次，content 恰好是 "noindex"），别和
-// src/core/seo/metadata.ts 的 noIndex 参数混为一谈 —— 那是页面自己声明的，渲染成
-// "noindex, nofollow"（e2e/i18n/blog.spec.ts 断的是那一套）。所以这里同时断言
-// 「只有一个 robots meta」和「content 精确等于 noindex」，两套机制分得开。
-test.describe("404 的元数据（关 JS）", () => {
+// The noindex here is **injected by the framework** (once by NonIndex in app-render.js and once
+// by the client boundary's http-access-fallback, with content exactly "noindex"). Don't confuse it
+// with the noIndex parameter in src/core/seo/metadata.ts — that one is declared by the page itself
+// and renders as "noindex, nofollow" (e2e/i18n/blog.spec.ts asserts that one). So this asserts
+// both "exactly one robots meta" and "content is exactly noindex", keeping the two mechanisms
+// apart.
+test.describe("404 metadata (JS off)", () => {
   test.use({ javaScriptEnabled: false });
 
   for (const path of ["/does-not-exist", "/de"]) {
-    test(`${path} 的静态 HTML 带本地化标题和 noindex，且不继承首页的 canonical`, async ({
+    test(`${path}: static HTML has a localized title and noindex, and doesn't inherit the home page canonical`, async ({
       page,
     }) => {
       const response = await page.goto(path);
       expect(response?.status()).toBe(404);
-      // 以前这里是站名（React <title> 只在客户端生效，关 JS 就没了）——
-      // 对关 JS 的爬虫来说，404 页标题和首页一模一样。
+      // This used to be the site name (the React <title> only applies on the client and is gone with
+      // JS off) — to a crawler without JS, the 404 page's title was identical to the home page's.
       await expect(page).toHaveTitle(
         `${messages.NotFound.title} | ${siteConfig.name}`,
       );
@@ -209,13 +224,15 @@ test.describe("404 的元数据（关 JS）", () => {
       await expect(robots).toHaveCount(1);
       await expect(robots).toHaveAttribute("content", "noindex");
 
-      // 404 没有自己的规范地址。以前这一页的 head 里是 [locale]/layout.tsx
-      // 那份 —— canonical 和 hreflang 都指向首页（Next 的 metadata 按字段浅合并，
-      // not-found 没写的字段会继承 layout 的），对爬虫等于声明「这一页就是首页」。
+      // A 404 has no canonical URL of its own. This page's head used to carry the one from
+      // [locale]/layout.tsx — canonical and hreflang both pointed at the home page (Next shallow-merges
+      // metadata per field, so fields not-found doesn't set are inherited from the layout), which to a
+      // crawler declares "this page is the home page".
       const head = page.locator("head");
       await expect(head.locator('link[rel="canonical"]')).toHaveCount(0);
       await expect(head.locator('link[rel="alternate"]')).toHaveCount(0);
-      // 同一份继承也落在 og / twitter 上：og:url 曾经指向首页，标题曾经是站名。
+      // The same inheritance hit og / twitter too: og:url used to point at the home page and the
+      // title used to be the site name.
       await expect(head.locator('meta[property="og:url"]')).toHaveCount(0);
       await expect(head.locator('meta[property="og:title"]')).toHaveAttribute(
         "content",
@@ -228,7 +245,7 @@ test.describe("404 的元数据（关 JS）", () => {
     });
   }
 
-  test("/missing.png 带 noindex，且静态 HTML 不冒用站名当标题", async ({
+  test("/missing.png has noindex, and its static HTML doesn't borrow the site name as its title", async ({
     page,
   }) => {
     const response = await page.goto("/missing.png");
@@ -238,10 +255,12 @@ test.describe("404 的元数据（关 JS）", () => {
     await expect(robots).toHaveCount(1);
     await expect(robots).toHaveAttribute("content", "noindex");
 
-    // 这条路径由根级 app/not-found.tsx 接住，它渲染在框架给的 client 边界里：React
-    // <title> 要水合后才进 head，所以静态 HTML 里一个 title 都没有（今天就是 undefined）。
-    // 要锁的是「别退化成 layout 的站名标题」—— 那等于告诉搜索引擎这是正常首页。
-    // 不断言「必须是空」，是为了让「给根级 404 补一个服务端标题」这种改进不被挡。
+    // This path is caught by the root app/not-found.tsx, which renders inside the client boundary
+    // the framework provides: the React <title> only enters the head after hydration, so the static
+    // HTML has no title at all (currently undefined). What must be pinned is "don't degrade to the
+    // layout's site-name title" — that would tell search engines this is a normal home page.
+    // It doesn't assert "must be empty", so an improvement like "give the root 404 a server-side
+    // title" isn't blocked.
     const html = (await response?.text()) ?? "";
     const title = /<title[^>]*>([\s\S]*?)<\/title>/.exec(html)?.[1];
     expect(title).not.toBe(siteConfig.name);

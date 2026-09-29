@@ -1,10 +1,16 @@
 import { expect, test } from "@playwright/test";
 
-// 恢复入口（src/core/recovery）。CI 不设 CRON_SECRET：入口必须是关着的 404，
-// 带什么 Authorization 头都一样 —— 没配密钥时不能静默放行。
-test.skip(!!process.env.CRON_SECRET, "设了 CRON_SECRET 时入口是开着的");
+// Recovery endpoint (src/core/recovery). CI doesn't set CRON_SECRET: the endpoint must be closed
+// with a 404 regardless of the Authorization header — without a configured secret it must never
+// silently let requests through.
+test.skip(
+  !!process.env.CRON_SECRET,
+  "the endpoint is open when CRON_SECRET is set",
+);
 
-test("没设 CRON_SECRET 时恢复入口一律 404", async ({ request }) => {
+test("recovery endpoint always returns 404 when CRON_SECRET is unset", async ({
+  request,
+}) => {
   const cases: Record<string, string>[] = [
     {},
     { authorization: "Bearer anything-at-all-here" },

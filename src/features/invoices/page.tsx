@@ -28,9 +28,9 @@ import type { InvoiceStatus } from "./schema";
 
 import siteConfig from "../../../site.config";
 
-// 示例业务模块的列表页：分页、按客户名搜索、新建 / 编辑 / 删除。
-// 路由文件 src/app/[locale]/(app)/invoices/page.tsx 只是转发到这里；
-// 删除这个示例的清单见 ./schema.ts 末尾。
+// List page of the example business module: pagination, search by customer name, create / edit /
+// delete. The route file src/app/[locale]/(app)/invoices/page.tsx just forwards here; the
+// checklist for deleting this example is at the end of ./schema.ts.
 
 type Props = PageProps<"/[locale]/invoices">;
 
@@ -46,9 +46,9 @@ export async function generateMetadata({ params }: Props) {
 }
 
 /**
- * 状态色只标异常：`sent`（等收款）是唯一需要人看一眼的，其余中性。
- * `paid` 是正常态用中性填充，草稿和作废都用描边档（同 docs/design.md 的规则）。
- * 全部 `flat`：产品语域没有唇边。
+ * Status colors mark only what needs attention: `sent` (awaiting payment) is the only one worth a
+ * glance; the rest are neutral. `paid` is the normal state with a neutral fill, draft and void use
+ * the outline tier (per the rules in docs/design.md). All `flat`: the product register has no lips.
  */
 const statusVariant = {
   draft: "outline",
@@ -72,18 +72,19 @@ function StatusBadge({
 }
 
 /**
- * 发票列表：只列当前登录用户自己的发票 —— 查询永远带 `user_id`（见 ./queries.ts）。
- * 金额按 site.config.ts 的 billing.currency 格式化，编辑和删除只在行上出现。
+ * Invoice list: only the signed-in user's own invoices — queries always filter by `user_id` (see
+ * ./queries.ts). Amounts are formatted with billing.currency from site.config.ts; edit and delete
+ * appear only on rows.
  */
 export default async function InvoicesPage({ params, searchParams }: Props) {
-  // 模块关掉时整页 404：页面、action、菜单项都按同一个开关收口。
+  // With the module off the whole page 404s: page, actions and menu item all hang off the same switch.
   if (!siteConfig.features.examples.invoices) notFound();
   const { locale } = await params;
   const search = await searchParams;
   const query = typeof search.q === "string" ? search.q : "";
   const page = parsePage(search.page);
 
-  // 文案、格式化和登录态互不依赖，一次并发发出。
+  // Messages, formatters and the session don't depend on each other, so fire them concurrently.
   const [t, format, session] = await Promise.all([
     getTranslations({ locale, namespace: "Invoices" }),
     getFormatter({ locale }),

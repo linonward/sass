@@ -26,8 +26,9 @@ export async function generateMetadata({ params }: Props) {
 }
 
 /**
- * 首次运行清单：注册后自动落到这一页（见 src/core/onboarding/landing.ts），之后随时从侧边栏进。
- * 每一步做没做都现算：用的是 site.config.ts 的出厂哨兵和套餐里的产品 ID，不落库。
+ * First-run checklist: new sign-ups land here automatically (see src/core/onboarding/landing.ts),
+ * and it stays reachable from the sidebar. Each step's done/not-done state is computed on the fly
+ * from the factory sentinels in site.config.ts and the product IDs in the plans — nothing is stored.
  */
 export default async function OnboardingPage({ params }: Props) {
   const { locale } = await params;

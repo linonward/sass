@@ -20,12 +20,13 @@ const nativeName = (locale: string) =>
 
 const copy = pseudoTranslate(en);
 
-test("非默认语言下验证码登录：保留语言前缀，邮件使用该语言", async ({
+test("verification-code sign-in in a non-default locale keeps the locale prefix and sends the email in that locale", async ({
   page,
   baseURL,
 }) => {
   await useRandomIp(page);
-  // 这份副本同样读 .env.local，登录页会去加载 GIS 脚本；本文件只关心验证码流程。
+  // This copy also reads .env.local, so the sign-in page loads the GIS script; this file only
+  // cares about the verification-code flow.
   await stubGoogleOneTap(page);
   const outboxDir = path.join(
     i18nCopyDir(new URL(baseURL!).port),
@@ -34,7 +35,7 @@ test("非默认语言下验证码登录：保留语言前缀，邮件使用该�
   );
   const email = uniqueEmail("i18n");
 
-  // 未登录访问带前缀的受保护页面，跳到同语言的登录页。
+  // A signed-out visit to a prefixed protected page redirects to sign-in in the same locale.
   await page.goto(`/${TEST_LOCALE}/dashboard`);
   await expect(page).toHaveURL(
     `/${TEST_LOCALE}/sign-in?callbackURL=${encodeURIComponent(`/${TEST_LOCALE}/dashboard`)}`,
@@ -57,12 +58,13 @@ test("非默认语言下验证码登录：保留语言前缀，邮件使用该�
   expect(welcome.locale).toBe(TEST_LOCALE);
 });
 
-test("设置偏好语言后界面切换到该语言，并保存到用户资料", async ({
+test("setting a preferred locale switches the UI to it and saves it to the user profile", async ({
   page,
   baseURL,
 }) => {
   await useRandomIp(page);
-  // 这份副本同样读 .env.local，登录页会去加载 GIS 脚本；本文件只关心验证码流程。
+  // This copy also reads .env.local, so the sign-in page loads the GIS script; this file only
+  // cares about the verification-code flow.
   await stubGoogleOneTap(page);
   const outboxDir = path.join(
     i18nCopyDir(new URL(baseURL!).port),
@@ -72,7 +74,8 @@ test("设置偏好语言后界面切换到该语言，并保存到用户资料",
   const email = uniqueEmail("pref");
   const { code } = await requestCode(page, email, { outboxDir });
   await enterCode(page, code);
-  // 新用户先落到引导页，这一例测的是偏好语言，直接去设置页。
+  // New users land on onboarding first; this case tests the preferred locale, so go straight to
+  // settings.
   await expect(page).toHaveURL("/onboarding");
   await page.goto("/settings");
   const form = page.getByRole("form", { name: en.Account.locale.label });

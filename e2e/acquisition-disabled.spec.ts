@@ -44,7 +44,8 @@ test("default-off acquisition has no UI, cookies, API requests or enabled endpoi
       await page.request.post("/api/acquisition/referrals", { data: {} })
     ).status(),
   ).toBe(404);
-  // 邀请落地页同样不存在：码的格式是对的，模块关着就只给 404。
+  // The referral landing page doesn't exist either: the code format is valid, but with the module
+  // off it only returns 404.
   expect(
     (await page.request.get(`/invite/${newReferralCode()}`)).status(),
   ).toBe(404);
@@ -58,12 +59,13 @@ test("default-off acquisition has no UI, cookies, API requests or enabled endpoi
   ).toBe(false);
 });
 
-test("default-off referrals: /referrals 对未登录和已登录都是 404，且不写任何数据", async ({
+test("default-off referrals: /referrals is 404 for signed-out and signed-in users and writes no data", async ({
   page,
 }) => {
   await useRandomIp(page);
-  // 未登录先来一次：模块关着，未登录访客不该被送去登录页（否则同一个地址
-  // 对未登录是 307、对已登录是 404 —— 页面在 (app) 下，layout 会先跳登录）。
+  // Signed out first: with the module off, signed-out visitors must not be sent to sign-in
+  // (otherwise the same URL is a 307 when signed out and a 404 when signed in — the page lives
+  // under (app), whose layout redirects to sign-in first).
   const anonymous = await page.goto("/referrals");
   expect(anonymous?.status()).toBe(404);
   await expect(page).toHaveURL("/referrals");
@@ -76,7 +78,7 @@ test("default-off referrals: /referrals 对未登录和已登录都是 404，且
   await expect(
     page.getByRole("heading", { name: messages.Referrals.title }),
   ).toHaveCount(0);
-  // 页面没渲染，也就没人给这个账号生成邀请码。
+  // The page never rendered, so nothing generated a referral code for this account.
   const codes = await withDatabase(
     async (db) =>
       (

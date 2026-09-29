@@ -22,9 +22,9 @@ export default function Error({
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
-      {/* 错误边界必须是 client 组件，用不了 metadata 导出，按文档用 React <title>。
-          React 会把它插到 <head> 里已有 <title> 的前面，浏览器取第一个，所以能盖住
-          被替换掉的那页的标题。 */}
+      {/* Error boundaries must be client components and can't export metadata, so per the docs use a
+          React <title>. React inserts it into <head> ahead of the existing <title>, and browsers take
+          the first one, so it overrides the title of the page that was replaced. */}
       <title>{t("title")}</title>
       <h1 className="heading-display text-4xl sm:text-5xl">{t("title")}</h1>
       <p className="text-muted-foreground text-lg text-pretty">
@@ -35,7 +35,8 @@ export default function Error({
           {t("id", { digest: error.digest })}
         </p>
       )}
-      {/* 营销面的 CTA 是 44px 带唇边的贴纸；默认的 32px 也低于 design.md 的触控目标下限。 */}
+      {/* Marketing CTAs are 44px stickers with a lip; the default 32px is also below the touch-target
+          minimum in design.md. */}
       <Button size="marketing" tone="primary" onClick={() => retry()}>
         {t("retry")}
       </Button>

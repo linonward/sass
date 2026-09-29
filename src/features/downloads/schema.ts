@@ -1,6 +1,8 @@
-// 卖可下载文件：发布的版本 + 每笔购买的授权。开关与产品在 site.config.ts 的 downloads。
+// Selling downloadable files: released versions + a grant per purchase. The switch and products
+// are under downloads in site.config.ts.
 //
-// 业务的表放 src/features/*/schema.ts —— drizzle.config.ts 会一并收录生成迁移。
+// Business tables go in src/features/*/schema.ts — drizzle.config.ts picks them up when generating
+// migrations.
 import {
   bigint,
   index,
@@ -13,9 +15,10 @@ import {
 import { user } from "@/core/db/schema/auth";
 
 /**
- * 一行 = 某个产品的一个发布版本，文件在私有对象存储（R2）的 `object_key`。
- * 由 `pnpm downloads:publish` 写入：先上传文件，再插这一行，所以有行就一定有文件。
- * 版本号在同一产品内唯一；重发同一版本是覆盖文件、刷新大小，不改发布时间。
+ * One row = one released version of a product; the file is at `object_key` in private object
+ * storage (R2). Written by `pnpm downloads:publish`: the file is uploaded first and the row inserted
+ * after, so a row always has a file. The version is unique within a product; republishing the same
+ * version overwrites the file and refreshes the size without changing the release time.
  */
 export const downloadReleases = pgTable(
   "download_releases",
@@ -40,12 +43,15 @@ export const downloadReleases = pgTable(
 );
 
 /**
- * 一行 = 一笔购买换来的授权。
+ * One row = the grant from one purchase.
  *
- * - (provider, order_id, product_id) 唯一：webhook 重放、补发都不会多出授权或多发邮件；
- * - `updates_until` = 购买时间 + 产品的 updateMonths：在它之前发布的版本都能下；
- * - `revoked_at`：订单全额退款时置上，之后一个版本都下不了（部分退款不动）；
- * - `user_id` 外键 cascade：删除账户时授权一并删除。
+ * - (provider, order_id, product_id) is unique: replayed or re-sent webhooks never add a grant or
+ *   send another email;
+ * - `updates_until` = purchase time + the product's updateMonths: every version released before it
+ *   can be downloaded;
+ * - `revoked_at`: set when the order is fully refunded, after which no version can be downloaded
+ *   (partial refunds leave it alone);
+ * - `user_id` foreign key cascades: deleting the account deletes its grants.
  */
 export const downloadEntitlements = pgTable(
   "download_entitlements",

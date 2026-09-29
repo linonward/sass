@@ -32,8 +32,9 @@ import {
 type Props = PageProps<"/[locale]/admin/exceptions">;
 
 /**
- * 状态色只标异常：待处理（open）是这页存在的理由，用 warning；
- * 处理完的中性，忽略的描边档。全部 `flat`：产品语域没有唇边。
+ * Status colors mark only what needs attention: open is the reason this page exists, so it gets
+ * warning; resolved is neutral, ignored gets the outline tier. All `flat`: the product register has
+ * no lips.
  */
 const statusVariant = {
   open: "warning",
@@ -68,7 +69,10 @@ export default async function AdminExceptionsPage({
   const when = (date: Date) =>
     format.dateTime(date, { dateStyle: "medium", timeStyle: "short" });
 
-  /** 摘要：差额单写订单和欠多少，AI 单写任务和积分；下面跟上下文和处理历史。 */
+  /**
+   * Summary: a shortfall exception shows the order and how much is owed, an AI exception shows the job
+   * and the credits; context and handling history follow below.
+   */
   function Summary({ row }: { row: ExceptionRow }) {
     const d = row.detail as Record<string, string | number | boolean | null>;
     return (
@@ -114,7 +118,7 @@ export default async function AdminExceptionsPage({
             )}
           </>
         )}
-        {/* 能查：用户、订单、积分流水。 */}
+        {/* Lookups: user, order, credit transactions. */}
         <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
           <Link href={`/admin/users/${row.userId}`} className={linkClass}>
             {t("links.user")}
@@ -189,7 +193,8 @@ export default async function AdminExceptionsPage({
       </div>
       <Table>
         <TableHeader>
-          {/* 摘要和状态（含「处理」）排在最前：窄屏时表格横向滚动，先看到的是要处理的东西。 */}
+          {/* Summary and status (including "handle") come first: on narrow screens the table scrolls
+              horizontally, so what needs handling is what you see first. */}
           <TableRow>
             <TableHead>{t("columns.summary")}</TableHead>
             <TableHead>{t("columns.status")}</TableHead>

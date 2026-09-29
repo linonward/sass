@@ -27,14 +27,16 @@ const outboxDir = path.join(
 );
 
 /**
- * 管理员邮箱需要写进 ADMIN_EMAILS（见 .github/workflows/ci.yml）。
- * 每个 project 用一个，避免并行时同一邮箱触发验证码的重发冷却。
+ * Admin emails must be listed in ADMIN_EMAILS (see .github/workflows/ci.yml).
+ * One per project, so parallel runs don't trip the same email's verification-code resend
+ * cooldown.
  */
 const adminEmail = (project: string) => `e2e-admin-${project}@example.com`;
 
 /**
- * 先关掉归因横幅再登录。它固定在底部，开着的时候正好盖住登录表单的按钮，
- * 点击会被拦下来（expect().toPass 重试也过不去）。
+ * Dismiss the attribution banner before signing in. It's fixed to the bottom, and while open it
+ * sits right over the sign-in form's button, intercepting clicks (expect().toPass retries don't
+ * get past it either).
  */
 async function acceptConsent(page: Page) {
   await page
@@ -42,24 +44,25 @@ async function acceptConsent(page: Page) {
     .click();
 }
 
-/** 在落地页记下来源、接受归因，再注册一个用户。 */
+/** Record the source on a landing page, accept attribution, then sign up a user. */
 async function signUpFrom(page: Page, source: string, email: string) {
   await page.goto(`/?utm_source=${source}`);
   await acceptConsent(page);
   await signIn(page, email, { outboxDir });
 }
 
-test.describe("渠道报表", () => {
-  // 同一个管理员邮箱只登录一次（验证码有重发冷却），用例按顺序共用这个页面。
+test.describe("channel report", () => {
+  // Sign in with the admin email only once (verification codes have a resend cooldown); the
+  // tests share this page in order.
   test.describe.configure({ mode: "serial" });
 
   let admin: Page;
-  /** 第一个用例注册的来源，后面的筛选用例接着用。 */
+  /** The source signed up by the first test, reused by the filter tests that follow. */
   let source: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     const email = adminEmail(testInfo.project.name);
-    // 失败重试时会在冷却期内再次登录。
+    // A retry after failure signs in again within the cooldown.
     await clearResendCooldown(email);
     admin = await (await browser.newContext()).newPage();
     await useRandomIp(admin);
@@ -73,7 +76,7 @@ test.describe("渠道报表", () => {
     await admin?.context().close();
   });
 
-  test("注册时冻结的来源出现在报表里，菜单里有入口", async ({
+  test("the source frozen at sign-up shows in the report, and the menu has an entry", async ({
     browser,
     isMobile,
   }) => {
@@ -84,8 +87,8 @@ test.describe("渠道报表", () => {
     await signUpFrom(landing, source, uniqueEmail("report"));
     await landing.context().close();
 
-    // 后台菜单只在 /admin 下展开（dashboard 侧边栏只有一个 Admin 入口），
-    // 所以先落到后台，再从菜单点进报表。
+    // The admin menu only expands under /admin (the dashboard sidebar has a single Admin entry), so
+    // land on admin first, then click into the report from the menu.
     await admin.goto("/admin/metrics");
     if (isMobile) {
       await admin.getByRole("button", { name: d.toggleSidebar }).click();
@@ -99,7 +102,8 @@ test.describe("渠道报表", () => {
       admin.getByRole("heading", { level: 1, name: t.title }),
     ).toBeVisible();
 
-    // 表格只认列，不给单行加测试用 id：按单元格里的来源名找行。
+    // The table is addressed by column only, with no test ids on rows: find the row by the source
+    // name in its cell.
     const row = admin
       .getByRole("region", { name: t.channels.title })
       .getByRole("row")
@@ -108,29 +112,34 @@ test.describe("渠道报表", () => {
     await expect(row.getByRole("cell").nth(1)).toHaveText("1");
   });
 
-  test("按来源筛选，没有数据的来源显示空状态", async () => {
+  test("filter by source; a source with no data shows the empty state", async () => {
     const region = admin.getByRole("region", { name: t.channels.title });
 
     await admin.goto(`/admin/acquisition?source=${source}`);
-    // 筛选结果只剩这一行，顶部没有编造出来的转化率或获客成本。
+    // The filtered result is just this one row, with no made-up conversion rate or acquisition cost
+    // at the top.
     await expect(region.getByRole("row")).toHaveCount(2);
     await expect(
       region.getByRole("cell", { name: source, exact: true }),
     ).toBeVisible();
-    // 精确匹配：页面上还有归因偏好那个 aside（aria-label 也以 Source 开头）。
+    // Exact match: the page also has the attribution preferences aside (its aria-label also starts
+    // with Source).
     await expect(
       admin.getByLabel(ad.acquisition.filters.source, { exact: true }),
     ).toHaveText(source);
 
-    // 格式合法但没人用过的来源：不报错，讲清为什么是空的。
+    // A well-formed source nobody has used: no error, and it explains why it's empty.
     await admin.goto("/admin/acquisition?source=e2e-never-used");
     await expect(region.getByRole("row")).toHaveCount(2);
     await expect(region.getByText(t.empty)).toBeVisible();
   });
 
-  test("填筛选 → 点 Apply → URL 与表格都对", async ({ browser }) => {
+  test("fill filters → click Apply → both URL and table are correct", async ({
+    browser,
+  }) => {
     const region = admin.getByRole("region", { name: t.channels.title });
-    // 再注册一条带 medium 的：三个 select 里的 source 和 medium 才都有正例可验。
+    // Sign up another one with a medium, so source and medium among the three selects both have a
+    // positive case to check.
     const medium = `e2e-medium-${randomUUID().slice(0, 8)}`;
     const landing = await (await browser.newContext()).newPage();
     await useRandomIp(landing);
@@ -140,12 +149,13 @@ test.describe("渠道报表", () => {
     await signIn(landing, uniqueEmail("apply"), { outboxDir });
     await landing.context().close();
 
-    // 同一个来源现在有两条注册（第一条没带 medium）。
+    // The same source now has two sign-ups (the first had no medium).
     await admin.goto(`/admin/acquisition?source=${source}`);
     const rows = region.getByRole("row").filter({ hasText: source });
     await expect(rows.getByRole("cell").nth(1)).toHaveText("2");
 
-    // 换到 7 天（默认 30 天不写进 URL）再提交：range 是隐藏域，要跟着表单走。
+    // Switch to 7 days (the 30-day default isn't written to the URL) before submitting: range is a
+    // hidden field and has to go along with the form.
     await admin
       .getByRole("link", { name: ad.filter.range.days.replace("{days}", "7") })
       .click();
@@ -158,28 +168,29 @@ test.describe("渠道报表", () => {
     );
     await admin.getByRole("button", { name: t.filters.apply }).click();
 
-    // GET 提交后地址栏就是规范形式：range 与两个筛选都在，没有空的死参数。
+    // After the GET submit the URL is in canonical form: range and both filters are present, with no
+    // empty dead params.
     await expect(admin).toHaveURL(
       `/admin/acquisition?range=7&source=${source}&medium=${medium}`,
     );
     const submitted = new URL(admin.url());
     expect(submitted.searchParams.get("campaign")).toBeNull();
 
-    // 表格用的是同一份筛选：medium 收窄到刚注册的那一条。
+    // The table uses the same filters: medium narrows it down to the sign-up just created.
     await expect(rows.getByRole("cell").nth(1)).toHaveText("1");
     await expect(
       admin.getByLabel(t.filters.source, { exact: true }),
     ).toHaveText(source);
   });
 
-  test("空参数被收成规范 URL，下拉跟着客户端跳转走", async () => {
-    // 表单提交会把空选项写成 source=&medium=&campaign=（服务端当没传），
-    // 手拼这种地址也该落到没有死参数的那一份上。
+  test("empty params collapse into the canonical URL, and selects follow client-side navigation", async () => {
+    // Submitting the form writes empty options as source=&medium=&campaign= (the server treats them
+    // as absent); a hand-built URL like that should also land on the version without dead params.
     await admin.goto("/admin/acquisition?source=&medium=&campaign=");
     await expect(admin).toHaveURL("/admin/acquisition");
 
-    // 同路由的客户端跳转（链接、前进后退）不会重新挂载节点，
-    // 下拉得跟着 URL 变，不然显示的筛选和表格用的筛选会对不上。
+    // Client-side navigation within the same route (links, back/forward) doesn't remount nodes, so
+    // the selects must follow the URL, or the filters shown won't match the filters the table uses.
     await admin.goto(`/admin/acquisition?source=${source}`);
     await admin
       .getByRole("link", { name: ad.filter.range.days.replace("{days}", "7") })
@@ -191,7 +202,7 @@ test.describe("渠道报表", () => {
       admin.getByLabel(t.filters.source, { exact: true }),
     ).toHaveText(source);
 
-    // 后退回到另一个筛选值：表格与下拉都该是 URL 里那一份。
+    // Going back to another filter value: both the table and the selects should match the URL.
     await admin.goto("/admin/acquisition?source=e2e-never-used");
     await admin.goBack();
     await expect(admin).toHaveURL(
@@ -207,7 +218,9 @@ test.describe("渠道报表", () => {
     ).toBeVisible();
   });
 
-  test("坏币种不会让报表挂掉，同一种货币不拆行", async ({ browser }) => {
+  test("a bad currency doesn't crash the report, and one currency isn't split across rows", async ({
+    browser,
+  }) => {
     const moneySource = `e2e-money-${randomUUID().slice(0, 8)}`;
     const email = uniqueEmail("money");
     const landing = await (await browser.newContext()).newPage();
@@ -218,9 +231,10 @@ test.describe("渠道报表", () => {
 
     const userId = await findUserId(email);
     expect(userId).toBeTruthy();
-    // 三条已收款订单：NULL 币种（用配置里的兜底）、小写币种、以及四个字母的非法币种。
-    // `orders.currency` 是自由文本列，最后一种以前会让 Intl.NumberFormat 抛 RangeError，
-    // 整页 500 —— 开工单的人清不掉这笔数据就一直打不开报表。
+    // Three paid orders: a NULL currency (uses the fallback from config), a lowercase currency, and an
+    // invalid four-letter currency. `orders.currency` is a free-text column, and the last one used to
+    // make Intl.NumberFormat throw a RangeError and 500 the whole page — whoever filed the ticket
+    // couldn't open the report at all until that row was cleaned up.
     await withDatabase(async (client) => {
       const order = (amount: number, currency: string | null) => [
         randomUUID(),
@@ -250,12 +264,13 @@ test.describe("渠道报表", () => {
       .getByRole("region", { name: t.channels.title })
       .getByRole("row")
       .filter({ hasText: moneySource });
-    // 兜底币种把 NULL 显示成金额（不是裸数字），它还和小写的 usd 合成一条；
-    // 非法币种退回「数字 + 原代码」，让人看得出是哪个币种写坏了。
+    // The fallback currency shows NULL as an amount (not a bare number), merged into one row with the
+    // lowercase usd; the invalid currency falls back to "number + raw code" so you can tell which
+    // currency is broken.
     await expect(row.getByRole("cell").nth(3)).toHaveText("$19.50 · 1 USDC");
   });
 
-  test("普通用户访问渠道报表返回 404", async ({ browser }) => {
+  test("regular users get a 404 on the channel report", async ({ browser }) => {
     const user = await (await browser.newContext()).newPage();
     await useRandomIp(user);
     await stubGoogleOneTap(user);
@@ -266,8 +281,9 @@ test.describe("渠道报表", () => {
     await user.context().close();
   });
 
-  // 后台是最容易横向溢出的地方：五列表格、一排筛选器。用同一 context 开新页面，登录态照旧。
-  test("窄屏下渠道报表不横向溢出", async () => {
+  // Admin is the most likely place to overflow horizontally: a five-column table and a row of
+  // filters. Open a new page in the same context so the session carries over.
+  test("channel report doesn't overflow horizontally on narrow screens", async () => {
     const page = await admin.context().newPage();
     await page.setViewportSize({ width: 375, height: 740 });
     for (const theme of ["light", "dark"] as const) {
@@ -276,9 +292,10 @@ test.describe("渠道报表", () => {
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
       );
-      expect(overflow, `${theme} 模式下溢出 ${overflow}px`).toBeLessThanOrEqual(
-        0,
-      );
+      expect(
+        overflow,
+        `${theme} mode overflows by ${overflow}px`,
+      ).toBeLessThanOrEqual(0);
     }
     await page.close();
   });

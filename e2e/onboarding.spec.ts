@@ -17,26 +17,28 @@ const o = messages.Onboarding;
 const d = messages.Dashboard;
 
 /**
- * 出厂占位值是不是都还在。
+ * Whether the out-of-the-box placeholders are all still there.
  *
- * CI 用 SITE_NAME / CREEM_PRODUCT_ID_* 把站名和套餐产品 ID 覆盖成品牌化过的值
- * （见 .github/workflows/ci.yml，为的是让 `pnpm build` 的占位守卫过关），本地 dev
- * 保留出厂值。清单的判定跟着配置走，断言也跟着分叉 —— 两边都要能跑。
+ * CI overrides the site name and plan product IDs with branded values via SITE_NAME /
+ * CREEM_PRODUCT_ID_* (see .github/workflows/ci.yml; it's so the placeholder guard in `pnpm build`
+ * passes), while local dev keeps the defaults. The checklist's checks follow the config, so the
+ * assertions branch too — both sides must pass.
  */
 const placeholdersGone = placeholderIssues(siteConfig).length === 0;
 
 test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
-  // 本地配了 Google 凭据时登录页会去加载 GIS 脚本；本文件只关心验证码流程。
+  // With Google credentials configured locally, the sign-in page loads the GIS script; this file
+  // only cares about the verification-code flow.
   await stubGoogleOneTap(page);
 });
 
-/** 按 data-step 取一行，不依赖文案顺序。 */
+/** Get a row by data-step, independent of copy order. */
 function step(page: Page, id: string) {
   return page.locator(`[data-testid="onboarding-step"][data-step="${id}"]`);
 }
 
-/** 用户记录上的完成标记：界面上看不到，只能直连数据库看。 */
+/** The completion flag on the user record: not visible in the UI, only via the database. */
 async function completedFlag(email: string) {
   return withDatabase(async (client) => {
     const { rows } = await client.query<{ onboarding_completed: boolean }>(
@@ -47,7 +49,10 @@ async function completedFlag(email: string) {
   });
 }
 
-/** 把判定不了的步骤（写文章、部署）勾上。跑在 Vercel 上时部署那步会自动完成，没有勾选框。 */
+/**
+ * Check off the steps that can't be detected (write a post, deploy). When running on Vercel the
+ * deploy step completes automatically and has no checkbox.
+ */
 async function tickManualSteps(page: Page) {
   for (const id of ["blogPost", "deploy"]) {
     const box = step(page, id).getByRole("checkbox");
@@ -56,22 +61,26 @@ async function tickManualSteps(page: Page) {
   }
 }
 
-test("新用户注册后自动落到清单，标完成写进用户记录", async ({ page }) => {
+test("new users land on the checklist after sign-up, and marking it done is saved to the user record", async ({
+  page,
+}) => {
   const email = uniqueEmail("onboarding");
   await signIn(page, email);
   await expect(page).toHaveURL("/onboarding");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(o.title);
 
   await expect(page.getByTestId("onboarding-step")).toHaveCount(5);
-  // 三个可跳转的步骤各挂一个「打开」链接。锁的是角色：它得是链接（会跳转），
-  // 不是按钮 —— 见 checklist.tsx 里为什么这两个不走 Base UI 的 Button。
+  // Each of the three navigable steps has an "Open" link. This pins the role: it must be a link
+  // (it navigates), not a button — see checklist.tsx for why these two don't use Base UI's Button.
   await expect(
     page.getByTestId("onboarding-step").getByRole("link"),
   ).toHaveCount(3);
-  // 品牌色没有环境变量可覆盖：出厂值还在时这一步就该是 todo，并把没改的值列出来。
+  // The brand color has no env var override: while the default is still there this step should be
+  // todo, listing the unchanged value.
   await expect(step(page, "brandColor")).toHaveAttribute("data-status", "todo");
   await expect(step(page, "brandColor")).toContainText("#0f766e");
-  // 站名和套餐产品 ID 的判定取决于环境（见 placeholdersGone）。
+  // The checks for site name and plan product IDs depend on the environment (see
+  // placeholdersGone).
   for (const id of ["siteName", "pricing"]) {
     await expect(step(page, id)).toHaveAttribute(
       "data-status",
@@ -79,12 +88,12 @@ test("新用户注册后自动落到清单，标完成写进用户记录", async
     );
   }
   if (!placeholdersGone) {
-    // 未改的出厂值原样列出来，买家知道该改哪儿。
+    // Unchanged defaults are listed verbatim so the buyer knows what to change.
     await expect(step(page, "siteName")).toContainText('name = "Acme"');
     await expect(step(page, "pricing")).toContainText("prod_placeholder_pro");
   }
 
-  // 勾选手动项只改当前页面：用户记录上还是「没完成」。
+  // Checking manual items only affects the current page: the user record is still "not done".
   await tickManualSteps(page);
   expect(await completedFlag(email)).toBeFalsy();
 
@@ -93,7 +102,7 @@ test("新用户注册后自动落到清单，标完成写进用户记录", async
   expect(await completedFlag(email)).toBe(true);
 });
 
-test("标记完成后再次登录直接进站，不再自动跳转；清单还能从侧边栏进", async ({
+test("after marking done, signing in again goes straight in with no redirect; the checklist is still reachable from the sidebar", async ({
   page,
   isMobile,
 }) => {
@@ -103,7 +112,7 @@ test("标记完成后再次登录直接进站，不再自动跳转；清单还�
   await page.getByTestId("onboarding-complete").click();
   await expect(page).toHaveURL("/dashboard");
 
-  // 退出再进来：已完成的用户不多一次跳转。
+  // Sign out and back in: users who are done get no extra redirect.
   await openUserMenu(page, isMobile);
   await page.getByRole("menuitem", { name: d.userMenu.signOut }).click();
   await expect(page).toHaveURL("/sign-in");
@@ -111,7 +120,7 @@ test("标记完成后再次登录直接进站，不再自动跳转；清单还�
   await signIn(page, email);
   await expect(page).toHaveURL("/dashboard");
 
-  // 侧边栏里一直有这个入口，只是不再提示「标记完成」。
+  // The sidebar always has this entry; it just no longer prompts "mark as done".
   if (isMobile) {
     await page.getByRole("button", { name: d.toggleSidebar }).click();
   }
@@ -124,13 +133,15 @@ test("标记完成后再次登录直接进站，不再自动跳转；清单还�
   await expect(page.getByTestId("onboarding-complete")).toHaveCount(0);
 });
 
-test("带 callbackURL 的登录尊重深链，不经过清单", async ({ page }) => {
+test("sign-in with a callbackURL respects the deep link and skips the checklist", async ({
+  page,
+}) => {
   const email = uniqueEmail("onboarding-callback");
   await page.goto("/example");
   await expect(page).toHaveURL(/\/sign-in\?callbackURL=%2Fexample/);
 
   await signIn(page, email);
   await expect(page).toHaveURL("/example");
-  // 深链登录不算「看过清单」：用户记录上还是没完成。
+  // A deep-link sign-in doesn't count as "seen the checklist": the user record is still not done.
   expect(await completedFlag(email)).toBeFalsy();
 });

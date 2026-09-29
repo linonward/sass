@@ -6,16 +6,17 @@ import siteConfig from "../site.config";
 
 const { features, observability } = siteConfig;
 
-// Next.js 在服务启动时调用一次（Node 和 Edge 两种 runtime 各一次）。
+// Next.js calls this once at server startup (once per runtime, Node and Edge).
 export async function register() {
   if (features.observability && observability.otel) {
-    // 在 Vercel 上走 Vercel 的 trace 收集（需要在项目里开启 Tracing / OTel 集成）；
-    // 其他环境配了 OTEL_EXPORTER_OTLP_ENDPOINT 就导出到那里，没配不导出。
+    // On Vercel, traces go to Vercel's collector (enable the Tracing / OTel integration in the
+    // project); elsewhere they're exported to OTEL_EXPORTER_OTLP_ENDPOINT if set, and not at all if not.
     const { registerOTel } = await import("@vercel/otel");
     registerOTel({ serviceName: siteConfig.name });
   }
-  // 放在 OTel 之后：同时开启时 Sentry 沿用已注册的 tracer provider。
-  // OBSERVABILITY_SENTRY 由 next.config.ts 在构建时写死，关闭时整段连同 SDK 都不会打进产物。
+  // After OTel: with both on, Sentry reuses the tracer provider already registered.
+  // OBSERVABILITY_SENTRY is inlined by next.config.ts at build time; when off, this whole block and
+  // the SDK are left out of the bundle.
   if (process.env.OBSERVABILITY_SENTRY === "true") {
     if (process.env.NEXT_RUNTIME === "nodejs") {
       await import("@/core/observability/sentry.server");
@@ -23,8 +24,9 @@ export async function register() {
       await import("@/core/observability/sentry.edge");
     }
   }
-  // 限流漏配 Upstash 时在启动日志里说清楚（生产运行时会拒绝 AI / 上传 / 结账的请求）。
-  // 只在 Node runtime 判定：Edge 上的 process.env 不完整，会把配好的部署误判成漏配。
+  // If Upstash is missing for rate limiting, say so clearly in the startup log (at runtime in
+  // production, AI / upload / checkout requests will be rejected). Check only in the Node runtime:
+  // process.env on Edge is incomplete and would flag a correctly configured deployment.
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { warnIfRateLimitUnconfigured } =
       await import("@/core/ratelimit/startup");
@@ -32,7 +34,7 @@ export async function register() {
   }
 }
 
-// 未捕获的请求错误（页面渲染、路由处理、Server Action、proxy）。
+// Uncaught request errors (page rendering, route handlers, Server Actions, proxy).
 export const onRequestError: Instrumentation.onRequestError = async (
   error,
   request,
@@ -40,14 +42,15 @@ export const onRequestError: Instrumentation.onRequestError = async (
 ) => {
   if (!features.observability) return;
   if (process.env.OBSERVABILITY_SENTRY === "true") {
-    // 先交给 Sentry（带请求上下文）；同一个错误对象 Sentry 只收一次，下面 logger.error 的上报会被跳过。
+    // Hand it to Sentry first (with request context); Sentry takes a given error object only once, so
+    // the report from logger.error below is skipped.
     const { captureRequestError } = await import("@sentry/nextjs");
     captureRequestError(error, request, context);
   }
   logger.error("request.error", {
     error,
     method: request.method,
-    // 只记路径，不记 query：里面可能有 token 之类的参数。
+    // Log the path only, not the query: it may contain params like tokens.
     path: request.path.split("?")[0],
     routePath: context.routePath,
     routeType: context.routeType,

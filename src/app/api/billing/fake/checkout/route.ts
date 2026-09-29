@@ -10,7 +10,7 @@ import {
 } from "@/core/billing/providers/fake";
 import type { FakeProvider } from "@/core/billing/testing/fake-provider";
 
-// 模拟的结账页（BILLING_PROVIDER=fake，只在本地和 CI 可用）。其他情况一律 404。
+// Simulated checkout page (BILLING_PROVIDER=fake, local and CI only). 404 in every other case.
 const notFound = () => new Response("Not Found", { status: 404 });
 
 const escape = (value: string) =>
@@ -46,14 +46,17 @@ export async function GET(request: Request) {
   });
 }
 
-/** "付款"：回跳成功页，并按设定的延迟把事件推给站内 webhook（或者不推，模拟 webhook 丢失）。 */
+/**
+ * "Pay": redirect back to the success page and push the event to our own webhook after the
+ * configured delay (or not at all, to simulate a lost webhook).
+ */
 export async function POST(request: Request) {
   if (!fakeBillingActive()) return notFound();
   const form = await request.formData();
   const session = verifyFakeSession(String(form.get("token") ?? ""));
   if (!session) return new Response("Invalid checkout", { status: 400 });
 
-  // 只能替自己付款；回跳地址必须是本站。
+  // You can only pay for yourself, and the return URL must be on this site.
   const user = await auth.api.getSession({ headers: request.headers });
   if (user?.user.id !== session.userId) {
     return new Response("Forbidden", { status: 403 });

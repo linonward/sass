@@ -4,7 +4,7 @@ import { redirect } from "@/core/i18n/navigation";
 export default async function AdminPage({
   params,
 }: PageProps<"/[locale]/admin">) {
-  // 先校验再跳转，非管理员看到的是 404 而不是跳转。
+  // Check first, then redirect, so non-admins get a 404 rather than a redirect.
   await requireAdmin();
   const { locale } = await params;
   redirect({ href: "/admin/users", locale });

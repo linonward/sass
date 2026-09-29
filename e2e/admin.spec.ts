@@ -19,21 +19,24 @@ const ak = messages.ApiKeys;
 const d = messages.Dashboard;
 
 /**
- * 管理员邮箱需要写进 ADMIN_EMAILS（见 .github/workflows/ci.yml）。
- * 每个 project 用一个，避免并行时同一邮箱触发验证码的重发冷却。
+ * Admin emails must be listed in ADMIN_EMAILS (see .github/workflows/ci.yml).
+ * One per project, so parallel runs don't trip the same email's verification-code resend
+ * cooldown.
  */
 const adminEmail = (project: string) => `e2e-admin-${project}@example.com`;
 
 async function newSignedInPage(browser: Browser, email: string) {
   const page = await (await browser.newContext()).newPage();
-  // useRandomIp 不是 React hook，只是名字以 use 开头。
+  // useRandomIp isn't a React hook; its name just starts with use.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   await useRandomIp(page);
   await signIn(page, email);
   return page;
 }
 
-test("未登录访问 /admin 返回 404，不跳转登录页", async ({ page }) => {
+test("signed-out visit to /admin returns 404 without redirecting to sign-in", async ({
+  page,
+}) => {
   for (const path of [
     "/admin",
     "/admin/users",
@@ -50,7 +53,7 @@ test("未登录访问 /admin 返回 404，不跳转登录页", async ({ page }) 
   }
 });
 
-test("普通用户访问后台返回 404，侧边栏没有后台入口", async ({
+test("regular users get a 404 on admin and have no admin entry in the sidebar", async ({
   page,
   isMobile,
 }) => {
@@ -83,8 +86,9 @@ test("普通用户访问后台返回 404，侧边栏没有后台入口", async (
   await expect(page.getByRole("list", { name: d.adminNav })).toHaveCount(0);
 });
 
-test.describe("管理员", () => {
-  // 同一个管理员邮箱只登录一次（验证码有重发冷却），用例按顺序共用这个页面。
+test.describe("admin", () => {
+  // Sign in with the admin email only once (verification codes have a resend cooldown); the
+  // tests share this page in order.
   test.describe.configure({ mode: "serial" });
 
   let admin: Awaited<ReturnType<typeof newSignedInPage>>;
@@ -92,7 +96,7 @@ test.describe("管理员", () => {
 
   test.beforeAll(async ({ browser }, testInfo) => {
     email = adminEmail(testInfo.project.name);
-    // 失败重试时会在冷却期内再次登录。
+    // A retry after failure signs in again within the cooldown.
     await clearResendCooldown(email);
     admin = await newSignedInPage(browser, email);
   });
@@ -101,7 +105,7 @@ test.describe("管理员", () => {
     await admin?.context().close();
   });
 
-  test("ADMIN_EMAILS 里的邮箱登录后获得 admin 角色，dashboard 里有后台入口", async ({
+  test("an email in ADMIN_EMAILS gets the admin role on sign-in and an admin entry in the dashboard", async ({
     isMobile,
   }) => {
     await admin.goto("/dashboard");
@@ -118,7 +122,7 @@ test.describe("管理员", () => {
     ).toBeVisible();
   });
 
-  test("搜索用户，调整积分后余额和流水正确，并显示操作的管理员", async ({
+  test("search a user, adjust credits: balance and credit transactions are correct and show the acting admin", async ({
     browser,
   }) => {
     const targetEmail = uniqueEmail("adjust");
@@ -152,7 +156,7 @@ test.describe("管理员", () => {
     await expect(entry).toContainText(`by ${email}`);
     await expect(entry).toContainText("+25");
 
-    // 扣到负数被拒绝，余额不变。
+    // Deducting below zero is rejected and the balance is unchanged.
     await form.getByLabel(ad.user.amount).fill("-100");
     await form.getByLabel(ad.user.reason, { exact: true }).fill("too much");
     await form.getByRole("button", { name: ad.user.adjust }).click();
@@ -162,7 +166,9 @@ test.describe("管理员", () => {
     );
   });
 
-  test("封禁后用户被登出且无法再登录，解封后恢复", async ({ browser }) => {
+  test("a banned user is signed out and can't sign in again; unbanning restores access", async ({
+    browser,
+  }) => {
     const targetEmail = uniqueEmail("ban");
     const target = await newSignedInPage(browser, targetEmail);
     const userId = await findUserId(targetEmail);
@@ -173,10 +179,10 @@ test.describe("管理员", () => {
     await ban.getByRole("button", { name: ad.user.ban }).click();
     await expect(admin.getByText(ad.user.bannedNotice)).toBeVisible();
 
-    // 已有的 session 失效：刷新后回到登录页。
+    // Existing sessions are invalidated: a reload goes back to sign-in.
     await target.reload();
     await expect(target).toHaveURL(/\/sign-in/);
-    // 重新登录被拒绝。
+    // Signing in again is rejected.
     await clearResendCooldown(targetEmail);
     const { code } = await requestCode(target, targetEmail);
     await enterCode(target, code);
@@ -192,7 +198,9 @@ test.describe("管理员", () => {
     await target.context().close();
   });
 
-  test("指标页显示注册和收入，可以切换时间范围", async ({ isMobile }) => {
+  test("metrics page shows sign-ups and revenue and can switch time ranges", async ({
+    isMobile,
+  }) => {
     await admin.goto("/admin/users");
     if (isMobile) {
       await admin.getByRole("button", { name: d.toggleSidebar }).click();
@@ -205,7 +213,7 @@ test.describe("管理员", () => {
     await expect(
       admin.getByRole("heading", { level: 1, name: ad.metrics.title }),
     ).toBeVisible();
-    // 本用例的管理员今天刚注册，新注册数至少为 1。
+    // This test's admin signed up today, so new sign-ups are at least 1.
     await expect(admin.getByTestId("metric-new-users")).not.toContainText(
       /^\D*0$/,
     );
@@ -224,16 +232,20 @@ test.describe("管理员", () => {
     );
   });
 
-  // 渠道报表只在归因开启时存在（见 e2e/acquisition/report.spec.ts）。模板默认关闭，
-  // 所以连管理员都该 404，菜单里也不该出现点了就 404 的入口。
-  test("归因关闭时渠道报表 404，后台菜单里没有入口", async ({ isMobile }) => {
+  // The channel report only exists when attribution is on (see e2e/acquisition/report.spec.ts).
+  // The template ships with it off, so even admins should get a 404, and the menu shouldn't show
+  // an entry that leads to a 404.
+  test("with attribution off, the channel report is 404 and has no admin menu entry", async ({
+    isMobile,
+  }) => {
     expect((await admin.goto("/admin/acquisition"))?.status()).toBe(404);
     await admin.goto("/admin/metrics");
     if (isMobile) {
       await admin.getByRole("button", { name: d.toggleSidebar }).click();
     }
-    // 七项：指标 / 状态页 / 用户 / API keys / 订单 / 异常单 / 订阅（状态页与 API keys 分别由
-    // site.config.ts 的 statusPage.enabled、apiKeys.enabled 开启；归因入口不在这七项里）。
+    // Seven items: metrics / status page / users / API keys / orders / exceptions / subscriptions (the
+    // status page and API keys are enabled by statusPage.enabled and apiKeys.enabled in
+    // site.config.ts; the attribution entry isn't among the seven).
     const nav = admin.getByRole("list", { name: d.adminNav });
     await expect(nav.getByRole("link")).toHaveCount(7);
     await expect(
@@ -247,8 +259,9 @@ test.describe("管理员", () => {
     ).toHaveCount(0);
   });
 
-  // 后台只看数量与时间：明文（库里根本没有）和哈希都不该出现在页面上。
-  test("API keys 后台页显示数量与最后使用时间，不含明文", async ({
+  // Admin only sees counts and times: neither the plaintext (not even in the database) nor the
+  // hash should appear on the page.
+  test("admin API keys page shows counts and last-used time, without plaintext", async ({
     browser,
     isMobile,
   }) => {
@@ -263,7 +276,8 @@ test.describe("管理员", () => {
       .getByTestId("api-key-created-value")
       .inputValue();
     await owner.getByRole("button", { name: ak.create.done }).click();
-    // 用一次，让「最后使用」有值（记录发生在响应之后，所以等它落库）。
+    // Use it once so "last used" has a value (it's recorded after the response, so wait for it to
+    // hit the database).
     await owner.request.get("/api/api-keys/me", {
       headers: { authorization: `Bearer ${plaintext}` },
     });
@@ -305,9 +319,10 @@ test.describe("管理员", () => {
     expect(await admin.content()).not.toContain(plaintext);
   });
 
-  // 产品面的横向溢出以前只测过营销首页（ui-shell）。后台是最容易溢出的地方：
-  // 六列表格、30 根柱子的图表、一排筛选器。用同一 context 开新页面，登录态照旧。
-  test("窄屏下指标页不横向溢出", async () => {
+  // Horizontal overflow in the product UI used to be tested only on the marketing home page
+  // (ui-shell). Admin is the most likely place to overflow: a six-column table, a 30-bar chart, a
+  // row of filters. Open a new page in the same context so the session carries over.
+  test("metrics page doesn't overflow horizontally on narrow screens", async () => {
     const page = await admin.context().newPage();
     await page.setViewportSize({ width: 375, height: 740 });
     for (const theme of ["light", "dark"] as const) {
@@ -316,17 +331,19 @@ test.describe("管理员", () => {
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
       );
-      expect(overflow, `${theme} 模式下溢出 ${overflow}px`).toBeLessThanOrEqual(
-        0,
-      );
+      expect(
+        overflow,
+        `${theme} mode overflows by ${overflow}px`,
+      ).toBeLessThanOrEqual(0);
     }
     await page.close();
   });
 
-  test("异常台：待处理的单子带计数；填理由处理后关单，处理历史留在行内", async ({}, testInfo) => {
+  test("exceptions page: open items show a count; resolving with a reason closes the item and keeps the history in the row", async ({}, testInfo) => {
     const ex = ad.exceptions;
-    // 一个用户、一张差额单（余额不够、退款积分没收回来）。直接落库：真实的开单路径
-    // 在 src/core/exceptions/exceptions.test.ts 里用真库和 webhook 覆盖。
+    // One user, one shortfall item (balance too low, refunded credits not reclaimed). Written
+    // straight to the database: the real path that opens items is covered with a real database and
+    // webhooks in src/core/exceptions/exceptions.test.ts.
     const ownerEmail = uniqueEmail(`exceptions-${testInfo.project.name}`);
     const exceptionId = await withDatabase(async (client) => {
       const ownerId = `e2e-exceptions-${randomUUID()}`;
@@ -357,7 +374,8 @@ test.describe("管理员", () => {
     await expect(
       admin.getByRole("heading", { name: ex.title, level: 1 }),
     ).toBeVisible();
-    // 侧边栏上的计数（别的用例也可能开着单子，只断言有数字）。
+    // The count in the sidebar (other tests may have open items too, so only assert there's a
+    // number).
     if (!testInfo.project.name.includes("mobile")) {
       await expect(admin.getByTestId("nav-badge-adminExceptions")).toHaveText(
         /^[1-9]\d*$/,
@@ -394,7 +412,7 @@ test.describe("管理员", () => {
     await expect(history).toContainText(adminEmail(testInfo.project.name));
   });
 
-  test("窄屏下异常台不横向溢出", async () => {
+  test("exceptions page doesn't overflow horizontally on narrow screens", async () => {
     const page = await admin.context().newPage();
     await page.setViewportSize({ width: 375, height: 740 });
     for (const theme of ["light", "dark"] as const) {
@@ -403,14 +421,15 @@ test.describe("管理员", () => {
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
       );
-      expect(overflow, `${theme} 模式下溢出 ${overflow}px`).toBeLessThanOrEqual(
-        0,
-      );
+      expect(
+        overflow,
+        `${theme} mode overflows by ${overflow}px`,
+      ).toBeLessThanOrEqual(0);
     }
     await page.close();
   });
 
-  test("订单和订阅列表可以按状态筛选", async () => {
+  test("order and subscription lists can be filtered by status", async () => {
     for (const [path, label] of [
       ["/admin/orders", ad.orderStatus.paid],
       ["/admin/subscriptions", messages.Billing.page.status.active],

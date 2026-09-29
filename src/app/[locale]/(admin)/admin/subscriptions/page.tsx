@@ -29,8 +29,8 @@ import {
 type Props = PageProps<"/[locale]/admin/subscriptions">;
 
 /**
- * 正常态（active）用中性填充，只有欠费值得标色。canceled / expired 是「结束了」，
- * 不是错误，保持 outline 的弱化处理，不上红。
+ * The normal state (active) uses a neutral fill; only past-due deserves a color. canceled / expired
+ * mean "it ended", not an error, so they keep the muted outline treatment instead of going red.
  */
 const statusVariant = {
   active: "secondary",
@@ -55,7 +55,7 @@ export default async function AdminSubscriptionsPage({
   const status = parseSubscriptionStatus(search.status);
   const page = parsePage(search.page);
 
-  // 文案、格式化和列表查询互不依赖，一次并发发出。
+  // Messages, formatters and the list query don't depend on each other, so fire them concurrently.
   const [t, tb, tp, format, data] = await Promise.all([
     getTranslations({ locale, namespace: "Admin" }),
     getTranslations({ locale, namespace: "Billing.page" }),

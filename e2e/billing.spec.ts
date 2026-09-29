@@ -2,19 +2,23 @@ import { expect, test } from "@playwright/test";
 
 import { signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
 
-// CI 没有 Creem 凭据，这里只验证接口的鉴权和"未配置"时的行为，不做真实支付。
-// 本地如果在 .env.local 配了 Creem，改为验证签名校验和占位产品 ID 的拒绝。
+// CI has no Creem credentials, so this only checks the endpoints' auth and "not configured"
+// behavior — no real payments. If Creem is configured locally in .env.local, it checks signature
+// verification and rejection of placeholder product IDs instead.
 const configured = Boolean(
   process.env.CREEM_API_KEY && process.env.CREEM_WEBHOOK_SECRET,
 );
-// CI 用 fake 服务商跑完整的结账流程（见 pricing.spec.ts），这时 Creem 路由视为未配置。
+// CI runs the full checkout flow with the fake provider (see pricing.spec.ts); the Creem routes
+// then count as not configured.
 const fake = process.env.BILLING_PROVIDER === "fake";
 
 test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
 });
 
-test("未登录时结账和客户门户返回 401", async ({ request }) => {
+test("checkout and customer portal return 401 when signed out", async ({
+  request,
+}) => {
   const checkout = await request.post("/api/billing/checkout", {
     data: { planId: "pro" },
   });
@@ -26,7 +30,7 @@ test("未登录时结账和客户门户返回 401", async ({ request }) => {
   expect(portal.status()).toBe(401);
 });
 
-test("webhook 不接受未签名的请求", async ({ request }) => {
+test("webhook rejects unsigned requests", async ({ request }) => {
   const response = await request.post("/api/webhooks/creem", {
     data: { id: "evt_x", eventType: "checkout.completed", object: {} },
   });
@@ -38,7 +42,7 @@ test("webhook 不接受未签名的请求", async ({ request }) => {
   }
 });
 
-test("非生效服务商的 webhook 路由（Waffo）返回 503，不抢别家的事件", async ({
+test("webhook route of an inactive provider (Waffo) returns 503 and doesn't claim another provider's events", async ({
   request,
 }) => {
   const response = await request.post("/api/webhooks/waffo", {
@@ -48,7 +52,7 @@ test("非生效服务商的 webhook 路由（Waffo）返回 503，不抢别家�
   expect(await response.json()).toEqual({ error: "billing_not_configured" });
 });
 
-test("登录后调用结账：fake 模式返回站内结账页，未配置 Creem 时返回 503", async ({
+test("signed-in checkout: fake mode returns the on-site checkout page, 503 when Creem isn't configured", async ({
   page,
 }) => {
   await signIn(page, uniqueEmail("checkout"));

@@ -4,22 +4,24 @@ import messages from "../messages/en.json";
 import { signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
 
 /**
- * 出厂状态：`userFlags.enabled: false`（见 site.config.ts）。
- * 打开后的行为由 `e2e/flags/` 那套临时副本覆盖（那个套件跑在另一个端口上）。
+ * Out-of-the-box state: `userFlags.enabled: false` (see site.config.ts).
+ * The enabled behavior is covered by the temporary copy in `e2e/flags/` (that suite runs on a
+ * different port).
  */
-test("总开关关着时 Dashboard 上没有 flag 区块，后台 flag 列表也不存在", async ({
+test("with the master switch off, the dashboard has no flag section and the admin flag list doesn't exist", async ({
   page,
 }) => {
   await useRandomIp(page);
   await signIn(page, uniqueEmail("flags-off"));
 
-  // 整段示例都不渲染：连 fallback 都没有，页面和没接这个模块时一样。
+  // The whole demo section doesn't render — not even a fallback; the page looks the same as
+  // without the module.
   await page.goto("/dashboard");
   await expect(page.getByTestId("flag-example")).toHaveCount(0);
   await expect(page.getByTestId("flag-beta-dashboard")).toHaveCount(0);
   await expect(page.getByTestId("flag-beta-dashboard-off")).toHaveCount(0);
 
-  // 后台页面同样 404（模块关着；非管理员本来就进不去）。
+  // The admin page is a 404 as well (module off; non-admins can't get in anyway).
   expect((await page.goto("/admin/flags"))?.status()).toBe(404);
   await expect(
     page.getByRole("heading", { name: messages.Admin.flags.title }),

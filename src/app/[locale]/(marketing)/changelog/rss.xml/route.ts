@@ -1,8 +1,9 @@
 import { rssResponse } from "@/core/changelog/pages";
 import { routing } from "@/core/i18n/routing";
 
-// 非默认语言的 RSS：/<locale>/changelog/rss.xml。默认语言的在 src/app/changelog/rss.xml/。
-// 带扩展名的路径不经过 proxy，所以默认语言不会被改写到 [locale] 下。
+// RSS for non-default locales: /<locale>/changelog/rss.xml. The default locale's feed is in
+// src/app/changelog/rss.xml/ — paths with an extension skip the proxy, so the default locale is
+// never rewritten under [locale].
 export const dynamicParams = false;
 
 export function generateStaticParams() {

@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 for (const file of [".env.local", ".env"])
   if (existsSync(file)) process.loadEnvFile(file);
-// 主套件用 E2E_PORT，多语言副本 +1、归因 +2、flag 副本 +3，这里 +4。
+// The main suite uses E2E_PORT, the i18n copy +1, attribution +2, the flags copy +3, and this one +4.
 const port = Number(process.env.E2E_PORT ?? 3100) + 4;
 const baseURL = `http://localhost:${port}`;
 

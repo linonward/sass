@@ -7,12 +7,14 @@ import messages from "../../messages/en.json";
 import { signIn, uniqueEmail, useRandomIp } from "../auth-helpers";
 
 /**
- * 关掉 `features.examples.invoices` 之后的样子（临时副本见 e2e/invoices/serve.ts）。
- * 打开时的行为由根套件的 e2e/invoices.spec.ts 覆盖，两份用例合起来钉住「开关两头都干净」。
+ * What things look like with `features.examples.invoices` turned off (temporary copy: see
+ * e2e/invoices/serve.ts). The enabled behavior is covered by e2e/invoices.spec.ts in the root
+ * suite; together the two pin down "clean on both sides of the switch".
  */
 const inv = messages.Invoices;
 const d = messages.Dashboard;
-// 服务器跑在临时副本里，验证码落在它自己的 .tmp/emails（EMAIL_OUTBOX_DIR 相对进程 cwd）。
+// The server runs in the temporary copy, so verification codes land in its own .tmp/emails
+// (EMAIL_OUTBOX_DIR is relative to the process cwd).
 const port = Number(process.env.E2E_PORT ?? 3100) + 4;
 const outboxDir = path.join(
   os.tmpdir(),
@@ -20,11 +22,15 @@ const outboxDir = path.join(
   ".tmp/emails",
 );
 
-test("关掉后：侧边栏没有入口，直接访问 404", async ({ page, isMobile }) => {
+test("when off: no sidebar entry, direct visits 404", async ({
+  page,
+  isMobile,
+}) => {
   await useRandomIp(page);
 
-  // 未登录也一样 404：判定在 proxy 里（src/core/auth/routes.ts 的 moduleGatedPages），
-  // 不会先被送去登录页 —— 同一个地址对两种身份是同一个结果。
+  // Signed out it's also a 404: the check lives in the proxy (moduleGatedPages in
+  // src/core/auth/routes.ts), so there's no detour to sign-in first — the same URL gives the same
+  // result for both.
   expect((await page.goto("/invoices"))?.status()).toBe(404);
 
   await signIn(page, uniqueEmail("invoices-off"), { outboxDir });
@@ -33,8 +39,8 @@ test("关掉后：侧边栏没有入口，直接访问 404", async ({ page, isMo
   if (isMobile)
     await page.getByRole("button", { name: d.toggleSidebar }).click();
   const suite = page.getByRole("list", { name: d.suiteNav });
-  // 菜单本身是渲染出来的（同一组里别的入口在），只是没有这一项 ——
-  // 关掉开关不该留下一个点进去就 404 的入口。
+  // The menu itself renders (other entries in the same group are there), just without this item —
+  // turning the switch off shouldn't leave behind an entry that leads to a 404.
   await expect(
     suite.getByRole("link", { name: d.nav.playground }),
   ).toBeVisible();
@@ -42,7 +48,7 @@ test("关掉后：侧边栏没有入口，直接访问 404", async ({ page, isMo
     0,
   );
 
-  // 登录之后同样进不去：整页 404，不是空列表。
+  // Signed in, it's still unreachable: a full-page 404, not an empty list.
   expect((await page.goto("/invoices"))?.status()).toBe(404);
   await expect(page.getByRole("heading", { name: inv.title })).toHaveCount(0);
 });

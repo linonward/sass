@@ -8,47 +8,48 @@ import {
   parseInvoiceForm,
 } from "./invoices";
 
-// 示例模块的纯逻辑：金额解析 + 表单校验。两个弹层和 Server Action 都走这里，
-// 所以这层锁住了，别的层不用重复测非法输入。
+// Pure logic of the example module: amount parsing + form validation. Both dialogs and the Server
+// Actions go through it, so with this layer locked down, other layers needn't retest bad input.
 
 describe("parseAmountToCents", () => {
   test.each([
     ["1250", 125000],
     ["1250.5", 125050],
     ["1250.05", 125005],
-    // 千分位逗号是给人看的，去掉即可。
+    // Thousands separators are for humans; just strip them.
     ["1,250.00", 125000],
     [" 19.99 ", 1999],
     ["0.01", 1],
-    // 上限正好收下；再多一分就拒绝（integer 列存不下，也不该让人填）。
+    // Exactly the maximum is accepted; one cent more is rejected (the integer column can't hold it,
+    // and nobody should be entering it).
     ["1000000", AMOUNT_MAX_CENTS],
-  ])("%s → %s 分", (value, cents) => {
+  ])("%s → %s cents", (value, cents) => {
     expect(parseAmountToCents(value)).toBe(cents);
   });
 
   test.each([
-    ["", "空"],
-    ["0", "零"],
-    ["0.00", "零"],
-    ["-1", "负数"],
-    ["19.999", "三位小数"],
-    ["1.2.3", "两个小数点"],
-    ["1e3", "科学计数法"],
-    ["１２３", "全角数字"],
-    ["12 34", "中间有空格"],
-    ["1000000.01", "超过上限"],
-  ])("%s → null（%s）", (value) => {
+    ["", "empty"],
+    ["0", "zero"],
+    ["0.00", "zero"],
+    ["-1", "negative"],
+    ["19.999", "three decimal places"],
+    ["1.2.3", "two decimal points"],
+    ["1e3", "scientific notation"],
+    ["１２３", "full-width digits"],
+    ["12 34", "space in the middle"],
+    ["1000000.01", "over the maximum"],
+  ])("%s → null (%s)", (value) => {
     expect(parseAmountToCents(value)).toBeNull();
   });
 
   test.each([null, undefined, 1250, {}, [], true])(
-    "非字符串 %o → null，不抛异常",
+    "non-string %o → null, without throwing",
     (value) => {
       expect(parseAmountToCents(value)).toBeNull();
     },
   );
 
-  test("不用浮点乘法：19.99 是 1999 分，不是 1998.99…", () => {
+  test("no floating-point multiplication: 19.99 is 1999 cents, not 1998.99…", () => {
     expect(parseAmountToCents("19.99")).toBe(1999);
     expect(Number("19.99") * 100).not.toBe(1999);
   });
@@ -60,18 +61,18 @@ describe("centsToInput", () => {
     [1999, "19.99"],
     [1, "0.01"],
     [0, "0.00"],
-  ])("%s 分 → %s", (cents, text) => {
+  ])("%s cents → %s", (cents, text) => {
     expect(centsToInput(cents)).toBe(text);
   });
 
-  test("回填出来的一定能再解析回同一个数（编辑 → 保存不该改掉金额）", () => {
+  test("a prefilled value always parses back to the same number (edit → save must not change the amount)", () => {
     for (const cents of [1, 1999, 125000, AMOUNT_MAX_CENTS]) {
       expect(parseAmountToCents(centsToInput(cents))).toBe(cents);
     }
   });
 });
 
-/** 造一份表单数据；传 undefined 的字段就是不填。 */
+/** Build form data; a field passed as undefined is left empty. */
 function form(fields: Record<string, string | undefined>) {
   const data = new FormData();
   for (const [key, value] of Object.entries(fields)) {
@@ -87,7 +88,7 @@ const valid = {
 };
 
 describe("parseInvoiceForm", () => {
-  test("合法表单：客户名 trim、金额换算成分", () => {
+  test("valid form: customer name is trimmed and the amount converted to cents", () => {
     expect(
       parseInvoiceForm(form({ ...valid, customerName: "  Acme Inc.  " })),
     ).toEqual({
@@ -97,21 +98,21 @@ describe("parseInvoiceForm", () => {
   });
 
   test.each([
-    ["空客户名", { ...valid, customerName: "   " }],
+    ["empty customer name", { ...valid, customerName: "   " }],
     [
-      "客户名过长",
+      "customer name too long",
       { ...valid, customerName: "A".repeat(CUSTOMER_NAME_MAX + 1) },
     ],
-    ["缺客户名", { ...valid, customerName: undefined }],
-    ["金额非法", { ...valid, amount: "0" }],
-    ["金额缺失", { ...valid, amount: undefined }],
-    ["状态不在枚举里", { ...valid, status: "cancelled" }],
-    ["状态缺失", { ...valid, status: undefined }],
-  ])("%s → 不通过", (_name, fields) => {
+    ["missing customer name", { ...valid, customerName: undefined }],
+    ["invalid amount", { ...valid, amount: "0" }],
+    ["missing amount", { ...valid, amount: undefined }],
+    ["status not in the enum", { ...valid, status: "cancelled" }],
+    ["missing status", { ...valid, status: undefined }],
+  ])("%s → rejected", (_name, fields) => {
     expect(parseInvoiceForm(form(fields))).toEqual({ ok: false });
   });
 
-  test("客户名正好在上限内", () => {
+  test("customer name exactly at the limit", () => {
     const parsed = parseInvoiceForm(
       form({ ...valid, customerName: "A".repeat(CUSTOMER_NAME_MAX) }),
     );

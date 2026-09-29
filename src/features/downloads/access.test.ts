@@ -8,13 +8,13 @@ const config = {
 };
 
 describe("updatesUntil", () => {
-  test("购买时间往后 N 个日历月", () => {
+  test("N calendar months after the purchase time", () => {
     expect(
       updatesUntil(new Date("2026-09-30T08:00:00Z"), 12).toISOString(),
     ).toBe("2027-09-30T08:00:00.000Z");
   });
 
-  test("月末溢出按 Date 的规则顺延，不会早于 N 个月", () => {
+  test("month-end overflow rolls forward per Date's rules, never earlier than N months", () => {
     const until = updatesUntil(new Date("2026-01-31T00:00:00Z"), 1);
     expect(until.getTime()).toBeGreaterThanOrEqual(
       new Date("2026-02-28T00:00:00Z").getTime(),
@@ -23,11 +23,11 @@ describe("updatesUntil", () => {
 });
 
 describe("productForPlan", () => {
-  test("套餐对应的产品", () => {
+  test("the product a plan maps to", () => {
     expect(productForPlan(config, "lifetime")?.id).toBe("template");
   });
 
-  test("不卖文件的套餐、没有套餐、模块关闭时都没有产品", () => {
+  test("no product for a plan that doesn't sell files, no plan, or a disabled module", () => {
     expect(productForPlan(config, "pro")).toBeUndefined();
     expect(productForPlan(config, undefined)).toBeUndefined();
     expect(
@@ -47,7 +47,7 @@ describe("canDownload", () => {
     publishedAt: new Date(publishedAt),
   });
 
-  test("更新期内发布的版本能下，包括截止那一刻", () => {
+  test("versions released within the updates period can be downloaded, including at the cutoff instant", () => {
     expect(canDownload(entitlement, release("2026-10-01T00:00:00Z"))).toBe(
       true,
     );
@@ -56,13 +56,13 @@ describe("canDownload", () => {
     );
   });
 
-  test("购买前发布的版本也能下（买到的是当时最新版）", () => {
+  test("versions released before the purchase can be downloaded too (you bought the latest at the time)", () => {
     expect(canDownload(entitlement, release("2025-01-01T00:00:00Z"))).toBe(
       true,
     );
   });
 
-  test("更新期之后发布的、别的产品的、授权被收回的都不能下", () => {
+  test("versions released after the updates period, of another product, or with a revoked grant can't be downloaded", () => {
     expect(canDownload(entitlement, release("2027-09-30T00:00:01Z"))).toBe(
       false,
     );

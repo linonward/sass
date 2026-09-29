@@ -5,21 +5,25 @@ allowBuilds:
   sharp: false
   unrs-resolver: false
 
-# pnpm 12 不再读取 package.json 里的 pnpm 字段，overrides 必须写在这里。
+# pnpm 12 no longer reads the pnpm field in package.json, so overrides must go here.
 overrides:
-  # 开发依赖链 drizzle-kit → @esbuild-kit/esm-loader → @esbuild-kit/core-utils 钉着
-  # esbuild ~0.18.20，而 <= 0.24.2 有已知告警（esbuild 的 dev server 允许任意站点跨域
-  # 发请求并读响应，GHSA-67mh-4wv8-2f99，pnpm audit 报 moderate）。这条链已并入 tsx、
-  # 标记 deprecated，等不到上游修复，只能自己抬。core-utils 只用 esbuild 的 transform /
-  # build，碰不到 dev server，所以告警本身走不到；这里写 ^0.25.0（第一个修好的版本线，
-  # 与 drizzle-kit 自己那条 esbuild ^0.25.4 对齐，取仓库里已有的版本，不引入新下载）。
-  # 越界改版本要有依据：改完实测 pnpm db:generate / db:migrate / notices:check 均正常。
+  # The dev dependency chain drizzle-kit → @esbuild-kit/esm-loader → @esbuild-kit/core-utils pins
+  # esbuild ~0.18.20, and <= 0.24.2 has a known advisory (esbuild's dev server lets any site send
+  # cross-origin requests and read the responses, GHSA-67mh-4wv8-2f99, reported as moderate by
+  # pnpm audit). That chain has been merged into tsx and marked deprecated, so no upstream fix is
+  # coming and we have to bump it ourselves. core-utils only uses esbuild's transform / build and
+  # never touches the dev server, so the advisory isn't reachable anyway. This uses ^0.25.0 (the
+  # first fixed release line, aligned with drizzle-kit's own esbuild ^0.25.4, resolving to a
+  # version already in the repo with no new downloads).
+  # Overriding outside the declared range needs evidence: after the change, pnpm db:generate /
+  # db:migrate / notices:check were all verified to work.
   "@esbuild-kit/core-utils>esbuild": "^0.25.0"
   toml: ">=4.2.0"
   uuid: ">=11.1.1"
 
-# pnpm 的供应链策略（minimumReleaseAge）默认拒绝太新的版本；resend 6.30.0 发布不足
-# 该时长，pnpm 在安装时自动加进这里。显式留下：删掉它，下次 install 会重新写回来，
-# 也可能让 CI 的 --frozen-lockfile 通不过该策略检查。
+# pnpm's supply-chain policy (minimumReleaseAge) rejects versions that are too new by default;
+# resend 6.30.0 hadn't been out that long, so pnpm added it here automatically during install.
+# Kept on purpose: if you delete it, the next install writes it back, and CI's --frozen-lockfile
+# may fail the policy check.
 minimumReleaseAgeExclude:
   - resend@6.30.0

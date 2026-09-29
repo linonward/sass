@@ -11,7 +11,7 @@ import {
   withDatabase,
 } from "./auth-helpers";
 
-// 示例业务模块（src/features/example/）。删除示例时连同这个文件一起删掉。
+// Example business module (src/features/example/). Delete this file along with the example.
 const ex = messages.Example;
 const d = messages.Dashboard;
 
@@ -34,14 +34,16 @@ test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
 });
 
-test("未登录访问示例页跳转登录，登录后回到示例页", async ({ page }) => {
+test("signed-out visit to the example page redirects to sign-in, then returns to it after sign-in", async ({
+  page,
+}) => {
   await page.goto("/example");
   await expect(page).toHaveURL(/\/sign-in\?callbackURL=%2Fexample/);
   await signIn(page, uniqueEmail("example-callback"));
   await expect(page).toHaveURL("/example");
 });
 
-test("从侧边栏进入，快速生成扣 1 积分；余额不足时提示", async ({
+test("open from the sidebar, a quick generation deducts 1 credit; insufficient balance shows a prompt", async ({
   page,
   isMobile,
 }) => {

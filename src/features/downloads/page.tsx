@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props) {
   });
 }
 
-/** 文件大小：按 1024 进位，保留一位小数（12.3 MB）。 */
+/** File size: base 1024, one decimal place (12.3 MB). */
 function fileSize(bytes: number, format: (n: number) => string) {
   const units = ["B", "KB", "MB", "GB"];
   let value = bytes;
@@ -40,9 +40,10 @@ function fileSize(bytes: number, format: (n: number) => string) {
 }
 
 /**
- * 下载页：当前用户的每份授权一块，列出能下的版本（新的在前）。
- * 下载按钮指向 /api/downloads/<版本 id>，那里现签一个 5 分钟的地址 —— 这一页和邮件里的
- * 链接因此永远有效，过期的只是跳转之后的那个地址。
+ * Downloads page: one block per grant the current user holds, listing the downloadable versions
+ * (newest first). Download buttons point to /api/downloads/<version id>, which signs a fresh
+ * 5-minute URL — so links on this page and in emails never expire; only the URL behind the
+ * redirect does.
  */
 export default async function DownloadsPage({ params }: Props) {
   if (!siteConfig.downloads.enabled) notFound();
@@ -76,8 +77,9 @@ export default async function DownloadsPage({ params }: Props) {
         </EmptyState>
       )}
       {entries.map((entry) => (
-        // 不套面板：表格 / 列表直接躺在画布上（docs/design.md「表格不套面板」）。
-        // 用列表不用表格：375px 下下载按钮始终在视野里，不出现横向滚动。
+        // No panel: tables / lists sit directly on the canvas (docs/design.md: tables don't get a
+        // panel). A list rather than a table: at 375px the download button stays in view with no
+        // horizontal scrolling.
         <section
           key={entry.id}
           className="flex flex-col gap-3"
@@ -120,7 +122,7 @@ export default async function DownloadsPage({ params }: Props) {
                       <span data-numeric>{size(release.size)}</span>
                     </p>
                   </div>
-                  {/* API 路由返回跳转，不走客户端路由，所以用 <a> 而不是 Link。 */}
+                  {/* The API route returns a redirect and bypasses client routing, so use <a> rather than Link. */}
                   <a
                     href={`/api/downloads/${release.id}`}
                     className={buttonVariants({

@@ -3,21 +3,23 @@ import { existsSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// 读取 .env.local / .env（不覆盖已有变量），数据库测试从中取 DATABASE_URL_TEST。
+// Read .env.local / .env (without overwriting existing variables); database tests take
+// DATABASE_URL_TEST from there.
 for (const file of [".env.local", ".env"]) {
   if (existsSync(file)) process.loadEnvFile(file);
 }
 
-// 会 import 全局 env（src/core/env.ts）的模块在测试里需要这些变量才能通过校验；
-// 单测不会用它们连接数据库或签名真实 session。已设置时（本地 .env.local、CI）不覆盖。
+// Modules that import the global env (src/core/env.ts) need these variables to pass validation in
+// tests; unit tests never use them to connect to a database or sign real sessions. Not overridden
+// when already set (local .env.local, CI).
 const testEnvDefaults = {
   DATABASE_URL: "postgres://postgres:postgres@localhost:5432/unused",
   BETTER_AUTH_SECRET: "test-only-secret-not-for-production-use",
 };
 
 export default defineConfig({
-  // Vite 内置 tsconfig paths 解析（读根目录 tsconfig.json 的 paths，`@/*` 与 `content-collections`），
-  // 不再需要 vite-tsconfig-paths 插件。
+  // Vite resolves tsconfig paths natively (reading `paths` from the root tsconfig.json: `@/*` and
+  // `content-collections`), so the vite-tsconfig-paths plugin is no longer needed.
   resolve: { tsconfigPaths: true },
   plugins: [react()],
   test: {
@@ -27,7 +29,8 @@ export default defineConfig({
     env: Object.fromEntries(
       Object.entries(testEnvDefaults).filter(([key]) => !process.env[key]),
     ),
-    // next-intl 引用 `next/navigation`（无扩展名），需经 Vite 处理才能解析。
+    // next-intl imports `next/navigation` (without an extension), which only resolves when Vite
+    // processes it.
     server: { deps: { inline: ["next-intl"] } },
     coverage: {
       provider: "v8",
@@ -39,8 +42,9 @@ export default defineConfig({
         "src/**/testing/**",
       ],
       thresholds: {
-        // 设在下限略低于当前基准线（~40%），挡住退步但不阻塞新代码。
-        // 这些值随覆盖率提升逐步上调。当前实际值见 coverage 报告。
+        // Set slightly below the current baseline (~40%) to catch regressions without blocking new
+        // code. Raise these gradually as coverage improves; see the coverage report for current
+        // values.
         lines: 35,
         branches: 30,
         functions: 35,

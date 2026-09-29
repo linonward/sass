@@ -2,24 +2,28 @@ import { z } from "zod";
 
 import { invoiceStatuses } from "./schema";
 
-// 示例业务模块：金额解析和表单校验。这里不 import Next / 数据库，纯逻辑便于单测；
-// 碰数据库的在 ./queries.ts，写数据的在 ./actions.ts。
+// Example business module: amount parsing and form validation. No Next / database imports here —
+// pure logic keeps it unit-testable. Database reads are in ./queries.ts, writes in ./actions.ts.
 
 export const CUSTOMER_NAME_MAX = 120;
 
-/** 金额上限（最小货币单位）：一亿分 = 100 万，挡住把 integer 列撑爆的输入。 */
+/**
+ * Maximum amount (in minor currency units): 100 million cents = 1 million, blocking input that
+ * would overflow the integer column.
+ */
 export const AMOUNT_MAX_CENTS = 100_000_000;
 
 /**
- * 人填的金额 → 最小货币单位（分）的整数。
+ * A human-entered amount → an integer in minor currency units (cents).
  *
- * 接受 `1250`、`1250.5`、`1,250.00`；不接受负数、0、超过两位小数和任何别的字符。
- * 解析不了返回 null（由调用方转成表单错误），不抛异常 —— 用户输入不该让服务端 500。
- * 用字符串拼接算分，不做 `Number(x) * 100` 的浮点乘法（`19.99 * 100` 是 1998.9999…）。
+ * Accepts `1250`, `1250.5`, `1,250.00`; rejects negatives, 0, more than two decimal places and
+ * any other character. Returns null when it can't parse (the caller turns that into a form error)
+ * rather than throwing — user input shouldn't make the server 500. Cents are computed by string
+ * concatenation, not floating-point `Number(x) * 100` (`19.99 * 100` is 1998.9999…).
  */
 export function parseAmountToCents(value: unknown): number | null {
   if (typeof value !== "string") return null;
-  // 千分位逗号只是给人看的，先去掉；其余字符一概不接受。
+  // Thousands separators are only for humans, so strip them first; any other character is rejected.
   const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(value.trim().replace(/,/g, ""));
   if (!match) return null;
   const cents =
@@ -27,18 +31,22 @@ export function parseAmountToCents(value: unknown): number | null {
   return cents > 0 && cents <= AMOUNT_MAX_CENTS ? cents : null;
 }
 
-/** 最小货币单位 → 表单里的金额文本（编辑时要回填成 `1250.00` 这种原样可改的值）。 */
+/**
+ * Minor currency units → the amount text in the form (editing needs to prefill an editable value
+ * like `1250.00`).
+ */
 export function centsToInput(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
 /**
- * 新建/编辑表单的校验。三个字段一份 schema，创建和更新共用 ——
- * 两处各写一份的话，迟早一边接受空客户名、另一边不接受。
+ * Validation for the create/edit form. One schema for the three fields, shared by create and
+ * update — with a copy in each, sooner or later one would accept an empty customer name and the
+ * other wouldn't.
  */
 export const invoiceFormSchema = z.object({
   customerName: z.string().trim().min(1).max(CUSTOMER_NAME_MAX),
-  // 表单传进来的是字符串，校验通过后就是「分」。
+  // The form sends a string; once validated it's cents.
   amount: z.unknown().transform((value, ctx) => {
     const cents = parseAmountToCents(value);
     if (cents === null) {
@@ -52,7 +60,10 @@ export const invoiceFormSchema = z.object({
 
 export type InvoiceInput = z.infer<typeof invoiceFormSchema>;
 
-/** 解析表单。失败时只回一个标记：具体哪个字段错了由客户端按 native 校验和提示兜。 */
+/**
+ * Parse the form. On failure it returns just a flag: which field is wrong is left to the client's
+ * native validation and hints.
+ */
 export function parseInvoiceForm(form: FormData) {
   const parsed = invoiceFormSchema.safeParse({
     customerName: form.get("customerName"),

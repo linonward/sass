@@ -10,21 +10,25 @@ import {
   summarize,
 } from "./src/core/changelog/frontmatter";
 
-// 文章路径 content/blog/<locale>/<slug>.mdx：目录名是语言，文件名是 URL 里的 slug。
+// Post path content/blog/<locale>/<slug>.mdx: the directory name is the locale, the file name is
+// the slug in the URL.
 const localePattern = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
 const slugPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-// 与 /blog 下的固定路由重名的 slug 访问不到。
+// Slugs that collide with fixed routes under /blog would be unreachable.
 const reservedSlugs = new Set(["page", "tags"]);
 
 const directory = "content/blog";
 const changelogDirectory = "content/changelog";
 
 /**
- * content-collections 在注册日志之前就解析了首批文件，frontmatter 写错（例如值里有未加引号的 ": "）
- * 的文件会被静默丢弃。这里核对磁盘上的文件是否都进了集合，缺了就让构建失败。
- * 开发环境只打印错误：watch 模式下改动的文件出错时本身会报错，不必中断 dev server。
+ * content-collections parses the first batch of files before its logging is registered, so files
+ * with broken frontmatter (for example an unquoted ": " in a value) are silently dropped. This
+ * checks that every file on disk made it into the collection and fails the build if any is
+ * missing. In development it only logs the error: in watch mode a changed file that fails reports
+ * its own error, so there's no need to stop the dev server.
  *
- * `nested`：blog 按语言分目录（`<locale>/<slug>.mdx`），changelog 是平铺的（`<slug>.mdx`）。
+ * `nested`: blog is split into per-locale directories (`<locale>/<slug>.mdx`), changelog is flat
+ * (`<slug>.mdx`).
  */
 function assertAllFilesBuilt(
   directory: string,
@@ -57,11 +61,11 @@ const posts = defineCollection({
   include: "*/*.mdx",
   schema: z.object({
     title: z.string().trim().min(1),
-    // 列表页摘要、meta description 和 RSS 描述。
+    // Summary on the list page, meta description, and RSS description.
     description: z.string().trim().min(1),
-    // 发布日期，例如 2026-01-31。
+    // Publication date, e.g. 2026-01-31.
     date: z.iso.date(),
-    // 小写 kebab-case，直接用作 /blog/tags/<tag> 的路径。
+    // Lowercase kebab-case, used directly as the /blog/tags/<tag> path.
     tags: z
       .array(
         z
@@ -69,12 +73,13 @@ const posts = defineCollection({
           .regex(slugPattern, 'must be lowercase kebab-case such as "product"'),
       )
       .default([]),
-    // public/ 下的图片，例如 /blog/hello-world.png。只用于页面展示，分享图由代码生成。
+    // An image under public/, e.g. /blog/hello-world.png. Only shown on the page; the social share
+    // image is generated in code.
     cover: z
       .string()
       .regex(/^\/(?!\/)/, 'must be a path under public/ such as "/blog/a.png"')
       .optional(),
-    // 草稿只在开发环境可见，生产构建里访问返回 404。
+    // Drafts are only visible in development; in production builds they return 404.
     draft: z.boolean().default(false),
     content: z.string(),
   }),
@@ -98,8 +103,9 @@ const posts = defineCollection({
     assertAllFilesBuilt(directory, documents, { nested: true }),
 });
 
-// 条目路径 content/changelog/<slug>.mdx：文件名就是页面上（和 RSS 里）的锚点。
-// 不按语言分目录：更新日志通常只有一份，页面外框跟着当前语言走（和法律页同一个取舍）。
+// Entry path content/changelog/<slug>.mdx: the file name is the anchor on the page (and in RSS).
+// Not split by locale: there's usually only one changelog, and the page chrome follows the current
+// locale (the same tradeoff as the legal pages).
 const changelog = defineCollection({
   name: "changelog",
   directory: changelogDirectory,
@@ -114,7 +120,8 @@ const changelog = defineCollection({
       );
     }
     const mdx = await compileMDX(context, document);
-    // 正文不进集合（页面用编译后的 mdx），但 description 的兜底要读原始正文。
+    // The body isn't kept in the collection (the page uses the compiled mdx), but the description
+    // fallback needs the raw body.
     const { content, ...rest } = document;
     return {
       ...rest,

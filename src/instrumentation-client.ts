@@ -1,5 +1,6 @@
-// 在前端代码执行前运行（Next.js instrumentation-client 约定）。
-// OBSERVABILITY_SENTRY 由 next.config.ts 在构建时写死；关闭 observability.sentry 时 Sentry SDK 不会打进产物。
+// Runs before any frontend code (the Next.js instrumentation-client convention).
+// OBSERVABILITY_SENTRY is inlined by next.config.ts at build time; with observability.sentry off, the
+// Sentry SDK is left out of the bundle.
 type Sentry = typeof import("@/core/observability/sentry.client");
 
 let sentry: Sentry | undefined;
@@ -10,7 +11,7 @@ if (process.env.OBSERVABILITY_SENTRY === "true") {
   });
 }
 
-// 路由切换的性能追踪（Sentry 初始化之前的切换不记录）。
+// Performance tracing for route transitions (transitions before Sentry initializes aren't recorded).
 export function onRouterTransitionStart(
   ...args: Parameters<Sentry["captureRouterTransitionStart"]>
 ) {

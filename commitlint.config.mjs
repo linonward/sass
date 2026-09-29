@@ -1,9 +1,11 @@
-// 提交信息用 Conventional Commits，由 .husky/commit-msg 检查。
-// 例如：feat(i18n): add locale switcher、fix: 修复登录跳转。合并提交（Merge ...）会被跳过。
+// Commit messages follow Conventional Commits, checked by .husky/commit-msg.
+// For example: feat(i18n): add locale switcher, fix: correct sign-in redirect. Merge commits
+// (Merge ...) are skipped.
 //
-// 先赋值再导出（同 eslint.config.mjs）：匿名默认导出会触发 next 预设里的
-// import/no-anonymous-default-export —— 那条规则本意冲着 React 组件去，
-// 但既然本仓库已有这个写法，跟齐比逐个文件豁免省事。
+// Assigned first, then exported (same as eslint.config.mjs): an anonymous default export trips
+// import/no-anonymous-default-export from the next preset. That rule is really aimed at React
+// components, but since the repo already uses this pattern, following it is simpler than
+// exempting files one by one.
 const config = {
   extends: ["@commitlint/config-conventional"],
 };

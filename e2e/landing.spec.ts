@@ -6,7 +6,7 @@ import siteConfig from "../site.config";
 const { landing } = siteConfig;
 const t = messages.Landing;
 
-test("首页按配置顺序渲染全部区块", async ({ page }) => {
+test("home page renders all sections in config order", async ({ page }) => {
   await page.goto("/");
   const ids = await page
     .locator("[data-section]")
@@ -14,14 +14,14 @@ test("首页按配置顺序渲染全部区块", async ({ page }) => {
   expect(ids).toEqual(landing.sections);
 });
 
-test("各区块内容来自配置与文案", async ({ page }) => {
+test("section content comes from config and messages", async ({ page }) => {
   await page.goto("/");
 
   await expect(
     page.getByRole("heading", { level: 1, name: t.hero.title }),
   ).toBeVisible();
   if (landing.hero.image) {
-    // 亮色、暗色各一张时，只显示其中一张。
+    // With one light and one dark image, only one of them is shown.
     await expect(
       page
         .getByRole("img", { name: t.hero.imageAlt, exact: true })
@@ -29,7 +29,8 @@ test("各区块内容来自配置与文案", async ({ page }) => {
     ).toHaveCount(1);
   }
 
-  // 有可买的套餐时，首屏主按钮直接卖：带价格，跳到交付区块的购买卡片。
+  // When there's a purchasable plan, the hero's primary button sells directly: it shows the price
+  // and jumps to the purchase card in the delivery section.
   const buy = page.locator("#hero").getByRole("link", {
     name: new RegExp(`^${t.hero.buyCta.split(" ·")[0]}`),
   });
@@ -46,7 +47,8 @@ test("各区块内容来自配置与文案", async ({ page }) => {
     landing.features.length,
   );
 
-  // 交付区块卖 landing.purchasePlan：价格、条款和购买按钮（结账流程由 billing.spec 覆盖）。
+  // The delivery section sells landing.purchasePlan: price, terms, and the buy button (the
+  // checkout flow is covered by billing.spec).
   const offer = page.getByTestId("delivery-offer");
   await expect(offer).toBeVisible();
   await expect(offer.getByText(t.delivery.terms)).toBeVisible();
@@ -67,8 +69,11 @@ test("各区块内容来自配置与文案", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("导航锚点跳到对应区块", async ({ page, isMobile }) => {
-  test.skip(isMobile, "移动端导航在菜单里，由 ui-shell 覆盖");
+test("nav anchors jump to their sections", async ({ page, isMobile }) => {
+  test.skip(
+    isMobile,
+    "mobile nav lives in the menu and is covered by ui-shell",
+  );
   await page.goto("/");
   await page
     .getByRole("navigation", { name: messages.Header.main })
@@ -79,7 +84,9 @@ test("导航锚点跳到对应区块", async ({ page, isMobile }) => {
 });
 
 for (const path of ["/", "/zh"]) {
-  test(`${path} 产品预览可用键盘切换且不触发 AI 请求`, async ({ page }) => {
+  test(`${path} product preview is keyboard-switchable and makes no AI requests`, async ({
+    page,
+  }) => {
     const aiRequests: string[] = [];
     page.on("request", (request) => {
       if (request.url().includes("/api/ai/")) aiRequests.push(request.url());
@@ -114,7 +121,9 @@ for (const path of ["/", "/zh"]) {
   });
 }
 
-test("中文 375px 亮暗主题不横向溢出", async ({ page }) => {
+test("zh at 375px doesn't overflow horizontally in light or dark theme", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 375, height: 812 });
   for (const theme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: theme });
@@ -128,7 +137,7 @@ test("中文 375px 亮暗主题不横向溢出", async ({ page }) => {
 });
 
 for (const path of ["/", "/zh"]) {
-  test(`${path} 用户故事跟随配置、主题与品牌色，375px 无溢出`, async ({
+  test(`${path} user stories follow config, theme, and brand color, with no overflow at 375px`, async ({
     page,
   }) => {
     const errors: string[] = [];

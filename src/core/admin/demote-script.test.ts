@@ -16,12 +16,14 @@ import { user } from "@/core/db/schema";
 const execFileAsync = promisify(execFile);
 const url = process.env.DATABASE_URL_TEST;
 
-// CI 必须提供测试库，不允许静默跳过。
+// CI must provide a test database; silently skipping is not allowed.
 if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过 admin 降级脚本测试：未设置 DATABASE_URL_TEST");
+  console.warn(
+    "Skipping admin demote script tests: DATABASE_URL_TEST is not set",
+  );
 }
 
 describe.skipIf(!url)("scripts/admin-demote.mjs", () => {
@@ -30,7 +32,7 @@ describe.skipIf(!url)("scripts/admin-demote.mjs", () => {
 
   const script = path.resolve(__dirname, "../../../scripts/admin-demote.mjs");
 
-  /** 跑脚本，返回 stdout/stderr 和退出码（非零不抛）。 */
+  /** Runs the script and returns stdout/stderr and the exit code (a non-zero exit does not throw). */
   async function demote(email: string, env: Record<string, string> = {}) {
     try {
       const { stdout, stderr } = await execFileAsync(
@@ -40,7 +42,7 @@ describe.skipIf(!url)("scripts/admin-demote.mjs", () => {
           env: {
             ...process.env,
             DATABASE_URL: url,
-            // 脚本会读 .env.local，这里把 ADMIN_EMAILS 固定住，避免受开发环境影响。
+            // The script reads .env.local; pin ADMIN_EMAILS here so the dev environment can't affect it.
             ADMIN_EMAILS: env.ADMIN_EMAILS ?? "",
             ...env,
           },
@@ -91,17 +93,17 @@ describe.skipIf(!url)("scripts/admin-demote.mjs", () => {
     await client?.close();
   });
 
-  test("admin 被摘掉，其他角色保留", async () => {
+  test("removes admin and keeps the other roles", async () => {
     const { id, email } = await newUser("admin,editor");
 
     const result = await demote(email);
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain("已撤销");
+    expect(result.stdout).toContain("Revoked the admin role");
     expect(await roleOf(id)).toBe("editor");
   });
 
-  test("只有 admin 一个角色时 role 置空", async () => {
+  test("sets role to null when admin was the only role", async () => {
     const { id, email } = await newUser("admin");
 
     expect((await demote(email)).code).toBe(0);
@@ -109,17 +111,17 @@ describe.skipIf(!url)("scripts/admin-demote.mjs", () => {
     expect(await roleOf(id)).toBeNull();
   });
 
-  test("不是 admin 的用户不动它", async () => {
+  test("leaves a non-admin user unchanged", async () => {
     const { id, email } = await newUser("editor");
 
     const result = await demote(email);
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain("本来就不是 admin");
+    expect(result.stdout).toContain("is not an admin");
     expect(await roleOf(id)).toBe("editor");
   });
 
-  test("邮箱还在 ADMIN_EMAILS 里时提醒会被重新提升", async () => {
+  test("warns that the user will be promoted again while the email is still in ADMIN_EMAILS", async () => {
     const { email } = await newUser("admin");
 
     const result = await demote(email, { ADMIN_EMAILS: email });
@@ -127,7 +129,7 @@ describe.skipIf(!url)("scripts/admin-demote.mjs", () => {
     expect(result.stderr).toContain("ADMIN_EMAILS");
   });
 
-  test("邮箱大小写不敏感", async () => {
+  test("matches the email case-insensitively", async () => {
     const { id, email } = await newUser("admin");
 
     expect((await demote(email.toUpperCase())).code).toBe(0);
@@ -135,14 +137,14 @@ describe.skipIf(!url)("scripts/admin-demote.mjs", () => {
     expect(await roleOf(id)).toBeNull();
   });
 
-  test("没有这个用户时非零退出", async () => {
+  test("exits non-zero when there is no such user", async () => {
     const result = await demote(`nobody-${randomUUID()}@example.com`);
 
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain("没有这个邮箱的用户");
+    expect(result.stderr).toContain("No user with this email");
   });
 
-  test("没给邮箱时打印用法并退出", async () => {
+  test("prints usage and exits when no email is given", async () => {
     const result = await demote("");
 
     expect(result.code).toBe(1);

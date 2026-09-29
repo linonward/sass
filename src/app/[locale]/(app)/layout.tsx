@@ -7,7 +7,7 @@ import { redirect } from "@/core/i18n/navigation";
 
 import siteConfig from "../../../../site.config";
 
-// 登录后的页面。proxy 只看 cookie 是否存在，这里再校验 session 是否有效。
+// Signed-in pages. The proxy only checks that the cookie exists; this layout verifies the session.
 export default async function AppLayout({
   children,
   params,
@@ -17,7 +17,7 @@ export default async function AppLayout({
   if (!session) return redirect({ href: SIGN_IN_PATH, locale });
 
   const nav = dashboardNav(siteConfig);
-  // 管理员多一个进入后台的入口。
+  // Admins get an extra link into the admin area.
   const showAdmin = adminEnabled && isAdmin(session.user);
 
   return (

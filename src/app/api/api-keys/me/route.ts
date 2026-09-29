@@ -10,7 +10,7 @@ const service = createApiKeyService(db);
 const middleware = createApiKeyMiddleware({
   enabled: siteConfig.apiKeys.enabled,
   findKeyByHash: (hashedKey) => service.findByHash(hashedKey),
-  // 记使用时间不阻塞响应。
+  // Recording last-used time doesn't block the response.
   touchLastUsed: (keyId) =>
     runAfterResponse(() => service.touchLastUsed(keyId)),
   checkRateLimit: createApiKeyRateLimiter({
@@ -20,11 +20,12 @@ const middleware = createApiKeyMiddleware({
 });
 
 /**
- * `GET /api/api-keys/me`：示例接口，用 `Authorization: Bearer sk_...` 认出调用用户，
- * 返回 `{ userId, keyId, name, prefix }`。业务要暴露自己的 API 时照抄这个文件的接线
- * （`withApiKey` + 上面的中间件），把处理函数换成自己的逻辑。
+ * `GET /api/api-keys/me`: an example endpoint that identifies the caller from
+ * `Authorization: Bearer sk_...` and returns `{ userId, keyId, name, prefix }`. To expose your own
+ * API, copy this file's wiring (`withApiKey` + the middleware above) and swap in your own handler.
  *
- * 鉴权失败一律 401，未开启 apiKeys 时 404；超限时按限流策略 429 / 503。
+ * Any auth failure is a 401, and 404 when apiKeys is off; over the limit it's 429 / 503 per the
+ * rate limit policy.
  */
 export const GET = withApiKey(middleware, (request) =>
   Response.json({

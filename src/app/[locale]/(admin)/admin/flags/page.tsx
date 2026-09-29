@@ -24,9 +24,10 @@ export function generateMetadata({ params }: Props) {
 }
 
 /**
- * 用户面 flag 的定义清单。v1 是纯配置驱动：flag 状态在 `site.config.ts` 里，
- * 是构建期常量，所以这里只读 —— 运行时改写配置等于要一个 DB 里的 flag 表（见卡片「不做」）。
- * 总开关关着时和别的模块一样 404；非管理员由 requireAdmin 拦成 404。
+ * List of user-facing feature flag definitions. v1 is purely config-driven: flag state lives in
+ * `site.config.ts` as build-time constants, so this page is read-only — changing config at runtime
+ * would mean a flag table in the database, which is out of scope. With the master switch off this
+ * returns 404 like other modules; requireAdmin turns non-admins into a 404.
  */
 export default async function AdminFlagsPage({ params }: Props) {
   if (!flagsEnabled()) notFound();
@@ -74,7 +75,8 @@ export default async function AdminFlagsPage({ params }: Props) {
                 </TableCell>
                 <TableCell>
                   {definition.adminOnly ? (
-                    // 只有自己人看得见是个需要留意一眼的状态，给品牌芯片；其余用弱文字。
+                    // "Visible to insiders only" is a state worth a glance, so it gets a brand chip; the rest use
+                    // muted text.
                     <Badge variant="band" flat>
                       {t("access.admins")}
                     </Badge>
@@ -88,7 +90,7 @@ export default async function AdminFlagsPage({ params }: Props) {
             ))}
           </TableBody>
         </Table>
-        {/* 后台改不了配置：改完 site.config.ts 要重新部署，这里把这件事说清楚。 */}
+        {/* The admin can't change config: editing site.config.ts needs a redeploy, and this says so plainly. */}
         <p className="text-muted-foreground text-xs">{t("configHint")}</p>
       </MetricSection>
     </div>

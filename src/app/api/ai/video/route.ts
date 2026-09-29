@@ -3,9 +3,13 @@ import { handleVideoStart } from "@/core/ai/handlers";
 import { auth } from "@/core/auth/server";
 import { scheduleOpportunisticRecovery } from "@/core/recovery";
 
-/** 示例视频接口：登录 → 限流 → 预扣积分 → 提交异步任务。结果用 GET /api/ai/video/:id 查询。 */
+/**
+ * Example video endpoint: sign-in → rate limit → reserve credits → submit an async job. Poll the
+ * result with GET /api/ai/video/:id.
+ */
 export async function POST(request: Request) {
-  // 用户在用 AI 功能：响应之后顺带推进别人悬着的任务（有界、限频，见 src/core/recovery）。
+  // A user is using AI: after responding, also advance other users' stuck jobs (bounded and
+  // throttled; see src/core/recovery).
   if (aiVideoEnabled) scheduleOpportunisticRecovery();
   return handleVideoStart(request, {
     enabled: aiVideoEnabled,

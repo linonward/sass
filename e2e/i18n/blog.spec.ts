@@ -5,8 +5,12 @@ import { TEST_LOCALE } from "./test-locale";
 
 const origin = `https://${siteConfig.domain}`;
 
-// 测试语言没有 content/blog/<locale>/ 目录：列表页为空且不收录，英文文章不会出现在这个语言下。
-test("没有文章的语言：空列表、noindex、文章 404", async ({ page, request }) => {
+// The test locale has no content/blog/<locale>/ directory: the index is empty and not indexed, and
+// English posts don't show up under this locale.
+test("locale without posts: empty index, noindex, posts 404", async ({
+  page,
+  request,
+}) => {
   const response = await page.goto(`/${TEST_LOCALE}/blog`);
   expect(response?.status()).toBe(200);
   await expect(

@@ -5,13 +5,14 @@ import siteConfig from "../site.config";
 
 const origin = `https://${siteConfig.domain}`;
 
-test("首页包含 canonical、hreflang、Open Graph 与 JSON-LD", async ({
+test("home page has canonical, hreflang, Open Graph, and JSON-LD", async ({
   page,
 }) => {
   await page.goto("/");
   const head = page.locator("head");
 
-  // 首页标题要带上这页讲什么，不能只剩站点名；描述跟着 Hero 走。
+  // The home page title must say what the page is about, not just the site name; the description
+  // follows the Hero.
   await expect(page).toHaveTitle(
     `${messages.Metadata.homeTitle} | ${siteConfig.name}`,
   );
@@ -51,29 +52,34 @@ test("首页包含 canonical、hreflang、Open Graph 与 JSON-LD", async ({
   ]);
 });
 
-test("OG 图可以访问", async ({ request }) => {
+test("OG image is reachable", async ({ request }) => {
   const response = await request.get("/opengraph-image");
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toBe("image/png");
 });
 
-test("标签页图标（favicon）有 link 且能取到图片", async ({ page, request }) => {
+test("tab icon (favicon) has a link and the image loads", async ({
+  page,
+  request,
+}) => {
   await page.goto("/");
-  // 只锁「有图标、且图标取得到」：href 由实现决定（内置生成的是 /icon，
-  // 买家按 README 换成自己的 icon.svg / icon.png 后就变成那个文件），所以从 DOM 里读。
+  // Only pin "there's an icon, and it loads": the href depends on the implementation (the built-in
+  // generated one is /icon; once a buyer swaps in their own icon.svg / icon.png per the README, it
+  // becomes that file), so read it from the DOM.
   const href = await page
     .locator('head link[rel="icon"]')
     .first()
     .getAttribute("href");
   expect(href).toBeTruthy();
 
-  // 取不到时浏览器标签页就是空白 —— 不是 404、且响应确实是张图才算数。
+  // If it doesn't load, the browser tab is blank — it only counts if it's not a 404 and the response
+  // really is an image.
   const response = await request.get(href!);
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toMatch(/^image\//);
 });
 
-test("sitemap.xml 列出首页", async ({ request }) => {
+test("sitemap.xml lists the home page", async ({ request }) => {
   const response = await request.get("/sitemap.xml");
   expect(response.status()).toBe(200);
   const xml = await response.text();
@@ -83,7 +89,9 @@ test("sitemap.xml 列出首页", async ({ request }) => {
   );
 });
 
-test("robots.txt 只挡机器端点 /api 并指向 sitemap", async ({ request }) => {
+test("robots.txt only blocks the machine endpoint /api and points to the sitemap", async ({
+  request,
+}) => {
   const response = await request.get("/robots.txt");
   expect(response.status()).toBe(200);
   const text = await response.text();
@@ -91,19 +99,21 @@ test("robots.txt 只挡机器端点 /api 并指向 sitemap", async ({ request })
   expect(text).toContain(`Sitemap: ${origin}/sitemap.xml`);
 });
 
-test("dashboard / admin 不进 robots，靠页面自己的 noindex 排除", async ({
+test("dashboard / admin stay out of robots and are excluded by their own noindex", async ({
   page,
   request,
 }) => {
-  // 两套封锁叠在一起是互相抵消：Disallow 挡住的路径爬虫抓不到，也就读不到页面上的
-  // meta noindex，有外链时反而可能以裸 URL 出现在结果里。留 noindex（页面侧在
-  // dashboard/page.tsx 和 admin/metadata.ts），robots 只留 /api 这种没有 HTML 的端点。
+  // Stacking both kinds of blocking cancels them out: crawlers can't fetch a path blocked by
+  // Disallow, so they never read the page's meta noindex, and with inbound links it may even show
+  // up in results as a bare URL. Keep noindex (on the page side, in dashboard/page.tsx and
+  // admin/metadata.ts), and leave robots with only endpoints like /api that have no HTML.
   const text = await (await request.get("/robots.txt")).text();
   for (const path of ["/dashboard", "/admin"]) {
     expect(text).not.toContain(`Disallow: ${path}\n`);
   }
 
-  // 爬虫抓 /dashboard 拿到的是 307 + 同样 noindex 的登录页，没有可收录的内容。
+  // A crawler fetching /dashboard gets a 307 + a sign-in page that's also noindex, so nothing is
+  // indexable.
   const response = await page.goto("/dashboard");
   expect(response?.status()).toBe(200);
   await expect(page).toHaveURL(/\/sign-in/);
@@ -113,22 +123,22 @@ test("dashboard / admin 不进 robots，靠页面自己的 noindex 排除", asyn
   );
 });
 
-test("llms.txt 是给 agent 的站点索引", async ({ request }) => {
+test("llms.txt is a site index for agents", async ({ request }) => {
   const response = await request.get("/llms.txt");
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toContain("text/plain");
 
   const text = await response.text();
-  // 站点名和一句话简介取自配置。
+  // Site name and one-line tagline come from config.
   expect(
     text.startsWith(`# ${siteConfig.name}\n\n> ${siteConfig.description}\n`),
   ).toBe(true);
-  // 公开页面，以及机器可读资源。
+  // Public pages, plus machine-readable resources.
   expect(text).toContain(`- [Home](${origin}):`);
   expect(text).toContain(`- [${messages.Nav.pricing}](${origin}/pricing):`);
   expect(text).toContain(`(${origin}/sitemap.xml)`);
   expect(text).toContain(`(${origin}/robots.txt)`);
-  // 套餐名称来自文案、价格来自配置，改任一边这里都跟着变。
+  // Plan names come from messages and prices from config; changing either updates this.
   const pro = siteConfig.billing.plans.find((plan) => plan.id === "pro")!;
   const proLine = text
     .split("\n")
@@ -136,7 +146,8 @@ test("llms.txt 是给 agent 的站点索引", async ({ request }) => {
       line.startsWith(`- [${messages.Landing.pricing.plans.pro.name} `),
     )!;
   expect(proLine).toContain(String(pro.price));
-  // 需要登录的路径列成纯文字，不做成链接 —— 抓过去只有登录页。
+  // Paths that require sign-in are listed as plain text, not links — fetching them only yields
+  // the sign-in page.
   expect(text).toContain("\n- /dashboard\n");
   expect(text).toContain("\n- /admin\n");
   expect(text).not.toContain("- [/dashboard]");

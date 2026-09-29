@@ -1,4 +1,4 @@
-// 在 src/core/billing/hooks.ts 里 import，处理账单事件前注册好。
+// Imported from src/core/billing/hooks.ts so it's registered before any billing event is handled.
 import { registerOnBillingEvent } from "@/core/billing/on-billing-event";
 
 import siteConfig from "../../../site.config";

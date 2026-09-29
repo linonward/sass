@@ -3,12 +3,12 @@ import { expect, test } from "@playwright/test";
 import messages from "../messages/en.json";
 import siteConfig from "../site.config";
 
-// 仓库自带的示例文章（content/blog/en/）。
+// Sample posts that ship with the repo (content/blog/en/).
 const post = { slug: "hello-world", title: "Hello, world", tag: "guides" };
 const draft = "draft-example";
 const origin = `https://${siteConfig.domain}`;
 
-test("列表页列出文章，点击进入文章页", async ({ page }) => {
+test("index lists posts; clicking opens the post page", async ({ page }) => {
   await page.goto("/");
   await page
     .getByRole("navigation", { name: messages.Nav.product })
@@ -30,7 +30,7 @@ test("列表页列出文章，点击进入文章页", async ({ page }) => {
   await expect(page.getByRole("article")).toContainText("Writing a post");
 });
 
-test("文章页有 canonical、文章 OG 图和 BlogPosting JSON-LD", async ({
+test("post page has canonical, a post OG image, and BlogPosting JSON-LD", async ({
   page,
   request,
 }) => {
@@ -66,7 +66,9 @@ test("文章页有 canonical、文章 OG 图和 BlogPosting JSON-LD", async ({
   expect(og.headers()["content-type"]).toBe("image/png");
 });
 
-test("标签页列出带该标签的文章，未知标签 404", async ({ page }) => {
+test("tag page lists posts with that tag; unknown tags 404", async ({
+  page,
+}) => {
   await page.goto(`/blog/${post.slug}`);
   await page
     .getByRole("link", { name: `#${post.tag}` })
@@ -75,7 +77,8 @@ test("标签页列出带该标签的文章，未知标签 404", async ({ page })
   await expect(page).toHaveURL(`/blog/tags/${post.tag}`);
   await expect(page.getByRole("link", { name: post.title })).toBeVisible();
 
-  // 标签页在 sitemap 里，所以必须真的可收录：canonical 自指、没有 meta robots。
+  // Tag pages are in the sitemap, so they must really be indexable: self-referencing canonical,
+  // no meta robots.
   await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute(
     "href",
     `${origin}/blog/tags/${post.tag}`,
@@ -86,7 +89,7 @@ test("标签页列出带该标签的文章，未知标签 404", async ({ page })
   expect(response?.status()).toBe(404);
 });
 
-test("RSS 和 sitemap 包含文章", async ({ request }) => {
+test("RSS and sitemap include posts", async ({ request }) => {
   const rss = await request.get("/blog/rss.xml");
   expect(rss.status()).toBe(200);
   expect(rss.headers()["content-type"]).toContain("application/rss+xml");
@@ -97,13 +100,14 @@ test("RSS 和 sitemap 包含文章", async ({ request }) => {
   const map = await (await request.get("/sitemap.xml")).text();
   expect(map).toContain(`<loc>${origin}/blog</loc>`);
   expect(map).toContain(`<loc>${origin}/blog/${post.slug}</loc>`);
-  // 标签页（以及有第二页时的 /blog/page/<n>、/blog/tags/<tag>/page/<n>）也收录。
+  // Tag pages (and /blog/page/<n>, /blog/tags/<tag>/page/<n> when there's a second page) are
+  // included too.
   expect(map).toContain(`<loc>${origin}/blog/tags/${post.tag}</loc>`);
   expect(map).not.toContain(draft);
 });
 
-test("sitemap 列出的博客 URL 都能打开", async ({ request }) => {
-  // 收录 ⇔ 有页面：sitemap 里的条目不能有 404（列表页、标签页、翻页都算）。
+test("every blog URL in the sitemap opens", async ({ request }) => {
+  // Listed ⇔ has a page: no sitemap entry may 404 (index, tag pages, and pagination all count).
   const map = await (await request.get("/sitemap.xml")).text();
   const urls = [...map.matchAll(/<loc>([^<]+)<\/loc>/g)]
     .map((match) => match[1]!)
@@ -111,24 +115,25 @@ test("sitemap 列出的博客 URL 都能打开", async ({ request }) => {
   expect(urls.length).toBeGreaterThan(0);
 
   for (const url of urls) {
-    // <loc> 是站点域名下的绝对地址，这里换成对本地 server 的相对路径。
+    // <loc> is an absolute URL on the site's domain; turn it into a path relative to the local
+    // server.
     const response = await request.get(new URL(url).pathname);
     expect(response.status(), url).toBe(200);
   }
 });
 
-test("生产构建里草稿返回 404", async ({ page, request }) => {
-  // 本地 e2e 跑的是 dev server，草稿可见；CI 跑生产构建。
-  test.skip(!process.env.CI, "草稿只在生产构建里隐藏");
+test("drafts return 404 in production builds", async ({ page, request }) => {
+  // Local e2e runs the dev server, where drafts are visible; CI runs a production build.
+  test.skip(!process.env.CI, "drafts are only hidden in production builds");
   const response = await page.goto(`/blog/${draft}`);
   expect(response?.status()).toBe(404);
   expect((await request.get(`/blog/${draft}/og`)).status()).toBe(404);
 });
 
-test.describe("375px 宽度", () => {
+test.describe("375px width", () => {
   test.use({ viewport: { width: 375, height: 740 } });
 
-  test("列表页和文章页不横向溢出", async ({ page }) => {
+  test("index and post pages don't overflow horizontally", async ({ page }) => {
     for (const path of ["/blog", `/blog/${post.slug}`]) {
       await page.goto(path);
       const overflow = await page.evaluate(

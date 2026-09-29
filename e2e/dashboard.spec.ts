@@ -16,16 +16,20 @@ test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
 });
 
-// 产品面以前没有横向溢出覆盖（ui-shell 的 375px 只测营销首页）。
-// 侧边栏在窄屏是抽屉、卡片和上传控件都得收住。
-test.describe("375px 宽度", () => {
+// The product UI used to have no horizontal-overflow coverage (ui-shell's 375px check only
+// covers the marketing home page). On narrow screens the sidebar is a drawer, and cards and the
+// upload control must all stay contained.
+test.describe("375px width", () => {
   test.use({ viewport: { width: 375, height: 740 } });
 
   for (const theme of ["light", "dark"] as const) {
-    test(`${theme} 模式下 dashboard 不横向溢出`, async ({ page }) => {
+    test(`${theme} mode: dashboard doesn't overflow horizontally`, async ({
+      page,
+    }) => {
       await page.emulateMedia({ colorScheme: theme });
       await signIn(page, uniqueEmail("overflow"));
-      // 注册后的第一落点是引导页，同属产品面：清单里的等宽字体线索最容易顶破 375px。
+      // The first stop after sign-up is onboarding, also part of the product UI: the monospace hints
+      // in the checklist are the most likely to push past 375px.
       await expect(page).toHaveURL("/onboarding");
       const onboardingOverflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
@@ -41,19 +45,19 @@ test.describe("375px 宽度", () => {
   }
 });
 
-test("侧边栏在 Dashboard 和设置页之间导航，当前项高亮", async ({
+test("sidebar navigates between Dashboard and settings and highlights the current item", async ({
   page,
   isMobile,
 }) => {
   await signIn(page, uniqueEmail("nav"));
-  // 新用户先落到引导页，从这里开始测侧边栏导航。
+  // New users land on onboarding first; start testing sidebar navigation from there.
   await expect(page).toHaveURL("/onboarding");
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     d.home.title,
   );
 
-  // 移动端侧边栏是抽屉，先打开。
+  // On mobile the sidebar is a drawer; open it first.
   if (isMobile) {
     await page.getByRole("button", { name: d.toggleSidebar }).click();
   }
@@ -67,12 +71,14 @@ test("侧边栏在 Dashboard 和设置页之间导航，当前项高亮", async 
   await expect(page).toHaveURL("/settings");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(a.title);
   if (isMobile) {
-    // 点了链接后抽屉自动收起。
+    // The drawer closes automatically after clicking a link.
     await expect(main).toBeHidden();
   }
 });
 
-test("修改名称后刷新仍然保持，并显示在用户菜单和欢迎语里", async ({ page }) => {
+test("a changed name persists after reload and shows in the user menu and greeting", async ({
+  page,
+}) => {
   await signIn(page, uniqueEmail("name"));
   await page.goto("/settings");
 
@@ -93,7 +99,7 @@ test("修改名称后刷新仍然保持，并显示在用户菜单和欢迎语�
   );
 });
 
-test("删除账户：二次确认、跳回首页、数据被清除，再次登录是新账户", async ({
+test("delete account: double confirmation, back to home, data wiped, signing in again gives a new account", async ({
   page,
 }) => {
   const email = uniqueEmail("delete");
@@ -107,7 +113,7 @@ test("删除账户：二次确认、跳回首页、数据被清除，再次登�
   const dialog = page.getByRole("alertdialog", { name: a.delete.title });
   const confirm = dialog.getByRole("button", { name: a.delete.confirm });
 
-  // 输入的邮箱不对时不能提交。
+  // Can't submit when the typed email doesn't match.
   await expect(confirm).toBeDisabled();
   await dialog.getByRole("textbox").fill("someone-else@example.com");
   await expect(confirm).toBeDisabled();
@@ -117,11 +123,12 @@ test("删除账户：二次确认、跳回首页、数据被清除，再次登�
 
   await expect(page).toHaveURL("/");
 
-  // 旧会话立即失效。
+  // The old session is invalidated immediately.
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/sign-in\?callbackURL=/);
 
-  // 数据库里该用户及其会话、登录方式、验证码记录都不存在了。
+  // The user and their sessions, accounts, and verification records are all gone from the
+  // database.
   const left = await withDatabase(async (client) => {
     const count = async (sql: string, value: string) =>
       Number((await client.query(sql, [value])).rows[0].count);
@@ -143,9 +150,10 @@ test("删除账户：二次确认、跳回首页、数据被清除，再次登�
   });
   expect(left).toEqual({ user: 0, session: 0, account: 0, verification: 0 });
 
-  // 验证码登录会自动注册：同一邮箱再登录得到的是一个新的空账户。
-  // 这次登录是从 /sign-in?callbackURL=/dashboard 发出的（上一段刚验证过旧会话失效），
-  // 带 callbackURL 的登录尊重深链，所以新账户不会先落引导页（见 onboarding.spec.ts）。
+  // Verification-code sign-in auto-registers: signing in again with the same email gives a new,
+  // empty account. This sign-in starts from /sign-in?callbackURL=/dashboard (the previous block
+  // just verified the old session is invalid), and sign-ins with a callbackURL respect the deep
+  // link, so the new account doesn't land on onboarding first (see onboarding.spec.ts).
   await useRandomIp(page);
   await signIn(page, email);
   await expect(page).toHaveURL("/dashboard");
