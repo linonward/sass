@@ -61,9 +61,16 @@ export const aiUsage = pgTable(
     durationMs: integer("duration_ms"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     finishedAt: timestamp("finished_at"),
+    // 恢复扫描最近一次看这一行的时间（见 src/core/ai/recovery.ts）。扫描按它轮转：
+    // 一时结不了的行（比如一直存不下来的视频）不会每次都占住有限的名额。
+    recoveryCheckedAt: timestamp("recovery_checked_at"),
   },
   (table) => [
     index("ai_usage_user_created_idx").on(table.userId, table.createdAt),
+    // 恢复扫描只找 pending 的行；部分索引只收这些，正常情况下几乎是空的。
+    index("ai_usage_pending_idx")
+      .on(table.recoveryCheckedAt, table.createdAt)
+      .where(sql`${table.status} = 'pending'`),
     // 后台指标按时间区间统计调用。
     index("ai_usage_created_idx").on(table.createdAt),
     check(

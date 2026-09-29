@@ -332,7 +332,9 @@ describe.skipIf(!url)("videoService", () => {
     const result = await s.pollVideo({ userId, id: started.job.id });
     expect(result.ok && result.job.status).toBe("failed");
     expect(await credits.getBalance(userId)).toBe(50);
-    expect((await usageRow(started.job.id)).error).toBe("timeout");
+    expect((await usageRow(started.job.id)).error).toBe(
+      "timeout: provider returned no result within 30 minutes",
+    );
   });
 
   test("查询出错和下载失败在超时前都当作暂时性错误", async () => {

@@ -13,6 +13,7 @@ import {
 } from "./observability/env";
 import { rateLimitServerEnv } from "./ratelimit/env";
 import { rateLimitingEnabled } from "./ratelimit/features";
+import { recoveryServerEnv } from "./recovery/env";
 import { uploadServerEnv } from "./upload/env";
 
 export { createAppEnv, requiredWhen } from "./create-env";
@@ -50,6 +51,7 @@ export const env = createAppEnv({
       enabled: siteConfig.features.upload,
       isPublic: siteConfig.upload.public,
     }),
+    ...recoveryServerEnv(),
     ...observabilityServerEnv(),
   },
   client: observabilityClientEnv({ sentry: sentryEnabled }),

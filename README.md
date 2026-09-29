@@ -442,6 +442,7 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 | `R2_PUBLIC_URL`                                                                             | bucket 的公开域名（`https://files.example.com`），只在 `upload.public` 为 true 时需要。                                                                                                                                           |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `ALIBABA_API_KEY` | 开启 `features.ai` 时，Production 必须填上 `ai.models` 用到的每家服务商的 key（见下文"AI 服务商"）。Preview 不填时对应模型返回 503。                                                                                              |
 | `ADMIN_EMAILS`                                                                              | 开启 `features.admin` 时 Production 必填：逗号分隔的邮箱，用这些邮箱登录即成为管理员（见"配置"里的后台）。Preview 可以不填。                                                                                                      |
+| `CRON_SECRET`                                                                               | 建议 Production 填（`openssl rand -hex 32`，至少 16 个字符）：恢复入口 `/api/cron/recovery` 的密钥，Vercel 的 cron 会自动带上。不填时入口返回 404，悬着的 AI 任务只靠用户访问时顺带扫描（见下文「恢复扫描」）。                   |
 | `ALIBABA_BASE_URL`                                                                          | 可选。百炼 key 所在地域的地址，不填是国际站；北京地域填 `https://dashscope.aliyuncs.com/compatible-mode/v1`。                                                                                                                     |
 | `OTEL_EXPORTER_OTLP_ENDPOINT`                                                               | 可选。开启 `observability.otel` 且不用 Vercel 的 trace 集成时，trace 导出到这个 OTLP 地址（见下文"日志与追踪"）。                                                                                                                 |
 | `NEXT_PUBLIC_SENTRY_DSN`                                                                    | 开启 `observability.sentry` 时必填（Production 和 Preview 都要）：Sentry 项目的 DSN（见下文"错误追踪（Sentry）"）。                                                                                                               |
@@ -612,11 +613,46 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 3. 自定义事件（`sign_up`、`checkout_started`、`purchase`）需要 Pro 或 Enterprise 计划，Hobby 只统计页面浏览。开启了 Deployment Protection 的预览环境，服务端事件需要在项目里创建 Protection Bypass for Automation（`VERCEL_AUTOMATION_BYPASS_SECRET`）。
 4. `purchase` 由 webhook 触发，没有访客上下文，所以在 Analytics 里看不到它的来源和设备；按 `plan` 筛选即可。
 
-### 5. GitHub
+### 5. 恢复扫描（悬着的 AI 任务）
+
+视频生成是异步的：提交后服务商在后台生成，结果要有人去问、下载、存进 R2 并结算。前端轮询会做这件事，但用户关掉页面、换了设备、或者函数在结算前被回收（重新部署、超时）之后，就没人推进了 —— 那一行停在 `pending`，积分一直扣着，视频明明生成好了也拿不到。
+
+恢复扫描负责兜底：找出没人推进的 `pending` 任务，**先去服务商那边核对**，能拿到结果就先保存结果（不退款），服务商明确失败或长期没有结果才退款，`error` 里写明原因。和前端轮询同时结算同一条任务时只结算一次、只退一次。
+
+| 情况                                                  | 扫描怎么处理                                              |
+| ----------------------------------------------------- | --------------------------------------------------------- |
+| 视频：服务商已完成                                    | 下载、存 R2、记为成功，不退款                             |
+| 视频：服务商明确失败                                  | 记为失败并退款                                            |
+| 视频：服务商还在生成                                  | 留着，下次再看；提交 30 分钟后仍没结果才退款              |
+| 视频：服务商已完成，但下载 / 存储失败、或查询接口出错 | 留着重试，不退款；24 小时（服务商结果失效）后仍不行才退款 |
+| 视频：提交时进程中断，没记下服务商的任务 id           | 没有能核对的任务，30 分钟后退款                           |
+| 文本 / 图片：请求结束前没来得及结算                   | 结果只存在于那次请求里，没有可核对的东西，15 分钟后退款   |
+
+**触发**：入口与频率解耦，同一时刻只会有一个扫描在跑（数据库租约），重复触发是安全的。
+
+- **机会式（默认就有，什么都不用配）**：用户使用 AI 功能时，响应之后顺带扫一次（每次最多 3 条，距上次不足 5 分钟就跳过）。站点有流量时，悬着的任务几分钟内就会被处理。
+- **定时入口**：`GET /api/cron/recovery`，带 `Authorization: Bearer $CRON_SECRET`，每次最多处理 20 条。按部署方式选：
+
+| 部署         | 怎么配                                                                                                                                                                                                         |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vercel Pro   | 在 Vercel 上设 `CRON_SECRET`，把 `vercel.json` 里 `crons` 的 `schedule` 改成每 5 分钟：`*/5 * * * *`。                                                                                                         |
+| Vercel Hobby | 设 `CRON_SECRET`，`vercel.json` 保持出厂的每天一次（`0 3 * * *`）。**Hobby 只允许每天一次的 cron，更频繁的表达式会让部署直接失败**，且触发时间在那个小时内浮动。白天靠机会式扫描，每天那一次兜住没流量的时段。 |
+| 自托管       | 设 `CRON_SECRET`，用任何调度器每几分钟调一次入口（`vercel.json` 的 `crons` 在 Vercel 之外不生效）：                                                                                                            |
+
+自托管的调度示例（系统 cron；systemd timer、Docker 里的 cron 容器同理，调的都是这一条）：
+
+```bash
+# crontab -e：每 5 分钟一次
+*/5 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<你的域名>/api/cron/recovery > /dev/null
+```
+
+每次扫描记一条结构化日志 `ai.recovery`（触发源、扫描条数、成功 / 失败 / 仍挂起的计数），在 Vercel 的 Logs 里按它搜。没设 `CRON_SECRET` 时入口返回 404，Vercel 的 cron 调到它也只是一次 404，不影响站点。
+
+### 6. GitHub
 
 - `main` 开启分支保护：必须通过 PR 合入，`ci` 为必需检查，禁止 force push。
 
-### 6. 可用性监控
+### 7. 可用性监控
 
 - 站点可用性可以用外部服务盯着，比如 UptimeRobot 或 Better Stack 的免费版：监控 `https://<domain>`，间隔 5 分钟（Better Stack 免费版是 3 分钟），告警走邮件。注意免费版都不提供证书到期告警。
 - 证书到期由仓库自带的 `tls-expiry` 工作流兜底：每天 01:00 UTC 跑一次 `scripts/check-tls-expiry.mjs`，检查 `site.config.ts` 里 `domain` 的证书剩余有效期，不足 30 天就开一条 issue，并让这次运行失败（GitHub 会发失败通知）。本地也可以随时手动跑：
@@ -628,7 +664,7 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 
   Vercel 托管的证书是自动续期的，所以这条检查主要是发现"续期卡住了"这种静默失败。
 
-### 7. 自托管（自己的服务器 / Docker）
+### 8. 自托管（自己的服务器 / Docker）
 
 不用 Vercel 时，生产闸门由 `NODE_ENV=production` 触发 —— 邮件只允许 Resend、`SKIP_ENV_VALIDATION` 失效、fake 支付与占位哨兵都在构建期拦人，判断逻辑和 Vercel 上完全一样。所以：
 

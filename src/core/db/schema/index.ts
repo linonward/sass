@@ -11,3 +11,4 @@ export * from "./leads";
 export * from "./referrals";
 export * from "./status";
 export * from "./api-keys";
+export * from "./recovery";

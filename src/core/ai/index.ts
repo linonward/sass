@@ -10,6 +10,7 @@ import {
   listPendingVideos as listPendingVideosFor,
 } from "./generations";
 import { createRunImage } from "./image";
+import { createAiRecovery } from "./recovery";
 import {
   createImageModelResolver,
   createModelResolver,
@@ -111,3 +112,13 @@ export const videoService = createVideoService({
 export function listPendingVideos(userId: string) {
   return listPendingVideosFor(getDb(), userId);
 }
+
+/**
+ * 恢复扫描：推进没人轮询的 pending 任务（关掉页面、换设备、函数被回收之后）。
+ * 由 src/core/recovery 按 cron 或机会式触发，见那里的说明。
+ */
+export const aiRecovery = createAiRecovery({
+  db: getDb,
+  credits: { deductCredits, refundCredits },
+  recoverVideo: videoService.recoverVideo,
+});
