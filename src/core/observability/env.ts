@@ -1,14 +1,15 @@
 import { z } from "zod";
 
-// 会被 next.config.ts 间接加载，那里不解析 `@/` 别名，只能用相对路径。
+// Loaded indirectly by next.config.ts, which doesn't resolve the `@/` alias, so use relative paths.
 import { requiredWhen } from "../create-env";
 
 type RuntimeEnv = Record<string, string | undefined>;
 
 /**
- * Sentry 的构建期变量，只用来上传 source map（三项都填了才上传），不填不影响错误上报。
- * - `SENTRY_AUTH_TOKEN`：Sentry 的 Organization Auth Token。
- * - `SENTRY_ORG` / `SENTRY_PROJECT`：组织和项目的 slug。
+ * Sentry build-time variables, used only to upload source maps (uploaded only when all three are
+ * set). Leaving them empty doesn't affect error reporting.
+ * - `SENTRY_AUTH_TOKEN`: a Sentry Organization Auth Token.
+ * - `SENTRY_ORG` / `SENTRY_PROJECT`: the organization and project slugs.
  */
 export function observabilityServerEnv() {
   return {
@@ -19,8 +20,8 @@ export function observabilityServerEnv() {
 }
 
 /**
- * 浏览器也要用的变量。
- * - `NEXT_PUBLIC_SENTRY_DSN`：Sentry 项目的 DSN，开启 `observability.sentry` 时必填。
+ * Variables the browser needs too.
+ * - `NEXT_PUBLIC_SENTRY_DSN`: the Sentry project's DSN; required when `observability.sentry` is on.
  */
 export function observabilityClientEnv({ sentry }: { sentry: boolean }) {
   return {
@@ -31,7 +32,7 @@ export function observabilityClientEnv({ sentry }: { sentry: boolean }) {
   };
 }
 
-/** 三项都填了才上传 source map。 */
+/** Source maps are uploaded only when all three are set. */
 export function canUploadSourceMaps(runtimeEnv: RuntimeEnv) {
   return Boolean(
     runtimeEnv.SENTRY_AUTH_TOKEN &&

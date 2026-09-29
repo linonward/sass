@@ -5,7 +5,7 @@ import { foregroundFor } from "../theme/brand-css";
 import { faviconSvg } from "./favicon";
 
 describe("favicon", () => {
-  test("底色用配置里的品牌色，字形用推导出的前景色", () => {
+  test("background uses the configured brand color; the glyph uses the derived foreground", () => {
     const svg = faviconSvg();
     expect(svg).toContain(`fill="${siteConfig.brand.primaryColor}"`);
     expect(svg).toContain(
@@ -13,7 +13,7 @@ describe("favicon", () => {
     );
   });
 
-  test("是方形的 SVG，浏览器可以缩放到任意标签页尺寸", () => {
+  test("is a square SVG the browser can scale to any tab size", () => {
     const svg = faviconSvg();
     expect(svg.startsWith("<svg")).toBe(true);
     expect(svg.endsWith("</svg>")).toBe(true);

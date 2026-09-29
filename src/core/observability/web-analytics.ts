@@ -2,7 +2,9 @@ import type { SiteConfig } from "@/core/config/schema";
 
 import siteConfig from "../../../site.config";
 
-/** Vercel Analytics / Speed Insights 是否开启：features.observability 是总开关。 */
+/**
+ * Whether Vercel Analytics / Speed Insights are on; features.observability is the master switch.
+ */
 export function webAnalyticsFlags(
   config: Pick<SiteConfig, "features" | "observability"> = siteConfig,
 ) {

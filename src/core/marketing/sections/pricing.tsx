@@ -18,15 +18,15 @@ export function Pricing({
 }: {
   plans: Plan[];
   currency: string;
-  /** 当前用户已拥有的套餐（仅 /pricing 传入；落地页是静态页面，不区分用户）。 */
+  /** Plans the current user already owns (passed only by /pricing; the landing page is static and user-agnostic). */
   owned?: Record<string, "subscribed" | "purchased">;
-  /** /pricing 页面把区块标题作为页面的 h1。 */
+  /** The /pricing page uses the section title as the page h1. */
   headingLevel?: 1 | 2;
   waveFrom?: Band;
 }) {
   const t = useTranslations("Landing.pricing");
   const format = useFormatter();
-  // id / key 来自配置，由 messages 测试保证存在。
+  // id / key come from config; the messages test guarantees they exist.
   const plan = (id: string, field: "name" | "description") =>
     t(`plans.${id}.${field}` as "plans.free.name");
   const feature = (key: string) =>
@@ -52,7 +52,8 @@ export function Pricing({
             data-plan={p.id}
             className={cn(
               "bg-card sticker flex flex-col rounded-xl p-6",
-              // 高亮套餐靠更厚的唇边和品牌色描边区分，不用浮在卡片外的角标。
+              // The highlighted plan stands out with a thicker lip and a brand-colored outline, not a badge
+              // floating outside the card.
               p.highlighted &&
                 "border-[var(--primary-edge)] [--tw-shadow:0_6px_0_0_var(--edge)] [--edge:var(--primary-edge)]",
             )}

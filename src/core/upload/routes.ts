@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/core/ratelimit";
 import type { UploadRouteContext } from "./handlers";
 import { uploadDeps, uploadEnabled } from "./index";
 
-/** 绑定登录、限流、数据库和 R2 的路由依赖，供 src/app/api/upload/* 使用。 */
+/** Route dependencies bound to auth, rate limiting, the database and R2, used by src/app/api/upload/*. */
 export const uploadRouteContext: UploadRouteContext = {
   enabled: uploadEnabled,
   getUserId: async (request) => {

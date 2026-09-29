@@ -12,7 +12,7 @@ import {
   type UserFlagsConfig,
 } from "./evaluate";
 
-/** 定义一个 flag，只写关心的字段。 */
+/** Defines a flag with only the fields the test cares about. */
 function flag(over: Partial<UserFlagDefinition> = {}): UserFlagDefinition {
   return {
     description: "test flag",
@@ -35,8 +35,9 @@ const user = { userId: "user-1" };
 const admin = { userId: "user-1", isAdmin: true };
 
 describe("flagBucket", () => {
-  test("sha256(userId + flagName) 前 8 位 hex 映射到 [0, 1)", () => {
-    // 钉住算法：8 位 hex = 32 位，除以 2^32。写死值是为了防止改算法时静默换桶。
+  test("maps the first 8 hex digits of sha256(userId + flagName) to [0, 1)", () => {
+    // Pins the algorithm: 8 hex digits = 32 bits, divided by 2^32. The values are hard-coded so an
+    // algorithm change can't silently reshuffle buckets.
     expect(flagBucket("user-1", "beta-dashboard")).toBeCloseTo(0.1336929298, 9);
     expect(flagBucket("user-2", "beta-dashboard")).toBeCloseTo(0.6656078573, 9);
     expect(flagBucket("user-1", "beta-preview")).toBeCloseTo(0.452236033, 9);
@@ -52,14 +53,14 @@ describe("flagBucket", () => {
     }
   });
 
-  test("同一个 user + flag 永远是同一个桶", () => {
+  test("the same user + flag is always the same bucket", () => {
     expect(flagBucket("user-1", "beta-dashboard")).toBe(
       flagBucket("user-1", "beta-dashboard"),
     );
   });
 
-  test("大面积用户上分桶是均匀的：rollout 50 大约放一半人进来", () => {
-    // 钉住的是「约一半」这个说法：hash 固定，所以这条不会飘。
+  test("bucketing is uniform across many users: rollout 50 lets in about half", () => {
+    // Pins the "about half" claim: the hash is fixed, so this can't flake.
     const ids = Array.from({ length: 400 }, (_, i) => `user-${i}`);
     const inside = ids.filter(
       (id) => flagBucket(id, "beta-dashboard") < 0.5,
@@ -70,35 +71,36 @@ describe("flagBucket", () => {
 });
 
 describe("isEnabledFor", () => {
-  test("总开关关着时，谁都拿不到", () => {
+  test("with the master switch off, nobody gets it", () => {
     const off = config({ x: flag() }, false);
     expect(isEnabledFor(off, anon, "x")).toBe(false);
     expect(isEnabledFor(off, user, "x")).toBe(false);
     expect(isEnabledFor(off, admin, "x")).toBe(false);
   });
 
-  test("没定义的 flag 是 false", () => {
+  test("an undefined flag is false", () => {
     expect(isEnabledFor(config({ x: flag() }), user, "typo")).toBe(false);
   });
 
-  test("单个 flag 关着时，谁也拿不到（总开关开着也一样）", () => {
+  test("with the flag itself off, nobody gets it (even with the master switch on)", () => {
     const off = config({ x: flag({ enabled: false }) });
     expect(isEnabledFor(off, user, "x")).toBe(false);
     expect(isEnabledFor(off, admin, "x")).toBe(false);
   });
 
-  test("rollout: 100 —— 有账号的用户都可见，未登录不可见", () => {
+  test("rollout: 100 — visible to every signed-in user, hidden when signed out", () => {
     const all = config({ x: flag({ rollout: 100 }) });
     expect(isEnabledFor(all, user, "x")).toBe(true);
     expect(isEnabledFor(all, { userId: "user-2" }, "x")).toBe(true);
     expect(isEnabledFor(all, anon, "x")).toBe(false);
   });
 
-  test("rollout: 50 —— admin 恒可见，普通用户按桶，未登录不可见", () => {
+  test("rollout: 50 — always visible to admins, bucketed for regular users, hidden when signed out", () => {
     const half = config({ "beta-dashboard": flag({ rollout: 50 }) });
     expect(isEnabledFor(half, admin, "beta-dashboard")).toBe(true);
     expect(isEnabledFor(half, anon, "beta-dashboard")).toBe(false);
-    // 桶里的人在（user-1 的桶 = 0.13），桶外的人不在（user-2 的桶 = 0.67）。
+    // Users inside the bucket get it (user-1's bucket = 0.13); users outside don't (user-2's bucket =
+    // 0.67).
     expect(isEnabledFor(half, user, "beta-dashboard")).toBe(true);
     expect(isEnabledFor(half, { userId: "user-2" }, "beta-dashboard")).toBe(
       false,
@@ -108,7 +110,7 @@ describe("isEnabledFor", () => {
     );
   });
 
-  test("rollout: 0 —— 默认谁都不给，配 adminOnly 才是「只给 admin」", () => {
+  test("rollout: 0 — nobody by default; adminOnly is what makes it admins-only", () => {
     const none = config({ x: flag({ rollout: 0 }) });
     expect(isEnabledFor(none, user, "x")).toBe(false);
     expect(isEnabledFor(none, anon, "x")).toBe(false);
@@ -121,7 +123,7 @@ describe("isEnabledFor", () => {
   });
 
   test.each([1, 50, 99, 100])(
-    "rollout 大于 0 时 admin 不受灰度限制（rollout: %i）",
+    "with rollout above 0, admins bypass the rollout (rollout: %i)",
     (rollout) => {
       expect(isEnabledFor(config({ x: flag({ rollout }) }), admin, "x")).toBe(
         true,
@@ -129,7 +131,7 @@ describe("isEnabledFor", () => {
     },
   );
 
-  test("rollout: 0 是硬关闭，连 admin 也拿不到；只给 admin 要配 adminOnly", () => {
+  test("rollout: 0 is hard off, even for admins; admins-only requires adminOnly", () => {
     expect(isEnabledFor(config({ x: flag({ rollout: 0 }) }), admin, "x")).toBe(
       false,
     );
@@ -142,20 +144,20 @@ describe("isEnabledFor", () => {
     ).toBe(true);
   });
 
-  test("adminOnly 对普通用户和未登录用户都是 false，rollout 多高都一样", () => {
+  test("adminOnly is false for regular and signed-out users no matter how high the rollout", () => {
     const adminOnly = config({ x: flag({ rollout: 100, adminOnly: true }) });
     expect(isEnabledFor(adminOnly, user, "x")).toBe(false);
     expect(isEnabledFor(adminOnly, anon, "x")).toBe(false);
     expect(isEnabledFor(adminOnly, admin, "x")).toBe(true);
   });
 
-  test("rollout 调大只会放人进来，不会把人踢出去", () => {
+  test("raising rollout only lets people in, never drops anyone", () => {
     const at20 = config({ "beta-dashboard": flag({ rollout: 20 }) });
     const at80 = config({ "beta-dashboard": flag({ rollout: 80 }) });
     const enabledAt = (defs: UserFlagsConfig, id: string) =>
       isEnabledFor(defs, { userId: id }, "beta-dashboard");
 
-    // 抽样里有三种人：20% 就进来、只在 80% 进来、80% 也没进来。
+    // The sample has three kinds of users: in at 20%, in only at 80%, and out even at 80%.
     expect(enabledAt(at20, "user-1")).toBe(true);
     expect(enabledAt(at20, "user-2")).toBe(false);
     expect(enabledAt(at80, "user-2")).toBe(true);
@@ -166,7 +168,7 @@ describe("isEnabledFor", () => {
     }
   });
 
-  test("同一个 user + flag 多次评估结果一致", () => {
+  test("repeated evaluation of the same user + flag is consistent", () => {
     const half = config({ x: flag({ rollout: 50 }) });
     const first = isEnabledFor(half, user, "x");
     for (let i = 0; i < 5; i += 1) {
@@ -176,8 +178,8 @@ describe("isEnabledFor", () => {
 });
 
 describe("isEnabled", () => {
-  // 演示站点的 userFlags.enabled 是 false（见 site.config.ts），所以这里恒 false。
-  test("出厂配置（总开关关）下永远是 false", () => {
+  // The demo site has userFlags.enabled false (see site.config.ts), so this is always false.
+  test("always false with the factory config (master switch off)", () => {
     expect(flagsEnabled()).toBe(false);
     for (const [id, options] of [
       [null, {}],
@@ -191,7 +193,7 @@ describe("isEnabled", () => {
 });
 
 describe("flagDefinitions / resolveFlags", () => {
-  test("flagDefinitions 按配置里的顺序列出名字和定义", () => {
+  test("flagDefinitions lists names and definitions in config order", () => {
     const defs = flagDefinitions(
       config({
         b: flag({ description: "second" }),
@@ -202,11 +204,11 @@ describe("flagDefinitions / resolveFlags", () => {
     expect(defs[0]!.definition.description).toBe("second");
   });
 
-  test("总开关关着时 resolveFlags 返回空对象（客户端拿不到任何 key）", () => {
+  test("resolveFlags returns an empty object with the master switch off (the client gets no keys)", () => {
     expect(resolveFlags(user, config({ x: flag() }, false))).toEqual({});
   });
 
-  test("总开关开着时每个定义都有一个值", () => {
+  test("every definition has a value with the master switch on", () => {
     const values = resolveFlags(
       user,
       config({ x: flag({ rollout: 100 }), y: flag({ rollout: 0 }) }),

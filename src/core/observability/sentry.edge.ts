@@ -3,7 +3,8 @@ import * as Sentry from "@sentry/nextjs";
 import siteConfig from "../../../site.config";
 import { registerSentry, sentryBaseOptions } from "./sentry";
 
-// Edge runtime（proxy.ts 等）的 Sentry 初始化，由 instrumentation.ts 在开启 observability.sentry 时动态加载。
+// Sentry initialization for the Edge runtime (proxy.ts and others), loaded dynamically by
+// instrumentation.ts when observability.sentry is on.
 Sentry.init({
   ...sentryBaseOptions({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,

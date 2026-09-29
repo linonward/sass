@@ -23,8 +23,9 @@ import { blogSitemap } from "./sitemap";
 
 const origin = `https://${siteConfig.domain}`;
 
-// 模拟多语言站点：en 有 13 篇文章（翻页）和 1 篇草稿，de 只有 1 篇翻译，fr 未启用。
-// 13 篇都带 guides 标签：标签页本身也要能翻页（/blog/tags/guides/page/2）。
+// Simulates a multilingual site: en has 13 posts (paginated) and 1 draft, de has only 1
+// translation, fr is not enabled. All 13 carry the guides tag, so the tag page itself paginates too
+// (/blog/tags/guides/page/2).
 vi.mock("@/core/i18n/routing", () => ({
   routing: { locales: ["en", "de"], defaultLocale: "en" },
 }));
@@ -78,7 +79,7 @@ vi.mock("content-collections", () => {
 });
 
 describe("posts", () => {
-  test("按日期倒序，生产环境（非 development）不含草稿", () => {
+  test("sorted newest first; excludes drafts in production (non-development)", () => {
     const posts = getPosts("en");
     expect(posts).toHaveLength(14);
     expect(posts[0]!.slug).toBe("hello");
@@ -87,14 +88,14 @@ describe("posts", () => {
     expect(getPosts("en", { drafts: true })[0]!.slug).toBe("secret");
   });
 
-  test("未启用的语言没有文章", () => {
+  test("a locale that is not enabled has no posts", () => {
     expect(getPosts("fr")).toEqual([]);
   });
 
-  test("标签只来自可见的文章", () => {
+  test("tags come only from visible posts", () => {
     expect(getTags("en")).toEqual(["guides", "news", "中文"]);
     expect(getTags("de")).toEqual(["news"]);
-    // sitemap 传 drafts: false（默认）—— 只有草稿用到的标签在生产里没有页面。
+    // sitemap passes drafts: false (the default) — tags used only by drafts have no page in production.
     expect(getTags("en", { drafts: true })).toEqual([
       "drafts-only",
       "guides",
@@ -103,20 +104,20 @@ describe("posts", () => {
     ]);
   });
 
-  test("同一 slug 的翻译", () => {
+  test("translations of the same slug", () => {
     expect(postLocales("hello")).toEqual(["en", "de"]);
     expect(postLocales("post-1")).toEqual(["en"]);
   });
 });
 
-describe("路径", () => {
-  test("标签路径编码一次：非 ASCII 和 / 都留在单个路由段里", () => {
+describe("paths", () => {
+  test("tag paths are encoded once: non-ASCII and / stay inside a single route segment", () => {
     expect(tagPath("guides")).toBe("/blog/tags/guides");
     expect(tagPath("中文")).toBe("/blog/tags/%E4%B8%AD%E6%96%87");
     expect(tagPath("a/b")).toBe("/blog/tags/a%2Fb");
 
-    // canonical、og、sitemap、内链和翻页都拼在 tagPath 之上：编码只有这一份，
-    // 页面和机器可读的清单不会一个带 % 一个不带。
+    // canonical, og, sitemap, internal links, and pagination are all built on tagPath: there is only
+    // one encoding, so pages and machine-readable listings can't disagree on percent-encoding.
     expect(pagePath(tagPath("中文"), 1)).toBe("/blog/tags/%E4%B8%AD%E6%96%87");
     expect(pagePath(tagPath("中文"), 2)).toBe(
       "/blog/tags/%E4%B8%AD%E6%96%87/page/2",
@@ -127,10 +128,10 @@ describe("路径", () => {
   });
 });
 
-describe("分页", () => {
+describe("pagination", () => {
   const posts = getPosts("en");
 
-  test(`每页 ${POSTS_PER_PAGE} 篇，超出范围返回 null`, () => {
+  test(`${POSTS_PER_PAGE} posts per page, null when out of range`, () => {
     expect(paginate(posts, 1)).toMatchObject({ page: 1, totalPages: 2 });
     expect(paginate(posts, 1)!.posts).toHaveLength(12);
     expect(paginate(posts, 2)!.posts).toHaveLength(2);
@@ -138,12 +139,12 @@ describe("分页", () => {
     expect(paginate(posts, 0)).toBeNull();
   });
 
-  test("没有文章时第 1 页是空列表", () => {
+  test("page 1 is an empty list when there are no posts", () => {
     expect(paginate([], 1)).toEqual({ posts: [], page: 1, totalPages: 1 });
     expect(extraPageParams([])).toEqual([]);
   });
 
-  test("/page/[page] 从第 2 页开始，只接受规范写法", () => {
+  test("/page/[page] starts at page 2 and only accepts the canonical form", () => {
     expect(extraPageParams(posts)).toEqual([{ page: "2" }]);
     expect(parsePageParam("2")).toBe(2);
     for (const value of ["1", "0", "02", "2a", ""]) {
@@ -157,37 +158,39 @@ describe("sitemap", () => {
   const languages = (url: string) =>
     entries().find((entry) => entry.url === url)?.alternates?.languages;
 
-  test("博客列表、翻页、标签页和已发布文章，hreflang 只列出有翻译的语言", () => {
+  test("blog index, pagination, tag pages, and published posts; hreflang lists only translated locales", () => {
     expect(withoutSiteDomain(blogSitemap())).toMatchSnapshot();
   });
 
-  test("三组列表路由都在 sitemap 里（可索引 ⇔ 在 sitemap）", () => {
+  test("all three list route groups are in the sitemap (indexable ⇔ in sitemap)", () => {
     const urls = entries().map((entry) => entry.url);
 
-    // /blog 与它的翻页（和路由的 generateStaticParams 同源）。
+    // /blog and its pages (same source as the route's generateStaticParams).
     expect(urls).toContain(`${origin}/blog`);
     expect(urls).toContain(`${origin}/blog/page/2`);
     expect(urls).not.toContain(`${origin}/blog/page/3`);
 
-    // /blog/tags/<tag> 与标签自己的翻页。
+    // /blog/tags/<tag> and the tag's own pages.
     expect(urls).toContain(`${origin}/blog/tags/news`);
     expect(urls).toContain(`${origin}/blog/tags/guides`);
     expect(urls).toContain(`${origin}/blog/tags/guides/page/2`);
     expect(urls).not.toContain(`${origin}/de/blog/tags/guides`);
 
-    // 标签路径带编码：canonical 走的是同一个 tagPath，两边不会一个带 % 一个不带。
+    // Tag paths are encoded: canonical uses the same tagPath, so the two can't disagree on
+    // percent-encoding.
     expect(urls).toContain(`${origin}/blog/tags/${encodeURIComponent("中文")}`);
     expect(urls.some((url) => url.includes("/blog/tags/中文"))).toBe(false);
   });
 
-  test("草稿和只有草稿用到的标签都不收录", () => {
+  test("excludes drafts and tags used only by drafts", () => {
     const urls = entries().map((entry) => entry.url);
     expect(urls.some((url) => url.includes("secret"))).toBe(false);
     expect(urls.some((url) => url.includes("drafts-only"))).toBe(false);
   });
 
-  test("列表页的 hreflang 与页面 metadata 同源（posts.ts 的 listLocales）", () => {
-    // 第 1 页：所有有文章的语言。翻页后页码在各语言间不对应，只列当前语言。
+  test("list page hreflang shares its source with page metadata (listLocales in posts.ts)", () => {
+    // Page 1: every locale with posts. Later page numbers don't correspond across locales, so only
+    // the current locale is listed.
     expect(languages(`${origin}/blog`)).toEqual({
       en: `${origin}/blog`,
       de: `${origin}/de/blog`,
@@ -197,7 +200,7 @@ describe("sitemap", () => {
       en: `${origin}/blog/page/2`,
       "x-default": `${origin}/blog/page/2`,
     });
-    // 标签是各语言自己的一套，始终只列当前语言。
+    // Each locale has its own set of tags, so only the current locale is ever listed.
     expect(languages(`${origin}/blog/tags/news`)).toEqual({
       en: `${origin}/blog/tags/news`,
       "x-default": `${origin}/blog/tags/news`,
@@ -208,7 +211,7 @@ describe("sitemap", () => {
     });
   });
 
-  test("lastModified 取该列表里最新的一篇文章", () => {
+  test("lastModified is the newest post in that list", () => {
     const list = entries().find((entry) => entry.url === `${origin}/blog`);
     expect(list?.lastModified).toBe("2026-02-01");
     const tag = entries().find(
@@ -217,7 +220,7 @@ describe("sitemap", () => {
     expect(tag?.lastModified).toBe("2026-02-01");
   });
 
-  test("合并进 app/sitemap.ts", () => {
+  test("is merged into app/sitemap.ts", () => {
     const urls = sitemap().map((entry) => entry.url);
     expect(urls).toContain(`https://${siteConfig.domain}/blog/hello`);
     expect(urls).toContain(`https://${siteConfig.domain}/de/blog/hello`);
@@ -226,7 +229,7 @@ describe("sitemap", () => {
 });
 
 describe("RSS", () => {
-  test("RSS 2.0 输出，转义标题和描述", () => {
+  test("RSS 2.0 output, escapes titles and descriptions", () => {
     const xml = buildRssFeed({
       locale: "de",
       title: "Acme Blog",
@@ -236,7 +239,7 @@ describe("RSS", () => {
     expect(withoutSiteDomain(xml)).toMatchSnapshot();
   });
 
-  test("默认语言的链接不带前缀，草稿不出现", () => {
+  test("default-locale links have no prefix and drafts are omitted", () => {
     const xml = buildRssFeed({
       locale: "en",
       title: "Acme Blog",

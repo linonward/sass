@@ -1,38 +1,39 @@
 /**
- * llms.txt 的排版（约定见 https://llmstxt.org）：
+ * llms.txt layout (convention at https://llmstxt.org):
  *
- *     # 站点名
- *     > 一句话
- *     （正文段落）
- *     ## 小节
- *     - [标题](url): 说明
+ *     # Site name
+ *     > One sentence
+ *     (body paragraphs)
+ *     ## Section
+ *     - [Title](url): description
  *
- * 这一层只负责排版，不碰配置和文案 —— 内容由调用方组装（见 src/app/llms.txt/route.ts），
- * 所以它可以单测，也不依赖 next-intl 或请求上下文。
+ * This layer only handles layout and doesn't touch config or messages — the caller assembles the
+ * content (see src/app/llms.txt/route.ts), so it can be unit-tested and depends on neither
+ * next-intl nor the request context.
  */
 
 export type LlmsItem = {
   title: string;
-  /** 没有 url 时这一行是纯文字，用来写「这些路径要登录」这类说明。 */
+  /** Without a url this line is plain text, for notes like "these paths require sign-in". */
   url?: string;
   note?: string;
 };
 
 export type LlmsSection = {
   title: string;
-  /** 小节标题下的一段说明。 */
+  /** A paragraph of explanation under the section heading. */
   note?: string;
   items: LlmsItem[];
 };
 
 export type LlmsDoc = {
   name: string;
-  /** H1 下面那句 blockquote：一句话说清这个站点是什么。 */
+  /** The blockquote under the H1: one sentence saying what the site is. */
   summary: string;
-  /** 正文段落。 */
+  /** Body paragraphs. */
   intro: string;
   sections: LlmsSection[];
-  /** 最后一节固定叫 Optional：需要更短上下文的 agent 可以整节跳过。没有内容就不出这一节。 */
+  /** The last section is always called Optional: agents needing a shorter context can skip it entirely. Omitted when empty. */
   optional?: LlmsSection;
 };
 
@@ -42,7 +43,7 @@ function renderItem(item: LlmsItem): string {
   return item.note ? `${line}: ${item.note}` : line;
 }
 
-/** 空小节（没有条目）整节不渲染 —— 比如博客关掉时不该留一个空标题。 */
+/** An empty section (no entries) is not rendered at all — e.g. with the blog off there shouldn't be an empty heading. */
 function renderSection(section: LlmsSection | undefined): string {
   if (!section || section.items.length === 0) return "";
   return [`## ${section.title}`, section.note, ...section.items.map(renderItem)]
@@ -57,6 +58,6 @@ export function buildLlmsTxt(doc: LlmsDoc): string {
     doc.intro,
     ...[...doc.sections, doc.optional].map(renderSection).filter(Boolean),
   ];
-  // 末尾留一个换行，和 robots.txt / sitemap.xml 一样是「文件」不是流。
+  // End with a newline: like robots.txt / sitemap.xml, this is a file, not a stream.
   return `${blocks.join("\n\n")}\n`;
 }

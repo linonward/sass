@@ -12,9 +12,11 @@ import { subscribeAction, type SubscribeState } from "./actions";
 const idle: SubscribeState = { status: "idle" };
 
 /**
- * 状态页底部的订阅表单：留邮箱 → 收确认信 → 之后 incident 变更会通知。
+ * Subscribe form at the bottom of the status page: enter an email → get a confirmation email →
+ * get notified of incident changes from then on.
  *
- * 提交结果只有两种（成功 / 输错了），没有「这个地址已经订过」这一档 —— 见 subscribeAction。
+ * Submission has only two outcomes (success / invalid input); there is no "already subscribed"
+ * outcome — see subscribeAction.
  */
 export function SubscribeForm({ locale }: { locale: string }) {
   const t = useTranslations("Status.subscribe");
@@ -23,7 +25,7 @@ export function SubscribeForm({ locale }: { locale: string }) {
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="locale" value={locale} />
-      {/* 蜜罐：真人看不到这个输入框，填了的都是脚本。 */}
+      {/* Honeypot: humans can't see this input; anything that fills it in is a script. */}
       <input
         type="text"
         name="website"

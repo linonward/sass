@@ -2,12 +2,13 @@ import * as React from "react";
 import { cn } from "cn";
 
 /**
- * tone 决定表面属于哪个语域：传了就是营销面的贴纸（描边 + 硬唇边），
- * 不传就是产品面/后台的平面（`panel`，只有 1px 描边）。
+ * tone decides which register the surface belongs to: pass it and you get a marketing sticker
+ * (outline + hard lip); omit it and you get a flat product/admin surface (`panel`, 1px outline
+ * only).
  *
- * 类名必须保持字面量：Tailwind 扫源码文本，拼接出来的 class 会被丢掉。
- * `panel` 自带的背景和圆角与 base 里的 `bg-card rounded-xl` 同值，
- * 重复是无害的 —— 它的作用是让「这是产品语域的面板」在源码里可 grep。
+ * Class names must stay literal: Tailwind scans source text, so concatenated classes get dropped.
+ * `panel`'s own background and radius match the `bg-card rounded-xl` in base; the duplication is
+ * harmless — its purpose is to make "this is a product-register panel" greppable in the source.
  */
 const cardTones = {
   primary: "sticker-lg border-[var(--edge)] [--edge:var(--primary-edge)]",

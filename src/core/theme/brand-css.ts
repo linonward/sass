@@ -1,14 +1,16 @@
 import type { SiteConfig } from "@/core/config/schema";
 
-// 由 site.config.ts 里的一个 primaryColor 推导出整套配色。
+// Derives the entire palette from the single primaryColor in site.config.ts.
 //
-// 为什么在 TS 里算，而不是用 CSS 的 `oklch(from var(--primary) calc(l - 0.22) c h)`：
-// 浏览器的自动色域映射不是我们对 chroma 做的二分收窄，TS 里验证过的对比度就不等于
-// 线上实际渲出来的对比度；而且 `oklch(from ...)` 在不支持的浏览器上整条声明失效，
-// 没有降级路径。算在这里，结果可单测、可断言 WCAG。
+// Why compute it in TS instead of CSS `oklch(from var(--primary) calc(l - 0.22) c h)`: the
+// browser's automatic gamut mapping is not the binary-search chroma narrowing we do here, so a
+// contrast ratio verified in TS would not equal the contrast actually rendered in production. And
+// `oklch(from ...)` invalidates the whole declaration in browsers that don't support it, with no
+// fallback path. Computing it here makes the result unit-testable and lets us assert WCAG.
 
-// 推导常量。edge 是「比填充色更深一档」的相对位移，不是绝对亮度 ——
-// 绝对亮度会让深色品牌推导出比填充还浅的 edge，贴纸的立体感就反了。
+// Derivation constants. The edge is a relative offset ("one step darker than the fill"), not an
+// absolute lightness — an absolute value would give dark brand colors an edge lighter than the
+// fill, inverting the sticker's sense of depth.
 const EDGE_LIGHTNESS_DROP = 0.22;
 const EDGE_MIN_LIGHTNESS = 0.19;
 const TEXT_LIGHTNESS = 0.5;
@@ -17,14 +19,14 @@ const BAND_LIGHTNESS = 0.93;
 const BAND_MAX_CHROMA = 0.05;
 const EDGE_MAX_CHROMA = 0.17;
 
-/** 中性色朝品牌色相微调的 chroma，小到几乎不可感知，但能营造潜意识的协调。 */
+/** Chroma that tints neutrals toward the brand hue: almost imperceptible, but it creates subconscious harmony. */
 const NEUTRAL_CHROMA = 0.006;
 
-/** 浅色主题画布的亮度，ensureContrast 拿它对对比度。 */
+/** Lightness of the light-theme canvas; ensureContrast measures contrast against it. */
 const CANVAS_LIGHTNESS = 0.969;
-/** UI 边界（描边）的最低对比度。 */
+/** Minimum contrast for UI boundaries (outlines). */
 const MIN_EDGE_CONTRAST = 3;
-/** 正文文字的最低对比度，WCAG AA。 */
+/** Minimum contrast for body text, WCAG AA. */
 const MIN_TEXT_CONTRAST = 4.5;
 
 function toRgb(hex: string): [number, number, number] {
@@ -52,13 +54,13 @@ const toGamma = (value: number) => {
 
 export type Oklch = { L: number; C: number; H: number };
 
-/** sRGB hex → 线性 RGB 三元组。不用 `.map`：那会把元组摊成 number[]，丢了长度信息。 */
+/** sRGB hex → linear RGB triple. No `.map`: that would widen the tuple to number[] and lose its length. */
 function linearRgb(hex: string): [number, number, number] {
   const [r, g, b] = toRgb(hex);
   return [toLinear(r), toLinear(g), toLinear(b)];
 }
 
-/** sRGB hex → OKLCH。 */
+/** sRGB hex → OKLCH. */
 export function hexToOklch(hex: string): Oklch {
   const [r, g, b] = linearRgb(hex);
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
@@ -77,7 +79,7 @@ const OKLCH_TO_LINEAR = [
   [-0.0041960863, -0.7034186147, 1.707614701],
 ] as const;
 
-/** OKLCH → 线性 sRGB 三通道，可能超出 [0,1]（用于色域判断）。 */
+/** OKLCH → linear sRGB channels; may fall outside [0,1] (used for gamut checks). */
 function oklchToLinear({ L, C, H }: Oklch): [number, number, number] {
   const h = (H * Math.PI) / 180;
   const A = C * Math.cos(h);
@@ -95,7 +97,7 @@ function oklchToLinear({ L, C, H }: Oklch): [number, number, number] {
 const inGamut = (color: Oklch) =>
   oklchToLinear(color).every((v) => v >= -0.001 && v <= 1.001);
 
-/** OKLCH → hex。超出色域时钳制到边界。 */
+/** OKLCH → hex. Out-of-gamut values are clamped to the boundary. */
 export function oklchToHex(color: Oklch): string {
   return (
     "#" +
@@ -106,8 +108,9 @@ export function oklchToHex(color: Oklch): string {
 }
 
 /**
- * 把 chroma 收窄到 sRGB 色域内（二分）。
- * 不收窄的话 `oklchToHex` 会静默钳制到边界，推导出的 edge/text 会跟预期的色相偏掉。
+ * Narrows chroma into the sRGB gamut (binary search).
+ * Without this, `oklchToHex` silently clamps to the boundary and the derived edge/text drift away
+ * from the intended hue.
  */
 export function fitChroma(L: number, C: number, H: number): number {
   let low = 0;
@@ -120,13 +123,13 @@ export function fitChroma(L: number, C: number, H: number): number {
   return low;
 }
 
-/** 相对亮度，0（黑）到 1（白）。 */
+/** Relative luminance, 0 (black) to 1 (white). */
 function luminance(hex: string): number {
   const [r, g, b] = linearRgb(hex);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** WCAG 对比度，1 到 21。 */
+/** WCAG contrast ratio, 1 to 21. */
 export function contrastRatio(a: string, b: string): number {
   const [x, y] = [luminance(a), luminance(b)];
   const [hi, lo] = x > y ? [x, y] : [y, x];
@@ -134,12 +137,14 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 /**
- * 压暗一个颜色直到它对背景达到最低对比度。
+ * Darkens a color until it reaches the minimum contrast against the background.
  *
- * 为什么不用「亮度不超过某个魔数」来钳制：OKLCH 的 L 是感知亮度，WCAG 对比度按
- * 相对亮度算，两者在色相之间不成比例 —— 同样 L=0.6 的灰和同样 L=0.6 的饱和蓝，
- * 实际对比度差很多。所以这里直接量对比度、按需压 L，规则自证。
- * 近白/近灰的品牌色（chroma≈0）只能靠这一档把 edge 压到能看见。
+ * Why not clamp with "lightness must not exceed some magic number": OKLCH's L is perceptual
+ * lightness while WCAG contrast is computed from relative luminance, and the two are not
+ * proportional across hues — a gray at L=0.6 and a saturated blue at L=0.6 have very different
+ * actual contrast. So we measure contrast directly and lower L as needed; the rule proves itself.
+ * Near-white / near-gray brand colors (chroma≈0) rely on this step alone to push the edge dark
+ * enough to be visible.
  */
 function ensureContrast(hex: string, background: string, min: number): string {
   const tone = hexToOklch(hex);
@@ -153,18 +158,21 @@ function ensureContrast(hex: string, background: string, min: number): string {
   return out;
 }
 
-/** 暖墨，亮色主题下的文字色；刻意不用纯黑。 */
+/** Warm ink, the text color in the light theme; deliberately not pure black. */
 export const INK = oklchToHex({ L: 0.202, C: 0.006, H: 60 });
-/** 暖白，深色主题下的文字色；刻意不用纯白。 */
+/** Warm white, the text color in the dark theme; deliberately not pure white. */
 export const PAPER = oklchToHex({ L: 0.985, C: 0.004, H: 60 });
 
 /**
- * 亮色主题的中性色阶（画布 / 卡片 / 文字 / 描边）。色相跟着品牌走，chroma 只有 0.006，
- * 几乎看不出来，但买家的品牌色一换，整页会隐隐跟着协调。
+ * Neutral scale for the light theme (canvas / card / text / outline). The hue follows the brand at
+ * a chroma of only 0.006 — barely visible, but when the buyer changes the brand color the whole
+ * page quietly shifts into harmony with it.
  *
- * 单独导出是因为**邮件和 OG 图读不到 CSS 变量**，只能把十六进制内联进 HTML / 分享图。
- * 它们必须和 `--background` / `--border` 这些 token 是同一组值：各写各的冷灰会让
- * 买家换完品牌色后，站内是暖调中性色、邮件和分享图还留在另一套灰上。
+ * Exported separately because **emails and OG images cannot read CSS variables**; they have to
+ * inline hex values into the HTML / share image. They must use the same values as tokens like
+ * `--background` / `--border`: if each hard-coded its own cool gray, then after the buyer changes
+ * the brand color the site would use tinted neutrals while emails and share images stayed on a
+ * different gray.
  */
 export function neutralScale(primaryColor: string) {
   const { H } = hexToOklch(primaryColor);
@@ -172,43 +180,46 @@ export function neutralScale(primaryColor: string) {
     oklchToHex({ L, C: fitChroma(L, chroma, H), H });
 
   return {
-    /** 画布 → `--background` */
+    /** Canvas → `--background` */
     canvas: neutral(CANVAS_LIGHTNESS),
-    /** 浅色带 → `--band-tint` */
+    /** Light band → `--band-tint` */
     bandTint: neutral(0.921, 0.012),
-    /** 卡片面 → `--card` / `--sidebar` */
+    /** Card surface → `--card` / `--sidebar` */
     card: neutral(0.983, 0.005),
-    /** 弹层与输入框 → `--popover` / `--input` */
+    /** Popovers and inputs → `--popover` / `--input` */
     popover: neutral(0.995, 0.003),
-    /** 中性填充 → `--muted` / `--secondary` / `--accent` / `--sidebar-accent` */
+    /** Neutral fill → `--muted` / `--secondary` / `--accent` / `--sidebar-accent` */
     muted: neutral(0.945, 0.007),
-    /** 次要文字 → `--muted-foreground` */
+    /** Secondary text → `--muted-foreground` */
     mutedForeground: neutral(0.52, 0.008),
-    /** 1px 描边 → `--border` / `--sidebar-border` */
+    /** 1px outline → `--border` / `--sidebar-border` */
     border: neutral(0.885, 0.008),
   };
 }
 
 /**
- * 在品牌色上对比度更高的文字颜色。
+ * The text color with the higher contrast on the brand color.
  *
- * 这里量的是实际对比度，不是拿亮度阈值卡：INK / PAPER 不是纯黑纯白，阈值那一点
- * 附近可能选错。量一把两种，选高的，保证拿到当下能达到的最优解。
+ * This measures actual contrast rather than using a luminance threshold: INK / PAPER are not pure
+ * black and white, so a threshold could pick wrong near the cutoff. Measuring both and taking the
+ * higher one guarantees the best result available.
  *
- * 注意固有极限：中等亮度的灰（相对亮度约 0.18 到 0.30）跟深色和浅色文字都够不到
- * 4.5:1，这是数学性质不是 bug。买家挑到那种品牌色时，`--primary` 仍按配置原样输出，
- * 我们只能给到当下最好的那个。
+ * Note the inherent limit: mid-luminance grays (relative luminance about 0.18 to 0.30) cannot reach
+ * 4.5:1 with either dark or light text — that is a mathematical property, not a bug. When a buyer
+ * picks such a brand color, `--primary` is still emitted exactly as configured; we can only offer
+ * the best option available.
  */
 export function foregroundFor(hex: string): string {
   return contrastRatio(INK, hex) >= contrastRatio(PAPER, hex) ? INK : PAPER;
 }
 
 /**
- * 由品牌色推导三档语义色，加一档给整块色带用的浅色。
+ * Derives three semantic tones from the brand color, plus a light tint for full-width bands.
  *
- * 每个语义角色都是 fill / edge / text 三档：
- * edge 同时做 1px 描边和零模糊硬阴影（「一个色用两次」是贴纸质感的来源），
- * text 是同一色相压到能在浅底上当文字用的那一档。
+ * Every semantic role has three tones — fill / edge / text:
+ * edge serves as both the 1px outline and the zero-blur hard shadow ("one color used twice" is
+ * where the sticker look comes from); text is the same hue pushed dark enough to read as text on a
+ * light background.
  */
 export function deriveBrand(primaryColor: string) {
   const { L, C, H } = hexToOklch(primaryColor);
@@ -218,7 +229,7 @@ export function deriveBrand(primaryColor: string) {
     return oklchToHex({ L: l, C: fitChroma(l, Math.min(C, maxChroma), H), H });
   };
 
-  // 推导时的浅色画布参照，和 brandCss 里生成的是同一个值（同一个来源）。
+  // Light canvas reference for derivation; the same value brandCss emits (single source).
   const { canvas } = neutralScale(primaryColor);
 
   const edgeLightness = Math.max(L - EDGE_LIGHTNESS_DROP, EDGE_MIN_LIGHTNESS);
@@ -226,21 +237,21 @@ export function deriveBrand(primaryColor: string) {
   return {
     canvas,
     fill: primaryColor,
-    /** 比填充深一档，用于描边和硬阴影。 */
+    /** One step darker than the fill, for outlines and hard shadows. */
     edge: ensureContrast(
       at(edgeLightness, EDGE_MAX_CHROMA),
       canvas,
       MIN_EDGE_CONTRAST,
     ),
-    /** 压到能在浅底上读的档位，用于文字和图标。 */
+    /** Pushed to a tone readable on light backgrounds, for text and icons. */
     text: ensureContrast(
       at(Math.min(L, TEXT_LIGHTNESS), TEXT_MAX_CHROMA),
       canvas,
       MIN_TEXT_CONTRAST,
     ),
-    /** 大幅提亮的浅色，用于整块色带背景。 */
+    /** Heavily lightened tint, for full-width band backgrounds. */
     band: at(BAND_LIGHTNESS, BAND_MAX_CHROMA),
-    /** 深色主题下整块色带用的暗色。 */
+    /** Dark tone for full-width bands in the dark theme. */
     bandDark: at(0.26, BAND_MAX_CHROMA),
     foreground: foregroundFor(primaryColor),
   };
@@ -253,16 +264,18 @@ function declare(pairs: Record<string, string>): string {
 }
 
 /**
- * 由 `brand` 生成覆盖主题变量的 CSS。
+ * Generates the CSS that overrides the theme variables from `brand`.
  *
- * 三条规则，不是一条：
- * - 品牌锚点两条主题共用，保持和之前完全一致（`brand-css.test.ts` 断言了这个字面量）。
- * - 亮色用 `html:root`，暗色用 `html:root.dark`。
- *   不能写 `html.dark`：它和 `html:root` 特异性打平（都是 0,1,1），靠源码顺序决定胜负。
- *   以前亮暗同值所以无害，一旦两套值分化，这个平局就变成承重结构。
+ * Three rules, not one:
+ * - The brand anchors are shared by both themes and stay exactly as before (`brand-css.test.ts`
+ *   asserts this literal).
+ * - Light uses `html:root`, dark uses `html:root.dark`.
+ *   It can't be `html.dark`: that ties with `html:root` on specificity (both 0,1,1), so source order
+ *   decides the winner. That was harmless while light and dark had the same values; once the two
+ *   sets diverge, the tie becomes load-bearing.
  *
- * 整块**不能**包 `@layer`：globals.css 里的 `:root` / `.dark` 是 unlayered 的，
- * layered 的规则即使特异性更高也会输。
+ * The block must **not** be wrapped in `@layer`: `:root` / `.dark` in globals.css are unlayered, and
+ * layered rules lose to them even with higher specificity.
  */
 export function brandCss(brand: SiteConfig["brand"]): string {
   const primary = brand.primaryColor;
@@ -270,7 +283,8 @@ export function brandCss(brand: SiteConfig["brand"]): string {
   const n = neutralScale(primary);
   const { H } = hexToOklch(primary);
 
-  // 暗色的中性色阶是另一套 L 值，只在 CSS 里用得到，邮件和 OG 图永远是亮色版。
+  // The dark neutral scale uses a different set of L values and is only needed in CSS; emails and
+  // OG images always use the light version.
   const neutral = (L: number, chroma = NEUTRAL_CHROMA) =>
     oklchToHex({ L, C: fitChroma(L, chroma, H), H });
 
@@ -285,8 +299,9 @@ export function brandCss(brand: SiteConfig["brand"]): string {
     "--sidebar-primary-foreground": d.foreground,
 
     "--background": n.canvas,
-    /* 浅色带的专用底色。比 --muted 再深一档：两者差太近的话，波浪在
-       「画布 → 浅色带」这一段上根本看不出来，整页的横向色带节奏就散了。 */
+    /* Dedicated background for light bands. One step darker than --muted: if the two are too
+       close, the wave on the "canvas → light band" transition is invisible and the page's rhythm
+       of horizontal bands falls apart. */
     "--band-tint": n.bandTint,
     "--foreground": INK,
     "--card": n.card,
@@ -343,7 +358,8 @@ export function brandCss(brand: SiteConfig["brand"]): string {
   };
 
   return [
-    // --chart-1 跟着品牌走：图表第一档就是品牌色本身，后四档是固定的语义色。
+    // --chart-1 follows the brand: the first chart color is the brand color itself; the other four
+    // are fixed semantic colors.
     `html:root,html.dark{--primary:${primary};--primary-foreground:${d.foreground};--ring:${primary};--chart-1:${primary};--sidebar-primary:${primary};--sidebar-primary-foreground:${d.foreground};}`,
     `html:root{${declare(light)}}`,
     `html:root.dark{${declare(dark)}}`,

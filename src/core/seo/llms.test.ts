@@ -24,7 +24,7 @@ const doc: LlmsDoc = {
 };
 
 describe("buildLlmsTxt", () => {
-  test("按约定排版：H1、blockquote、正文、小节", () => {
+  test("follows the convention: H1, blockquote, body, sections", () => {
     expect(buildLlmsTxt(doc).split("\n").slice(0, 8)).toEqual([
       "# Acme",
       "",
@@ -37,7 +37,7 @@ describe("buildLlmsTxt", () => {
     ]);
   });
 
-  test("没有 url 的条目渲染成纯文字行", () => {
+  test("entries without a url render as plain text lines", () => {
     const text = buildLlmsTxt(doc);
     expect(text).toContain(
       "## Requires an account\nCrawlers get the sign-in screen.\n- /dashboard\n- /admin",
@@ -45,12 +45,12 @@ describe("buildLlmsTxt", () => {
     expect(text).not.toContain("- [/dashboard]");
   });
 
-  test("空小节整节不渲染", () => {
+  test("empty sections are not rendered at all", () => {
     const text = buildLlmsTxt(doc);
     expect(text).not.toContain("Empty section");
   });
 
-  test("没有 optional 时不出这一节；有则排最后", () => {
+  test("omits the section without optional; otherwise it comes last", () => {
     expect(buildLlmsTxt(doc)).not.toContain("Optional");
 
     const withOptional = buildLlmsTxt({
@@ -67,7 +67,7 @@ describe("buildLlmsTxt", () => {
     ).toBe(true);
   });
 
-  test("结尾是一个换行", () => {
+  test("ends with a single newline", () => {
     const text = buildLlmsTxt(doc);
     expect(text.endsWith("\n")).toBe(true);
     expect(text.endsWith("\n\n")).toBe(false);

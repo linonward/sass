@@ -3,7 +3,7 @@ import { DEFAULT_LOGO_PATH } from "@/core/config/logo";
 import siteConfig from "../../../site.config";
 import { absoluteUrl, siteUrl } from "./urls";
 
-/** 序列化 JSON-LD 并转义 `<`、`>`、`&` 和行分隔符，防止内容闭合 script 标签造成 XSS。 */
+/** Serializes JSON-LD and escapes `<`, `>`, `&`, and line separators so content can't close the script tag and cause XSS. */
 export function serializeJsonLd(data: unknown): string {
   return JSON.stringify(data).replace(
     /[<>&\u2028\u2029]/g,

@@ -1,8 +1,8 @@
 import type { ObjectStorage } from "./storage";
 
 /**
- * 内存里的对象存储，用于测试。`put()` 模拟浏览器直传成功；
- * 预签名地址是可读的假地址，便于断言。
+ * In-memory object storage for tests. `put()` simulates a successful direct upload from the
+ * browser; presigned URLs are readable fake URLs, easy to assert on.
  */
 export class MemoryStorage implements ObjectStorage {
   readonly objects = new Map<string, { size: number; mime: string | null }>();

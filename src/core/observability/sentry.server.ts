@@ -3,7 +3,8 @@ import * as Sentry from "@sentry/nextjs";
 import siteConfig from "../../../site.config";
 import { registerSentry, sentryBaseOptions } from "./sentry";
 
-// Node runtime 的 Sentry 初始化，由 instrumentation.ts 在开启 observability.sentry 时动态加载。
+// Sentry initialization for the Node runtime, loaded dynamically by instrumentation.ts when
+// observability.sentry is on.
 const { observability } = siteConfig;
 
 Sentry.init({
@@ -13,8 +14,9 @@ Sentry.init({
   }),
   ...(observability.otel
     ? {
-        // 已经由 @vercel/otel 注册了 tracer provider：Sentry 不再注册第二个，追踪留在 OTel 里，
-        // Sentry 只收错误，并关联到当前 OTel span。采样由 OTel 那边决定。
+        // @vercel/otel has already registered a tracer provider, so Sentry doesn't register a
+        // second one. Tracing stays in OTel; Sentry only collects errors and links them to the
+        // current OTel span. Sampling is decided on the OTel side.
         enableOpenTelemetrySetup: false,
         integrations: [Sentry.openTelemetryIntegration()],
       }

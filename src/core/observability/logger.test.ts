@@ -24,8 +24,8 @@ function setup(options: Partial<LoggerOptions> = {}) {
   return { logger, write, lines };
 }
 
-describe("json 格式", () => {
-  test("单行 JSON：level、event、time 和字段", () => {
+describe("json format", () => {
+  test("single-line JSON with level, event, time, and fields", () => {
     const { logger, write, lines } = setup();
     logger.info("ai.usage", { modelId: "deepseek", credits: 1 });
     expect(write).toHaveBeenCalledWith("info", expect.any(String));
@@ -41,7 +41,7 @@ describe("json 格式", () => {
     ]);
   });
 
-  test("带上当前 span 的 traceId 和 spanId", () => {
+  test("includes the current span's traceId and spanId", () => {
     const { logger, lines } = setup({
       traceContext: () => ({ traceId: "a".repeat(32), spanId: "b".repeat(16) }),
     });
@@ -52,7 +52,7 @@ describe("json 格式", () => {
     });
   });
 
-  test("低于级别的日志不输出", () => {
+  test("drops logs below the level", () => {
     const { logger, write } = setup({ level: "warn" });
     logger.debug("a");
     logger.info("b");
@@ -61,7 +61,7 @@ describe("json 格式", () => {
     expect(write.mock.calls.map(([level]) => level)).toEqual(["warn", "error"]);
   });
 
-  test("Error 序列化出 name、message、stack 和 cause", () => {
+  test("serializes an Error with name, message, stack, and cause", () => {
     const { logger, lines } = setup();
     const cause = new Error("socket hang up");
     const error = Object.assign(new TypeError("fetch failed", { cause }), {
@@ -78,7 +78,7 @@ describe("json 格式", () => {
     expect(logged.stack).toContain("TypeError: fetch failed");
   });
 
-  test("字段对象里的 Error 同样序列化", () => {
+  test("serializes an Error inside a fields object too", () => {
     const { logger, lines } = setup();
     logger.error("ai.model_failed", {
       error: new Error("boom"),
@@ -91,8 +91,8 @@ describe("json 格式", () => {
   });
 });
 
-describe("脱敏", () => {
-  test("邮箱、token、密码、cookie 等字段替换为 [redacted]，嵌套和数组也处理", () => {
+describe("redaction", () => {
+  test("replaces email, token, password, cookie, and similar fields with [redacted], including nested objects and arrays", () => {
     expect(
       redact({
         userId: "u1",
@@ -124,7 +124,7 @@ describe("脱敏", () => {
     });
   });
 
-  test("输出的日志里没有敏感值", () => {
+  test("leaves no sensitive values in the written log", () => {
     const { logger, write } = setup();
     logger.error("auth.failed", { email: "a@b.com", token: "secret-token" });
     const line = write.mock.calls[0]![1] as string;
@@ -132,7 +132,7 @@ describe("脱敏", () => {
     expect(line).not.toContain("secret-token");
   });
 
-  test("验证码类字段脱敏：code、otp、pin 和它们的各种写法", () => {
+  test("redacts verification code fields: code, otp, pin, and their variants", () => {
     expect(
       redact({
         code: "123456",
@@ -149,7 +149,7 @@ describe("脱敏", () => {
         authCode: "123456",
         securityCode: "123456",
         magicCode: "123456",
-        // 嵌套和数组同样处理。
+        // Nested objects and arrays are handled the same way.
         payload: { code: "123456" },
         attempts: [{ code: "123456", ok: 1 }],
       }),
@@ -173,9 +173,10 @@ describe("脱敏", () => {
     });
   });
 
-  // 反方向：不能因为要脱敏 code 就把所有叫 code 的字段一起抹掉。
-  // statusCode / errorCode 这些是排障时要看的诊断值，脱敏掉属于静默降低可观测性。
-  test("诊断类的 code 不脱敏：statusCode、errorCode、countryCode、zipCode", () => {
+  // The other direction: redacting `code` must not wipe out every field named *code.
+  // statusCode / errorCode are diagnostic values needed for troubleshooting; redacting them would
+  // silently degrade observability.
+  test("does not redact diagnostic codes: statusCode, errorCode, countryCode, zipCode", () => {
     expect(
       redact({
         statusCode: 404,
@@ -199,7 +200,7 @@ describe("脱敏", () => {
     });
   });
 
-  test('logger.info("otp", { code }) 的输出里没有验证码', () => {
+  test('logger.info("otp", { code }) leaves no verification code in the output', () => {
     const { logger, write, lines } = setup();
     logger.info("otp", { code: "123456" });
     expect(lines()[0]).toMatchObject({ event: "otp", code: "[redacted]" });
@@ -207,8 +208,8 @@ describe("脱敏", () => {
   });
 });
 
-describe("pretty 格式", () => {
-  test("事件名、字段和原始 Error 交给 console", () => {
+describe("pretty format", () => {
+  test("passes the event name, fields, and original Error to console", () => {
     const { logger, write } = setup({ format: "pretty" });
     const error = new Error("boom");
     logger.error("ai.model_failed", { error, modelId: "qwen", email: "x@y" });
@@ -220,15 +221,15 @@ describe("pretty 格式", () => {
     );
   });
 
-  test("没有字段时只输出事件名", () => {
+  test("writes only the event name when there are no fields", () => {
     const { logger, write } = setup({ format: "pretty" });
     logger.warn("ratelimit.disabled");
     expect(write).toHaveBeenCalledWith("warn", "[ratelimit.disabled]");
   });
 });
 
-describe("错误上报钩子", () => {
-  test("logger.error 调用钩子，传入 Error、事件名和脱敏后的字段", () => {
+describe("error reporting hook", () => {
+  test("logger.error calls the hook with the Error, event name, and redacted fields", () => {
     const { logger } = setup();
     const reporter = vi.fn();
     logger.setErrorReporter(reporter);
@@ -242,7 +243,7 @@ describe("错误上报钩子", () => {
     });
   });
 
-  test("级别过滤掉的 error 也会上报", () => {
+  test("reports errors even when the level filters them out", () => {
     const { logger, write } = setup({ level: "error" });
     const reporter = vi.fn();
     logger.setErrorReporter(reporter);
@@ -251,7 +252,7 @@ describe("错误上报钩子", () => {
     expect(write).toHaveBeenCalledOnce();
   });
 
-  test("钩子报错不影响调用方，取消注册后不再调用", () => {
+  test("a failing hook doesn't affect the caller, and is no longer called after unregistering", () => {
     const { logger, write } = setup();
     const unregister = logger.setErrorReporter(() => {
       throw new Error("sentry down");
@@ -292,14 +293,14 @@ describe("loggerOptionsFromConfig", () => {
     observability,
   });
 
-  test("关闭 features.observability：保持原来的 console 输出，只打 warn 以上", () => {
+  test("features.observability off: keeps plain console output, warn and above only", () => {
     expect(loggerOptionsFromConfig(config(false), "production")).toEqual({
       level: "warn",
       format: "pretty",
     });
   });
 
-  test("开启后生产环境输出 JSON，级别取配置", () => {
+  test("when on, production writes JSON and the level comes from config", () => {
     expect(loggerOptionsFromConfig(config(true), "production")).toEqual({
       level: "debug",
       format: "json",
@@ -310,7 +311,7 @@ describe("loggerOptionsFromConfig", () => {
     });
   });
 
-  test("测试环境只打 warn 以上", () => {
+  test("tests log warn and above only", () => {
     expect(loggerOptionsFromConfig(config(true), "test")).toEqual({
       level: "warn",
       format: "pretty",

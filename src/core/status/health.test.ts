@@ -9,7 +9,7 @@ import {
   shouldOpenIncident,
 } from "./health";
 
-/** 只会挂起的 fetch：等 signal 中止时按浏览器的行为抛 TimeoutError。 */
+/** A fetch that only hangs: when the signal aborts, it throws TimeoutError like browsers do. */
 const hangingFetch = ((_url: string, init?: RequestInit) =>
   new Promise((_resolve, reject) => {
     init?.signal?.addEventListener("abort", () => {
@@ -30,30 +30,30 @@ const throwWith = (error: unknown): typeof fetch =>
   }) as unknown as typeof fetch;
 
 describe("probeHealth", () => {
-  test("2xx 算健康", async () => {
+  test("2xx counts as healthy", async () => {
     await expect(
       probeHealth("https://example.com", { fetchImpl: respond(200) }),
     ).resolves.toEqual({ ok: true, status: 200 });
   });
 
-  test("非 2xx 算失败，错误里带状态码", async () => {
+  test("non-2xx counts as a failure, with the status code in the error", async () => {
     await expect(
       probeHealth("https://example.com", { fetchImpl: respond(503) }),
     ).resolves.toEqual({ ok: false, error: "HTTP 503" });
   });
 
-  test("超时一定会在 timeoutMs 内返回", async () => {
+  test("a timeout always returns within timeoutMs", async () => {
     const started = Date.now();
     const result = await probeHealth("https://example.com", {
       fetchImpl: hangingFetch,
       timeoutMs: 20,
     });
     expect(result).toEqual({ ok: false, error: "timeout after 20ms" });
-    // 上限放得很宽（CI 上慢），关键是它没有一直等下去。
+    // The bound is very loose (CI is slow); what matters is that it doesn't wait forever.
     expect(Date.now() - started).toBeLessThan(HEALTH_TIMEOUT_MS);
   });
 
-  test("网络错误原样带出来", async () => {
+  test("network errors are passed through as-is", async () => {
     await expect(
       probeHealth("https://example.com", {
         fetchImpl: throwWith(new Error("getaddrinfo ENOTFOUND")),
@@ -61,19 +61,19 @@ describe("probeHealth", () => {
     ).resolves.toEqual({ ok: false, error: "getaddrinfo ENOTFOUND" });
   });
 
-  test("非 Error 的抛出也转成字符串，不炸渲染", async () => {
+  test("non-Error throws are stringified too, so rendering doesn't blow up", async () => {
     await expect(
       probeHealth("https://example.com", { fetchImpl: throwWith("boom") }),
     ).resolves.toEqual({ ok: false, error: "boom" });
   });
 
-  test("默认超时是 5 秒", () => {
+  test("the default timeout is 5 seconds", () => {
     expect(HEALTH_TIMEOUT_MS).toBe(5_000);
   });
 });
 
 describe("checkTargets", () => {
-  test("只探测配了 healthUrl 的组件", () => {
+  test("only probes components that have a healthUrl", () => {
     expect(
       checkTargets({
         api: { label: "API", healthUrl: "https://example.com/health" },
@@ -84,13 +84,13 @@ describe("checkTargets", () => {
 });
 
 describe("shouldOpenIncident", () => {
-  test("连续失败到阈值才开，一次失败只是抖动", () => {
+  test("opens only once consecutive failures reach the threshold; one failure is just a blip", () => {
     expect(FAILURE_THRESHOLD).toBe(2);
     expect(shouldOpenIncident(1, false)).toBe(false);
     expect(shouldOpenIncident(2, false)).toBe(true);
   });
 
-  test("已经有进行中的自动 incident 就不再开一条", () => {
+  test("doesn't open another one while an automatic incident is ongoing", () => {
     expect(shouldOpenIncident(5, true)).toBe(false);
   });
 });

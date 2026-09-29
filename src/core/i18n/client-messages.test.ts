@@ -24,11 +24,11 @@ const clientFiles = sourceFiles(src).filter((file) =>
 );
 
 describe("clientNamespaces", () => {
-  test("覆盖所有客户端组件用到的命名空间", () => {
+  test("covers every namespace used by client components", () => {
     const used = new Set<string>();
     for (const file of clientFiles) {
       const code = readFileSync(file, "utf8");
-      // 客户端组件不能用 useTranslations() 取全部文案，否则裁剪就没有意义。
+      // Client components can't call useTranslations() for all messages, or trimming would be pointless.
       expect(code, file).not.toMatch(/useTranslations\(\s*\)/);
       for (const [, namespace] of code.matchAll(
         /useTranslations\(\s*["'`]([A-Za-z]+)/g,
@@ -42,13 +42,13 @@ describe("clientNamespaces", () => {
     ).toEqual([]);
   });
 
-  test("列出的命名空间都存在", () => {
+  test("every listed namespace exists", () => {
     for (const namespace of clientNamespaces) {
       expect(messages).toHaveProperty(namespace);
     }
   });
 
-  test("只保留客户端命名空间", () => {
+  test("keeps only client namespaces", () => {
     const picked = pickClientMessages(messages);
     expect(Object.keys(picked).sort()).toEqual([...clientNamespaces].sort());
     expect(picked).not.toHaveProperty("Email");
@@ -56,23 +56,25 @@ describe("clientNamespaces", () => {
   });
 });
 
-describe("客户端组件的可访问名", () => {
+describe("client component accessible names", () => {
   /**
-   * 可访问名同样是文案：读屏用户听的是 `sr-only` 文本和 `aria-label`，鼠标用户看的是
-   * `title` 悬停提示。写死在组件里就没法本地化 —— 买家新增语言后这几处永远是英文，
-   * 调用方也盖不住。
+   * Accessible names are copy too: screen reader users hear `sr-only` text and `aria-label`, and
+   * mouse users see `title` tooltips. Hard-coded in a component they can't be localized — after a
+   * buyer adds a locale those spots stay in English forever, and callers can't override them.
    *
-   * 所以 UI 原语一律「调用方传 labels，原语留英文兜底」：字面量只允许出现在原语的
-   * 常量里（源码中是 `{SIDEBAR_LABELS.toggle}` 这类引用），调用方传的必须是 `t(...)`。
-   * 这条扫的就是别再有字面量。
+   * So UI primitives always follow "callers pass labels, primitives keep an English fallback":
+   * literals are only allowed in the primitive's constants (referenced in source as
+   * `{SIDEBAR_LABELS.toggle}` and the like), and callers must pass `t(...)`. This test scans for
+   * any new literals.
    */
-  test("不写死可访问名", () => {
+  test("does not hard-code accessible names", () => {
     for (const file of clientFiles) {
       const code = readFileSync(file, "utf8");
-      // 字面量的 `aria-label` / `title`；`aria-labelledby` 这类不受影响。
+      // Literal `aria-label` / `title`; things like `aria-labelledby` are unaffected.
       expect(code, file).not.toMatch(/\saria-label="/);
       expect(code, file).not.toMatch(/\stitle="/);
-      // `sr-only` 容器里直接跟字面量文本（`{t(...)}` 表达式、子元素都不匹配）。
+      // Literal text directly inside an `sr-only` container (`{t(...)}` expressions and child elements
+      // don't match).
       expect(code, file).not.toMatch(/sr-only[^>]*>\s*[A-Za-z]/);
     }
   });

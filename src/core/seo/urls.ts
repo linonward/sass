@@ -4,21 +4,22 @@ import siteConfig from "../../../site.config";
 
 export const siteUrl = `https://${siteConfig.domain}`;
 
-/** 某语言下的站内路径，遵循 `localePrefix: "as-needed"`：默认语言不带前缀。 */
+/** Site-relative path in a locale, following `localePrefix: "as-needed"`: the default locale has no prefix. */
 export function localizedPath(locale: string, path: string): string {
   if (locale === routing.defaultLocale) return path;
   return path === "/" ? `/${locale}` : `/${locale}${path}`;
 }
 
-/** 某语言下的绝对 URL。首页不带尾斜杠，与 Next 输出的 canonical 一致。 */
+/** Absolute URL in a locale. The home page has no trailing slash, matching the canonical Next emits. */
 export function absoluteUrl(locale: string, path: string): string {
   const localized = localizedPath(locale, path);
   return localized === "/" ? siteUrl : `${siteUrl}${localized}`;
 }
 
 /**
- * hreflang 映射：每个语言一项，外加 `x-default`。
- * 页面只有部分语言的版本时（如博客文章）传入 `locales`；x-default 优先指向默认语言，没有就指向第一个。
+ * hreflang map: one entry per locale, plus `x-default`.
+ * Pass `locales` when a page exists in only some locales (such as blog posts); x-default prefers the
+ * default locale and otherwise points at the first one.
  */
 export function languageAlternates(
   path: string,

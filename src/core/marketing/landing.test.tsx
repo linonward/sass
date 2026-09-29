@@ -27,7 +27,7 @@ function sectionIds(container: HTMLElement) {
 }
 
 describe("Landing", () => {
-  test("按配置顺序渲染全部区块", () => {
+  test("renders every section in config order", () => {
     expect(
       sectionIds(
         renderSections([
@@ -42,7 +42,7 @@ describe("Landing", () => {
     ).toEqual(["hero", "features", "delivery", "pricing", "faq", "cta"]);
   });
 
-  test("调整顺序后渲染顺序随之变化", () => {
+  test("render order follows a reordered config", () => {
     expect(sectionIds(renderSections(["faq", "hero", "cta"]))).toEqual([
       "faq",
       "hero",
@@ -50,21 +50,21 @@ describe("Landing", () => {
     ]);
   });
 
-  test("删除的区块不再渲染", () => {
+  test("removed sections are no longer rendered", () => {
     const rendered = sectionIds(
       renderSections(["hero", "features", "faq", "cta"]),
     );
     expect(rendered).not.toContain("pricing");
   });
 
-  test("空数组时不渲染任何区块", () => {
+  test("renders no sections for an empty array", () => {
     expect(sectionIds(renderSections([]))).toEqual([]);
   });
 
-  // next-intl 遇到缺失的 key 或解析不了的 ICU 消息时，会把 key 原样渲染到页面上。
-  // 这种错误只有跑一遍真实渲染才看得见：`{ model, credits }` 这种带花括号的文案
-  // 会被当成 ICU 占位符解析失败，就是这条兜住的。
-  test("文案全部解析成功，没有原样漏出来的 key", () => {
+  // When next-intl hits a missing key or an ICU message it can't parse, it renders the raw key on
+  // the page. That kind of error only shows up in a real render: copy with braces like
+  // `{ model, credits }` fails to parse as ICU placeholders, and this test is what catches it.
+  test("all messages resolve, with no raw keys leaking through", () => {
     const { textContent } = renderSections([
       "hero",
       "timesaved",
@@ -80,7 +80,7 @@ describe("Landing", () => {
 
 type PlansInput = NonNullable<NonNullable<SiteConfigInput["billing"]>["plans"]>;
 
-describe("交付区块的购买卡片", () => {
+describe("delivery section purchase card", () => {
   function renderDelivery(plans?: (plans: PlansInput) => PlansInput) {
     const input = siteConfig as SiteConfigInput;
     const config = defineConfig({
@@ -98,7 +98,7 @@ describe("交付区块的购买卡片", () => {
     );
   }
 
-  test("显示 purchasePlan 套餐的价格、条款和购买按钮", () => {
+  test("shows the purchasePlan price, terms, and buy button", () => {
     const view = renderDelivery((plans) =>
       plans.map((p) => (p.id === "lifetime" ? { ...p, price: 99 } : p)),
     );
@@ -111,7 +111,7 @@ describe("交付区块的购买卡片", () => {
     ).toBeDefined();
   });
 
-  test("套餐被隐藏或不存在时退回「即将公布」，没有购买按钮", () => {
+  test('falls back to "coming soon" with no buy button when the plan is hidden or missing', () => {
     for (const plans of [
       (all: PlansInput) =>
         all.map((p) => (p.id === "lifetime" ? { ...p, hidden: true } : p)),
@@ -130,7 +130,7 @@ describe("交付区块的购买卡片", () => {
   });
 });
 
-describe("landing / billing 配置", () => {
+describe("landing / billing config", () => {
   test.each([
     ["landing.sections.1", { landing: { sections: ["hero", "blog"] } }],
     ["landing.sections", { landing: { sections: ["hero", "hero"] } }],
@@ -158,14 +158,14 @@ describe("landing / billing 配置", () => {
       },
     ],
     ["billing.currency", { billing: { currency: "usd" } }],
-  ])("非法字段 %s 出现在报错中", (path, patch) => {
+  ])("invalid field %s appears in the error", (path, patch) => {
     expect(() =>
       defineConfig({ ...siteConfig, ...patch } as SiteConfigInput),
     ).toThrow(`- ${path}: `);
   });
 });
 
-describe("首屏与结尾的按钮", () => {
+describe("hero and closing buttons", () => {
   function renderWith({
     hidden = false,
     showcaseUrl,
@@ -189,7 +189,7 @@ describe("首屏与结尾的按钮", () => {
   }
   const t = messages.Landing;
 
-  test("有可买的套餐：主按钮是「立即购买 · 价格」，跳到交付区块的购买卡片", () => {
+  test('with a purchasable plan: the primary button is "Buy now · price" and jumps to the delivery purchase card', () => {
     const view = renderWith();
     const buy = view.getAllByRole("link", { name: "Buy now · $99" });
     expect(buy).toHaveLength(2);
@@ -197,7 +197,7 @@ describe("首屏与结尾的按钮", () => {
       expect(link.getAttribute("href")).toMatch(/#delivery$/);
     }
     expect(view.getByText(t.hero.offerNote)).toBeDefined();
-    // 没配真实案例时，次按钮是站内演示。
+    // Without a real showcase configured, the secondary button is the in-site demo.
     for (const link of view.getAllByRole("link", {
       name: t.hero.primaryCta,
     })) {
@@ -205,7 +205,7 @@ describe("首屏与结尾的按钮", () => {
     }
   });
 
-  test("配了 showcaseUrl：次按钮在新标签页打开真实案例", () => {
+  test("with showcaseUrl set: the secondary button opens the real showcase in a new tab", () => {
     const view = renderWith({ showcaseUrl: "https://shots.example.com" });
     for (const link of view.getAllByRole("link", {
       name: t.hero.showcaseCta,
@@ -216,7 +216,7 @@ describe("首屏与结尾的按钮", () => {
     expect(view.queryByRole("link", { name: t.hero.primaryCta })).toBeNull();
   });
 
-  test("套餐被隐藏：退回演示为主按钮，不显示价格说明", () => {
+  test("with the plan hidden: falls back to the demo as the primary button, with no price note", () => {
     const view = renderWith({ hidden: true });
     expect(view.queryByRole("link", { name: /Buy now/ })).toBeNull();
     expect(view.queryByText(t.hero.offerNote)).toBeNull();
@@ -227,7 +227,7 @@ describe("首屏与结尾的按钮", () => {
     }
   });
 
-  test("showcaseUrl 只接受 https", () => {
+  test("showcaseUrl only accepts https", () => {
     expect(() =>
       defineConfig({
         ...(siteConfig as SiteConfigInput),
@@ -240,7 +240,7 @@ describe("首屏与结尾的按钮", () => {
   });
 });
 
-describe("省掉的工时", () => {
+describe("time saved", () => {
   function renderTimeSaved(timeSaved: { key: string; hours: number }[]) {
     const config = defineConfig({
       ...siteConfig,
@@ -257,7 +257,7 @@ describe("省掉的工时", () => {
     );
   }
 
-  test("逐项列出工时，合计自动算", () => {
+  test("lists hours per item and computes the total", () => {
     const view = renderTimeSaved(siteConfig.landing.timeSaved);
     const items = view.container.querySelectorAll("#timesaved li");
     expect(items).toHaveLength(siteConfig.landing.timeSaved.length);
@@ -267,12 +267,12 @@ describe("省掉的工时", () => {
     );
   });
 
-  test("空列表时整个区块不渲染", () => {
+  test("does not render the section for an empty list", () => {
     const view = renderTimeSaved([]);
     expect(sectionIds(view.container)).toEqual(["hero", "features"]);
   });
 
-  test("配置里的每个 key 在中英文案里都有", async () => {
+  test("every key in config exists in both the English and Chinese messages", async () => {
     const zh = (await import("../../../messages/zh.json")).default;
     for (const { key } of siteConfig.landing.timeSaved) {
       for (const m of [messages, zh]) {

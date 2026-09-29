@@ -2,7 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import { FACTORY_BRAND_COLOR, onboardingSteps } from "./steps";
 
-/** 除了指定字段，其余都按「已经配置好」算，单个用例只验证一个判定。 */
+/**
+ * Everything except the overridden fields counts as "already configured", so each test checks a
+ * single rule.
+ */
 function input(overrides: Partial<Parameters<typeof onboardingSteps>[0]> = {}) {
   return {
     brandColor: "#4f46e5",
@@ -22,7 +25,7 @@ function statusOf(
 }
 
 describe("onboardingSteps", () => {
-  test("配置都改好、跑在 Vercel 上时，只剩写文章要手动勾", () => {
+  test("with all config changed and running on Vercel, only writing a post needs a manual check", () => {
     const steps = onboardingSteps(input());
     expect(steps.map((step) => step.id)).toEqual([
       "brandColor",
@@ -40,7 +43,7 @@ describe("onboardingSteps", () => {
     ]);
   });
 
-  test("品牌色还是出厂值时算未完成，并给出原文", () => {
+  test("brand color still at the factory value is todo, with the original value as evidence", () => {
     const steps = onboardingSteps(input({ brandColor: FACTORY_BRAND_COLOR }));
     expect(statusOf(steps, "brandColor")).toBe("todo");
     expect(steps.find((step) => step.id === "brandColor")?.evidence).toEqual([
@@ -48,7 +51,7 @@ describe("onboardingSteps", () => {
     ]);
   });
 
-  test("品牌色比大小写、去空格后相同才算没改", () => {
+  test("brand color counts as unchanged only if equal ignoring case and whitespace", () => {
     expect(
       statusOf(
         onboardingSteps(input({ brandColor: "  #0F766E " })),
@@ -60,15 +63,19 @@ describe("onboardingSteps", () => {
     ).toBe("done");
   });
 
-  test("哨兵报告了占位值就算未完成，每一条都进 evidence", () => {
+  test("placeholders reported by the sentinels mean todo, and each one goes into evidence", () => {
     const steps = onboardingSteps(
       input({
         placeholders: [
-          { path: "name", placeholder: "Acme", hint: "改成你的产品名" },
+          {
+            path: "name",
+            placeholder: "Acme",
+            hint: "Change to your product name",
+          },
           {
             path: "email.fromAddress",
             placeholder: "noreply@example.com",
-            hint: "改成你的发件地址",
+            hint: "Change to your sender address",
           },
         ],
       }),
@@ -80,7 +87,7 @@ describe("onboardingSteps", () => {
     ]);
   });
 
-  test("套餐里还有占位产品 ID 时算未完成", () => {
+  test("a placeholder product ID still in the plans means todo", () => {
     const steps = onboardingSteps(
       input({ planProductIds: ["prod_placeholder_pro", "prod_live_lifetime"] }),
     );
@@ -90,13 +97,13 @@ describe("onboardingSteps", () => {
     ]);
   });
 
-  test("没有付费套餐（一个产品 ID 都没有）算已完成", () => {
+  test("no paid plans (no product IDs at all) counts as done", () => {
     expect(
       statusOf(onboardingSteps(input({ planProductIds: [] })), "pricing"),
     ).toBe("done");
   });
 
-  test("不在 Vercel 上时部署只能手动勾", () => {
+  test("off Vercel, the deploy step can only be checked manually", () => {
     expect(
       statusOf(onboardingSteps(input({ onVercel: false })), "deploy"),
     ).toBe("manual");
@@ -105,13 +112,13 @@ describe("onboardingSteps", () => {
     );
   });
 
-  test("关掉博客模块后没有写文章这一步", () => {
+  test("with the blog module off, there is no write-a-post step", () => {
     const steps = onboardingSteps(input({ blogEnabled: false }));
     expect(steps.map((step) => step.id)).not.toContain("blogPost");
     expect(steps).toHaveLength(4);
   });
 
-  test("自动判定的步骤不会带 manual 状态", () => {
+  test("automatically detected steps never have manual status", () => {
     const steps = onboardingSteps(
       input({ brandColor: FACTORY_BRAND_COLOR, onVercel: false }),
     );
@@ -119,7 +126,8 @@ describe("onboardingSteps", () => {
       if (step.id === "brandColor") expect(step.status).toBe("todo");
       if (step.id === "deploy") expect(step.status).toBe("manual");
     }
-    // 手动步骤没有 evidence：界面不给它显示「还没改的出厂值」。
+    // Manual steps have no evidence: the UI doesn't show "factory values you haven't changed" for
+    // them.
     expect(
       steps
         .filter((step) => step.status === "manual")

@@ -22,7 +22,10 @@ import { notifySubscribers } from "./notify";
 import { createIncident, resolveIncident, updateIncident } from "./store";
 import { prepareSubscription, subscriberEmail } from "./subscribers";
 
-/** incident 说明的长度上限。状态页首屏是一眼看完的，长文留给博客。 */
+/**
+ * Max length of an incident message. The status page is meant to be taken in at a glance; long
+ * write-ups belong on the blog.
+ */
 const MAX_MESSAGE = 500;
 
 export type StatusErrorCode =
@@ -38,10 +41,14 @@ export type StatusActionState =
   | { status: "success" }
   | { status: "error"; error: StatusErrorCode };
 
-// Server Action 可以绕过页面直接调用，所以每个 action 都重新校验管理员身份。
+// Server Actions can be called directly without going through the page, so every action re-checks
+// that the caller is an admin.
 const forbidden: StatusActionState = { status: "error", error: "forbidden" };
 
-/** 组件必须是 `site.config.ts` 里登记过的 key；客户端传来的值一律不信。 */
+/**
+ * The component must be a key registered in `site.config.ts`; values sent by the client are never
+ * trusted.
+ */
 function parseComponent(value: FormDataEntryValue | null): string | null {
   const component = String(value ?? "");
   return component in siteConfig.statusPage.components ? component : null;
@@ -64,8 +71,9 @@ function parseMessage(value: FormDataEntryValue | null): string | null {
 }
 
 /**
- * 通知订阅者。放在 `runAfterResponse` 里：发信是这次操作的副作用，
- * 不该让管理员多等一轮 SMTP，失败也只记日志（那条 incident 已经在库里了）。
+ * Notifies subscribers. Runs inside `runAfterResponse`: sending mail is a side effect of this
+ * action, so the admin shouldn't wait for an SMTP round trip, and failures are only logged (the
+ * incident is already in the database).
  */
 async function announce(event: Parameters<typeof notifySubscribers>[1]) {
   await runAfterResponse(async () => {
@@ -77,7 +85,7 @@ async function announce(event: Parameters<typeof notifySubscribers>[1]) {
   });
 }
 
-/** 开一条 incident（`operational` 用来发没有影响的公告）。 */
+/** Opens an incident (`operational` is for announcements with no impact). */
 export async function createIncidentAction(
   _prev: StatusActionState,
   form: FormData,
@@ -98,7 +106,10 @@ export async function createIncidentAction(
   return { status: "success" };
 }
 
-/** 更新进行中的 incident：改影响级别或改说明（同一行的创建和解决仍是一条时间线）。 */
+/**
+ * Updates an ongoing incident: changes the impact level or the message (creation and resolution
+ * of the same row still form one timeline).
+ */
 export async function updateIncidentAction(
   _prev: StatusActionState,
   form: FormData,
@@ -120,7 +131,10 @@ export async function updateIncidentAction(
   return { status: "success" };
 }
 
-/** 解决：`status` 保留当时的影响级别，时间线上仍然看得出「当时是 outage」。 */
+/**
+ * Resolves an incident: `status` keeps the impact level it had, so the timeline still shows "this
+ * was an outage".
+ */
 export async function resolveIncidentAction(
   _prev: StatusActionState,
   form: FormData,
@@ -145,10 +159,12 @@ export type SubscribeState =
   | { status: "error"; error: SubscribeErrorCode };
 
 /**
- * 订阅状态通知：写入待确认的地址，并发一封确认信。
+ * Subscribes to status notifications: stores the address as pending and sends a confirmation
+ * email.
  *
- * 已经确认过的地址、以及 60 秒内的重复提交都不发信，但返回的成功文案是同一句 ——
- * 表单不该成为一个「这个地址订没订过」的探测接口。
+ * Already-confirmed addresses and repeat submissions within 60 seconds get no email, but the
+ * success message returned is identical — the form must not become a probe for "is this address
+ * already subscribed".
  */
 export async function subscribeAction(
   _prev: SubscribeState,
@@ -158,7 +174,8 @@ export async function subscribeAction(
   const parsed = subscriberEmail.safeParse(String(form.get("email") ?? ""));
   if (!parsed.success) return { status: "error", error: "invalidEmail" };
 
-  // 蜜罐：真人看不见这个字段，填了的都是脚本；对外仍然返回成功。
+  // Honeypot: humans can't see this field, so anything that fills it in is a script. Still report
+  // success.
   if (String(form.get("website") ?? "")) return { status: "success" };
 
   const requestHeaders = await headers();

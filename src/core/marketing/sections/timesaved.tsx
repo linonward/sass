@@ -6,8 +6,9 @@ import { bands, type Band } from "./band";
 import { Section } from "./section";
 
 /**
- * 「省掉的工时」：模板里已经做好的活，逐项列出估算工时，最后一行是合计。
- * 把功能换算成买家省下的时间；工时是估算，写在 site.config.ts 里。
+ * "Time saved": work the template has already done, listed item by item with estimated hours and a
+ * total on the last row. It translates features into time the buyer saves; the hours are estimates
+ * set in site.config.ts.
  */
 export function TimeSaved({
   items,

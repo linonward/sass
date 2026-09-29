@@ -1,16 +1,17 @@
 import type { LandingSectionId } from "@/core/config/schema";
 
 /**
- * 页面的横向色带。
+ * The page's horizontal color bands.
  *
- * 区块靠色带和波浪分隔，不是靠留白里浮着的卡片。每个区块的色带集中定义在
- * 下面的 bands 表里，不散落到各组件内部。
+ * Sections are separated by bands and waves, not by cards floating in whitespace. Each section's
+ * band is defined centrally in the bands table below rather than scattered across components.
  */
 export type Band = "canvas" | "tint" | "primary" | "success" | "dark";
 
 /**
- * 每个区块的外层色带；首屏流程条和特性交替行在区块内使用品牌浅色。
- * Landing 用它算相邻两段之间的波浪，所以这里是唯一的事实来源。
+ * Each section's outer band; the hero flow strip and alternating feature rows use the light brand
+ * tint inside their sections. Landing uses this to compute the wave between adjacent sections, so
+ * this is the single source of truth.
  */
 export const bands: Record<LandingSectionId, Band> = {
   hero: "canvas",
@@ -23,7 +24,7 @@ export const bands: Record<LandingSectionId, Band> = {
   cta: "primary",
 };
 
-/** 色带底。必须是字面量：Tailwind 扫源码文本，拼接出来的 class 会被丢掉。 */
+/** Band backgrounds. Must be literals: Tailwind scans source text, and concatenated classes get dropped. */
 export const bandBg: Record<Band, string> = {
   canvas: "bg-background",
   tint: "bg-band-tint",
@@ -32,7 +33,7 @@ export const bandBg: Record<Band, string> = {
   dark: "bg-footer",
 };
 
-/** 波浪的填充色，和上面的底色一一对应，两者必须严丝合缝。 */
+/** Wave fill colors, one-to-one with the backgrounds above; the two must match exactly. */
 export const bandFill: Record<Band, string> = {
   canvas: "fill-background",
   tint: "fill-band-tint",

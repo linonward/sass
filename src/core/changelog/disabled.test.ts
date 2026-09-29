@@ -1,8 +1,9 @@
 import { describe, expect, test, vi } from "vitest";
 
-// 关掉开关的那一支（`changelog.enabled: false`）：页面 404、feed 404、没有条目、
-// sitemap 里也不登记。这一支在演示站上跑不到（演示站是开的），所以用配置替身测。
-// 写法照 src/core/acquisition/auth-hook.test.ts 的 site.config 替身。
+// The flag-off branch (`changelog.enabled: false`): page 404, feed 404, no entries, and no sitemap
+// registration. The demo site never exercises this branch (it has the flag on), so it is tested
+// with a config stand-in, following the site.config stand-in in
+// src/core/acquisition/auth-hook.test.ts.
 vi.mock("../../../site.config", async (original) => {
   const configModule = await original<typeof import("../../../site.config")>();
   return {
@@ -20,18 +21,18 @@ import { changelogPath, getEntries } from "./entries";
 import { ChangelogPage, rssResponse } from "./pages";
 
 describe("changelog.enabled: false", () => {
-  test("没有条目，页面 notFound()", () => {
+  test("no entries, page calls notFound()", () => {
     expect(getEntries()).toEqual([]);
     expect(() => ChangelogPage()).toThrow();
   });
 
-  test("feed 返回 404", async () => {
+  test("feed returns 404", async () => {
     const response = await rssResponse("en");
     expect(response.status).toBe(404);
     expect(await response.text()).toBe("Not Found");
   });
 
-  test("sitemap 的登记里没有它", () => {
+  test("is not registered in the sitemap", () => {
     expect(marketingRoutes).not.toContain(changelogPath);
   });
 });

@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`robots > 只挡机器端点 /api 并指向 sitemap 1`] = `
+exports[`robots > blocks only the machine endpoint /api and points to the sitemap 1`] = `
 {
   "host": "https://<domain>",
   "rules": {
@@ -14,7 +14,7 @@ exports[`robots > 只挡机器端点 /api 并指向 sitemap 1`] = `
 }
 `;
 
-exports[`sitemap > 营销路由 × 语言，带 hreflang 1`] = `
+exports[`sitemap > marketing routes × locales, with hreflang 1`] = `
 [
   {
     "alternates": {

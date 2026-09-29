@@ -20,7 +20,7 @@ vi.mock("@/core/i18n/navigation", () => ({
   ),
 }));
 
-/** jsdom 没有 matchMedia。`isMobile` 决定媒体查询是否匹配；默认桌面端。 */
+/** jsdom has no matchMedia. `isMobile` decides whether media queries match; defaults to desktop. */
 function setViewport(isMobile: boolean) {
   window.matchMedia = ((query: string) => ({
     matches: isMobile && query.includes("max-width"),
@@ -35,8 +35,9 @@ beforeEach(() => {
 });
 
 /**
- * 模拟业务项目在 site.config.ts 里加了一项 dashboard.nav。AI、示例模块与 API Key
- * 固定关闭，不受演示站点的开关影响（下面各自有专门用例覆盖开启后的样子）。
+ * Simulates an app project that added one dashboard.nav item in site.config.ts. AI, the example
+ * modules, and API keys are pinned off, independent of the demo site's flags (dedicated cases
+ * below cover what each looks like when on).
  */
 function configWithProjects() {
   return defineConfig({
@@ -73,13 +74,13 @@ function renderSidebar(config = configWithProjects()) {
 }
 
 describe("dashboardNav", () => {
-  test("套件项在前，业务项来自配置", () => {
+  test("kit items come first; app items come from config", () => {
     const nav = dashboardNav(configWithProjects());
     expect(nav.suite).toBe(suiteNav);
     expect(nav.business.map((i) => i.href)).toEqual(["/projects"]);
   });
 
-  test("features.ai 开启时，Dashboard 之后多一个 Playground", () => {
+  test("with features.ai on, Playground follows Dashboard", () => {
     const base = configWithProjects();
     expect(dashboardNav(base).suite.map((i) => i.href)).not.toContain(
       "/playground",
@@ -105,7 +106,7 @@ describe("dashboardNav", () => {
     expect(isActiveNav(path, href)).toBe(expected);
   });
 
-  test("features.examples.invoices 关闭时没有 Invoices 入口", () => {
+  test("no Invoices item when features.examples.invoices is off", () => {
     const config = configWithProjects();
     expect(config.features.examples.invoices).toBe(false);
     expect(dashboardNav(config).suite.map((i) => i.href)).not.toContain(
@@ -113,7 +114,7 @@ describe("dashboardNav", () => {
     );
   });
 
-  test("features.examples.invoices 开启时，Playground 之后多一个 Invoices", () => {
+  test("with features.examples.invoices on, Invoices follows Playground", () => {
     const base = configWithProjects();
     const invoicesOn = {
       ...base,
@@ -125,7 +126,7 @@ describe("dashboardNav", () => {
       "/billing",
       "/settings",
     ]);
-    // 与 Playground 同时开启时，Invoices 排在它后面。
+    // When both are on, Invoices comes after Playground.
     expect(
       dashboardNav({
         ...invoicesOn,
@@ -140,7 +141,7 @@ describe("dashboardNav", () => {
     ]);
   });
 
-  test("acquisition.referrals 关闭时没有 Referrals 入口（出厂默认）", () => {
+  test("no Referrals item when acquisition.referrals is off (factory default)", () => {
     const config = configWithProjects();
     expect(config.acquisition.referrals.enabled).toBe(false);
     expect(dashboardNav(config).suite.map((i) => i.href)).not.toContain(
@@ -148,7 +149,7 @@ describe("dashboardNav", () => {
     );
   });
 
-  test("acquisition.referrals 开启时，Dashboard 之后多一个 Referrals", () => {
+  test("with acquisition.referrals on, Referrals follows Dashboard", () => {
     const base = configWithProjects();
     const nav = dashboardNav({
       ...base,
@@ -166,7 +167,7 @@ describe("dashboardNav", () => {
       "/billing",
       "/settings",
     ]);
-    // 与 Playground 同时开启时，Referrals 排在它后面。
+    // When both are on, Referrals comes after Playground.
     expect(
       dashboardNav({
         ...base,
@@ -188,7 +189,7 @@ describe("dashboardNav", () => {
     ]);
   });
 
-  test("apiKeys 关闭时没有 API keys 入口（出厂默认）", () => {
+  test("no API keys item when apiKeys is off (factory default)", () => {
     const config = configWithProjects();
     expect(config.apiKeys.enabled).toBe(false);
     expect(dashboardNav(config).suite.map((i) => i.href)).not.toContain(
@@ -196,7 +197,7 @@ describe("dashboardNav", () => {
     );
   });
 
-  test("apiKeys 开启时，Referrals 之后多一个 API keys", () => {
+  test("with apiKeys on, API keys follows Referrals", () => {
     const base = configWithProjects();
     const nav = dashboardNav({
       ...base,
@@ -225,7 +226,7 @@ describe("adminNav", () => {
     });
   };
 
-  test("statusPage 开启时，Status page 排在 Metrics 之后（可选模块同一条规则）", () => {
+  test("with statusPage on, Status page comes after Metrics (same rule as other optional modules)", () => {
     expect(withStatusPage(true).map((i) => i.href)).toEqual([
       "/admin/metrics",
       "/admin/status",
@@ -236,7 +237,7 @@ describe("adminNav", () => {
     ]);
   });
 
-  test("statusPage 关闭时没有 Status page 入口（页面 404，留个点进去就 404 的入口只会让人以为坏了）", () => {
+  test("no Status page item when statusPage is off (the page 404s, and a link that leads to a 404 only looks broken)", () => {
     expect(withStatusPage(false).map((i) => i.href)).not.toContain(
       "/admin/status",
     );
@@ -244,7 +245,7 @@ describe("adminNav", () => {
 });
 
 describe("adminNav", () => {
-  test("userFlags 关闭时没有 Flags 入口（出厂默认）", () => {
+  test("no Flags item when userFlags is off (factory default)", () => {
     const config = defineConfig({
       ...(configWithProjects() as SiteConfigInput),
       statusPage: { enabled: false },
@@ -259,7 +260,7 @@ describe("adminNav", () => {
     ]);
   });
 
-  test("userFlags 开启时，Metrics 之后多一个 Flags", () => {
+  test("with userFlags on, Flags follows Metrics", () => {
     const base = configWithProjects();
     const nav = adminNav(
       defineConfig({
@@ -278,7 +279,7 @@ describe("adminNav", () => {
     ]);
   });
 
-  test("Flags 和 Acquisition 都开启时，两个入口按顺序插在 Metrics 之后", () => {
+  test("with Flags and Acquisition both on, both items are inserted in order after Metrics", () => {
     const base = configWithProjects();
     const nav = adminNav(
       defineConfig({
@@ -301,7 +302,7 @@ describe("adminNav", () => {
 });
 
 describe("AppSidebar", () => {
-  test("在 dashboard.nav 加一项后，侧边栏出现对应入口", () => {
+  test("adding a dashboard.nav item adds it to the sidebar", () => {
     renderSidebar();
     const business = screen.getByRole("list", {
       name: messages.Dashboard.businessNav,
@@ -311,7 +312,7 @@ describe("AppSidebar", () => {
     ).toHaveProperty("href", expect.stringMatching(/\/projects$/));
   });
 
-  test("没有业务项时不渲染业务分组", () => {
+  test("does not render the app group when there are no app items", () => {
     renderSidebar(
       defineConfig({
         ...(siteConfig as SiteConfigInput),
@@ -326,7 +327,7 @@ describe("AppSidebar", () => {
     ).toBeDefined();
   });
 
-  test("模块开启时侧边栏出现 Referrals 入口", () => {
+  test("sidebar shows Referrals when the module is on", () => {
     const base = configWithProjects();
     renderSidebar(
       defineConfig({
@@ -345,7 +346,7 @@ describe("AppSidebar", () => {
     ).toHaveProperty("href", expect.stringMatching(/\/referrals$/));
   });
 
-  test("示例模块开启时侧边栏出现 Invoices 入口", () => {
+  test("sidebar shows Invoices when the example module is on", () => {
     const base = configWithProjects();
     renderSidebar(
       defineConfig({
@@ -379,7 +380,7 @@ describe("AppSidebar", () => {
     );
   }
 
-  test("待处理的异常单数显示在 Exceptions 上；链接的可访问名不变", () => {
+  test("open exception count shows on Exceptions; the link's accessible name is unchanged", () => {
     renderAdminSidebar(3);
     const badge = screen.getByTestId("nav-badge-adminExceptions");
     expect(badge.textContent).toBe("3");
@@ -391,7 +392,7 @@ describe("AppSidebar", () => {
     ).toHaveProperty("href", expect.stringMatching(/\/admin\/exceptions$/));
   });
 
-  test("open 清零后计数消失", () => {
+  test("the count disappears once open reaches zero", () => {
     renderAdminSidebar(0);
     expect(screen.queryByTestId("nav-badge-adminExceptions")).toBeNull();
     expect(
@@ -401,7 +402,7 @@ describe("AppSidebar", () => {
     ).toBeDefined();
   });
 
-  test("当前页的菜单项高亮", () => {
+  test("highlights the current page's menu item", () => {
     pathname = "/projects/42";
     renderSidebar();
     const link = screen.getByRole("link", { name: "Projects" });
@@ -425,13 +426,14 @@ describe("initials", () => {
   });
 });
 
-describe("AppSidebar 的可访问名", () => {
+describe("AppSidebar accessible names", () => {
   /**
-   * 侧栏的三处可访问名（抽屉标题/描述、触发器、导轨）都来自 messages，以前是
-   * 写死在 `src/core/ui/sidebar.tsx` 里的。这里用一份伪翻译的文案渲染：名字跟着 messages
-   * 走才算接上了 i18n，写死的话这条会红。
+   * The sidebar's three accessible names (drawer title/description, trigger, rail) all come from
+   * messages; they used to be hard-coded in `src/core/ui/sidebar.tsx`. This renders with
+   * pseudo-translated copy: the names only count as wired to i18n if they follow messages, and
+   * this turns red if they are hard-coded.
    */
-  test("移动端抽屉的标题、描述与导轨的名字都来自 messages", () => {
+  test("mobile drawer title, description, and rail name all come from messages", () => {
     const copy = {
       ...messages,
       Dashboard: {
@@ -447,8 +449,9 @@ describe("AppSidebar 的可访问名", () => {
       <NextIntlClientProvider locale="de" messages={copy}>
         <TooltipProvider>
           <SidebarProvider>
-            {/* 站点里的触发器在 shell 的顶栏（`DashboardShell` 传 `t("toggleSidebar")`），
-                这里补一个打开抽屉；外壳那条链路由 e2e 锁。 */}
+            {/* On the site the trigger lives in the shell's top bar (`DashboardShell` passes
+                `t("toggleSidebar")`); one is added here to open the drawer. e2e locks the
+                shell's path. */}
             <SidebarTrigger label={copy.Dashboard.toggleSidebar} />
             <AppSidebar
               nav={dashboardNav(configWithProjects())}
@@ -460,15 +463,16 @@ describe("AppSidebar 的可访问名", () => {
       </NextIntlClientProvider>,
     );
 
-    // 抽屉关着时导轨不在 DOM 里，只有触发器能匹配。
+    // While the drawer is closed the rail is not in the DOM, so only the trigger matches.
     const trigger = screen.getByRole("button", { name: "[de] Toggle sidebar" });
     expect(trigger.dataset.slot).toBe("sidebar-trigger");
     fireEvent.click(trigger);
 
     expect(screen.getByRole("dialog", { name: "[de] Sidebar" })).toBeDefined();
     expect(screen.getByText("[de] Displays the mobile sidebar.")).toBeDefined();
-    // 抽屉打开后 popup 之外的内容对辅助技术不可见，此时按名字取到的就是抽屉里的导轨
-    //（`SidebarRail`，`AppSidebar` 自己传的 label）。
+    // Once the drawer opens, content outside the popup is hidden from assistive technology, so the
+    // name now resolves to the rail inside the drawer (`SidebarRail`, with the label `AppSidebar`
+    // passes itself).
     expect(
       screen.getByRole("button", { name: "[de] Toggle sidebar" }).dataset.slot,
     ).toBe("sidebar-rail");

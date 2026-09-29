@@ -1,15 +1,17 @@
 import { z } from "zod";
 
-// 会被 next.config.ts 间接加载，那里不解析 `@/` 别名，只能用相对路径。
+// Loaded indirectly by next.config.ts, which doesn't resolve the `@/` alias, so relative paths only.
 import { requiredWhen } from "../create-env";
 
 type RuntimeEnv = Record<string, string | undefined>;
 
 /**
- * 上传模块的变量（Cloudflare R2）。
- * - `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`：
- *   开启 `features.upload` 时在 Vercel 生产环境必填；其他环境可以不填，此时上传接口返回 503。
- * - `R2_PUBLIC_URL`：bucket 的公开域名（例如 https://files.example.com），只在 `upload.public` 为 true 时需要。
+ * Variables for the upload module (Cloudflare R2).
+ * - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`: required in Vercel
+ *   production when `features.upload` is on; optional elsewhere, in which case the upload API
+ *   returns 503.
+ * - `R2_PUBLIC_URL`: the bucket's public origin (e.g. https://files.example.com), only needed when
+ *   `upload.public` is true.
  */
 export function uploadServerEnv(
   runtimeEnv: RuntimeEnv,

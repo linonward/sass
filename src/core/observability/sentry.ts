@@ -2,14 +2,15 @@ import type * as SentryNext from "@sentry/nextjs";
 
 import type { ErrorReporter, LogFields } from "./logger";
 
-// 这里只用类型，不引入 SDK：关闭 Sentry 时不打包、不加载 @sentry/nextjs。
-// SDK 由 sentry.server.ts / sentry.edge.ts / sentry.client.ts 初始化后注册进来。
+// Types only, no SDK import here: when Sentry is off, @sentry/nextjs is neither bundled nor loaded.
+// sentry.server.ts / sentry.edge.ts / sentry.client.ts initialize the SDK and register it here.
 export type SentryApi = Pick<
   typeof SentryNext,
   "captureException" | "setUser" | "withScope"
 >;
 
-// 存在 globalThis：instrumentation 和各路由的 bundle 不一定共享模块实例（同 Sentry 自己的做法）。
+// Stored on globalThis: instrumentation and the per-route bundles don't necessarily share module
+// instances (Sentry does the same).
 const KEY = Symbol.for("app.observability.sentry");
 type Holder = {
   [KEY]?: { api?: SentryApi; pendingUserId?: string | null };
@@ -23,11 +24,12 @@ function current() {
   return holder().api;
 }
 
-/** 初始化完成后调用；传 undefined 取消注册（测试用）。 */
+/** Call once initialization finishes; pass undefined to unregister (for tests). */
 export function registerSentry(api: SentryApi | undefined) {
   const state = holder();
   state.api = api;
-  // 浏览器端 SDK 是动态加载的，页面可能先调用了 identifyUser，这里补上。
+  // The browser SDK is loaded dynamically, so the page may have called identifyUser first; apply
+  // it now.
   if (api && state.pendingUserId !== undefined) {
     api.setUser(state.pendingUserId ? { id: state.pendingUserId } : null);
   }
@@ -35,8 +37,10 @@ export function registerSentry(api: SentryApi | undefined) {
 }
 
 /**
- * Sentry 初始化参数的公共部分。SDK 默认会收集 cookie、请求头、query、请求体、AI 输入输出、
- * 数据库参数和堆栈里的局部变量，这里全部关掉；用户只由 identifyUser 设置 ID，不自动带 IP 和邮箱。
+ * The shared part of the Sentry init options. By default the SDK collects cookies, request
+ * headers, query strings, request bodies, AI inputs and outputs, database parameters, and local
+ * variables in stack frames; all of that is turned off here. The user is set only through
+ * identifyUser, as an ID, with no automatic IP address or email.
  */
 export function sentryBaseOptions({
   dsn,
@@ -66,15 +70,16 @@ export function sentryBaseOptions({
 }
 
 /**
- * logger.error 的上报：事件名做 tag，其余字段（已脱敏）做 extra；字段里有 userId 时设为用户。
- * 没有 Error 时用事件名造一个，方便在 Sentry 里按事件分组。
+ * Reporter for logger.error: the event name becomes a tag, the remaining (already redacted)
+ * fields become extras, and a userId field sets the user.
+ * When there's no Error, one is created from the event name so Sentry can group by event.
  */
 export const reportToSentry: ErrorReporter = (error, event, fields) => {
   const sentry = current();
   if (!sentry) return;
   sentry.withScope((scope) => {
     scope.setTag("event", event);
-    // error 已经作为异常本身上报，不再重复放进 extra。
+    // error is already reported as the exception itself; don't duplicate it in extras.
     const { userId, ...extra } = fields as LogFields;
     delete extra.error;
     if (typeof userId === "string") scope.setUser({ id: userId });
@@ -83,16 +88,17 @@ export const reportToSentry: ErrorReporter = (error, event, fields) => {
   });
 };
 
-/** 当前请求（服务端）或当前页面（浏览器）的登录用户；只发 ID。 */
+/** The signed-in user of the current request (server) or page (browser); only the ID is sent. */
 export function identifyUser(userId: string | null | undefined) {
   const api = current();
   if (api) api.setUser(userId ? { id: userId } : null);
-  // 只在浏览器里暂存：服务端的 SDK 在启动时就注册好了，暂存会串到别的请求。
+  // Only buffer in the browser: the server SDK is registered at startup, and a buffered user would
+  // leak into other requests.
   else if (typeof window !== "undefined")
     holder().pendingUserId = userId ?? null;
 }
 
-/** 客户端错误边界（error.tsx / global-error.tsx）用。 */
+/** Used by the client error boundaries (error.tsx / global-error.tsx). */
 export function captureError(error: unknown) {
   current()?.captureException(error);
 }

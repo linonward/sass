@@ -6,21 +6,23 @@ import { foregroundFor } from "@/core/theme/brand-css";
 import siteConfig from "../../../site.config";
 
 /**
- * 标签页图标。构建时由 `src/app/icon.tsx`（Next 的 `icon` 文件约定）生成一次，
- * 和 `og-card.tsx` 是同一套写法：这里出图，路由文件只负责按约定导出。
+ * The browser tab icon. Generated once at build time by `src/app/icon.tsx` (Next's `icon` file
+ * convention), the same pattern as `og-card.tsx`: the image is produced here, and the route file
+ * only exports it per the convention.
  *
- * 尺寸 96×96：标签页在 2x / 3x 屏上要 32 / 48 个物理像素，96 够用且不糊；
- * Google 搜索结果的 favicon 也要求至少 48px 且是 48 的倍数。
+ * Size 96×96: a tab needs 32 / 48 physical pixels on 2x / 3x screens, so 96 is enough and stays
+ * crisp; Google search results also require a favicon of at least 48px and a multiple of 48.
  */
 export const faviconSize = { width: 96, height: 96 };
 
 /**
- * 标记的 SVG 源码，颜色由品牌色推导：底是配置里的 `brand.primaryColor`，
- * 字形走 `foregroundFor`（也就是 `--primary-foreground` 的同一个值）。
- * 几何取自 `brandMarkGeometry` —— 标签页图标和顶栏的标记必须长得一样。
+ * SVG source of the mark, with colors derived from the brand color: the background is the
+ * configured `brand.primaryColor`, and the glyph uses `foregroundFor` (the same value as
+ * `--primary-foreground`). The geometry comes from `brandMarkGeometry` — the tab icon and the
+ * header mark must look identical.
  *
- * 单独抽出来是为了可测：ImageResponse 在单测环境（jsdom）里渲不出来，
- * 能断言的部分在这里。
+ * Extracted so it can be tested: ImageResponse can't render in the unit-test environment (jsdom),
+ * so the assertable part lives here.
  */
 export function faviconSvg(): string {
   const { primaryColor } = siteConfig.brand;
@@ -36,21 +38,23 @@ export function faviconSvg(): string {
 }
 
 /**
- * 标签页图标（PNG）。
+ * The browser tab icon (PNG).
  *
- * 为什么是 PNG 而不是 SVG：Safari 到 26 才支持 SVG favicon，之前的版本遇到
- * `type="image/svg+xml"` 会干脆不显示图标 —— 那正是这个图标要修的现象。PNG 所有浏览器都认。
+ * Why PNG instead of SVG: Safari only supports SVG favicons from version 26; earlier versions show
+ * no icon at all for `type="image/svg+xml"` — exactly the symptom this icon fixes. Every browser
+ * supports PNG.
  *
- * 为什么用代码画而不是放一张静态图：颜色来自 `site.config.ts`，静态图里是写死的，
- * 买家换了品牌色还得再手改一个文件，和「改一个配置换整站」相矛盾。
+ * Why draw it in code instead of shipping a static image: the colors come from `site.config.ts`,
+ * whereas a static image hard-codes them, so a buyer who changes the brand color would have to edit
+ * another file by hand — contradicting "change one config value to restyle the whole site".
  */
 export function faviconImage(): ImageResponse {
   const dataUri = `data:image/svg+xml;base64,${Buffer.from(faviconSvg()).toString("base64")}`;
 
   return new ImageResponse(
-    // ImageResponse 的根节点必须是带 display 的块级元素，图挂在它下面。
+    // ImageResponse's root must be a block element with display set; the image hangs beneath it.
     <div style={{ display: "flex", width: "100%", height: "100%" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- 这棵 JSX 由 satori 渲染成 PNG，不是页面里的 <img>，套不上 next/image */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- this JSX tree is rendered to PNG by satori, not an <img> on a page, so next/image doesn't apply */}
       <img
         src={dataUri}
         width={faviconSize.width}

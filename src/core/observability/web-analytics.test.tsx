@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 describe("webAnalyticsFlags", () => {
-  test("features.observability 是总开关", () => {
+  test("features.observability is the master switch", () => {
     expect(
       webAnalyticsFlags(
         config(false, { analytics: true, speedInsights: true }),
@@ -53,7 +53,7 @@ describe("webAnalyticsFlags", () => {
     ).toEqual({ analytics: true, speedInsights: false });
   });
 
-  test("默认读取 site.config 的开关", () => {
+  test("reads the flags from site.config by default", () => {
     expect(webAnalyticsFlags()).toEqual({
       analytics: true,
       speedInsights: true,
@@ -62,7 +62,7 @@ describe("webAnalyticsFlags", () => {
 });
 
 describe("WebAnalyticsScripts", () => {
-  test("都关闭时不渲染任何脚本", () => {
+  test("renders no scripts when both are off", () => {
     const { container } = render(
       <WebAnalyticsScripts
         flags={{ analytics: false, speedInsights: false }}
@@ -71,7 +71,7 @@ describe("WebAnalyticsScripts", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  test("按开关分别渲染 Analytics 和 Speed Insights", () => {
+  test("renders Analytics and Speed Insights according to their own flags", () => {
     const { queryByTestId, rerender } = render(
       <WebAnalyticsScripts flags={{ analytics: true, speedInsights: false }} />,
     );
@@ -86,13 +86,13 @@ describe("WebAnalyticsScripts", () => {
   });
 });
 
-describe("track（客户端）", () => {
-  test("<Analytics /> 没挂载（window.va 不存在）时为空操作", () => {
+describe("track (client)", () => {
+  test("is a no-op when <Analytics /> isn't mounted (window.va is missing)", () => {
     track(trackEvents.checkoutStarted, { plan: "pro" });
     expect(vercelTrack).not.toHaveBeenCalled();
   });
 
-  test("挂载后转交给 @vercel/analytics", () => {
+  test("forwards to @vercel/analytics once mounted", () => {
     window.va = vi.fn();
     track(trackEvents.checkoutStarted, { plan: "pro" });
     expect(vercelTrack).toHaveBeenCalledWith("checkout_started", {
@@ -100,7 +100,7 @@ describe("track（客户端）", () => {
     });
   });
 
-  test("统计出错不抛给调用方", () => {
+  test("doesn't throw analytics errors to the caller", () => {
     window.va = vi.fn();
     vercelTrack.mockImplementation(() => {
       throw new Error("boom");
@@ -110,13 +110,13 @@ describe("track（客户端）", () => {
 });
 
 describe("createServerTracker", () => {
-  test("关闭时不发送", async () => {
+  test("sends nothing when off", async () => {
     const send = vi.fn();
     await createServerTracker({ enabled: false, send })(trackEvents.signUp);
     expect(send).not.toHaveBeenCalled();
   });
 
-  test("开启时发送事件名、属性和访客 headers", async () => {
+  test("when on, sends the event name, properties, and visitor headers", async () => {
     const send = vi.fn().mockResolvedValue(undefined);
     const headers = new Headers({ "user-agent": "test" });
     await createServerTracker({ enabled: true, send })(
@@ -127,7 +127,7 @@ describe("createServerTracker", () => {
     expect(send).toHaveBeenCalledWith("purchase", { plan: "pro" }, { headers });
   });
 
-  test("发送失败只记 warn，不抛错", async () => {
+  test("a failed send is only logged as warn, not thrown", async () => {
     const error = new Error("network");
     const send = vi.fn().mockRejectedValue(error);
     const logWarn = vi.fn();

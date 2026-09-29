@@ -14,7 +14,8 @@ import {
 import { ChangelogList } from "./entry-list";
 import { buildChangelogFeed } from "./rss";
 
-// 以下函数供 src/app/[locale]/(marketing)/changelog/ 下的页面使用，页面文件只负责取 params。
+// The functions below are used by the pages under src/app/[locale]/(marketing)/changelog/; the
+// page files only read params.
 
 async function changelogTranslations(locale: string) {
   return getTranslations({ locale, namespace: "Changelog" });
@@ -26,7 +27,7 @@ function feeds(locale: string, title: string) {
   };
 }
 
-// —— 列表页 /changelog ——
+// —— List page /changelog ——
 
 export async function changelogMetadata(locale: string) {
   const t = await changelogTranslations(locale);
@@ -44,7 +45,7 @@ export function ChangelogPage() {
   return <ChangelogList entries={getEntries()} />;
 }
 
-// —— RSS /changelog/rss.xml、/<locale>/changelog/rss.xml ——
+// —— RSS /changelog/rss.xml, /<locale>/changelog/rss.xml ——
 
 export async function rssResponse(locale: string) {
   if (!changelogEnabled) return new Response("Not Found", { status: 404 });

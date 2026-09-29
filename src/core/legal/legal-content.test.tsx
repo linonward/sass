@@ -9,7 +9,8 @@ import siteConfig from "../../../site.config";
 import { paymentProcessors } from "../billing/processor";
 import type { LegalDocument } from "./document";
 
-// 法律页按生效的支付商写名称和角色（MoR / 支付处理方），不写死某一家。
+// Legal pages name the active payment provider and its role (MoR / payment processor) instead of
+// hard-coding one.
 function text(
   document: LegalDocument,
   provider: keyof typeof paymentProcessors,
@@ -27,9 +28,9 @@ function text(
   return container.textContent ?? "";
 }
 
-describe("法律页里的支付商", () => {
+describe("payment provider in legal pages", () => {
   test.each([terms, privacy, refund])(
-    "MoR（Waffo Pancake）：写成经销商兼 MoR，不出现 Creem",
+    "MoR (Waffo Pancake): described as reseller and MoR, Creem never mentioned",
     (doc) => {
       const content = text(doc, "waffo");
       expect(content).toContain("Waffo Pancake");
@@ -39,7 +40,7 @@ describe("法律页里的支付商", () => {
   );
 
   test.each([terms, privacy, refund])(
-    "非 MoR（Stripe）：写成支付处理方，不自称 MoR",
+    "non-MoR (Stripe): described as payment processor, never claims to be the MoR",
     (doc) => {
       const content = text(doc, "stripe");
       expect(content).toContain("Stripe");
@@ -50,7 +51,7 @@ describe("法律页里的支付商", () => {
     },
   );
 
-  test("退款政策：数字产品售出不退款，重复 / 未授权扣款除外", () => {
+  test("refund policy: no refunds on digital products once sold, except duplicate / unauthorized charges", () => {
     const content = text(refund, "waffo");
     expect(content).toContain("final and non-refundable");
     expect(content).toContain("Duplicate or unauthorized charges");

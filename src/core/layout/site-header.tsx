@@ -20,8 +20,9 @@ export function SiteHeader() {
   }));
 
   return (
-    // 实底，不做 backdrop-blur：玻璃感会击碎贴纸那套硬边的分层逻辑。
-    // 底边那条 2px 硬阴影和正文里卡片的唇边是同一套语言。
+    // Solid background, no backdrop-blur: a glass effect would break the hard-edge layering of
+    // the sticker system. The 2px hard shadow along the bottom speaks the same language as the
+    // lips on cards in the page body.
     <header className="bg-background sticky top-0 z-40 border-b shadow-[0_2px_0_0_var(--border)]">
       <div className="container-marketing flex h-(--header-height) items-center gap-5">
         <SiteLogo />
@@ -44,7 +45,7 @@ export function SiteHeader() {
             <LocaleSwitcher locales={routing.locales} />
           )}
           <ThemeToggle />
-          {/* 窄屏保留主题、语言与菜单；演示入口在首屏正文。 */}
+          {/* On narrow screens keep theme, language and menu; the demo entry is in the hero copy. */}
           <Link
             href="/demo"
             className={cn(

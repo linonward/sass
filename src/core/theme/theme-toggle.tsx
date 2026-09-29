@@ -24,7 +24,7 @@ export function ThemeToggle() {
       <DropdownMenuTrigger
         render={<Button variant="ghost" size="icon" aria-label={t("toggle")} />}
       >
-        {/* 图标只靠 CSS 切换，避免服务端与客户端渲染不一致。 */}
+        {/* Icons switch via CSS only, to avoid a server/client render mismatch. */}
         <SunIcon className="dark:hidden" />
         <MoonIcon className="hidden dark:block" />
       </DropdownMenuTrigger>

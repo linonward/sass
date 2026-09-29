@@ -6,11 +6,11 @@ export type RssFeedOptions = {
   locale: string;
   title: string;
   description: string;
-  /** 已按日期倒序、不含草稿的文章。 */
+  /** Posts sorted newest first, excluding drafts. */
   posts: Post[];
 };
 
-/** 博客的 RSS 2.0：条目来自文章，链接和分类（标签）都拼在 `/blog` 上。 */
+/** The blog's RSS 2.0: items come from posts; links and categories (tags) are built on `/blog`. */
 export function buildRssFeed({
   locale,
   title,

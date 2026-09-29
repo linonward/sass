@@ -1,6 +1,6 @@
 import type { DashboardNavItem, SiteConfig } from "@/core/config/schema";
 
-/** 套件自带的菜单项。业务项写在 site.config.ts 的 dashboard.nav，排在这些之后。 */
+/** The kit's built-in menu items. App items go in dashboard.nav in site.config.ts and come after these. */
 export const suiteNav: readonly DashboardNavItem[] = [
   { key: "home", href: "/dashboard", icon: "home" },
   { key: "billing", href: "/billing", icon: "creditCard" },
@@ -8,19 +8,20 @@ export const suiteNav: readonly DashboardNavItem[] = [
 ];
 
 /**
- * 侧边栏里的一项：配置里的菜单项，外加运行时才知道的计数（比如待处理的异常单）。
- * `badge` 大于 0 时显示在右侧；0 或不传就不显示 —— 清零后计数消失。
+ * A sidebar item: the configured menu item plus a count only known at runtime (such as open
+ * exceptions). `badge` shows on the right when greater than 0; 0 or omitted hides it — the count
+ * disappears once it reaches zero.
  */
 export type NavEntry = DashboardNavItem & { badge?: number };
 
 export type DashboardNav = {
   suite: readonly NavEntry[];
   business: readonly NavEntry[];
-  /** 后台菜单：管理员在 dashboard 里看到一个入口，在 /admin 里看到完整菜单。 */
+  /** Admin menu: admins see a single entry in the dashboard and the full menu under /admin. */
   admin?: readonly NavEntry[];
 };
 
-/** 管理员在 dashboard 侧边栏里看到的后台入口。 */
+/** The admin entry admins see in the dashboard sidebar. */
 export const adminEntryNav: DashboardNavItem = {
   key: "admin",
   href: "/admin",
@@ -31,12 +32,13 @@ const adminNavBase: readonly DashboardNavItem[] = [
   { key: "adminMetrics", href: "/admin/metrics", icon: "chart" },
   { key: "adminUsers", href: "/admin/users", icon: "users" },
   { key: "adminOrders", href: "/admin/orders", icon: "creditCard" },
-  // 计费异常台：钱或结果需要人看的地方，紧挨着订单。侧边栏上带待处理计数（见 (admin)/layout.tsx）。
+  // Billing exceptions page: where money or outcomes need a human to look, right next to Orders.
+  // Shows the open count in the sidebar (see (admin)/layout.tsx).
   { key: "adminExceptions", href: "/admin/exceptions", icon: "receipt" },
   { key: "adminSubscriptions", href: "/admin/subscriptions", icon: "layers" },
 ];
 
-// 只在归因模块开启时出现的后台项，排在 Metrics 之后。
+// Admin items that appear only when the attribution module is on, after Metrics.
 const acquisitionNav: DashboardNavItem = {
   key: "adminAcquisition",
   href: "/admin/acquisition",
@@ -55,21 +57,23 @@ const leadsNav: DashboardNavItem = {
   icon: "fileText",
 };
 
-// 只在状态页开启时出现的后台项，和归因 / 留资报表一样排在 Metrics 之后。
+// Admin item that appears only when the status page is on; after Metrics like the attribution /
+// lead reports.
 const adminStatusNav: DashboardNavItem = {
   key: "adminStatus",
   href: "/admin/status",
   icon: "layers",
 };
 
-// 只在 apiKeys 模块开启时出现的后台项，排在 Users 之后：和用户是同一类信息。
+// Admin item that appears only when the apiKeys module is on, after Users: it's the same kind of
+// information.
 const adminApiKeysNav: DashboardNavItem = {
   key: "adminApiKeys",
   href: "/admin/api-keys",
   icon: "key",
 };
 
-// 只在用户面 flag 模块开启时出现的后台项，排在 Metrics 之后。
+// Admin item that appears only when the user-facing flags module is on, after Metrics.
 const flagsNav: DashboardNavItem = {
   key: "adminFlags",
   href: "/admin/flags",
@@ -77,9 +81,11 @@ const flagsNav: DashboardNavItem = {
 };
 
 /**
- * /admin 里的菜单。获客报表、线索管理、邀请管理、状态页、feature flags 和 API Key 报表只在对应模块开启时出现 ——
- * 关闭时那些页面 404，菜单里留一个点进去就 404 的入口只会让人以为坏了。
- * 顺序：Metrics →（flags / 归因 / 留资报表）→（邀请管理 / 状态页）→ Users →（API Key 报表）→ Orders → Exceptions → Subscriptions。
+ * The /admin menu. Acquisition reports, lead management, referral management, the status page,
+ * feature flags, and the API key report appear only when their module is on — when off those pages
+ * 404, and a menu link that leads to a 404 only looks broken.
+ * Order: Metrics → (flags / attribution / lead reports) → (referral management / status page) →
+ * Users → (API key report) → Orders → Exceptions → Subscriptions.
  */
 export function adminNav(
   config: Pick<
@@ -101,13 +107,13 @@ export function adminNav(
   ];
 }
 
-// 只在对应模块开启时显示的套件项，排在 Dashboard 之后。
+// Kit items shown only when their module is on, after Dashboard.
 const playgroundNav: DashboardNavItem = {
   key: "playground",
   href: "/playground",
   icon: "sparkles",
 };
-// 示例业务模块（发票 CRUD）的入口。开关在 site.config.ts 的 features.examples。
+// Entry for the example app module (invoice CRUD). Toggled by features.examples in site.config.ts.
 const invoicesNav: DashboardNavItem = {
   key: "invoices",
   href: "/invoices",
@@ -124,7 +130,7 @@ const apiKeysNav: DashboardNavItem = {
   icon: "key",
 };
 
-/** 侧边栏的两组菜单：套件项和业务项。开启的模块会在套件项里多出对应入口。 */
+/** The sidebar's two menu groups: kit items and app items. Enabled modules add their entries to the kit items. */
 export function dashboardNav(
   config: Pick<
     SiteConfig,
@@ -143,7 +149,7 @@ export function dashboardNav(
   return { suite, business: config.dashboard.nav };
 }
 
-/** 当前路径是否属于该菜单项：本身或其子页面。 */
+/** Whether the current path belongs to the menu item: the item itself or one of its subpages. */
 export function isActiveNav(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }

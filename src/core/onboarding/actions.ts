@@ -13,10 +13,12 @@ import { localizedPath } from "@/core/seo/urls";
 export type CompleteState = { status: "idle" } | { status: "success" };
 
 /**
- * 标记首次运行引导已完成：之后登录不再自动落到 /onboarding，页面本身还能从菜单进。
+ * Marks first-run onboarding as done: later sign-ins no longer land on /onboarding automatically,
+ * though the page is still reachable from the menu.
  *
- * 只写这一个布尔值 —— 每一步是否做过由页面现算（见 steps.ts），存下来只会两处打架。
- * 幂等：重复点、两个标签页同时点都只是再写一次 true。
+ * Only this one boolean is stored — whether each step is done is computed by the page (see
+ * steps.ts); storing that too would just give two sources that disagree.
+ * Idempotent: repeated clicks, or two tabs clicking at once, just write true again.
  */
 export async function completeOnboarding(
   locale: string,

@@ -3,14 +3,16 @@ import { cn } from "@/core/lib/utils";
 import { bandFill, type Band } from "./band";
 
 /**
- * 区块之间的波浪分隔。
+ * Wave divider between sections.
  *
- * 它是独立元素而不是区块自己的装饰：背景填下一段的色，SVG 填上一段的色。
- * 这样无论 `landing.sections` 怎么配顺序，波浪永远和相邻两段对得上。
+ * It's a standalone element rather than a section's own decoration: the background takes the next
+ * section's color and the SVG takes the previous one's. That way the wave always matches its two
+ * neighbors however `landing.sections` is ordered.
  *
- * SVG 画得比视口宽（200%）并居中，让波峰波谷的尺寸不随屏幕宽度变形；
- * 父级 overflow-hidden 负责裁掉溢出部分。用 preserveAspectRatio="none"
- * 拉伸的话，窄屏上两道波会被压得很柴。
+ * The SVG is drawn wider than the viewport (200%) and centered so the size of the crests and troughs
+ * doesn't distort with screen width; the parent's overflow-hidden clips the overflow. Stretching it
+ * with preserveAspectRatio="none" would squash the two waves into something scrawny on narrow
+ * screens.
  */
 export function Wave({ from, className }: { from: Band; className?: string }) {
   return (
@@ -23,8 +25,9 @@ export function Wave({ from, className }: { from: Band; className?: string }) {
         preserveAspectRatio="none"
         className={cn("absolute -left-1/2 h-full w-[200%]", bandFill[from])}
       >
-        {/* 控制点顶到 0 和 64 两端，波峰波谷各约 24px，色带交接才看得出来。
-            幅度太浅的话波浪就退化成一条直线，整页的横向节奏就散了。 */}
+        {/* Control points reach both ends, 0 and 64, giving crests and troughs of about 24px each so
+            the band transition is visible. Too shallow and the wave degrades into a straight line,
+            and the page's horizontal rhythm falls apart. */}
         <path d="M0,0 H1920 V32 C1700,64 1500,64 1280,32 C1060,0 860,0 640,32 C420,64 220,64 0,32 Z" />
       </svg>
     </div>

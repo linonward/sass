@@ -35,7 +35,7 @@ import {
 
 export type MenuUser = { name: string; email: string; image?: string | null };
 
-/** 头像缺省时显示的首字母：优先取名称，没有名称时取邮箱。 */
+/** Initials shown when there is no avatar: from the name, falling back to the email. */
 export function initials({ name, email }: Pick<MenuUser, "name" | "email">) {
   const source = name.trim() || email;
   const words = source.split(/[\s@._-]+/).filter(Boolean);
@@ -63,7 +63,7 @@ export function UserMenu({
 }: {
   user: MenuUser;
   locales: readonly string[];
-  /** 退出登录的 Server Action（已绑定语言）。 */
+  /** Sign-out Server Action (already bound to the locale). */
   signOut: () => Promise<void>;
 }) {
   const t = useTranslations("Dashboard.userMenu");
@@ -75,7 +75,7 @@ export function UserMenu({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        {/* 菜单弹层渲染在 portal 里，退出按钮通过 form 属性提交这个表单。 */}
+        {/* The menu popup renders in a portal, so the sign-out button submits this form via the form attribute. */}
         <form id={formId} action={signOut} hidden />
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -147,9 +147,10 @@ export function UserMenu({
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              // render 出来的是原生 <button>：不声明 nativeButton 的话 Base UI 会按
-              // 非原生元素给它挂 role 之类的属性，dev 控制台每次开菜单都报一条错。
-              // role="menuitem" 来自另一处，不受这个开关影响。
+              // What gets rendered is a native <button>: without nativeButton, Base UI treats it
+              // as a non-native element and adds attributes like role, logging an error to the
+              // dev console every time the menu opens. role="menuitem" comes from elsewhere and is
+              // unaffected by this flag.
               nativeButton
               render={<button type="submit" form={formId} className="w-full" />}
             >

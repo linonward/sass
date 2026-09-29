@@ -4,7 +4,10 @@ import { buildMetadata } from "@/core/seo/metadata";
 import siteConfig from "../../../site.config";
 import type { LegalDocument } from "./document";
 
-/** 生成法律页的 `generateMetadata`，canonical / hreflang 等由 buildMetadata 统一处理。 */
+/**
+ * Builds a legal page's `generateMetadata`. Canonical, hreflang, etc. are handled centrally by
+ * buildMetadata.
+ */
 export function legalMetadata(document: LegalDocument, path: string) {
   return async ({ params }: { params: Promise<{ locale: string }> }) =>
     buildMetadata({
@@ -23,8 +26,8 @@ function formatDate(isoDate: string, locale: string) {
 }
 
 /**
- * 法律页的排版容器。正文只有英文，因此 lang="en"；
- * 在其他语言路径下访问时，外层 Header / Footer 仍按当前语言显示。
+ * Layout container for legal pages. The body text is English only, hence lang="en"; when visited
+ * under another locale's path, the surrounding Header / Footer still render in that locale.
  */
 export function LegalPage({
   document,

@@ -4,7 +4,7 @@ import * as React from "react";
 import { Field as FieldPrimitive } from "@base-ui/react/field";
 import { cn } from "cn";
 
-/** 多行输入。样式串和 `input.tsx` 保持一致，改一个就两个一起改。 */
+/** Multi-line input. Its class string mirrors `input.tsx`; change one, change both. */
 // Rendered through Base UI's Field.Control (like Input) so a surrounding
 // FormField wires its label, description and error without ids.
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {

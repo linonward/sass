@@ -10,8 +10,9 @@ import { formatPrice } from "./price";
 import { Section } from "./section";
 
 /**
- * 「交付」区块：左边是购买卡片（`landing.purchasePlan` 指向的套餐），右边是交付内容清单。
- * 没配购买套餐、或套餐被隐藏时，卡片显示「即将公布」、没有购买按钮。
+ * The "delivery" section: the purchase card on the left (the plan `landing.purchasePlan` points to)
+ * and the list of deliverables on the right. When no purchase plan is configured or the plan is
+ * hidden, the card shows "coming soon" with no buy button.
  */
 export function Delivery({
   waveFrom,

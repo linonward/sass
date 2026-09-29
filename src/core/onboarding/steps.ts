@@ -1,50 +1,58 @@
 import type { PlaceholderIssue } from "@/core/config/sentinels";
 
-/** 出厂品牌色，和 site.config.ts 里 brand.primaryColor 的初值一致。改了就算做过这一步。 */
+/**
+ * Factory brand color, identical to the initial brand.primaryColor in site.config.ts. Changing it
+ * counts as having done this step.
+ */
 export const FACTORY_BRAND_COLOR = "#0f766e";
 
-/** 模板里的占位产品 ID，和 src/core/billing/checkout.ts 的结账守卫是同一个约定。 */
+/**
+ * The template's placeholder product IDs — the same convention as the checkout guard in
+ * src/core/billing/checkout.ts.
+ */
 const PLACEHOLDER_PRODUCT = /^prod_placeholder/;
 
 export type OnboardingStepId =
   "brandColor" | "siteName" | "pricing" | "blogPost" | "deploy";
 
 /**
- * - `done`：从配置或环境就能确认已经做过；
- * - `todo`：确认还没做（`evidence` 里是还没改的出厂值原文）；
- * - `manual`：没有可靠的信号，界面上给一个手动勾选。
+ * - `done`: confirmed as done from config or the environment;
+ * - `todo`: confirmed as not done yet (`evidence` holds the unchanged factory values verbatim);
+ * - `manual`: no reliable signal, so the UI offers a manual checkbox.
  *
- * 手动勾选只活在当前页面里：持久化的只有「整份清单完成」（用户记录上的一个布尔值），
- * 多花一列去记每一步不值当。
+ * Manual checks live only in the current page: the only persisted state is "whole checklist done"
+ * (one boolean on the user record); spending a column on each step isn't worth it.
  */
 export type OnboardingStepStatus = "done" | "todo" | "manual";
 
 export type OnboardingStep = {
   id: OnboardingStepId;
   status: OnboardingStepStatus;
-  /** `todo` 时的线索：还没改的出厂值原文，例如 `name = "Acme"`。 */
+  /** Clue for `todo`: the unchanged factory value verbatim, e.g. `name = "Acme"`. */
   evidence: readonly string[];
 };
 
 export type OnboardingInput = {
-  /** siteConfig.brand.primaryColor。 */
+  /** siteConfig.brand.primaryColor. */
   brandColor: string;
-  /** siteConfig 里还没改的出厂占位值（src/core/config/sentinels）。 */
+  /** Factory placeholders still unchanged in siteConfig (src/core/config/sentinels). */
   placeholders: readonly PlaceholderIssue[];
-  /** siteConfig.billing.plans 里配了的服务商产品 ID。 */
+  /** Provider product IDs configured in siteConfig.billing.plans. */
   planProductIds: readonly string[];
-  /** features.blog：关掉时「写第一篇文章」这一步不出现。 */
+  /** features.blog: when off, the "write your first post" step doesn't appear. */
   blogEnabled: boolean;
-  /** 是否跑在 Vercel 上：部署这一步能自动判定。 */
+  /** Whether we're running on Vercel: lets the deploy step be detected automatically. */
   onVercel: boolean;
 };
 
 /**
- * 首次运行清单。每一步的判定都只依赖入参，纯函数，方便单测。
+ * First-run checklist. Every step's status depends only on the inputs — a pure function, easy to
+ * unit test.
  *
- * 判定不了的两步给 `manual`，而不是猜一个：
- * - 写文章：仓库里本来就带着演示文章（content/blog/），分不出哪篇是买家写的；
- * - 部署：本地开发时看不见 Vercel，只能靠买家自己勾。
+ * The two steps that can't be detected get `manual` instead of a guess:
+ * - writing a post: the repo already ships demo posts (content/blog/), so there's no telling which
+ *   one the buyer wrote;
+ * - deploying: local development can't see Vercel, so only the buyer can check it off.
  */
 export function onboardingSteps(input: OnboardingInput): OnboardingStep[] {
   const brandColorDone =

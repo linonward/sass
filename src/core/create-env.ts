@@ -4,7 +4,8 @@ import { z } from "zod";
 import { formatIssues } from "./config/format-issues";
 
 type ServerShape = Record<string, z.ZodType>;
-// 浏览器也要用的变量，必须以 NEXT_PUBLIC_ 开头（Next.js 构建时内联进客户端代码）。
+// Variables the browser also needs must start with NEXT_PUBLIC_ (Next.js inlines them into client
+// code at build time).
 type ClientShape = Record<`NEXT_PUBLIC_${string}`, z.ZodType>;
 type RuntimeEnv = Record<string, string | undefined>;
 
@@ -12,7 +13,8 @@ const nodeEnvSchema = z
   .enum(["development", "test", "production"])
   .default("development");
 
-// createEnv 的推断在泛型包装里会退化成 unknown，这里显式写出结果类型。
+// createEnv's inference degrades to unknown inside a generic wrapper, so the result type is spelled
+// out explicitly here.
 type AppEnv<
   TServer extends ServerShape,
   TClient extends ClientShape,
@@ -25,29 +27,31 @@ type AppEnv<
 >;
 
 /**
- * 只有 `enabled` 为 true 时才要求该变量；否则变量可以不填。
- * 用法：`OPENAI_API_KEY: requiredWhen(siteConfig.features.ai, z.string().min(1))`。
+ * Requires the variable only when `enabled` is true; otherwise it may be left unset.
+ * Usage: `OPENAI_API_KEY: requiredWhen(siteConfig.features.ai, z.string().min(1))`.
  */
 export function requiredWhen<T extends z.ZodType>(enabled: boolean, schema: T) {
   return enabled ? schema : schema.optional();
 }
 
 /**
- * 是否跳过校验。`SKIP_ENV_VALIDATION` 只在非生产运行时生效：
- * `next build`、`next start` 和 Docker 里 `NODE_ENV` 都是 production，此时强制校验 ——
- * 否则部署上一个环境变量就能跳过必填项检查，连带跳过各模块的闸门（比如「生产不允许 fake 支付」）。
+ * Whether to skip validation. `SKIP_ENV_VALIDATION` only takes effect outside a production runtime:
+ * `NODE_ENV` is production in `next build`, `next start`, and Docker, and validation is enforced
+ * there — otherwise a single env var on a deployment could skip the required-variable checks, and
+ * with them each module's gates (such as "no fake payments in production").
  *
- * 注意：Next 的 CLI 会把没设过的 `NODE_ENV` 补成该命令的默认值（`next typegen` 是 production，
- * 见 node_modules/next/dist/bin/next:84 的 `process.env.NODE_ENV = process.env.NODE_ENV || defaultEnv`），
- * 所以只给 `SKIP_ENV_VALIDATION=1` 而不给 `NODE_ENV` 的本地命令会被当成生产运行时。
- * `pnpm typecheck` 因此在脚本里显式带上 `NODE_ENV=development` —— 它是类型工具，不是生产运行时。
+ * Note: the Next CLI fills an unset `NODE_ENV` with the command's default (`next typegen` uses
+ * production; see `process.env.NODE_ENV = process.env.NODE_ENV || defaultEnv` in
+ * node_modules/next/dist/bin/next:84), so a local command that sets `SKIP_ENV_VALIDATION=1` without
+ * `NODE_ENV` is treated as a production runtime. That is why the `pnpm typecheck` script explicitly
+ * sets `NODE_ENV=development` — it is a type tool, not a production runtime.
  */
 function skipValidation(runtimeEnv: RuntimeEnv) {
   if (runtimeEnv.NODE_ENV === "production") return false;
   return Boolean(runtimeEnv.SKIP_ENV_VALIDATION);
 }
 
-/** 按给定 schema 校验环境变量。任一字段非法时抛错，并逐条列出变量名。 */
+/** Validates env vars against the given schema. Throws if any field is invalid, listing each variable name. */
 export function createAppEnv<
   TServer extends ServerShape,
   TClient extends ClientShape = Record<never, never>,

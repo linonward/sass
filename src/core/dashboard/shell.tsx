@@ -22,7 +22,7 @@ import type { DashboardNav } from "./nav";
 import { SidebarBrand } from "./sidebar-brand";
 import { UserMenu } from "./user-menu";
 
-/** 登录后的外框：侧边栏 + 顶栏。(app) 和 (admin) 两个 layout 共用，菜单不同。 */
+/** Signed-in frame: sidebar + top bar. Shared by the (app) and (admin) layouts with different menus. */
 export async function DashboardShell({
   locale,
   session,
@@ -33,15 +33,16 @@ export async function DashboardShell({
   locale: string;
   session: Session;
   nav: DashboardNav;
-  /** 内容区宽度。后台的宽表格用 `wide`，产品页的表单保持窄栏更好读。 */
+  /** Content width. Admin's wide tables use `wide`; product-page forms read better in a narrow column. */
   width?: "default" | "wide";
   children: React.ReactNode;
 }) {
   const t = await getTranslations({ locale, namespace: "Dashboard" });
-  // 侧边栏的展开状态由 SidebarProvider 写进 cookie，服务端据此渲染，刷新时不闪。
+  // SidebarProvider writes the sidebar's open state to a cookie; the server renders from it, so there
+  // is no flash on reload.
   const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
   const { name, email, image } = session.user;
-  // 这次请求的 feature flag 快照，交给下面的客户端组件（见 src/core/flags/）。
+  // This request's feature flag snapshot, handed to the client components below (see src/core/flags/).
   const flags = resolveFlags({
     userId: session.user.id,
     isAdmin: isAdmin(session.user),
@@ -69,14 +70,14 @@ export async function DashboardShell({
               <ThemeToggle />
             </div>
           </header>
-          {/* SidebarInset 本身就是 <main>，这里不能再嵌套一个 main。 */}
+          {/* SidebarInset is already a <main>, so another main can't be nested here. */}
           <div
             className={cn(
               "mx-auto w-full flex-1 px-4 py-6 md:px-8 md:py-8",
               width === "wide" ? "max-w-6xl" : "max-w-5xl",
             )}
           >
-            {/* 登录后的页面才有 flag 快照：公开页面拿不到身份，也就分不了桶。 */}
+            {/* Only signed-in pages have a flag snapshot: public pages have no identity, so they can't be bucketed. */}
             <FlagsProvider values={flags}>{children}</FlagsProvider>
           </div>
         </SidebarInset>
