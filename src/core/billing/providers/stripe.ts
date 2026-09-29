@@ -12,35 +12,44 @@ import {
 
 export const STRIPE_PROVIDER_ID = "stripe";
 
-/** 客户门户的返回地址：门户是从站内账单页打开的，回来时回同一页。 */
+/**
+ * Return path for the customer portal: the portal is opened from the in-app billing page, so it
+ * returns to that same page.
+ */
 const PORTAL_RETURN_PATH = "/billing";
 
 /*
- * Stripe webhook → BillingEvent 映射（事件类型清单见 https://docs.stripe.com/api/events/types）：
+ * Stripe webhook → BillingEvent mapping (event type list:
+ * https://docs.stripe.com/api/events/types):
  *
- * | Stripe event                              | BillingEvent           | 说明                                                     |
- * | ----------------------------------------- | ---------------------- | -------------------------------------------------------- |
- * | checkout.session.completed（mode=payment）| checkout.completed     | orderId 用 payment_intent，带 amount_total / currency     |
- * | checkout.session.completed（订阅）        | checkout.completed     | 不带 orderId：订阅的钱由 invoice.paid 记（一次付款只记一单）|
- * | invoice.paid                              | subscription.renewed   | 首期和续费都记；orderId 用 invoice.id，金额 amount_paid    |
- * | invoice.payment_failed                    | payment.failed         | orderId 也用 invoice.id：重试成功时合并回同一单            |
- * | customer.subscription.updated             | 按 status 分派，见 parseSubscriptionEvent                                           |
- * | customer.subscription.deleted             | subscription.expired   | 订阅已经结束（立即取消，或期末取消到期）                   |
- * | 其他（charge.refunded、charge.dispute.* 等）| 忽略（返回 null）                                                                 |
+ * | Stripe event                                | BillingEvent         | Notes                                                    |
+ * | ------------------------------------------- | -------------------- | -------------------------------------------------------- |
+ * | checkout.session.completed (mode=payment)   | checkout.completed   | orderId is payment_intent; carries amount_total / currency |
+ * | checkout.session.completed (subscription)   | checkout.completed   | No orderId: subscription money is recorded by invoice.paid (one order per payment) |
+ * | invoice.paid                                | subscription.renewed | Records both the first period and renewals; orderId is invoice.id, amount is amount_paid |
+ * | invoice.payment_failed                      | payment.failed       | orderId is also invoice.id: a successful retry merges back into the same order |
+ * | customer.subscription.updated               | Dispatched by status, see parseSubscriptionEvent                                |
+ * | customer.subscription.deleted               | subscription.expired | The subscription has ended (canceled immediately, or canceled at period end and expired) |
+ * | Others (charge.refunded, charge.dispute.*, etc.) | Ignored (returns null)                                                     |
  *
- * 订单 ID 的约定和 Creem 一致：一次付款对应一个订单。订阅每一期都用 invoice.id 当订单号，
- * 订阅结账的分支不带 orderId，所以首期不会记成两单（重复记账会虚增 src/core/admin/metrics.ts 的营收）。
- * 订阅 metadata 是发票 finalize 时的快照，续费事件里仍能靠 parent.subscription_details.metadata
- * 找到 userId / planId；找不到时用发票行上的 Price ID 反查套餐。
+ * The order ID convention matches Creem: one payment maps to one order. Each subscription period
+ * uses invoice.id as the order number, and the subscription checkout branch carries no orderId,
+ * so the first period is never recorded as two orders (double-recording would inflate revenue in
+ * src/core/admin/metrics.ts).
+ * Subscription metadata is a snapshot taken when the invoice is finalized, so renewal events can
+ * still find userId / planId via parent.subscription_details.metadata; when they can't, the plan
+ * is looked up by the Price ID on the invoice line.
  *
- * **v1 不处理退款**：Stripe 的退款对象上没有 invoice 字段，Charge / PaymentIntent 也不再暴露 invoice，
- * 想把退款对应回订单只能靠自定义 metadata，或者 Invoice Payment API
- * （invoice_payment.payment.payment_intent，只对 2019-03-15 之后 finalize 的发票可用）。
- * 那条路会把 Stripe 特有的结构漏进订单表和 src/core/admin/metrics.ts 的营收统计，
- * 所以退款事件一律忽略（Creem 的退款回收积分是它自己的路径，见 README 的「支付」一节）。
+ * **v1 does not handle refunds**: Stripe's refund object has no invoice field, and Charge /
+ * PaymentIntent no longer expose the invoice either, so mapping a refund back to an order would
+ * require custom metadata or the Invoice Payment API (invoice_payment.payment.payment_intent, only
+ * available for invoices finalized after 2019-03-15). That path would leak Stripe-specific
+ * structure into the orders table and the revenue stats in src/core/admin/metrics.ts, so refund
+ * events are always ignored (Creem reclaiming credits on refund is its own path; see the
+ * "Payments" section of the README).
  *
- * 时间：Stripe 的 created / current_period_* 都是 Unix 秒，转 Date 要乘 1000。
- * 金额：以最小货币单位（分）计，和 events.ts 一致。
+ * Time: Stripe's created / current_period_* are Unix seconds; multiply by 1000 to get a Date.
+ * Amounts: in the smallest currency unit (cents), consistent with events.ts.
  */
 
 type Loose = Record<string, unknown>;
@@ -55,18 +64,21 @@ const asString = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
 const asNumber = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? value : undefined;
-/** Stripe 的时间戳是 Unix 秒。 */
+/** Stripe timestamps are Unix seconds. */
 const asTimestamp = (value: unknown): Date | undefined => {
   const seconds = asNumber(value);
   if (seconds === undefined) return undefined;
   const date = new Date(seconds * 1000);
   return Number.isNaN(date.getTime()) ? undefined : date;
 };
-/** Stripe 的关联对象有时展开成对象，有时只给 ID。 */
+/** Stripe sometimes expands related objects and sometimes gives only the ID. */
 const idOf = (value: unknown): string | undefined =>
   asString(value) ?? asString(asObject(value)?.id);
 
-/** 结账时写入的 metadata：{ userId, planId }。订阅靠 subscription_data.metadata 复制过去。 */
+/**
+ * Metadata written at checkout: { userId, planId }. Subscriptions get a copy via
+ * subscription_data.metadata.
+ */
 function metadataOf(...sources: unknown[]) {
   for (const source of sources) {
     const metadata = asObject(asObject(source)?.metadata);
@@ -80,16 +92,20 @@ function metadataOf(...sources: unknown[]) {
   return { userId: undefined, planId: undefined };
 }
 
-/** 发票行上的 Price ID：当前 API 放在 pricing.price_details.price 上（顶层的 price 已移除）。 */
+/**
+ * The Price ID on an invoice line: the current API puts it at pricing.price_details.price (the
+ * top-level price was removed).
+ */
 function lineItemPriceId(line: Loose | undefined) {
   const details = asObject(asObject(line?.pricing)?.price_details);
   return idOf(details?.price);
 }
 
 /**
- * 这一期账单覆盖的**服务周期**。当前 API 上 invoice.period_start / period_end 只是
- * 「能关联到这个发票项的时间范围」（见 https://docs.stripe.com/api/invoices/object），
- * 真正的服务周期在发票行的 period 上；拿不到行才退回发票的字段。
+ * The **service period** this bill covers. In the current API, invoice.period_start / period_end
+ * are only "the time range in which invoice items can be associated with this invoice" (see
+ * https://docs.stripe.com/api/invoices/object); the real service period is on the invoice line's
+ * period, and we fall back to the invoice fields only when there is no line.
  */
 function servicePeriod(line: Loose | undefined, invoice: Loose) {
   const period = asObject(line?.period);
@@ -99,7 +115,10 @@ function servicePeriod(line: Loose | undefined, invoice: Loose) {
   };
 }
 
-/** metadata 里的 planId 优先；没有就按 Price ID 反查套餐（订阅项上是 price，发票行上是 pricing）。 */
+/**
+ * The planId in metadata wins; otherwise look up the plan by Price ID (price on a subscription
+ * item, pricing on an invoice line).
+ */
 function planIdOf(
   metadataPlanId: string | undefined,
   ...prices: unknown[]
@@ -118,7 +137,10 @@ type EventBase = Pick<
   "provider" | "eventId" | "occurredAt" | "raw"
 >;
 
-/** 把已校验的 Stripe webhook 请求体转换成 BillingEvent；不关心的事件返回 null。 */
+/**
+ * Converts a verified Stripe webhook body into a BillingEvent; returns null for events we don't
+ * care about.
+ */
 export function parseStripeEvent(payload: unknown): BillingEvent | null {
   const event = asObject(payload);
   const object = asObject(asObject(event?.data)?.object);
@@ -154,8 +176,8 @@ function parseCheckoutSession(
   const checkoutId = asString(session.id);
   if (!checkoutId) return null;
   const { userId, planId } = metadataOf(session);
-  // 订阅结账不带订单：钱在 invoice.paid 里记（mode 只有 payment / setup / subscription，
-  // 我们创建结账时只会用前两者里的 payment 和 subscription）。
+  // Subscription checkouts carry no order: the money is recorded in invoice.paid (mode is one of
+  // payment / setup / subscription, and our checkouts only ever use payment and subscription).
   const oneTime = asString(session.mode) !== "subscription";
   return {
     ...base,
@@ -164,7 +186,8 @@ function parseCheckoutSession(
     customerId: idOf(session.customer),
     checkoutId,
     planId,
-    // 一次性付款用 PaymentIntent 当订单号（没有就用结账会话的 ID）。
+    // One-time payments use the PaymentIntent as the order number (or the checkout session ID if
+    // there is none).
     orderId: oneTime ? (idOf(session.payment_intent) ?? checkoutId) : undefined,
     subscriptionId: idOf(session.subscription),
     amount: oneTime ? asNumber(session.amount_total) : undefined,
@@ -181,7 +204,8 @@ function parseInvoiceEvent(
   const parent = asObject(invoice.parent);
   const details = asObject(parent?.subscription_details);
   const subscriptionId = idOf(details?.subscription);
-  // 只处理订阅开出来的发票：一次性发票（parent 为空或指向报价单）v1 不记订单。
+  // Only handle invoices issued by subscriptions: v1 records no order for one-off invoices (parent
+  // empty or pointing at a quote).
   if (
     !orderId ||
     !details ||
@@ -224,8 +248,8 @@ function parseSubscriptionEvent(
   const subscriptionId = asString(subscription.id);
   if (!subscriptionId) return null;
 
-  // 当前 API（2026-08-26.dahlia）把计费周期从 subscription 挪到了订阅项上：
-  // subscription.current_period_* 已不存在，要读 items.data[0]。
+  // The current API (2026-08-26.dahlia) moved the billing period from the subscription to the
+  // subscription items: subscription.current_period_* no longer exists, so read items.data[0].
   const item = asObject(asArray(asObject(subscription.items)?.data)[0]);
   const { userId, planId } = metadataOf(subscription);
   const common = {
@@ -240,16 +264,18 @@ function parseSubscriptionEvent(
   };
 
   if (eventType === "customer.subscription.deleted") {
-    // deleted 是终态：订阅已经结束（立即取消，或 cancel_at_period_end 到期）。
-    // 记成 expired 而不是 canceled —— canceled 表示「还能用到 currentPeriodEnd」，
-    // 而立即取消时 Stripe 会先发一条 status=canceled 的 updated，那条已经记过 canceled 了。
+    // deleted is terminal: the subscription has ended (canceled immediately, or
+    // cancel_at_period_end reached). Record it as expired rather than canceled — canceled means
+    // "still usable until currentPeriodEnd", and on an immediate cancel Stripe first sends an
+    // updated event with status=canceled, which has already been recorded as canceled.
     return { ...common, type: "subscription.expired" };
   }
 
   switch (asString(subscription.status)) {
     case "active":
     case "trialing":
-      // 预约在期末取消：状态还是 active，但续费已经停了 → 按已取消处理，带上可用到的时间。
+      // Scheduled to cancel at period end: status is still active but renewal has stopped → treat
+      // as canceled and include the time access lasts until.
       return subscription.cancel_at_period_end === true
         ? {
             ...common,
@@ -264,7 +290,7 @@ function parseSubscriptionEvent(
           };
     case "past_due":
     case "unpaid":
-      // 扣款失败（Stripe 自己会重试）；订单由 invoice.payment_failed 记。
+      // Charge failed (Stripe retries on its own); the order is recorded by invoice.payment_failed.
       return { ...common, type: "payment.failed" };
     case "canceled":
       return {
@@ -273,12 +299,12 @@ function parseSubscriptionEvent(
         currentPeriodEnd: period.currentPeriodEnd,
       };
     default:
-      // incomplete / incomplete_expired / paused / ended：v1 不处理。
+      // incomplete / incomplete_expired / paused / ended: not handled in v1.
       return null;
   }
 }
 
-/** 用到的 SDK 方法，测试可以注入假的实现。 */
+/** The SDK methods we use; tests can inject a fake implementation. */
 export type StripeClient = {
   checkout: { sessions: Pick<Stripe["checkout"]["sessions"], "create"> };
   billingPortal: {
@@ -292,7 +318,10 @@ export type StripeClient = {
 export type StripeProviderOptions = {
   secretKey: string;
   webhookSecret: string;
-  /** 测试注入；默认按 secretKey 创建官方 SDK 客户端（apiVersion 用 SDK 自带的默认值）。 */
+  /**
+   * Injected by tests; defaults to an official SDK client built from secretKey (apiVersion uses
+   * the SDK's built-in default).
+   */
   client?: StripeClient;
 };
 
@@ -310,19 +339,21 @@ export function createStripeProvider({
       const plan = planForCheckout(input.planId);
       const metadata = { userId: input.userId, planId: input.planId };
       const session = await stripe.checkout.sessions.create({
-        // 订阅用 subscription，一次性买断用 payment。
+        // subscription for subscriptions, payment for one-time purchases.
         mode: plan.subscription ? "subscription" : "payment",
         line_items: [{ price: plan.priceId, quantity: 1 }],
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
         client_reference_id: input.userId,
         metadata,
-        // 订阅要多带一份：Session 的 metadata **不会**复制到订阅上，
-        // 只有 subscription_data.metadata 会。webhook 靠它找到用户和套餐。
+        // Subscriptions need an extra copy: the Session's metadata is **not** copied to the
+        // subscription, only subscription_data.metadata is. The webhook relies on it to find the
+        // user and plan.
         ...(plan.subscription && { subscription_data: { metadata } }),
         ...(input.customerEmail && { customer_email: input.customerEmail }),
       });
-      // 不传 Idempotency-Key：重复下单由 checkout_sessions 表的复用和互斥处理（见 ../checkout.ts）。
+      // No Idempotency-Key: duplicate checkouts are handled by reuse and mutual exclusion in the
+      // checkout_sessions table (see ../checkout.ts).
       if (!session.url) {
         throw new Error("Stripe checkout session has no url");
       }
@@ -330,9 +361,10 @@ export function createStripeProvider({
     },
 
     async getPortalUrl(customerId: string): Promise<string> {
-      // Stripe 的客户门户必须给 return_url（Creem 的 generateBillingLinks 不需要）。
-      // 这里拿不到 Request，用站点自己的绝对地址（和 canonical 同一个来源）回到账单页；
-      // localePrefix 是 as-needed，默认语言不带前缀。
+      // Stripe's customer portal requires a return_url (Creem's generateBillingLinks doesn't).
+      // There's no Request here, so return to the billing page via the site's own absolute URL
+      // (the same source as canonical); localePrefix is as-needed, so the default locale has no
+      // prefix.
       const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
         return_url: `${siteUrl}${PORTAL_RETURN_PATH}`,
@@ -340,7 +372,10 @@ export function createStripeProvider({
       return session.url;
     },
 
-    /** 立即取消。已经不会再扣款的订阅视为成功（之后还会重试，不能因为终态就报错）。 */
+    /**
+     * Cancels immediately. A subscription that will never be charged again counts as success
+     * (this gets retried later, so a terminal state must not raise an error).
+     */
     async cancelSubscription(subscriptionId: string): Promise<void> {
       try {
         const current = await stripe.subscriptions.retrieve(subscriptionId);
@@ -353,22 +388,25 @@ export function createStripeProvider({
     },
 
     async verifyWebhook(request: Request): Promise<unknown> {
-      // body 必须是原始字符串：签名是对收到的字节做 HMAC，先 JSON.parse 再序列化会改字节。
+      // body must be the raw string: the signature is an HMAC over the received bytes, and
+      // JSON.parse followed by re-serializing would change the bytes.
       const body = await request.text();
       const signature = request.headers.get("stripe-signature") ?? "";
       try {
-        // 同步版 constructEvent 走 node:crypto（NodeCryptoProvider）。我们的 webhook 路由
-        // 跑在 Node.js runtime 上（src/app/api/webhooks/stripe/route.ts），stripe-node 官方
-        // Next.js App Router 的例子也是同步版；constructEventAsync + createSubtleCryptoProvider()
-        // 只给没有 node:crypto 的运行时（Cloudflare Workers / edge），同步版在那里会抛
-        // CryptoProviderOnlySupportsAsyncError。容忍窗口用 SDK 默认的 300 秒。
+        // The synchronous constructEvent uses node:crypto (NodeCryptoProvider). Our webhook route
+        // runs on the Node.js runtime (src/app/api/webhooks/stripe/route.ts), and stripe-node's
+        // official Next.js App Router example also uses the sync version;
+        // constructEventAsync + createSubtleCryptoProvider() is only for runtimes without
+        // node:crypto (Cloudflare Workers / edge), where the sync version throws
+        // CryptoProviderOnlySupportsAsyncError. The tolerance window is the SDK default of 300s.
         return stripe.webhooks.constructEvent(body, signature, webhookSecret);
       } catch (error) {
         if (error instanceof stripe.errors.StripeSignatureVerificationError) {
           throw new WebhookVerificationError(error.message);
         }
-        // 签名对但 body 不是合法 JSON 时 constructEvent 抛的是 SyntaxError（不是签名错误）；
-        // 这种请求结构不对，同样按未通过校验处理，不写库、不重试。
+        // With a valid signature but a body that isn't valid JSON, constructEvent throws a
+        // SyntaxError (not a signature error); such a request is malformed, so it is also treated
+        // as failing verification: nothing is written and it isn't retried.
         if (error instanceof SyntaxError) {
           throw new WebhookVerificationError("Invalid webhook body");
         }
@@ -380,7 +418,7 @@ export function createStripeProvider({
   };
 }
 
-/** Stripe 的「对象不存在」错误（404）。 */
+/** Stripe's "no such object" error (404). */
 function isNotFound(error: unknown) {
   return (
     error instanceof Stripe.errors.StripeInvalidRequestError &&
@@ -389,15 +427,21 @@ function isNotFound(error: unknown) {
 }
 
 /**
- * 已经不会再扣款、也就不能再取消的状态（见 https://docs.stripe.com/api/subscriptions/object 的 status）。
- * canceled：已经结束；incomplete_expired：首期没付上、发票已作废，是终态。
- * 其余状态（active / trialing / past_due / unpaid / paused / incomplete）都还能取消。
+ * Statuses that will never be charged again and so can't be canceled (see status on
+ * https://docs.stripe.com/api/subscriptions/object).
+ * canceled: already ended; incomplete_expired: the first period was never paid and the invoice
+ * was voided, a terminal state.
+ * All other statuses (active / trialing / past_due / unpaid / paused / incomplete) can still be
+ * canceled.
  */
 function isTerminal(status: string) {
   return status === "canceled" || status === "incomplete_expired";
 }
 
-/** 结账要用的套餐信息：产品 ID 必填（免费套餐没有，也就不能结账）。 */
+/**
+ * Plan info needed for checkout: the product ID is required (free plans have none, so they can't
+ * be checked out).
+ */
 function planForCheckout(planId: string) {
   const plan = getPlan(planId);
   if (!plan?.providerProductId) {

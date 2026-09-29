@@ -24,15 +24,17 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过积分测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping credits tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
-describe.skipIf(!url)("积分账本", () => {
+describe.skipIf(!url)("credits ledger", () => {
   let client: DbClient;
   let credits: Credits;
 
   beforeAll(async () => {
-    // 测试自己保证表结构是最新的，不依赖外部先执行 db:migrate。
+    // The test makes sure the schema is current itself instead of relying on db:migrate having run.
     const pool = new Pool({ connectionString: url });
     await migrate(drizzle({ client: pool }), {
       migrationsFolder: path.resolve(__dirname, "../../../drizzle"),
@@ -55,7 +57,7 @@ describe.skipIf(!url)("积分账本", () => {
     return id;
   }
 
-  /** 该用户所有流水 amount 之和，应始终等于余额。 */
+  /** Sum of amount over all of this user's transactions; must always equal the balance. */
   async function ledgerSum(userId: string) {
     const [row] = await client.db
       .select({
@@ -76,7 +78,7 @@ describe.skipIf(!url)("积分账本", () => {
 
   const source = () => `test-${randomUUID()}`;
 
-  test("发放积分：没有余额记录时创建，余额等于流水之和", async () => {
+  test("grant: creates the balance row if missing; balance equals the ledger sum", async () => {
     const userId = await newUser();
     expect(await credits.getBalance(userId)).toBe(0);
 
@@ -99,7 +101,7 @@ describe.skipIf(!url)("积分账本", () => {
     expect(await ledgerSum(userId)).toBe(100);
   });
 
-  test("同一 sourceId 重复发放只到账一次，并返回 duplicate", async () => {
+  test("repeated grants with the same sourceId are credited once and return duplicate", async () => {
     const userId = await newUser();
     const input = { userId, amount: 30, source: "order", sourceId: source() };
 
@@ -114,7 +116,7 @@ describe.skipIf(!url)("积分账本", () => {
     expect(await transactionCount(userId)).toBe(1);
   });
 
-  test("并发重复发放同一 sourceId 也只到账一次", async () => {
+  test("concurrent repeated grants with the same sourceId are also credited once", async () => {
     const userId = await newUser();
     const input = { userId, amount: 10, source: "order", sourceId: source() };
 
@@ -127,7 +129,7 @@ describe.skipIf(!url)("积分账本", () => {
     expect(await transactionCount(userId)).toBe(1);
   });
 
-  test("50 个并发扣减：余额不会为负，流水总和等于余额", async () => {
+  test("50 concurrent deductions: balance never goes negative; ledger sum equals balance", async () => {
     const userId = await newUser();
     await credits.grantCredits({
       userId,
@@ -152,7 +154,7 @@ describe.skipIf(!url)("积分账本", () => {
     expect(await ledgerSum(userId)).toBe(0);
   });
 
-  test("余额只够一部分并发请求时，成功次数正好等于余额能支持的次数", async () => {
+  test("when the balance covers only some concurrent requests, the success count is exactly what the balance allows", async () => {
     const userId = await newUser();
     await credits.grantCredits({
       userId,
@@ -161,7 +163,7 @@ describe.skipIf(!url)("积分账本", () => {
       sourceId: source(),
     });
 
-    // 每次扣 3，70 只够 23 次。
+    // 3 per deduction; 70 covers only 23.
     const results = await Promise.allSettled(
       Array.from({ length: 50 }, (_, i) =>
         credits.deductCredits({
@@ -184,11 +186,11 @@ describe.skipIf(!url)("积分账本", () => {
     }
     expect(await credits.getBalance(userId)).toBe(1);
     expect(await ledgerSum(userId)).toBe(1);
-    // 失败的扣减不留流水：1 条发放 + 23 条扣减。
+    // Failed deductions leave no transactions: 1 grant + 23 deductions.
     expect(await transactionCount(userId)).toBe(24);
   });
 
-  test("余额不足时抛出 InsufficientCreditsError，余额和流水都不变", async () => {
+  test("insufficient balance throws InsufficientCreditsError; balance and ledger unchanged", async () => {
     const userId = await newUser();
     await credits.grantCredits({
       userId,
@@ -210,7 +212,7 @@ describe.skipIf(!url)("积分账本", () => {
     expect(await transactionCount(userId)).toBe(1);
   });
 
-  test("从未有过余额的用户扣减时同样报余额不足", async () => {
+  test("a user who never had a balance also gets insufficient balance on deduction", async () => {
     const userId = await newUser();
     await expect(
       credits.deductCredits({
@@ -223,7 +225,7 @@ describe.skipIf(!url)("积分账本", () => {
     expect(await transactionCount(userId)).toBe(0);
   });
 
-  test("同一 sourceId 重复扣减只扣一次", async () => {
+  test("repeated deductions with the same sourceId deduct once", async () => {
     const userId = await newUser();
     await credits.grantCredits({
       userId,
@@ -241,7 +243,7 @@ describe.skipIf(!url)("积分账本", () => {
     expect(await credits.getBalance(userId)).toBe(6);
   });
 
-  describe("退款", () => {
+  describe("refund", () => {
     async function userWithDeduction(deduct: number) {
       const userId = await newUser();
       await credits.grantCredits({
@@ -255,7 +257,7 @@ describe.skipIf(!url)("积分账本", () => {
       return { userId, call };
     }
 
-    test("默认全额退还原扣减", async () => {
+    test("refunds the full original deduction by default", async () => {
       const { userId, call } = await userWithDeduction(8);
 
       const result = await credits.refundCredits({
@@ -274,7 +276,7 @@ describe.skipIf(!url)("积分账本", () => {
       expect(await ledgerSum(userId)).toBe(20);
     });
 
-    test("可以部分退款", async () => {
+    test("allows partial refunds", async () => {
       const { userId, call } = await userWithDeduction(8);
       const result = await credits.refundCredits({
         userId,
@@ -284,7 +286,7 @@ describe.skipIf(!url)("积分账本", () => {
       expect(result.balance).toBe(15);
     });
 
-    test("重复退款不生效", async () => {
+    test("repeated refunds have no effect", async () => {
       const { userId, call } = await userWithDeduction(8);
 
       await credits.refundCredits({ userId, ...call });
@@ -300,7 +302,7 @@ describe.skipIf(!url)("积分账本", () => {
       expect(await credits.getBalance(userId)).toBe(20);
     });
 
-    test("退款金额不能超过原扣减金额", async () => {
+    test("refund amount cannot exceed the original deduction", async () => {
       const { userId, call } = await userWithDeduction(8);
       await expect(
         credits.refundCredits({ userId, ...call, amount: 9 }),
@@ -308,14 +310,14 @@ describe.skipIf(!url)("积分账本", () => {
       expect(await credits.getBalance(userId)).toBe(12);
     });
 
-    test("找不到原扣减时报错", async () => {
+    test("throws when the original deduction is not found", async () => {
       const userId = await newUser();
       await expect(
         credits.refundCredits({ userId, source: "ai", sourceId: source() }),
       ).rejects.toBeInstanceOf(CreditTransactionNotFoundError);
     });
 
-    test("不能退别人的扣减", async () => {
+    test("cannot refund someone else's deduction", async () => {
       const { call } = await userWithDeduction(8);
       const other = await newUser();
       await expect(
@@ -324,8 +326,8 @@ describe.skipIf(!url)("积分账本", () => {
     });
   });
 
-  describe("调整", () => {
-    test("可正可负，负向调整不能让余额变成负数", async () => {
+  describe("adjust", () => {
+    test("can be positive or negative; a negative adjustment cannot make the balance negative", async () => {
       const userId = await newUser();
 
       await credits.adjustCredits({
@@ -356,8 +358,8 @@ describe.skipIf(!url)("积分账本", () => {
     });
   });
 
-  describe("外部事务", () => {
-    test("外部事务回滚时，积分变动一起回滚", async () => {
+  describe("outer transaction", () => {
+    test("when the outer transaction rolls back, credit changes roll back with it", async () => {
       const userId = await newUser();
 
       await expect(
@@ -375,7 +377,7 @@ describe.skipIf(!url)("积分账本", () => {
       expect(await transactionCount(userId)).toBe(0);
     });
 
-    test("在外部事务里扣减失败，只回滚这一步，外部事务可以继续提交", async () => {
+    test("a failed deduction inside an outer transaction rolls back only that step; the outer transaction can still commit", async () => {
       const userId = await newUser();
 
       await client.db.transaction(async (tx) => {
@@ -396,7 +398,7 @@ describe.skipIf(!url)("积分账本", () => {
     });
   });
 
-  test("删除用户后，余额和流水被级联删除", async () => {
+  test("deleting the user cascades to the balance and the ledger", async () => {
     const userId = await newUser();
     await credits.grantCredits({
       userId,
@@ -415,7 +417,7 @@ describe.skipIf(!url)("积分账本", () => {
     expect(await transactionCount(userId)).toBe(0);
   });
 
-  test("listTransactions 按时间倒序返回", async () => {
+  test("listTransactions returns newest first", async () => {
     const userId = await newUser();
     const ids = [source(), source(), source()];
     for (const sourceId of ids) {
@@ -434,14 +436,14 @@ describe.skipIf(!url)("积分账本", () => {
     expect(list[1]!.sourceId).toBe(ids[1]);
   });
 
-  test("数据库约束兜底：直接写入负余额会被拒绝", async () => {
+  test("database constraint as a backstop: writing a negative balance directly is rejected", async () => {
     const userId = await newUser();
     await expect(
       client.db.insert(userCredits).values({ userId, balance: -1 }),
     ).rejects.toThrow();
   });
 
-  describe("回收（clamp）", () => {
+  describe("reclaim (clamp)", () => {
     const reclaim = (userId: string, amount: number, sourceId = source()) =>
       credits.reclaimCredits({
         userId,
@@ -450,7 +452,7 @@ describe.skipIf(!url)("积分账本", () => {
         sourceId,
       });
 
-    test("余额够时足额扣减，差额为 0", async () => {
+    test("deducts in full when the balance is enough; shortfall is 0", async () => {
       const userId = await newUser();
       await credits.grantCredits({
         userId,
@@ -474,7 +476,7 @@ describe.skipIf(!url)("积分账本", () => {
       expect(await ledgerSum(userId)).toBe(0);
     });
 
-    test("余额不够时扣到 0，差额原样返回", async () => {
+    test("deducts down to 0 when the balance is short and returns the shortfall as is", async () => {
       const userId = await newUser();
       await credits.grantCredits({
         userId,
@@ -496,7 +498,7 @@ describe.skipIf(!url)("积分账本", () => {
       expect(await ledgerSum(userId)).toBe(0);
     });
 
-    test("余额为 0 时不写流水也不报错（amount 有非零约束，没有额度可记）", async () => {
+    test("with a balance of 0, writes no transaction and does not throw (amount has a non-zero constraint, nothing to record)", async () => {
       const userId = await newUser();
 
       const result = await reclaim(userId, 100);
@@ -510,7 +512,7 @@ describe.skipIf(!url)("积分账本", () => {
       expect(await transactionCount(userId)).toBe(0);
     });
 
-    test("同一 (source, sourceId) 重复回收只扣一次", async () => {
+    test("repeated reclaims with the same (source, sourceId) deduct once", async () => {
       const userId = await newUser();
       await credits.grantCredits({
         userId,
@@ -531,11 +533,11 @@ describe.skipIf(!url)("积分账本", () => {
         balance: 0,
       });
       expect(await credits.getBalance(userId)).toBe(0);
-      // 一条发放 + 一条回收。
+      // One grant + one reclaim.
       expect(await transactionCount(userId)).toBe(2);
     });
 
-    test("并发回收：只有一笔扣得动，余额与流水之和保持一致", async () => {
+    test("concurrent reclaims: only one can deduct; balance and ledger sum stay consistent", async () => {
       const userId = await newUser();
       await credits.grantCredits({
         userId,
@@ -560,12 +562,12 @@ describe.skipIf(!url)("积分账本", () => {
   });
 });
 
-describe("参数校验与开关（不需要数据库）", () => {
+describe("input validation and the flag (no database needed)", () => {
   const unreachable = () => {
     throw new Error("database should not be touched");
   };
 
-  test("features.credits 关闭时所有 API 抛出 CreditsDisabledError，且不访问数据库", async () => {
+  test("with features.credits off, every API throws CreditsDisabledError without touching the database", async () => {
     const disabled = createCredits({ db: unreachable, enabled: false });
     const input = { userId: "u", amount: 1, source: "s", sourceId: "1" };
 
@@ -598,18 +600,18 @@ describe("参数校验与开关（不需要数据库）", () => {
   });
 
   test.each([
-    ["零", 0],
-    ["负数", -1],
-    ["小数", 1.5],
-    ["超出 int 范围", 2 ** 31],
-  ])("amount 为%s时拒绝", async (_, amount) => {
+    ["zero", 0],
+    ["negative", -1],
+    ["fractional", 1.5],
+    ["out of int range", 2 ** 31],
+  ])("rejects amount when %s", async (_, amount) => {
     const credits = createCredits({ db: unreachable, enabled: true });
     await expect(
       credits.grantCredits({ userId: "u", amount, source: "s", sourceId: "1" }),
     ).rejects.toThrow();
   });
 
-  test("source 不能使用保留的 refund", async () => {
+  test("source cannot use the reserved refund", async () => {
     const credits = createCredits({ db: unreachable, enabled: true });
     await expect(
       credits.grantCredits({

@@ -15,7 +15,7 @@ import { runAfterResponse } from "@/core/lib/after-response";
 import { logger, type LogFn } from "@/core/observability/logger";
 import { setSpanAttributes } from "@/core/observability/trace";
 
-/** 积分流水的 source；sourceId 是 ai_usage.id。 */
+/** The source of the credit transactions; sourceId is ai_usage.id. */
 export const AI_CREDIT_SOURCE = "ai";
 
 export type UsageDeps = {
@@ -37,8 +37,8 @@ function errorMessage(error: unknown) {
 }
 
 /**
- * 一次调用结束时的日志和 span 属性：模型、积分、耗时、结果。
- * 失败原因已经由调用方的 logError 记过，这里不重复。
+ * Log and span attributes at the end of a call: model, credits, duration, outcome.
+ * The failure reason has already been logged by the caller's logError, so it isn't repeated here.
  */
 export function logUsage({
   usageId,
@@ -80,8 +80,9 @@ export function logUsage({
 }
 
 /**
- * 写一条 pending 的 ai_usage 并预扣积分，两者在同一个事务里。
- * 余额不足时返回 null（调用方转成 402），其他错误照常抛出。
+ * Writes a pending ai_usage row and pre-deducts credits, both in the same transaction.
+ * Returns null on insufficient balance (the caller turns it into a 402); other errors are thrown as
+ * usual.
  */
 export async function reserveUsage(
   { db, credits, logError }: UsageDeps,
@@ -126,7 +127,8 @@ export async function reserveUsage(
     if (error instanceof InsufficientCreditsError) return null;
     throw error;
   }
-  // 余额不足提醒等回调放到响应之后，不拖慢模型调用的开始。
+  // Callbacks such as the low-balance alert run after the response so they don't delay the start of
+  // the model call.
   await runAfterResponse(async () => {
     for (const fn of afterCommit) {
       try {
@@ -140,14 +142,15 @@ export async function reserveUsage(
 }
 
 /**
- * 结束一次调用：失败时按 ai_usage.id 退回积分（同一 sourceId 只退一次），
- * 然后写入状态、用量和耗时。从不抛错，出错只记日志。
+ * Finishes a call: on failure, refunds the credits by ai_usage.id (only once per sourceId), then
+ * writes the status, usage, and duration. Never throws; errors are only logged.
  *
- * `onlyIfPending`：异步任务可能被多个请求同时推进。只有把 pending 改成终态的那一次
- * 才退款，返回 true；记录已经结束时什么都不做，返回 false。
+ * `onlyIfPending`: an async job may be advanced by several requests at once. Only the call that
+ * moves pending to a terminal state refunds and returns true; if the record has already finished,
+ * it does nothing and returns false.
  *
- * `inSettlement`：结算真的发生时，在同一个事务里再做一件事（比如开一张异常单）——
- * 和状态、退款一起提交或一起回滚。
+ * `inSettlement`: when settlement actually happens, do one more thing in the same transaction (e.g.
+ * open an exception) — committed or rolled back together with the status and refund.
  */
 export async function settleUsage(
   { db, credits, logError }: UsageDeps,
@@ -208,9 +211,10 @@ export async function settleUsage(
       )
       .returning({ id: aiUsage.id });
   try {
-    // 状态和退款必须在同一个事务里。onlyIfPending 先抢状态是为了并发去重，但退款若在
-    // 事务外失败，会留下「已终态、钱没退」的行 —— 后续查询直接返回终态，没有重试入口。
-    // 一起回滚，下一次查询还能重来。
+    // Status and refund must be in the same transaction. onlyIfPending claims the status first to
+    // dedupe concurrent calls, but if the refund failed outside the transaction it would leave a
+    // row that is terminal with the money not refunded — later queries return the terminal state
+    // directly, with no way to retry. Rolling back together lets the next query try again.
     const settled = await db().transaction(async (tx) => {
       if (onlyIfPending) {
         if ((await update(tx)).length === 0) return false;

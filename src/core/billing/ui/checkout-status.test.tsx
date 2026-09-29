@@ -35,8 +35,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("CheckoutStatus 的下一步", () => {
-  test("套餐配了下一步：显示说明，主按钮换成它", async () => {
+describe("CheckoutStatus next step", () => {
+  test("a plan with a next step shows its description and uses it as the primary button", async () => {
     renderStatus("lifetime");
     expect(await screen.findByText("Link emailed.")).toBeDefined();
     expect(
@@ -47,7 +47,7 @@ describe("CheckoutStatus 的下一步", () => {
     expect(screen.queryByRole("link", { name: t.toBilling })).toBeNull();
   });
 
-  test("没配的套餐照常是账单页", async () => {
+  test("a plan without one still goes to the billing page", async () => {
     renderStatus("pro");
     expect(
       (await screen.findByRole("link", { name: t.toBilling })).getAttribute(

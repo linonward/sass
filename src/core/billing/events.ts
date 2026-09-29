@@ -1,20 +1,20 @@
 /**
- * 归一化的账单事件。各支付服务商的 parseEvent() 把自己的 webhook 转换成这里的类型，
- * 下游（handleBillingEvent、onBillingEvent 钩子）只和它打交道。
- * 金额以最小货币单位（分）计；时间都是 Date。
+ * Normalized billing events. Each payment provider's parseEvent() turns its webhooks into these types,
+ * and downstream code (handleBillingEvent, onBillingEvent hooks) only deals with them.
+ * Amounts are in the smallest currency unit (cents); all times are Dates.
  */
 type EventBase = {
-  /** 服务商 ID，例如 "creem"。 */
+  /** Provider ID, e.g. "creem". */
   provider: string;
-  /** 服务商给的事件 ID，(provider, eventId) 用于幂等。 */
+  /** Event ID from the provider; (provider, eventId) is used for idempotency. */
   eventId: string;
-  /** 事件在服务商那边发生的时间，用于判断乱序。 */
+  /** When the event happened at the provider; used to detect out-of-order delivery. */
   occurredAt: Date;
-  /** 创建结账时传给服务商的用户 ID（metadata），有就优先用它。 */
+  /** User ID passed to the provider (as metadata) when creating checkout; preferred when present. */
   userId?: string;
-  /** 服务商的客户 ID；没有 userId 时按它查 billing_customers。 */
+  /** Provider's customer ID; used to look up billing_customers when there's no userId. */
   customerId?: string;
-  /** 服务商的原始数据。 */
+  /** Raw data from the provider. */
   raw: unknown;
 };
 
@@ -30,9 +30,12 @@ export type CheckoutCompletedEvent = EventBase &
     type: "checkout.completed";
     checkoutId: string;
     planId?: string;
-    /** 一次性购买或订阅首付产生的订单。 */
+    /** Order created by a one-time purchase or the first subscription payment. */
     orderId?: string;
-    /** 订阅结账时的订阅 ID；订阅状态由 subscription.* 事件维护。 */
+    /**
+     * Subscription ID at subscription checkout; subscription state is maintained by subscription.*
+     * events.
+     */
     subscriptionId?: string;
   };
 
@@ -49,14 +52,14 @@ export type SubscriptionRenewedEvent = EventBase &
     type: "subscription.renewed";
     subscriptionId: string;
     planId?: string;
-    /** 这次续费扣款对应的订单。 */
+    /** Order for this renewal charge. */
     orderId?: string;
   };
 
 export type SubscriptionCanceledEvent = EventBase & {
   type: "subscription.canceled";
   subscriptionId: string;
-  /** 取消后仍可使用到这个时间。 */
+  /** Still usable until this time after cancellation. */
   currentPeriodEnd?: Date;
 };
 

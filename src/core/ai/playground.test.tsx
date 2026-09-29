@@ -26,13 +26,15 @@ describe("chatErrorCode", () => {
   });
 });
 
-// 流式渲染的回归测试：服务端逐个 delta 推流，useChat 不传 throttle 时**每个分片都会重渲染**
-// （@ai-sdk/react/dist/index.d.ts:119-122）。这里用真实的 Chat/transport 路径（只把 fetch
-// 换成一段真的 UI message stream），数 Playground 子树提交了多少次，防止 throttle 被摘掉。
+// Regression test for streaming rendering: the server streams delta by delta, and without throttle
+// useChat **re-renders on every chunk** (@ai-sdk/react/dist/index.d.ts:119-122). This uses the real
+// Chat/transport path (only fetch is replaced with a real UI message stream) and counts how many
+// commits the Playground subtree makes, so removing throttle gets caught.
 //
-// 分片之间不等待（`_internal.delay` 直接 resolve，整段流在一个微任务批次里推完），
-// 所以这个数字与机器负载无关：实测不节流 64 次提交，节流后 3 次（leading + trailing）。
-// 真实模型 30–80 token/s 时，节流把重渲染卡在每秒约 1000/50 = 20 次。
+// There is no wait between chunks (`_internal.delay` resolves immediately, so the whole stream is
+// pushed in one microtask batch), which makes the count independent of machine load: measured at
+// 64 commits without throttling and 3 with it (leading + trailing). With a real model at 30–80
+// tokens/s, throttling caps re-renders at about 1000/50 = 20 per second.
 const DELTA_COUNT = 60;
 const FULL_TEXT = Array.from({ length: DELTA_COUNT }, (_, i) => i % 10).join(
   "",
@@ -62,9 +64,9 @@ function stubChatFetch() {
                   cacheRead: undefined,
                   cacheWrite: undefined,
                 },
-                // LanguageModelV4Usage 的 outputTokens 三个字段都是必填的
-                // （node_modules/@ai-sdk/provider/dist/index.d.ts:648）。这个 mock 只推文本，
-                // 所以 reasoning 是 0，不是 undefined。
+                // All three fields of LanguageModelV4Usage's outputTokens are required
+                // (node_modules/@ai-sdk/provider/dist/index.d.ts:648). This mock only streams
+                // text, so reasoning is 0, not undefined.
                 outputTokens: {
                   total: DELTA_COUNT,
                   text: DELTA_COUNT,
@@ -83,7 +85,7 @@ function stubChatFetch() {
   return fetchMock;
 }
 
-/** 渲染真实的 Playground，返回「挂载之后又提交了几次」的计数器。 */
+/** Renders the real Playground and returns a counter of commits made after mount. */
 function renderPlayground() {
   const commits: string[] = [];
   render(
@@ -115,14 +117,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Playground 流式渲染", () => {
-  test("整段流式输出不会每个分片重渲染一次", async () => {
+describe("Playground streaming rendering", () => {
+  test("does not re-render once per chunk over a full streamed response", async () => {
     const fetchMock = stubChatFetch();
     const commits = renderPlayground();
 
     typeAndSend("Hello");
     commits.length = 0;
-    // 等整段流走完（文字齐了 + 回到可发送状态）再数，数的是整段流的提交次数。
+    // Count only after the whole stream finishes (all text in + back to the sendable state), so
+    // this counts commits for the entire stream.
     await waitFor(
       () => {
         expect(screen.getByText(FULL_TEXT)).toBeTruthy();
@@ -132,14 +135,15 @@ describe("Playground 流式渲染", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    // 60 个分片：实测不节流 64 次提交，节流后 3 次。阈值取 DELTA_COUNT / 4 留足余量。
+    // 60 chunks: measured at 64 commits without throttling and 3 with it. The DELTA_COUNT / 4
+    // threshold leaves plenty of margin.
     expect(
       commits.length,
-      `${DELTA_COUNT} 个分片提交了 ${commits.length} 次，throttle 可能被摘掉了`,
+      `${DELTA_COUNT} chunks caused ${commits.length} commits; throttle may have been removed`,
     ).toBeLessThan(DELTA_COUNT / 4);
   });
 
-  test("节流不丢内容：整段文字完整落地，且之后还能继续输入", async () => {
+  test("throttling loses no content: the full text lands and input still works afterwards", async () => {
     stubChatFetch();
     renderPlayground();
 
@@ -147,12 +151,14 @@ describe("Playground 流式渲染", () => {
     await waitFor(() => expect(screen.getByText(FULL_TEXT)).toBeTruthy(), {
       timeout: 5000,
     });
-    // 用户消息 + 助手回复两条气泡（含屏幕阅读器用的角色标签）。
+    // Two bubbles, the user message and the assistant reply (including the role labels for screen
+    // readers).
     expect(screen.getByText("Hello")).toBeTruthy();
     expect(screen.getByText(/^You:/)).toBeTruthy();
 
-    // 流结束后回到 idle：输入框还能打字，Send 重新可用（busy 通过 memo 传进 Composer）。
-    // 用 waitFor 等按钮回来：状态切到 ready 可能在最后一段文字之后才提交。
+    // Back to idle after the stream ends: the input still accepts typing and Send is enabled again
+    // (busy is passed into the memoized Composer). Use waitFor for the button: the switch to ready
+    // may commit after the last chunk of text.
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Second" },
     });
@@ -166,12 +172,13 @@ describe("Playground 流式渲染", () => {
     ).toBe(false);
   });
 
-  test("流式期间打字不会清空或打断输入框", async () => {
+  test("typing during streaming does not clear or interrupt the input", async () => {
     stubChatFetch();
     renderPlayground();
 
     typeAndSend("Hello");
-    // 故意不等流结束就打字（input 状态现在在 Composer 内部，不能因为父组件重渲染被重置）。
+    // Deliberately type before the stream ends (input state now lives inside Composer and must not
+    // be reset by parent re-renders).
     await act(async () => {
       fireEvent.change(screen.getByRole("textbox"), {
         target: { value: "typing while streaming" },

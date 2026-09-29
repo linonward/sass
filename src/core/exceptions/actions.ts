@@ -21,9 +21,10 @@ const input = z.object({
 });
 
 /**
- * 异常台的所有处理动作走这一个入口。Server Action 可以绕过页面直接调用，
- * 所以这里重新校验管理员身份（页面上的 requireAdmin 挡不住直接调用）。
- * 每个动作都必须填理由，理由和结果写进 admin_actions。
+ * Every action on the exceptions page goes through this single entry point. A Server Action can be
+ * called directly, bypassing the page, so admin identity is re-checked here (the page's requireAdmin
+ * can't stop direct calls). Every action requires a reason; the reason and the result are written
+ * to admin_actions.
  */
 export async function exceptionAction(
   _prev: ExceptionActionState,
@@ -65,7 +66,8 @@ export async function exceptionAction(
       error: outcome.error === "not_open" ? "notOpen" : "invalid",
     };
   }
-  // 不在这里 refresh()：按「待处理」筛选时，刚关掉的单子会从列表里消失，连带弹层和
-  // 结果一起被卸载，管理员看不到处理结果。弹层关掉时由客户端刷新（见 ui/handle-dialog.tsx）。
+  // No refresh() here: when filtering by "open", the exception that was just closed would drop out
+  // of the list, unmounting the dialog and its result with it, and the admin would never see the
+  // outcome. The client refreshes when the dialog closes (see ui/handle-dialog.tsx).
   return { status: "success", result: outcome.result, closed: outcome.closed };
 }

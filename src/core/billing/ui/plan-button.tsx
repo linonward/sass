@@ -10,8 +10,9 @@ import { Button, buttonVariants } from "@/core/ui/button";
 import { useCheckout } from "./use-checkout";
 
 /**
- * 定价卡片上的按钮。落地页是静态页面，不知道访客是否登录，`owned` 为空：
- * 点击后由结账接口决定去结账、去登录还是去客户门户。/pricing 会传入 `owned`，直接显示对应状态。
+ * The button on a pricing card. The landing page is static and doesn't know whether the visitor is
+ * signed in, so `owned` is empty: on click, the checkout endpoint decides whether to go to checkout,
+ * sign-in or the customer portal. /pricing passes `owned` and shows the matching state directly.
  */
 export function PlanButton({
   planId,
@@ -31,7 +32,8 @@ export function PlanButton({
   const variant = highlighted ? "default" : "outline";
   const className = "mt-8 w-full";
 
-  // 免费套餐不用付款：直接进 dashboard，未登录时由 proxy 先带去登录。
+  // Free plans need no payment: go straight to the dashboard; signed-out users are sent to sign in
+  // by the proxy first.
   if (free) {
     return (
       <Link
@@ -44,7 +46,7 @@ export function PlanButton({
   }
   if (owned === "subscribed") {
     return (
-      // 客户门户是服务端重定向，要整页跳转。
+      // The customer portal is a server-side redirect, so this needs a full-page navigation.
       // eslint-disable-next-line @next/next/no-html-link-for-pages
       <a
         href="/api/billing/portal"

@@ -10,12 +10,16 @@ import {
   waffoMinorUnits,
 } from "./waffo";
 
-// 真实的官方 SDK（@waffo/pancake-ts）+ 注入的假 fetch：请求签名由 SDK 真跑，不联网。
-// webhook 用本地生成的 RSA 密钥按 Pancake 的格式签（X-Waffo-Signature: t=<毫秒>,v1=<base64>，
-// 签名输入是 `${t}.${body}`），通过 `webhookPublicKey` 注入给验签 —— 生产环境用 SDK 内置的公钥。
-// 事件结构取自 SDK 自带的 docs/webhook-guide.md（WebhookEvent / WebhookEventData）。
+// The real official SDK (@waffo/pancake-ts) plus an injected fake fetch: the SDK really signs the
+// requests, without touching the network.
+// Webhooks are signed with a locally generated RSA key in Pancake's format
+// (X-Waffo-Signature: t=<milliseconds>,v1=<base64>, signing input `${t}.${body}`), and the public
+// key is injected for signature verification via `webhookPublicKey` — production uses the public
+// key bundled with the SDK.
+// Event shapes come from the docs/webhook-guide.md shipped with the SDK
+// (WebhookEvent / WebhookEventData).
 
-// 套餐的产品 ID 要符合 Pancake 的格式（PROD_ + 22 位）。
+// Plan product IDs must match Pancake's format (PROD_ + 22 characters).
 vi.mock("../plans", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../plans")>();
   const products: Record<string, string> = {
@@ -149,7 +153,7 @@ describe("Waffo Pancake adapter", () => {
     s = setup();
   });
 
-  test("金额：展示格式 → ISO 最小单位", () => {
+  test("amounts: display format → ISO minor units", () => {
     expect(waffoMinorUnits("29.00", "USD")).toBe(2900);
     expect(waffoMinorUnits("1,299.50", "USD")).toBe(129950);
     expect(waffoMinorUnits("1000", "JPY")).toBe(1000);
@@ -159,7 +163,7 @@ describe("Waffo Pancake adapter", () => {
     expect(waffoMinorUnits("n/a", "USD")).toBeUndefined();
   });
 
-  test("结账：authenticated checkout，产品 ID 取套餐配置，buyerIdentity 是用户 ID，metadata 带回用户和套餐", async () => {
+  test("checkout: authenticated checkout, product ID from the plan config, buyerIdentity is the user ID, metadata carries user and plan back", async () => {
     s.http.reply("/v1/actions/auth/issue-session-token", {
       data: { token: "jwt-token", expiresAt: "2026-09-29T09:00:00Z" },
     });
@@ -200,12 +204,13 @@ describe("Waffo Pancake adapter", () => {
       metadata: { userId: "user_1", planId: "pro" },
       orderMerchantExternalId: "user_1:pro",
     });
-    // 请求由 SDK 用商户私钥签名，带商户 ID 和环境。
+    // The SDK signs the request with the merchant private key and includes the merchant ID and
+    // environment.
     expect(session.headers.get("x-merchant-id")).toBe(MERCHANT_ID);
     expect(session.headers.get("x-signature")).toBeTruthy();
   });
 
-  test("结账：套餐没配产品 ID 时抛错（不拿空 ID 去调服务商）", async () => {
+  test("checkout: throws when the plan has no product ID (never calls the provider with an empty ID)", async () => {
     await expect(
       s.provider.createCheckout({
         userId: "user_1",
@@ -217,15 +222,15 @@ describe("Waffo Pancake adapter", () => {
     expect(s.http.calls).toHaveLength(0);
   });
 
-  describe("webhook 验签", () => {
-    test("Waffo 私钥签的事件通过", async () => {
+  describe("webhook signature verification", () => {
+    test("accepts events signed with the Waffo private key", async () => {
       const payload = event("order.completed");
       await expect(
         s.provider.verifyWebhook(webhookRequest(payload)),
       ).resolves.toEqual(payload);
     });
 
-    test("没签名、签名不对、签错内容、时间戳过期都抛 WebhookVerificationError", async () => {
+    test("missing signature, wrong signature, signed over different content, and expired timestamp all throw WebhookVerificationError", async () => {
       const payload = event("order.completed");
       const body = JSON.stringify(payload);
       for (const request of [
@@ -244,7 +249,7 @@ describe("Waffo Pancake adapter", () => {
       }
     });
 
-    test("环境不符：生产站点拒收测试环境的事件（免费测试卡不能在生产发积分）", async () => {
+    test("environment mismatch: a production site rejects test-environment events (free test cards must not grant credits in production)", async () => {
       const prod = setup("prod");
       await expect(
         prod.provider.verifyWebhook(webhookRequest(event("order.completed"))),
@@ -256,7 +261,7 @@ describe("Waffo Pancake adapter", () => {
       ).resolves.toMatchObject({ mode: "prod" });
     });
 
-    test("processWebhook：未签名 401；不关心的事件 200 ignored", async () => {
+    test("processWebhook: unsigned is 401; ignored events are 200 ignored", async () => {
       const unsigned = await processWebhook(
         s.provider,
         webhookRequest(event("order.completed"), null),
@@ -274,7 +279,7 @@ describe("Waffo Pancake adapter", () => {
   });
 
   describe("parseEvent", () => {
-    test("order.completed → checkout.completed：订单是这笔付款（paymentId），金额取实付，幂等键是事件类型 + eventId", () => {
+    test("order.completed → checkout.completed: the order is this payment (paymentId), the amount is what was actually paid, and the idempotency key is event type + eventId", () => {
       expect(
         s.provider.parseEvent(
           event("order.completed", {
@@ -295,13 +300,14 @@ describe("Waffo Pancake adapter", () => {
         currency: "USD",
         raw: expect.anything(),
       });
-      // 万一没带 paymentId，退回订单 ID（仍然能记账，只是退款对不上）。
+      // If paymentId is missing, fall back to the order ID (the payment is still recorded, but
+      // refunds won't match).
       expect(s.provider.parseEvent(event("order.completed"))).toMatchObject({
         orderId: ORDER,
       });
     });
 
-    test("用户 ID：metadata 优先，其次 buyerIdentity", () => {
+    test("user ID: metadata first, then buyerIdentity", () => {
       const fromIdentity = s.provider.parseEvent(
         event("order.completed", { orderMetadata: undefined }),
       );
@@ -311,7 +317,7 @@ describe("Waffo Pancake adapter", () => {
       });
     });
 
-    test("订阅：激活 / 续期 / 恢复 / 撤销取消 → active（带当期起止），订阅 ID 记作客户 ID", () => {
+    test("subscription: activated / renewal / recovered / uncanceled → active (with current period start and end), subscription ID doubles as customer ID", () => {
       for (const type of [
         "subscription.activated",
         "subscription.renewed",
@@ -331,7 +337,7 @@ describe("Waffo Pancake adapter", () => {
       }
     });
 
-    test("每一期扣款 → subscription.renewed，订单是这一期的 paymentId；没有 paymentId 忽略", () => {
+    test("each period's charge → subscription.renewed, the order is that period's paymentId; ignored without paymentId", () => {
       expect(
         s.provider.parseEvent(
           event("subscription.payment_succeeded", {
@@ -355,7 +361,7 @@ describe("Waffo Pancake adapter", () => {
       ).toBeNull();
     });
 
-    test("取消中 → canceled（用到当期结束）；彻底终止 → expired；续费失败 → payment.failed", () => {
+    test("canceling → canceled (usable until period end); fully terminated → expired; renewal failure → payment.failed", () => {
       expect(
         s.provider.parseEvent(
           event("subscription.canceling", subscriptionData),
@@ -373,7 +379,7 @@ describe("Waffo Pancake adapter", () => {
       ).toMatchObject({ type: "payment.failed", subscriptionId: SUB });
     });
 
-    test("退款：按被退的那笔付款（paymentId）对上 —— 一次性订单和订阅某一期同一套；没有 paymentId 不映射", () => {
+    test("refund: matched by the refunded payment (paymentId) — same scheme for one-time orders and a subscription period; not mapped without paymentId", () => {
       expect(
         s.provider.parseEvent(
           event(
@@ -414,7 +420,7 @@ describe("Waffo Pancake adapter", () => {
       expect(s.provider.parseEvent(event("refund.failed"))).toBeNull();
     });
 
-    test("不关心或结构不对的 payload 返回 null", () => {
+    test("returns null for ignored or malformed payloads", () => {
       for (const payload of [
         null,
         "x",
@@ -429,15 +435,15 @@ describe("Waffo Pancake adapter", () => {
     });
   });
 
-  describe("门户与取消", () => {
-    test("门户：返回 Pancake 的托管门户登录页（魔法链接登录，官方还没有预登录链接）", async () => {
+  describe("portal and cancellation", () => {
+    test("portal: returns the Pancake hosted portal login page (magic-link login; no official pre-authenticated link yet)", async () => {
       await expect(s.provider.getPortalUrl(SUB)).resolves.toBe(
         WAFFO_PORTAL_URL,
       );
       expect(s.http.calls).toHaveLength(0);
     });
 
-    test("取消：调 cancel-order；报错但订阅已不再扣款（或查不到）视为成功；仍在扣款就抛错", async () => {
+    test("cancel: calls cancel-order; an error counts as success if the subscription will no longer be charged (or can't be found); throws if it is still being charged", async () => {
       s.http.reply("/v1/actions/subscription-order/cancel-order", {
         data: { orderId: SUB, status: "canceling" },
       });

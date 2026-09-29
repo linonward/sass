@@ -21,11 +21,11 @@ if (!url && process.env.CI) {
 }
 if (!url) {
   console.warn(
-    "跳过恢复运行器测试：未设置 DATABASE_URL_TEST（见 .env.example）",
+    "Skipping recovery runner tests: DATABASE_URL_TEST is not set (see .env.example)",
   );
 }
 
-describe.skipIf(!url)("恢复运行器与租约", () => {
+describe.skipIf(!url)("recovery runner and lease", () => {
   let dbClient: DbClient;
 
   beforeAll(async () => {
@@ -43,7 +43,7 @@ describe.skipIf(!url)("恢复运行器与租约", () => {
 
   const leaseName = () => `test-${randomUUID()}`;
 
-  test("并发抢同一把租约：只有一个抢到；放掉之后又能抢", async () => {
+  test("concurrent acquires of one lease: only one wins; after release it can be acquired again", async () => {
     const name = leaseName();
     const results = await Promise.all(
       Array.from({ length: 5 }, () =>
@@ -58,10 +58,10 @@ describe.skipIf(!url)("恢复运行器与租约", () => {
     expect(await acquireLease(dbClient.db, { name, ttlMs: 60_000 })).toBe(true);
   });
 
-  test("持有者死掉（没放）：租约到期后别人能接手", async () => {
+  test("holder dies without releasing: someone else can take over after the lease expires", async () => {
     const name = leaseName();
     expect(await acquireLease(dbClient.db, { name, ttlMs: 60_000 })).toBe(true);
-    // 模拟过了 TTL：把到期时间拨回过去。
+    // Simulate the TTL passing: move the expiry into the past.
     await dbClient.db
       .update(jobLeases)
       .set({ lockedUntil: sql`now() - interval '1 second'` })
@@ -69,13 +69,13 @@ describe.skipIf(!url)("恢复运行器与租约", () => {
     expect(await acquireLease(dbClient.db, { name, ttlMs: 60_000 })).toBe(true);
   });
 
-  test("限频：距上次开始不足最小间隔就不抢，锁已放掉也一样", async () => {
+  test("rate limit: no acquire within the minimum interval since the last start, even if the lock was released", async () => {
     const name = leaseName();
     const opts = { name, ttlMs: 60_000, minIntervalMs: 5 * 60_000 };
     expect(await acquireLease(dbClient.db, opts)).toBe(true);
     await releaseLease(dbClient.db, name);
     expect(await acquireLease(dbClient.db, opts)).toBe(false);
-    // cron 不受限频：只看锁。
+    // cron isn't rate-limited: only the lock matters.
     expect(await acquireLease(dbClient.db, { name, ttlMs: 60_000 })).toBe(true);
     await releaseLease(dbClient.db, name);
     await dbClient.db
@@ -90,7 +90,7 @@ describe.skipIf(!url)("恢复运行器与租约", () => {
     expect(row!.lastFinishedAt).not.toBeNull();
   });
 
-  test("运行器：抢到才跑，记结构化日志；一个任务出错不影响其它任务，也不会让租约挂着", async () => {
+  test("runner: runs only when it gets the lease and writes structured logs; one failing task does not affect the others or leave the lease held", async () => {
     const name = leaseName();
     const logInfo = vi.fn();
     const logError = vi.fn();
@@ -113,7 +113,8 @@ describe.skipIf(!url)("恢复运行器与租约", () => {
       run({ trigger: "cron", limit: 7 }),
       run({ trigger: "cron", limit: 7 }),
     ]);
-    // 同时触发的两次里只有一次真的跑了（平台重复投递、调度器重叠都是这个形状）。
+    // Of two simultaneous triggers only one actually runs (duplicate platform deliveries and
+    // overlapping schedulers look exactly like this).
     expect([first.ran, second.ran].sort()).toEqual([false, true]);
     expect(ai).toHaveBeenCalledTimes(1);
     expect(ai).toHaveBeenCalledWith({ limit: 7 });
@@ -133,7 +134,8 @@ describe.skipIf(!url)("恢复运行器与租约", () => {
       expect.objectContaining({ trigger: "cron" }),
     );
 
-    // 租约已经放掉：cron 能立刻再跑；机会式的要等 5 分钟。
+    // The lease has been released: cron can run again right away; opportunistic has to wait 5
+    // minutes.
     expect((await run({ trigger: "opportunistic", limit: 3 })).ran).toBe(false);
     expect((await run({ trigger: "cron", limit: 7 })).ran).toBe(true);
   });

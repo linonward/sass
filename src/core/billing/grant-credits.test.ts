@@ -11,7 +11,7 @@ const base = {
 };
 
 describe("creditsForBillingEvent", () => {
-  test("一次性购买：按订单发放", () => {
+  test("one-time purchase: granted per order", () => {
     const event: BillingEvent = {
       ...base,
       type: "checkout.completed",
@@ -25,7 +25,7 @@ describe("creditsForBillingEvent", () => {
     });
   });
 
-  test("订阅的结账和激活不发放（由账期付款发放）", () => {
+  test("subscription checkout and activation grant nothing (the billing-period payment does)", () => {
     expect(
       creditsForBillingEvent({
         ...base,
@@ -45,7 +45,7 @@ describe("creditsForBillingEvent", () => {
     ).toBeNull();
   });
 
-  test("订阅账期：按订阅 + 账期开始时间发放", () => {
+  test("subscription billing period: granted per subscription + period start", () => {
     expect(
       creditsForBillingEvent({
         ...base,
@@ -61,7 +61,7 @@ describe("creditsForBillingEvent", () => {
     });
   });
 
-  test("没有账期信息时退回用付款的订单 ID", () => {
+  test("falls back to the payment's order ID when there is no billing period info", () => {
     expect(
       creditsForBillingEvent({
         ...base,
@@ -73,7 +73,7 @@ describe("creditsForBillingEvent", () => {
     ).toMatchObject({ sourceId: "creem:order:tran_1" });
   });
 
-  test("未知套餐、免费套餐或退款不发放", () => {
+  test("unknown plans, free plans and refunds grant nothing", () => {
     expect(
       creditsForBillingEvent({
         ...base,

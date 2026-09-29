@@ -33,9 +33,12 @@
 
 ## 顺序
 
-`T2600 → T2601 → T2602 → T2603 → T2604 → T2605 → T2606 → T2306`
+`T2600 → T2601 →（T2501 合入后）T2602 / T2603 / T2604 并行 → T2605 → T2606 → T2306`
 
-T2601–T2605 按目录互不重叠，理论上可以并行；单人推进时串行做，最后由 T2606 加闸。
+- T2602–T2604 按目录互不重叠，可以并行。它们都依赖阶段 25 的 T2501（form-fields）：T2501 改了这三批里的文件（`src/core/account/settings-forms.tsx`、`src/core/acquisition/report-filters*`、`src/core/status/admin-forms.tsx`、`src/core/ui/*`、`src/features/invoices/dialogs*`、`e2e/status.spec.ts`），同时改代码和注释必然冲突，所以等它合入后翻译它的最终代码。
+- 三条共用任务表的相邻状态行：逐条合入，后合的先 rebase。
+- 本地不要同时跑多个 worktree 的完整 e2e（共用测试库会互相干扰），完整 e2e 交给 CI。
+- T2605 等三条都合入：文档引用的 `.env.example`、`site.config.ts` 和脚本输出以英文版为准。T2606 最后加闸。
 
 与[阶段 25（基础组件）](phase-25-foundation-components.md)的关系：两个阶段互不依赖。T2600 合入之后，阶段 25 新写的代码直接用英文（`AGENTS.md` 的语言规则）；阶段 25 的卡改到的目录如果正好在某个英文化批次里，后合入的那个 rebase 时顺手把对方新增的中文补译。
 
@@ -76,16 +79,16 @@ T2601–T2605 按目录互不重叠，理论上可以并行；单人推进时串
 
 **验收**
 
-- [ ] 范围内文件不含中文（`zh` locale 的测试夹具除外，并在 PR 描述列出）
-- [ ] 纯注释文件去注释后的输出与改前一致
-- [ ] `pnpm lint` / `pnpm typecheck` / `pnpm test` 绿
+- [x] 范围内文件不含中文（`zh` locale 的测试夹具除外，并在 PR 描述列出）—— 实际没有例外
+- [x] 纯注释文件去注释后的输出与改前一致：69 个源码文件去注释后一致；37 个测试文件去注释、并清空字符串内容后一致（只改了测试标题、`test.each` 标签和跳过提示）
+- [x] `pnpm lint` / `pnpm typecheck` / `pnpm test` 绿（141 个文件，1599 项）
 
 ---
 
 ## T2602 english-core-identity
 
 - 分支 / worktree：`chore/english-core-identity` → `../sass-english-core-identity`
-- 依赖：T2601
+- 依赖：T2601、T2501（见「顺序」）
 
 **范围**：`src/core/auth`、`src/core/email`、`src/core/acquisition`、`src/core/admin`、`src/core/api-keys`、`src/core/security`、`src/core/ratelimit`、`src/core/account`、`src/core/db`、`src/core/config`（约 1800 行）。
 
@@ -98,7 +101,7 @@ T2601–T2605 按目录互不重叠，理论上可以并行；单人推进时串
 ## T2603 english-core-rest
 
 - 分支 / worktree：`chore/english-core-rest` → `../sass-english-core-rest`
-- 依赖：T2602
+- 依赖：T2601、T2501（见「顺序」）
 
 **范围**：`src/core` 下其余全部（status、observability、ui、upload、seo、blog、theme、changelog、i18n、flags、dashboard、marketing、onboarding，以及 `src/core` 根目录的文件，约 1300 行）。
 
@@ -109,7 +112,7 @@ T2601–T2605 按目录互不重叠，理论上可以并行；单人推进时串
 ## T2604 english-app
 
 - 分支 / worktree：`chore/english-app` → `../sass-english-app`
-- 依赖：T2603
+- 依赖：T2601、T2501（见「顺序」）
 
 **范围**：`src/app`、`src/features`、`src/` 下 `core` 以外的其余文件、`e2e/`、`scripts/`、`.github/`、根目录配置（`site.config.ts`、`.env.example`、`next.config.ts`、`content-collections.ts`、`pnpm-workspace.yaml`、`vitest.config.mts`、`playwright.config.ts`、`eslint.config.mjs`、`commitlint.config.mjs`、`lint-staged.config.mjs`）、`content/legal`（约 1900 行）。
 
@@ -122,7 +125,7 @@ T2601–T2605 按目录互不重叠，理论上可以并行；单人推进时串
 ## T2605 english-docs
 
 - 分支 / worktree：`docs/english-docs` → `../sass-english-docs`
-- 依赖：T2604（文档里引用的脚本输出和配置说明以英文版为准）
+- 依赖：T2602、T2603、T2604（文档里引用的脚本输出和配置说明以英文版为准）
 
 **范围**：`README.md`、`UPGRADING.md`、`docs/starter-guide.md`、`docs/agent-guide.md`、`docs/design.md`、`docs/i18n.md`、`docs/billing.md`、`THIRD-PARTY-NOTICES.md`。
 

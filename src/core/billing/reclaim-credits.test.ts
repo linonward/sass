@@ -41,15 +41,17 @@ import { FakeProvider } from "./testing/fake-provider";
 
 const url = process.env.DATABASE_URL_TEST;
 
-// CI 必须提供测试库，不允许静默跳过。
+// CI must provide a test database; silently skipping is not allowed.
 if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过退款回收测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping refund reclaim tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
-// site.config.ts 的套餐：lifetime 一次发放 2000 积分。
+// Plans from site.config.ts: lifetime grants 2000 credits once.
 const GRANTED = 2000;
 const ORDER_AMOUNT = 3000;
 
@@ -86,14 +88,14 @@ describe("creditsToReclaim", () => {
       alreadyReclaimed: over.alreadyReclaimed ?? 0,
     });
 
-  test("全额退款：回收全部发放的积分", () => {
+  test("full refund: reclaims all granted credits", () => {
     expect(call({ refundedAmount: ORDER_AMOUNT })).toMatchObject({
       amount: GRANTED,
       sourceId: reclaimSourceId("creem", "ord_1", "ref_1"),
     });
   });
 
-  test("部分退款：按已退金额比例回收", () => {
+  test("partial refund: reclaims in proportion to the refunded amount", () => {
     expect(call({ refundedAmount: ORDER_AMOUNT / 2 })?.amount).toBe(
       GRANTED / 2,
     );
@@ -102,8 +104,9 @@ describe("creditsToReclaim", () => {
     );
   });
 
-  test("累计口径：多次部分退款的取整误差由最后一次补上", () => {
-    // 3000 分三次各退 1000，逐次取整会得到 666、666、666（少收 2），累计口径是 666、667、667。
+  test("cumulative basis: rounding error from several partial refunds is made up by the last one", () => {
+    // 3000 refunded as 1000 three times: rounding each gives 666, 666, 666 (2 short); cumulative
+    // gives 666, 667, 667.
     const first = call({ refundedAmount: 1000 })!;
     const second = call({
       refundedAmount: 2000,
@@ -119,7 +122,7 @@ describe("creditsToReclaim", () => {
     expect(first.amount + second.amount + third.amount).toBe(GRANTED);
   });
 
-  test("已经回收够了的订单不再回收", () => {
+  test("an order that has already been fully reclaimed isn't reclaimed again", () => {
     expect(
       call({ refundedAmount: ORDER_AMOUNT, alreadyReclaimed: GRANTED }),
     ).toBeNull();
@@ -128,16 +131,16 @@ describe("creditsToReclaim", () => {
     ).toBeNull();
   });
 
-  test("订单金额缺失或为 0 时不回收（退款先于付款事件到达）", () => {
+  test("no reclaim when the order amount is missing or 0 (refund arrived before the payment event)", () => {
     expect(call({ refundedAmount: 500, amount: null })).toBeNull();
     expect(call({ refundedAmount: 500, amount: 0 })).toBeNull();
   });
 
-  test("已退金额超过订单金额时按订单金额封顶", () => {
+  test("a refunded amount above the order amount is capped at the order amount", () => {
     expect(call({ refundedAmount: ORDER_AMOUNT * 2 })?.amount).toBe(GRANTED);
   });
 
-  test("部分退款的理由写明是部分退款", () => {
+  test("the reason for a partial refund says it is a partial refund", () => {
     expect(call({ refundedAmount: 1000 })?.reason).toContain("Partial");
     expect(call({ refundedAmount: ORDER_AMOUNT })?.reason).not.toContain(
       "Partial",
@@ -145,7 +148,7 @@ describe("creditsToReclaim", () => {
   });
 });
 
-describe.skipIf(!url)("退款回收集分", () => {
+describe.skipIf(!url)("refund credit reclaim", () => {
   let client: DbClient;
   let db: DbClient["db"];
   let credits: Credits;
@@ -180,7 +183,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     );
   }
 
-  /** 走一遍真实流程：一次性购买发放积分，订单落库。 */
+  /** Run the real flow: a one-time purchase grants credits and the order is stored. */
   async function purchase({
     planId = "lifetime",
     orderId = `ord_${randomUUID()}`,
@@ -216,7 +219,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     });
 
   beforeAll(async () => {
-    // 测试自己保证表结构是最新的，不依赖外部先执行 db:migrate。
+    // The test makes sure the schema is current itself instead of relying on db:migrate being run first.
     const pool = new Pool({ connectionString: url });
     await migrate(drizzle({ client: pool }), {
       migrationsFolder: path.resolve(__dirname, "../../../drizzle"),
@@ -244,7 +247,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     useCredits(true);
   });
 
-  test("全额退款：购买发放的积分全部回收，余额清零", async () => {
+  test("full refund: all credits granted by the purchase are reclaimed and the balance goes to zero", async () => {
     const orderId = await purchase();
     expect(await balance()).toBe(GRANTED);
 
@@ -264,7 +267,7 @@ describe.skipIf(!url)("退款回收集分", () => {
   });
 
   test.each(["checkout", "subscription"])(
-    "退款先到，%s 付款后到仍回收；重推不会重复回收",
+    "refund first, %s payment later: still reclaimed; re-pushes don't reclaim twice",
     async (kind) => {
       const orderId = `ord_${randomUUID()}`;
       await handle(refund(orderId));
@@ -299,7 +302,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     },
   );
 
-  test("套餐下线后按实际发放额回收，不依赖当前套餐配置", async () => {
+  test("after a plan is retired, reclaims by the amount actually granted, not the current plan config", async () => {
     const orderId = await purchase({ planId: "removed-plan" });
     await credits.grantCredits({
       userId,
@@ -315,7 +318,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     ).toBe(-777);
   });
 
-  test("订阅跨账期且套餐下线：只回收被退款订单对应的实际积分", async () => {
+  test("subscription across billing periods with a retired plan: reclaims only the credits actually granted for the refunded order", async () => {
     const subscriptionId = randomUUID();
     const first = fake.event("subscription.renewed", {
       userId,
@@ -344,7 +347,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     expect(await balance()).toBe(0);
   });
 
-  test("旧 Creem 订单没有关联字段时，从付款原文恢复旧账期，套餐下线不影响", async () => {
+  test("old Creem orders without the link fields: recovers the old billing period from the raw payment; plan retirement doesn't matter", async () => {
     const orderId = randomUUID(),
       subscriptionId = randomUUID(),
       eventId = randomUUID();
@@ -391,7 +394,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     ).toBe(-777);
   });
 
-  test("部分退款先到，后续多个退款按累计金额回收且不超过实际发放", async () => {
+  test("partial refund first, then several refunds reclaim by cumulative amount without exceeding what was granted", async () => {
     const orderId = randomUUID();
     await handle(refund(orderId, { amount: 1000 }));
     await purchase({ orderId });
@@ -402,7 +405,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     expect(await balance()).toBe(0);
   });
 
-  test("付款与退款并发最终回收一次", async () => {
+  test("concurrent payment and refund end up reclaiming once", async () => {
     const orderId = randomUUID();
     const paid = fake.event("checkout.completed", {
       userId,
@@ -419,7 +422,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     ).toHaveLength(1);
   });
 
-  test("补偿失败回滚整次付款，重试可以完成发放与回收", async () => {
+  test("a failed compensation rolls back the whole payment; a retry completes both grant and reclaim", async () => {
     const orderId = randomUUID();
     await handle(refund(orderId));
     registerOnBillingEvent(
@@ -448,7 +451,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     expect(await reclaims()).toHaveLength(2);
   });
 
-  test("积分已经花掉一部分：扣到 0，差额不写流水（amount 有非零约束）", async () => {
+  test("credits partly spent already: deducts down to 0; the difference isn't written as a transaction (amount has a non-zero constraint)", async () => {
     const orderId = await purchase();
     await credits.deductCredits({
       userId,
@@ -463,11 +466,11 @@ describe.skipIf(!url)("退款回收集分", () => {
     expect(await balance()).toBe(0);
     const entries = await reclaims();
     const reclaim = entries.find((tx) => tx.source === REFUND_RECLAIM_SOURCE);
-    // 应回收 2000，余额只有 500 —— 只扣得动 500。
+    // Should reclaim 2000 but the balance is only 500 — only 500 can be deducted.
     expect(reclaim).toMatchObject({ amount: -500 });
   });
 
-  test("余额为 0 时一分都扣不动，也不写流水", async () => {
+  test("with a balance of 0 nothing can be deducted, and no transaction is written", async () => {
     const orderId = await purchase();
     await credits.deductCredits({
       userId,
@@ -484,14 +487,14 @@ describe.skipIf(!url)("退款回收集分", () => {
     ).toBe(false);
   });
 
-  test("部分退款：按比例回收", async () => {
+  test("partial refund: reclaims proportionally", async () => {
     const orderId = await purchase();
     await handle(refund(orderId, { amount: ORDER_AMOUNT / 4 }));
 
     expect(await balance()).toBe(GRANTED - GRANTED / 4);
   });
 
-  test("多次部分退款的取整误差被最后一次补上", async () => {
+  test("rounding error from several partial refunds is made up by the last one", async () => {
     const orderId = await purchase();
     for (let i = 0; i < 3; i++) {
       await handle(refund(orderId, { amount: ORDER_AMOUNT / 3 }));
@@ -500,7 +503,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     expect(await balance()).toBe(0);
   });
 
-  test("重复推送同一个事件：不重复扣减", async () => {
+  test("pushing the same event again: no duplicate deduction", async () => {
     const orderId = await purchase();
     const event = refund(orderId);
 
@@ -510,14 +513,15 @@ describe.skipIf(!url)("退款回收集分", () => {
     expect(await balance()).toBe(after);
   });
 
-  test("同一笔退款换事件 ID 重推：流水来源相同，同样不重复扣减", async () => {
+  test("the same refund re-pushed with a new event ID: same transaction source, still no duplicate deduction", async () => {
     const orderId = await purchase();
     const refundId = `ref_${randomUUID()}`;
 
     await handle(refund(orderId, { refundId }));
     const after = await balance();
-    // 服务商重试时换了事件 ID，(provider, event_id) 挡不住，由流水的
-    // (source, sourceId) 兜住 —— 回收额度按已回收部分扣减后归零，不再写第二条。
+    // The provider changed the event ID on retry, so (provider, event_id) can't catch it; the
+    // transaction's (source, sourceId) does — the reclaim amount drops to zero after subtracting what
+    // was already reclaimed, so no second transaction is written.
     await handle(refund(orderId, { refundId, eventId: `evt_${randomUUID()}` }));
 
     expect(await balance()).toBe(after);
@@ -527,7 +531,7 @@ describe.skipIf(!url)("退款回收集分", () => {
     expect(reclaimEntries).toHaveLength(1);
   });
 
-  test("features.credits 关闭时既不发放也不回收", async () => {
+  test("with features.credits off, credits are neither granted nor reclaimed", async () => {
     useCredits(false);
     const event = fake.event("checkout.completed", {
       userId,
@@ -551,9 +555,10 @@ describe.skipIf(!url)("退款回收集分", () => {
     expect(await reclaims()).toHaveLength(0);
   });
 
-  test("套餐没有积分时不回收", async () => {
+  test("no reclaim when the plan has no credits", async () => {
     const orderId = await purchase({ planId: "free" });
-    // free 套餐有积分，先验证能回收；再用一个未知套餐验证不回收。
+    // The free plan has credits, so first check it can be reclaimed; then use an unknown plan to
+    // check nothing is reclaimed.
     await handle(refund(orderId));
     expect(
       (await reclaims()).some((tx) => tx.source === REFUND_RECLAIM_SOURCE),

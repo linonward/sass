@@ -24,15 +24,16 @@ export { AI_CREDIT_SOURCE } from "./usage";
 
 export type RunAIInput = Prompt &
   LanguageModelCallOptions & {
-    // 当前登录用户；为空时返回 401。
+    // The signed-in user; returns 401 when empty.
     userId: string | null | undefined;
-    // 客户端 IP，用于按 IP 限流（getClientIp(request.headers)）。
+    // Client IP, used for per-IP rate limiting (getClientIp(request.headers)).
     ip?: string | null;
-    // site.config.ts 中 ai.models 的 id；不填用 ai.defaultModel。
+    // An id from ai.models in site.config.ts; defaults to ai.defaultModel.
     modelId?: string;
-    // 传入后可以中止生成（比如 request.signal）。中止时模型已产生用量，积分不退。
+    // Pass one to be able to abort generation (e.g. request.signal). On abort the model has already
+    // incurred usage, so credits are not refunded.
     abortSignal?: AbortSignal;
-    // 服务商报错时的自动重试次数（AI SDK 默认 2）。
+    // Number of automatic retries on provider errors (AI SDK default: 2).
     maxRetries?: number;
   };
 
@@ -43,16 +44,19 @@ export type RunAIResult =
       ok: true;
       usageId: string;
       model: AiModel;
-      // streamText 的结果：toUIMessageStreamResponse()、textStream、await text 等照常使用。
+      // The streamText result: use toUIMessageStreamResponse(), textStream, await text, etc. as
+      // usual.
       result: StreamResult;
-      // 调用结束（成功、失败退款或中止）并写完 ai_usage 后 resolve，从不 reject。
-      // 路由里用 next/server 的 after(() => settled)，确保响应结束后记账还能跑完。
+      // Resolves once the call ends (success, failure with refund, or abort) and ai_usage is
+      // written; never rejects. In routes use next/server's after(() => settled) so accounting can
+      // still finish after the response ends.
       settled: Promise<AiUsageStatus>;
     }
   | {
       ok: false;
       status: 400 | 401 | 402 | 429 | 503;
-      // 可以直接 return 给客户端的响应（JSON：{ error }，限流时带 Retry-After）。
+      // A response you can return to the client directly (JSON: { error }, with Retry-After when
+      // rate limited).
       response: Response;
     };
 
@@ -64,7 +68,7 @@ export type RunAIDeps = {
     policy: string,
     identifiers: RateLimitIdentifiers,
   ) => Promise<RateLimitResult>;
-  // 按配置取模型；该服务商没有配置 key 时返回 null。
+  // Resolves the model from config; returns null when that provider has no key configured.
   getModel: (model: AiModel) => LanguageModel | null;
   now?: () => number;
   logError?: LogFn;
@@ -79,10 +83,12 @@ function fail(status: 400 | 401 | 402 | 503, error: string) {
 }
 
 /**
- * 创建 runAI。默认实例见 `./index.ts`；测试注入 mock 模型、数据库和限流。
+ * Creates runAI. The default instance is in `./index.ts`; tests inject mock models, database, and
+ * rate limiting.
  *
- * 顺序：检查登录 → 选模型 → 限流（ai 策略）→ 预扣积分并写 ai_usage（同一事务）→ 调用模型。
- * 模型报错时按 ai_usage.id 退回积分；成功时记录 token 用量和耗时。
+ * Order: check sign-in → pick model → rate limit (ai policy) → pre-deduct credits and write
+ * ai_usage (same transaction) → call the model. On a model error the credits are refunded by
+ * ai_usage.id; on success the token usage and duration are recorded.
  */
 export function createRunAI({
   db,
@@ -119,7 +125,7 @@ export function createRunAI({
       };
     }
 
-    // 预扣和 ai_usage 在同一个事务里：要么都写入，要么都没有。
+    // The pre-deduction and ai_usage share one transaction: either both are written or neither is.
     const usageId = await reserveUsage(usageDeps, {
       userId,
       kind: "text",
@@ -128,7 +134,8 @@ export function createRunAI({
     if (!usageId) return fail(402, "insufficient_credits");
 
     const startedAt = now();
-    // 流式调用在路由返回后才结束，span 手动开、在 finish 里结束。
+    // A streaming call only ends after the route returns, so the span is opened manually and ended
+    // in finish.
     const span = startSpan("ai.text", {
       "ai.usage_id": usageId,
       "ai.model_id": model.id,
@@ -141,7 +148,7 @@ export function createRunAI({
     });
     let finished = false;
 
-    // 只执行一次：onError 之后 streamText 可能还会调用 onEnd。
+    // Runs only once: streamText may still call onEnd after onError.
     async function finish(
       status: AiUsageStatus,
       details: { usage?: LanguageModelUsage; error?: unknown } = {},
@@ -190,11 +197,13 @@ export function createRunAI({
         onAbort: () => finish("aborted"),
       });
     } catch (error) {
-      // 参数错误等同步异常：积分已经预扣，同样退回。
+      // Synchronous exceptions such as invalid arguments: credits were already pre-deducted, so
+      // refund them too.
       await finish("failed", { error });
       throw error;
     }
-    // 服务端把流读完：客户端断开时生成照常结束，onEnd / onError 一定会触发，积分和用量不会悬空。
+    // The server reads the stream to the end: if the client disconnects, generation still finishes,
+    // onEnd / onError always fire, and credits and usage are never left hanging.
     void result.consumeStream();
 
     return { ok: true, usageId, model, result, settled };

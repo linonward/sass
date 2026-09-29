@@ -25,15 +25,17 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过图片测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping image tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
-// PNG 文件头，generateImage 按它识别出 image/png。
+// PNG file header; generateImage uses it to detect image/png.
 const png = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
 ]);
 
-/** 返回一张 PNG；doGenerate 是 vi.fn，可以断言调用参数。 */
+/** Returns a PNG; doGenerate is a vi.fn so tests can assert on its call arguments. */
 function okModel() {
   return new MockImageModelV4({
     doGenerate: vi.fn(async () => ({
@@ -120,7 +122,7 @@ describe.skipIf(!url)("runImage", () => {
       config,
       credits,
       checkRateLimit,
-      // 只有 alibaba 配了 key。
+      // Only alibaba has a key configured.
       getModel: (m: AiImageModel) => (m.provider === "alibaba" ? model : null),
       getStorage: () => storage,
       fileUrl: async (key) => `https://files.test/${key}`,
@@ -144,7 +146,7 @@ describe.skipIf(!url)("runImage", () => {
       .where(eq(creditTransactions.userId, userId));
   }
 
-  test("成功：扣积分，图片写进存储和 files，ai_usage 记下类型、提示词和文件", async () => {
+  test("success: deducts credits, writes the image to storage and files, and records the type, prompt, and file in ai_usage", async () => {
     const userId = await newUser(10);
     const { runImage, checkRateLimit, model, storage } = setup();
 
@@ -194,7 +196,7 @@ describe.skipIf(!url)("runImage", () => {
     expect(await credits.getBalance(userId)).toBe(6);
   });
 
-  test("生成记录：只列成功的图片，新的在前", async () => {
+  test("generations: lists only successful images, newest first", async () => {
     const userId = await newUser(20);
     const { runImage } = setup();
     for (const prompt of ["first", "second"]) {
@@ -214,7 +216,7 @@ describe.skipIf(!url)("runImage", () => {
     expect(list[0]!.url).toMatch(/^https:\/\/files\.test\//);
   });
 
-  test("余额不足返回 402，不调用模型，不写 ai_usage", async () => {
+  test("returns 402 on insufficient balance without calling the model or writing ai_usage", async () => {
     const userId = await newUser(3);
     const { runImage, model } = setup();
     const run = await runImage({ userId, prompt: "hi" });
@@ -230,7 +232,7 @@ describe.skipIf(!url)("runImage", () => {
     ).toHaveLength(0);
   });
 
-  test("模型报错：返回 502，积分退回，记为 failed", async () => {
+  test("model error: returns 502, refunds the credits, and records failed", async () => {
     const userId = await newUser(10);
     const { runImage, storage } = setup({ model: throwingModel() });
     const run = await runImage({ userId, prompt: "hi", maxRetries: 0 });
@@ -251,7 +253,7 @@ describe.skipIf(!url)("runImage", () => {
     expect(row!.error).toContain("provider down");
   });
 
-  test("存储写入失败：积分同样退回", async () => {
+  test("storage write failure: the credits are refunded too", async () => {
     const userId = await newUser(10);
     const storage = new MemoryStorage();
     storage.putObject = async () => {
@@ -264,7 +266,7 @@ describe.skipIf(!url)("runImage", () => {
     expect(await credits.getBalance(userId)).toBe(10);
   });
 
-  test("免费模型不扣积分", async () => {
+  test("free models deduct no credits", async () => {
     const userId = await newUser(0);
     const { runImage } = setup();
     const run = await runImage({ userId, prompt: "hi", modelId: "free-img" });
@@ -272,7 +274,7 @@ describe.skipIf(!url)("runImage", () => {
     expect(await transactions(userId)).toHaveLength(0);
   });
 
-  test("超限返回 429，限流服务不可用（closed）返回 503，都不扣积分", async () => {
+  test("returns 429 over the limit and 503 when the rate limiter is unavailable (closed), deducting no credits in either case", async () => {
     const userId = await newUser(10);
     const limited = await setup({
       rateLimit: { ok: false, reason: "limited", retryAfter: 30 },
@@ -295,7 +297,7 @@ describe.skipIf(!url)("runImage", () => {
     [{ prompt: "hi", aspectRatio: "2:1" }, 400, "invalid_aspect_ratio"],
     [{ prompt: "hi", modelId: "nope" }, 400, "invalid_model"],
     [{ prompt: "hi", modelId: "gpt-img" }, 503, "model_unavailable"],
-  ])("参数 %j 返回 %i %s", async (input, status, error) => {
+  ])("params %j return %i %s", async (input, status, error) => {
     const userId = await newUser(10);
     const run = await setup().runImage({ userId, ...input });
     if (run.ok) throw new Error("expected failure");
@@ -304,7 +306,7 @@ describe.skipIf(!url)("runImage", () => {
     expect(await credits.getBalance(userId)).toBe(10);
   });
 
-  test("未登录 401，没有配置存储 503", async () => {
+  test("401 when signed out, 503 when storage is not configured", async () => {
     const noUser = await setup().runImage({ userId: null, prompt: "hi" });
     expect(noUser.ok || noUser.status).toBe(401);
     const userId = await newUser(10);

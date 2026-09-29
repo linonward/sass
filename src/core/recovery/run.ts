@@ -7,20 +7,27 @@ import {
 
 import { acquireLease, releaseLease } from "./lease";
 
-/** 所有恢复任务共用一把租约：同一时刻只跑一次恢复。 */
+/** All recovery tasks share one lease: only one recovery runs at a time. */
 export const RECOVERY_LEASE = "recovery";
 
 /**
- * 租约时长：比恢复入口的 maxDuration（300 秒）长。进程中途死掉时，最多等这么久别人就能接手。
+ * Lease duration: longer than the recovery endpoint's maxDuration (300 seconds). If the process dies
+ * midway, someone else can take over after at most this long.
  */
 export const RECOVERY_LEASE_TTL_MS = 6 * 60 * 1000;
 
-/** 机会式扫描的最小间隔：距上一次恢复开始不足这么久，就不顺带扫了。 */
+/**
+ * Minimum interval for opportunistic sweeps: if the last recovery started less than this long ago,
+ * skip the piggyback sweep.
+ */
 export const OPPORTUNISTIC_INTERVAL_MS = 5 * 60 * 1000;
 
 export type RecoveryTrigger = "cron" | "opportunistic";
 
-/** 一个恢复任务：处理最多 `limit` 条，返回计数（写进 `<name>.recovery` 日志）。 */
+/**
+ * One recovery task: handles up to `limit` items and returns counts (written to the
+ * `<name>.recovery` log).
+ */
 export type RecoveryTask = (options: {
   limit: number;
 }) => Promise<Record<string, number>>;
@@ -34,10 +41,12 @@ export type RecoveryRun =
     };
 
 /**
- * 恢复的运行器：一个入口，多个触发源（cron、机会式），多个任务（目前是 AI 任务）。
+ * The recovery runner: one entry point, several triggers (cron, opportunistic), several tasks
+ * (currently AI tasks).
  *
- * 抢到租约才跑，跑完放掉；每个任务各自 try/catch，一个出错不影响其它任务，也不会让租约挂着。
- * 每个任务跑完记一条结构化日志 `<name>.recovery`，带上触发源和计数。
+ * It runs only after acquiring the lease and releases it when done. Each task has its own
+ * try/catch, so one failure does not affect the others or leave the lease held. After each task it
+ * writes one structured log `<name>.recovery` with the trigger and the counts.
  */
 export function createRecoveryRunner({
   db,
@@ -83,7 +92,7 @@ export function createRecoveryRunner({
       try {
         await releaseLease(db(), leaseName);
       } catch (error) {
-        // 放不掉也没关系：租约到期自己会失效。
+        // Failing to release is fine: the lease expires on its own.
         logError("recovery.release_failed", { error });
       }
     }

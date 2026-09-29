@@ -19,17 +19,27 @@ import { localizedPath } from "@/core/seo/urls";
 import { getPlan } from "./plans";
 import type { PaymentProvider } from "./provider";
 
-/** 结账成功后回到的页面（不含语言前缀）。页面按服务商附带的订单或订阅 ID 轮询状态。 */
+/**
+ * Page returned to after a successful checkout (without locale prefix). It polls status using the
+ * order or subscription ID the provider appends.
+ */
 export const CHECKOUT_SUCCESS_PATH = "/billing/success";
-/** 用户放弃结账时回到的定价区块。Creem 没有取消地址参数，仅供其他服务商使用。 */
+/**
+ * Pricing section returned to when the user abandons checkout. Creem has no cancel URL parameter, so
+ * this is only used by other providers.
+ */
 export const CHECKOUT_CANCEL_PATH = "/#pricing";
 
-/** 模板里的占位产品 ID（site.config.ts），换成真实 ID 之前不允许结账。 */
+/**
+ * Placeholder product ID in the template (site.config.ts); checkout isn't allowed until it's
+ * replaced with a real ID.
+ */
 const PLACEHOLDER_PRODUCT = /^prod_placeholder/;
 
 /**
- * 结账会话的复用窗口。窗口内同一 (user, plan) 的重复请求拿到同一个 URL，不重复建单；
- * 超时后重新建（用户放弃结账过一阵子再回来，拿到的是新会话）。
+ * Reuse window for checkout sessions. Within it, repeated requests for the same (user, plan) get the
+ * same URL instead of creating another order; after it expires a new one is created (a user who
+ * abandoned checkout and comes back a while later gets a fresh session).
  */
 export const CHECKOUT_SESSION_TTL_MS = 30 * 60 * 1000;
 
@@ -45,7 +55,7 @@ export type BillingError =
 
 export type BillingResult =
   | { ok: true; url: string }
-  // rate_limited 带 retryAfter（秒），路由用它写 Retry-After 响应头。
+  // rate_limited carries retryAfter (seconds); the route uses it for the Retry-After response header.
   | { ok: false; error: BillingError; status: number; retryAfter?: number };
 
 const fail = (
@@ -60,10 +70,11 @@ const fail = (
 });
 
 /**
- * 为已登录用户创建结账会话。
- * - 只允许配置了真实产品 ID 的付费套餐。
- * - 已有仍在计费的订阅时拒绝（409），升级、换套餐请走客户门户；一次性套餐买过就不能再买。
- * - 成功页带上用户当前的语言前缀。
+ * Create a checkout session for a signed-in user.
+ * - Only paid plans configured with a real product ID are allowed.
+ * - Rejected (409) if a subscription is still billing; upgrades and plan changes go through the
+ *   customer portal. A one-time plan can't be bought again once purchased.
+ * - The success page carries the user's current locale prefix.
  */
 export async function startCheckout({
   db,
@@ -81,7 +92,7 @@ export async function startCheckout({
   user: { id: string; email: string };
   planId: unknown;
   locale: unknown;
-  /** 站点根地址，例如 https://example.com。 */
+  /** Site root URL, e.g. https://example.com. */
   origin: string;
   ip?: string | null;
   checkRateLimit: (
@@ -93,7 +104,7 @@ export async function startCheckout({
   if (!provider) return fail("billing_not_configured", 503);
 
   const plan = typeof planId === "string" ? getPlan(planId) : undefined;
-  // 隐藏的套餐不能新购（已有订阅照常续费，那不走这里）。
+  // Hidden plans can't be bought (existing subscriptions still renew, which doesn't go through here).
   if (!plan || plan.hidden) return fail("invalid_plan", 400);
   if (plan.price === 0) return fail("free_plan", 400);
   if (
@@ -103,8 +114,9 @@ export async function startCheckout({
     return fail("plan_not_configured", 503);
   }
 
-  // 每次调用都会在服务商侧真实建单，先限流再往下走（放在参数校验之后：
-  // 非法套餐不消耗额度，免得把同一用户的正常结账误伤掉）。
+  // Each call really creates an order at the provider, so rate-limit before going further (placed after
+  // argument validation: invalid plans don't consume quota, so we don't accidentally block the same
+  // user's legitimate checkouts).
   const limit = await checkRateLimit("checkout", { userId: user.id, ip });
   if (!limit.ok) {
     return fail(
@@ -118,19 +130,22 @@ export async function startCheckout({
     typeof locale === "string" && hasLocale(routing.locales, locale)
       ? locale
       : routing.defaultLocale;
-  // 成功页的兜底定位：套餐 + 下单时间。有的服务商回跳时不带订单 / 订阅 ID（Waffo Pancake、Stripe），
-  // 成功页就按「这个用户、这个套餐、这个时间之后」的订单查（见 ./status.ts）。服务商自己追加的
-  // order_id / subscription_id 仍然优先。
+  // Fallback lookup for the success page: plan + checkout time. Some providers don't include an order /
+  // subscription ID on redirect (Waffo Pancake, Stripe), so the success page looks for orders by "this
+  // user, this plan, after this time" (see ./status.ts). order_id / subscription_id appended by the
+  // provider itself still take precedence.
   const successUrl = `${origin}${localizedPath(lang, CHECKOUT_SUCCESS_PATH)}?${new URLSearchParams(
     { plan: plan.id, since: String(now.getTime()) },
   )}`;
   const cancelUrl = `${origin}${localizedPath(lang, "/")}#pricing`;
 
-  // 去重与互斥：先锁住这个用户的行（并发/双击在这里排队），再复查重和未过期的会话，
-  // 都没有才向服务商建新单并记下。见 checkoutSessions 的注释（Creem 的 request_id 不是
-  // 幂等键，实测同一 request_id 会返回两个会话）。
-  // 取舍：provider 调用在事务里（持连接约 0.5 秒）—— 这是仓库里唯一一处「事务内外部
-  // HTTP」，结账是低频操作，宁可贵一点也不要双扣款。
+  // Dedup and mutual exclusion: first lock this user's row (concurrent requests/double-clicks queue
+  // here), then recheck for duplicates and unexpired sessions; only if there are none do we create a
+  // new order at the provider and record it. See the comment on checkoutSessions (Creem's request_id
+  // is not an idempotency key — in testing, the same request_id returned two sessions).
+  // Tradeoff: the provider call happens inside the transaction (holding a connection for ~0.5s) —
+  // the only "external HTTP inside a transaction" in the repo. Checkout is low-frequency; better a
+  // bit more expensive than a double charge.
   return db.transaction(async (tx) => {
     await tx
       .select({ id: userTable.id })
@@ -147,7 +162,7 @@ export async function startCheckout({
             eq(subscriptions.userId, user.id),
             or(
               inArray(subscriptions.status, ["active", "past_due"]),
-              // 已取消续费但还没到期的，也算仍在使用。
+              // Canceled but not yet expired also counts as still in use.
               and(
                 eq(subscriptions.status, "canceled"),
                 gt(subscriptions.currentPeriodEnd, now),
@@ -172,8 +187,8 @@ export async function startCheckout({
       if (existing) return fail("already_purchased", 409);
     }
 
-    // 有效期内复用同一个会话：重复请求（双开标签页、连点、重试）拿到的是同一个 URL，
-    // 用户不可能在两个页面上重复付款。
+    // Reuse the same session while it's valid: repeated requests (two tabs, repeated clicks, retries)
+    // get the same URL, so the user can't pay twice on two pages.
     const [reusable] = await tx
       .select({ url: checkoutSessions.url })
       .from(checkoutSessions)
@@ -218,7 +233,10 @@ export async function startCheckout({
   });
 }
 
-/** 客户门户地址。用户还没有在该服务商下付过款（没有客户记录）时返回 no_customer。 */
+/**
+ * Customer portal URL. Returns no_customer when the user has never paid with this provider (no
+ * customer record).
+ */
 export async function openPortal({
   db,
   provider,
@@ -243,8 +261,9 @@ export async function openPortal({
 }
 
 /**
- * 回跳地址用的站点根地址。生产环境固定用配置的域名，不信任请求头里的 Host；
- * 本地和预览用请求自身的地址（每个预览部署的域名都不同）。
+ * Site root URL for redirects. Production always uses the configured domain and doesn't trust the
+ * Host request header; local and preview use the request's own origin (every preview deployment has
+ * a different domain).
  */
 export function billingOrigin(
   request: Request,

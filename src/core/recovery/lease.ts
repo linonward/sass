@@ -4,14 +4,18 @@ import type { Database } from "@/core/db/client";
 import { jobLeases } from "@/core/db/schema";
 
 /**
- * 抢一次租约。成功返回 true：调用方现在独占这个任务，跑完调 `releaseLease`。
+ * Tries to acquire the lease once. Returns true on success: the caller now owns this job exclusively
+ * and must call `releaseLease` when done.
  *
- * - `ttlMs`：租约时长，要比一次运行的最长时间（函数的 maxDuration）长。进程中途死掉时，
- *   到期后别人就能再抢到，不需要人工解锁。
- * - `minIntervalMs`：距上一次**开始**不足这么久就不抢（机会式扫描的限频）；0 表示只看锁。
+ * - `ttlMs`: lease duration; must be longer than the longest possible run (the function's
+ *   maxDuration). If the process dies midway, someone else can grab it once it expires — no manual
+ *   unlock needed.
+ * - `minIntervalMs`: don't acquire if the previous run **started** less than this long ago (rate
+ *   limit for opportunistic sweeps); 0 means only the lock matters.
  *
- * 整个判断是一条 upsert：并发的几个调用方里只有一个能让 WHERE 成立，其余拿到 0 行。
- * 时间一律用数据库的 now()，不受各实例时钟漂移影响。
+ * The whole check is a single upsert: among concurrent callers only one can satisfy the WHERE, the
+ * rest get 0 rows. All times use the database's now(), so clock drift between instances doesn't
+ * matter.
  */
 export async function acquireLease(
   db: Database,
@@ -40,7 +44,10 @@ export async function acquireLease(
   return rows.length > 0;
 }
 
-/** 放掉租约并记下结束时间。`lastStartedAt` 不动 —— 限频按开始时间算。 */
+/**
+ * Releases the lease and records the finish time. `lastStartedAt` is left alone — the rate limit is
+ * based on start time.
+ */
 export async function releaseLease(db: Database, name: string) {
   await db
     .update(jobLeases)

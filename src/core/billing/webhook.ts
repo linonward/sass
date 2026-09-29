@@ -6,11 +6,13 @@ import { handleBillingEvent } from "./handle-event";
 import { WebhookVerificationError, type PaymentProvider } from "./provider";
 
 /**
- * webhook 路由的完整处理：校验签名 → 解析事件 → handleBillingEvent，并转换成 HTTP 响应。
- * - 401：签名错误，不写库；服务商不应重试。
- * - 200：已处理、重复事件、不关心的事件类型、用户已删除。
- * - 500：处理失败（包括钩子失败、暂时找不到用户），事务已回滚，等待服务商重试。
- * 路由层只需 `return processWebhook(creem, request)`。
+ * Full webhook route handling: verify signature → parse event → handleBillingEvent, then map to an
+ * HTTP response.
+ * - 401: bad signature, nothing written; the provider shouldn't retry.
+ * - 200: handled, duplicate event, event type we don't care about, or user already deleted.
+ * - 500: handling failed (including hook failures or a user not found yet); the transaction was
+ *   rolled back and we wait for the provider to retry.
+ * The route only needs `return processWebhook(creem, request)`.
  */
 export async function processWebhook(
   provider: PaymentProvider,
@@ -48,7 +50,7 @@ export async function processWebhook(
     async (span) => {
       try {
         const result = await handleBillingEvent(event, options);
-        // duplicate：同一事件重复推送，没有重复处理。
+        // duplicate: the same event was pushed again and was not processed twice.
         span.setAttribute("billing.result", result.status);
         logger.info("billing.webhook", { ...fields, result: result.status });
         return Response.json(result);

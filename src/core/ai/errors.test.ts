@@ -15,7 +15,7 @@ describe("imageErrorCode", () => {
     );
   });
 
-  test("响应体不是 JSON", async () => {
+  test("response body is not JSON", async () => {
     expect(await imageErrorCode(new Response("oops", { status: 500 }))).toBe(
       "generic",
     );

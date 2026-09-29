@@ -17,49 +17,65 @@ import {
 } from "../provider";
 
 /**
- * Waffo Pancake（https://pancake.waffo.ai，MoR）的 adapter，走官方 SDK `@waffo/pancake-ts`。
+ * Adapter for Waffo Pancake (https://pancake.waffo.ai, a MoR), using the official SDK
+ * `@waffo/pancake-ts`.
  *
- * 和 Creem / Lemon Squeezy 一样是 MoR、有产品目录：套餐的 `providerProductId` 填 Pancake 的
- * 产品 ID（`PROD_…`，test / prod 两套），金额和周期在 Pancake 后台的产品上定义。
+ * Like Creem and Lemon Squeezy it is a MoR with a product catalog: a plan's `providerProductId` is
+ * the Pancake product ID (`PROD_…`, separate for test and prod), and the amount and interval are
+ * defined on the product in the Pancake dashboard.
  *
- * - 结账：`checkout.authenticated.create`。`buyerIdentity` = 我们的用户 ID（订单绑定到它，
- *   换邮箱也不会串单），`metadata` 带上 userId / planId，webhook 的 `orderMetadata` 原样带回。
- * - 验签：`verifyWebhook`（`X-Waffo-Signature`，RSA-SHA256，带时间戳防重放），**固定按 `WAFFO_MODE`
- *   的环境验**，并再核对事件的 `mode` —— 否则生产站点会收下测试环境（免费测试卡）的付款并发积分。
- * - 发生时间取信封的 `timestamp`；幂等键见下。
- * - 取消：`orders.cancelSubscription` —— 生效中的订阅变成 canceling，用到当期结束。
+ * - Checkout: `checkout.authenticated.create`. `buyerIdentity` = our user ID (orders are bound to
+ *   it, so changing email never mixes up orders), and `metadata` carries userId / planId, which
+ *   the webhook's `orderMetadata` echoes back unchanged.
+ * - Signature verification: `verifyWebhook` (`X-Waffo-Signature`, RSA-SHA256, timestamped against
+ *   replay), **always against the `WAFFO_MODE` environment**, and the event's `mode` is checked
+ *   again — otherwise a production site would accept test-environment payments (free test cards)
+ *   and grant credits.
+ * - The occurrence time comes from the envelope's `timestamp`; see below for the idempotency key.
+ * - Cancel: `orders.cancelSubscription` — an active subscription becomes canceling and stays
+ *   usable until the end of the current period.
  *
- * 事件映射（Pancake → BillingEvent）：
+ * Event mapping (Pancake → BillingEvent):
  *
- * | Pancake                                                   | BillingEvent          |
- * | --------------------------------------------------------- | --------------------- |
- * | order.completed（一次性订单首付成功）                      | checkout.completed    |
- * | subscription.activated / renewed / recovered / uncanceled | subscription.active   |
- * | subscription.payment_succeeded（每一期扣款，含首期）       | subscription.renewed  |
- * | subscription.canceling（取消，用到当期结束）               | subscription.canceled |
- * | subscription.canceled（彻底终止）                          | subscription.expired  |
- * | subscription.past_due（续费扣款失败）                      | payment.failed        |
- * | refund.succeeded                                          | refund.created        |
- * | refund.failed、plan_change_* 等                            | 忽略                  |
+ * | Pancake                                                         | BillingEvent          |
+ * | --------------------------------------------------------------- | --------------------- |
+ * | order.completed (first payment of a one-time order succeeded)   | checkout.completed    |
+ * | subscription.activated / renewed / recovered / uncanceled       | subscription.active   |
+ * | subscription.payment_succeeded (every period's charge, incl. first) | subscription.renewed |
+ * | subscription.canceling (canceled, usable until period end)      | subscription.canceled |
+ * | subscription.canceled (fully terminated)                        | subscription.expired  |
+ * | subscription.past_due (renewal charge failed)                   | payment.failed        |
+ * | refund.succeeded                                                | refund.created        |
+ * | refund.failed, plan_change_*, etc.                              | Ignored               |
  *
- * 订单 ID 的约定：模板的一张订单 = Pancake 的一笔付款（`paymentId`，`PAY_…`），一次性订单和订阅的
- * 每一期都一样；退款事件带着被退的那笔 `paymentId`，所以部分 / 全额退款都能对上具体哪一笔
- * （包括订阅的某一期）。订阅 ID 是订阅那张订单的 `orderId`（`ORD_…`）。
+ * Order ID convention: one template order = one Pancake payment (`paymentId`, `PAY_…`), the same
+ * for one-time orders and for each subscription period. Refund events carry the `paymentId` being
+ * refunded, so both partial and full refunds match the exact payment (including a specific
+ * subscription period). The subscription ID is the `orderId` (`ORD_…`) of the subscription order.
  *
- * 幂等键用「事件类型 + eventId」：官方文档和 SDK 对信封里 `id` 的含义说法不一（事件实体 ID /
- * 投递记录 UUID），官方文档建议按 eventType + eventId 去重，两种说法下都安全。
+ * The idempotency key is "event type + eventId": the official docs and the SDK disagree on what
+ * the envelope's `id` means (event entity ID vs. delivery record UUID), and the official docs
+ * recommend deduplicating by eventType + eventId, which is safe under either reading.
  *
- * 订阅 ID 同时记作客户 ID（Pancake 没有独立的客户对象）。套餐升降级（plan_change）不接：
- * 模板没有换套餐的流程。一次性付款被拒、结账放弃都没有 webhook（订单停在 pending），不需要映射。
+ * The subscription ID doubles as the customer ID (Pancake has no separate customer object). Plan
+ * upgrades/downgrades (plan_change) are not handled: the template has no plan-switching flow.
+ * Declined one-time payments and abandoned checkouts send no webhook (the order stays pending), so
+ * they need no mapping.
  */
 
 export const WAFFO_PROVIDER_ID = "waffo";
 
-/** Pancake 的托管客户门户：魔法链接登录，跨商户。官方还没有「预登录」的门户链接接口。 */
+/**
+ * Pancake's hosted customer portal: magic-link login, shared across merchants. There is no
+ * official API yet for a "pre-authenticated" portal link.
+ */
 export const WAFFO_PORTAL_URL =
   "https://pancake.waffo.ai/consumer/portal/login";
 
-/** 不会再扣款的订阅单状态：取消中（用到期末）、已关闭 / 取消 / 过期。 */
+/**
+ * Subscription order statuses that will never be charged again: canceling (usable until period
+ * end), closed, canceled, expired.
+ */
 const ENDED_SUBSCRIPTION = new Set([
   "canceling",
   "closed",
@@ -68,8 +84,10 @@ const ENDED_SUBSCRIPTION = new Set([
 ]);
 
 /**
- * 币种的 ISO 4217 最小单位位数（模板里的金额都按它存，例如 USD 2、JPY 0、KWD 3）。
- * 用明确的表而不是 `Intl`：Node 的 ICU 对个别币种（例如 IDR）给的是展示用的位数，不是 ISO 的。
+ * The ISO 4217 minor-unit digits of a currency (the template stores all amounts this way, e.g.
+ * USD 2, JPY 0, KWD 3).
+ * Uses an explicit table rather than `Intl`: for some currencies (e.g. IDR) Node's ICU returns
+ * display digits, not the ISO ones.
  */
 const ISO_ZERO_DECIMAL = new Set([
   "BIF",
@@ -106,7 +124,10 @@ function isoDigits(currency: string) {
   return 2;
 }
 
-/** Pancake 的展示金额（小数字符串，例如 "29.00"）→ 模板的最小货币单位。 */
+/**
+ * Pancake's display amount (a decimal string, e.g. "29.00") → the template's smallest currency
+ * unit.
+ */
 export function waffoMinorUnits(
   amount: string | undefined,
   currency: string,
@@ -127,9 +148,12 @@ export type WaffoProviderOptions = {
   merchantId: string;
   privateKey: string;
   mode: WaffoMode;
-  /** 测试注入：替换 SDK 的 fetch，不联网。 */
+  /** Injected by tests: replaces the SDK's fetch so nothing hits the network. */
   fetch?: typeof fetch;
-  /** 测试注入：webhook 验签用的公钥（生产用 SDK 内置的 Waffo 公钥）。 */
+  /**
+   * Injected by tests: the public key for webhook signature verification (production uses the
+   * Waffo public key bundled with the SDK).
+   */
   webhookPublicKey?: string;
 };
 
@@ -232,9 +256,10 @@ export function createWaffoProvider({
         return {
           ...common,
           type: "refund.created",
-          // 被退的那笔付款（一次性订单或订阅的某一期），和记账时的订单 ID 同一套。
+          // The refunded payment (a one-time order or one subscription period), using the same
+          // order IDs as when the payment was recorded.
           orderId: data.paymentId,
-          // eventId 是 Pancake 的退款 ID（REF_…）。
+          // eventId is the Pancake refund ID (REF_…).
           refundId: event.eventId || event.id,
           amount,
           currency,
@@ -267,17 +292,22 @@ export function createWaffoProvider({
     },
 
     /**
-     * Pancake 的托管客户门户是魔法链接登录（买家输入邮箱收链接），官方还没有「预登录」链接的接口，
-     * 所以这里返回门户登录页：买家用付款时的邮箱登录后能查订单、下发票、取消 / 恢复订阅。
+     * Pancake's hosted customer portal uses magic-link login (the buyer enters an email and gets a
+     * link), and there is no official API yet for a "pre-authenticated" link, so this returns the
+     * portal login page: after logging in with the email used at payment, the buyer can view
+     * orders, download invoices, and cancel or resume subscriptions.
      */
     async getPortalUrl(): Promise<string> {
       return WAFFO_PORTAL_URL;
     },
 
     /**
-     * 删号时调用：生效中的订阅变成 canceling（不再续费，用到当期结束）。
-     * 模板的约定是「已取消或不存在的订阅视为成功」（删号钩子要能安全重试）：接口报错时查一次
-     * 这张订阅单，已经不会再扣款（或查不到）就当成功，否则把原错误抛出去。
+     * Called on account deletion: an active subscription becomes canceling (no more renewals,
+     * usable until the end of the current period).
+     * The template's contract is "an already canceled or missing subscription counts as success"
+     * (the account-deletion hook must be safe to retry): when the API errors, look up the
+     * subscription order once; if it will never be charged again (or can't be found), treat it as
+     * success, otherwise rethrow the original error.
      */
     async cancelSubscription(subscriptionId: string): Promise<void> {
       try {
@@ -309,7 +339,8 @@ export function createWaffoProvider({
       } catch {
         throw new WebhookVerificationError();
       }
-      // 签名对了，但来自另一个环境（例如生产站点收到测试模式的付款）：当作无效，不处理。
+      // Valid signature, but from the other environment (e.g. a production site receiving a
+      // test-mode payment): treat it as invalid and don't process it.
       if (event.mode && event.mode !== mode) {
         throw new WebhookVerificationError(
           `Waffo webhook from ${event.mode} rejected in ${mode} mode`,

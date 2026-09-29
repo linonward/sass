@@ -9,19 +9,25 @@ import { settleUsage } from "./usage";
 import type { VideoJob } from "./video";
 
 /**
- * 视频任务提交后多久才进扫描范围。刚提交的行还在 startVideo 里（taskId 可能还没写回），
- * 前端也还在轮询，扫描不去碰它们。
+ * How long after submission a video job enters the sweep. Freshly submitted rows are still inside
+ * startVideo (the taskId may not be written back yet) and the frontend is still polling them, so
+ * the sweep leaves them alone.
  */
 export const RECOVERY_VIDEO_STALE_MS = 2 * 60 * 1000;
 
 /**
- * 文本 / 图片是同一个请求里生成并结算的，函数最长跑 120 秒（图片路由的 maxDuration）。
- * 超过这个时长还是 pending，说明函数在结算前被回收了。它们没有服务商侧的任务 id，
- * 结果只存在于那次请求里 —— 没有可核对的东西，按失败退款，`error` 写明原因。
+ * Text / image are generated and settled within a single request, and the function runs for at most
+ * 120 seconds (the image route's maxDuration). Still pending past this limit means the function was
+ * reclaimed before settling. They have no provider-side job id and the result only existed in that
+ * request — there's nothing to reconcile, so they are refunded as failed, with the reason in
+ * `error`.
  */
 export const RECOVERY_SYNC_HARD_LIMIT_MS = 15 * 60 * 1000;
 
-/** 一次扫描最多处理的行数：视频要下载转存，名额决定了一次扫描的最长耗时。 */
+/**
+ * Maximum rows handled per sweep: videos have to be downloaded and stored, so this quota bounds how
+ * long one sweep can take.
+ */
 export const RECOVERY_DEFAULT_LIMIT = 10;
 
 export type AiRecoveryResult = {
@@ -41,15 +47,17 @@ export type AiRecoveryDeps = {
 };
 
 /**
- * 恢复扫描：把没人推进的 pending 行推进到终态。
+ * Recovery sweep: drives pending rows that nobody is advancing to a terminal state.
  *
- * - 视频：交给 `recoverVideo`，和前端轮询走同一条结算路径（先问服务商，有结果先保存，
- *   明确失败或到了硬上限才退款）；
- * - 文本 / 图片：超过 RECOVERY_SYNC_HARD_LIMIT_MS 仍是 pending 的，按失败退款。
+ * - Video: handed to `recoverVideo`, which takes the same settlement path as frontend polling (ask
+ *   the provider first, save any result first, and refund only on an explicit failure or the hard
+ *   limit);
+ * - Text / image: rows still pending past RECOVERY_SYNC_HARD_LIMIT_MS are refunded as failed.
  *
- * 并发安全靠结算本身：`settleUsage({ onlyIfPending })` 和视频转存的认领都只让一个调用方
- * 把 pending 改成终态，退款按 `(source, sourceId)` 唯一，所以扫描和前端轮询撞在同一行上
- * 也只结算一次、只退一次。同一批行扫两次，结果相同。
+ * Concurrency safety comes from settlement itself: `settleUsage({ onlyIfPending })` and the claim
+ * on the video copy both let only one caller move pending to a terminal state, and refunds are
+ * unique per `(source, sourceId)`, so even when the sweep and frontend polling hit the same row it
+ * is settled once and refunded once. Sweeping the same rows twice gives the same result.
  */
 export function createAiRecovery({
   db,
@@ -63,7 +71,7 @@ export function createAiRecovery({
     userIds,
   }: {
     limit?: number;
-    // 只扫这些用户的任务（测试隔离、按用户重试时用）；不传扫全部。
+    // Only sweep these users' jobs (for test isolation and per-user retries); omit to sweep all.
     userIds?: string[];
   } = {}): Promise<AiRecoveryResult> {
     const at = now();
@@ -86,7 +94,8 @@ export function createAiRecovery({
           ),
         ),
       )
-      // 没看过的先看，其次看得最久远的：一时结不了的行不会每次都占住名额。
+      // Unchecked rows first, then the least recently checked: rows that can't settle yet don't hog
+      // the quota on every sweep.
       .orderBy(
         sql`${aiUsage.recoveryCheckedAt} asc nulls first`,
         asc(aiUsage.createdAt),
@@ -102,7 +111,8 @@ export function createAiRecovery({
     };
     for (const row of rows) {
       try {
-        // 先记下「看过了」再推进：推进途中进程死掉，下一次扫描也会先去看别的行。
+        // Mark the row as checked before advancing it: if the process dies midway, the next sweep
+        // still looks at other rows first.
         await db()
           .update(aiUsage)
           .set({ recoveryCheckedAt: new Date(at) })
@@ -110,7 +120,8 @@ export function createAiRecovery({
 
         if (row.kind === "video") {
           const job = await recoverVideo(row.id);
-          // null：这一行在查询之后被删了（用户注销账户），没有要推进的东西。
+          // null: the row was deleted after the query (the user deleted their account); nothing to
+          // advance.
           if (job) result[job.status] += 1;
           continue;
         }
@@ -120,7 +131,7 @@ export function createAiRecovery({
           {
             userId: row.userId,
             usageId: row.id,
-            // 按预扣时记下的积分退，不受之后改配置影响。
+            // Refund the credits recorded at pre-deduction, unaffected by later config changes.
             model: {
               id: row.modelId,
               provider: row.provider,
@@ -134,7 +145,8 @@ export function createAiRecovery({
             onlyIfPending: true,
           },
         );
-        // 不管这次是不是本扫描结算的，读一次终态再计数（并发时另一方可能先结了）。
+        // Whether or not this sweep settled it, read the terminal state once before counting (under
+        // concurrency another caller may have settled it first).
         const [after] = await db()
           .select({ status: aiUsage.status })
           .from(aiUsage)
@@ -143,7 +155,7 @@ export function createAiRecovery({
         else if (after?.status === "pending") result.pending += 1;
         else result.failed += 1;
       } catch (error) {
-        // 一行出错不拖累其它行；这一行下次扫描再来。
+        // One failing row doesn't hold up the others; it gets retried on the next sweep.
         result.errors += 1;
         logError("ai.recovery_row_failed", { error, usageId: row.id });
       }

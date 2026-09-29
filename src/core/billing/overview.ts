@@ -5,20 +5,20 @@ import { billingCustomers, orders, subscriptions } from "@/core/db/schema";
 import type { SubscriptionStatus } from "@/core/db/schema";
 
 export type BillingOverview = {
-  /** 仍在使用中的订阅：active、past_due，或已取消续费但还没到期。 */
+  /** Subscriptions still in use: active, past_due, or canceled but not yet expired. */
   subscription: {
     planId: string | null;
     status: SubscriptionStatus;
     currentPeriodEnd: Date | null;
     canceledAt: Date | null;
   } | null;
-  /** 已付款的一次性套餐。 */
+  /** Paid one-time plans. */
   purchasedPlanIds: string[];
-  /** 是否在服务商那边有客户记录（有才能打开客户门户）。 */
+  /** Whether a customer record exists at the provider (required to open the customer portal). */
   hasCustomer: boolean;
 };
 
-/** 账单页和定价页用到的当前状态。 */
+/** Current state used by the billing and pricing pages. */
 export async function getBillingOverview({
   db,
   userId,
@@ -28,7 +28,7 @@ export async function getBillingOverview({
   userId: string;
   now?: Date;
 }): Promise<BillingOverview> {
-  // 三个查询互不依赖，并行执行。
+  // The three queries are independent; run them in parallel.
   const [[subscription], purchases, [customer]] = await Promise.all([
     db
       .select({
@@ -78,7 +78,10 @@ export async function getBillingOverview({
   };
 }
 
-/** 定价页按钮的状态：已订阅的套餐显示"管理订阅"，买过的一次性套餐显示"已购买"。 */
+/**
+ * Pricing button state: subscribed plans show "Manage subscription", purchased one-time plans show
+ * "Purchased".
+ */
 export function ownedPlans(overview: BillingOverview) {
   const owned: Record<string, "subscribed" | "purchased"> = {};
   for (const id of overview.purchasedPlanIds) owned[id] = "purchased";

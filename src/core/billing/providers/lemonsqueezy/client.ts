@@ -1,22 +1,33 @@
 /**
- * Lemon Squeezy API 的薄封装。
+ * Thin wrapper around the Lemon Squeezy API.
  *
- * 刻意不引 `@lemonsqueezy/lemonsqueezy.js`：SDK 最后一版是 2024-11-05，仓库此后没有推送，
- * 而它本身只是对 fetch 的一层包装（加几个类型定义）。手写这几行换来的是：依赖面只有官方的
- * HTTP 接口一处（不碰 package.json / pnpm-lock.yaml / THIRD-PARTY-NOTICES.md），而且能直接
- * 注入假 fetch 做单测。官方对 API 没有落日计划，接口形状见 https://docs.lemonsqueezy.com/api。
+ * Deliberately not using `@lemonsqueezy/lemonsqueezy.js`: the SDK's last release was 2024-11-05,
+ * its repo has had no pushes since, and it is only a thin layer over fetch (plus a few type
+ * definitions). Writing these few lines by hand means the only dependency surface is the official
+ * HTTP API (no changes to package.json / pnpm-lock.yaml / THIRD-PARTY-NOTICES.md), and unit tests
+ * can inject a fake fetch directly. Lemon Squeezy has no sunset plan for the API; see
+ * https://docs.lemonsqueezy.com/api for its shape.
  */
 
 export const LEMONSQUEEZY_API_BASE_URL = "https://api.lemonsqueezy.com";
 export const LEMONSQUEEZY_PROVIDER_ID = "lemonsqueezy";
 
-/** JSON:API 的媒体类型；Accept 和 Content-Type 都要带上，否则服务端按普通 JSON 处理。 */
+/**
+ * The JSON:API media type; send it in both Accept and Content-Type, or the server treats the
+ * request as plain JSON.
+ */
 const JSON_API_MEDIA_TYPE = "application/vnd.api+json";
 
-/** 响应体截断长度：错误信息要能看出原因，又不至于把整页 HTML 写进日志。 */
+/**
+ * Response body truncation length: long enough for the error to show the cause, short enough not
+ * to dump a whole HTML page into the logs.
+ */
 const ERROR_BODY_LIMIT = 500;
 
-/** 非 2xx 响应。带状态码和响应体片段，调用方按状态码判断（例如取消订阅的 404 视为成功）。 */
+/**
+ * A non-2xx response. Carries the status code and a body snippet so callers can branch on the
+ * status (e.g. a 404 when canceling a subscription counts as success).
+ */
 export class LemonSqueezyApiError extends Error {
   constructor(
     readonly status: number,
@@ -27,31 +38,35 @@ export class LemonSqueezyApiError extends Error {
   }
 }
 
-/** injectable fetch：测试注入假实现，生产用全局 fetch。 */
+/** Injectable fetch: tests inject a fake, production uses the global fetch. */
 export type LemonSqueezyFetch = typeof fetch;
 
 export type LemonSqueezyClientOptions = {
   apiKey: string;
   baseUrl?: string;
-  /** 测试注入；默认用全局 fetch。 */
+  /** Injected by tests; defaults to the global fetch. */
   fetch?: LemonSqueezyFetch;
 };
 
 /**
- * 用到的客户端形状，测试可以注入假的实现。
+ * The client shape we use; tests can inject a fake implementation.
  *
- * 只暴露一个 `request`：JSON:API 的对象结构由适配器解析（parseEvent 是纯函数，用假 fetch
- * 就能连请求体带响应解析一起断言），客户端负责的只有鉴权头、媒体类型和错误上抛。
+ * It only exposes `request`: the adapter parses the JSON:API object structure (parseEvent is a pure
+ * function, and with a fake fetch tests can assert on both the request body and the response
+ * parsing), so the client is only responsible for the auth header, the media type, and throwing on
+ * errors.
  */
 export type LemonSqueezyClient = {
   request(method: string, path: string, body?: unknown): Promise<unknown>;
 };
 
 /**
- * 创建客户端。
+ * Creates the client.
  *
- * **不做重试，429 也不做**：结账是用户点击触发的（失败让用户重试最直接），webhook 由
- * Lemon Squeezy 自己按退避重推，这里再排一层重试只会拉长请求、还可能重复建单。
+ * **No retries, not even on 429**: checkout is triggered by a user click (letting the user retry
+ * on failure is the most direct option), and Lemon Squeezy redelivers webhooks with its own
+ * backoff. Adding another retry layer here would only drag out requests and could create duplicate
+ * orders.
  */
 export function createLemonSqueezyClient({
   apiKey,

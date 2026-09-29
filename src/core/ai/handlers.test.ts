@@ -38,7 +38,7 @@ function deps(result: RunImageResult = { ok: true, generation }) {
 }
 
 describe("handleImage", () => {
-  test("把提示词和选项交给 runImage，返回 generation", async () => {
+  test("passes the prompt and options to runImage and returns generation", async () => {
     const d = deps();
     const response = await handleImage(
       post(
@@ -63,7 +63,7 @@ describe("handleImage", () => {
     );
   });
 
-  test("runImage 的错误响应原样返回", async () => {
+  test("returns runImage's error response as is", async () => {
     const response = await handleImage(
       post(JSON.stringify({ prompt: "a" })),
       deps({
@@ -79,17 +79,22 @@ describe("handleImage", () => {
   });
 
   test.each([
-    ["关闭时 404", { enabled: false }, JSON.stringify({ prompt: "a" }), 404],
     [
-      "未登录 401",
+      "404 when disabled",
+      { enabled: false },
+      JSON.stringify({ prompt: "a" }),
+      404,
+    ],
+    [
+      "401 when signed out",
       { getUserId: async () => null },
       JSON.stringify({ prompt: "a" }),
       401,
     ],
-    ["不是 JSON 400", {}, "nope", 400],
-    ["不是对象 400", {}, "1", 400],
+    ["400 when not JSON", {}, "nope", 400],
+    ["400 when not an object", {}, "1", 400],
     [
-      "过大 413",
+      "413 when too large",
       {},
       JSON.stringify({ prompt: "x".repeat(MAX_IMAGE_BODY_BYTES) }),
       413,
@@ -105,7 +110,7 @@ describe("handleImage", () => {
 describe("handleGenerations", () => {
   const get = () => new Request("http://localhost/api/ai/generations");
 
-  test("返回当前用户的生成记录", async () => {
+  test("returns the current user's generations", async () => {
     const listGenerations = vi.fn(async () => [generation]);
     const response = await handleGenerations(get(), {
       enabled: true,
@@ -119,7 +124,7 @@ describe("handleGenerations", () => {
     expect(listGenerations).toHaveBeenCalledWith("u1");
   });
 
-  test("关闭时 404，未登录 401", async () => {
+  test("404 when disabled, 401 when signed out", async () => {
     const listGenerations = vi.fn(async () => []);
     expect(
       (
@@ -146,7 +151,7 @@ describe("handleGenerations", () => {
 describe("video", () => {
   const job = { id: "v1", status: "pending" as const };
 
-  test("提交：参数交给 startVideo，返回 202 和 job", async () => {
+  test("submit: passes the params to startVideo and returns 202 with job", async () => {
     const startVideo = vi.fn(async () => ({ ok: true as const, job }));
     const response = await handleVideoStart(
       post(
@@ -173,7 +178,7 @@ describe("video", () => {
     );
   });
 
-  test("查询：按 id 调 pollVideo", async () => {
+  test("poll: calls pollVideo by id", async () => {
     const pollVideo = vi.fn(async () => ({ ok: true as const, job }));
     const response = await handleVideoStatus(
       new Request("http://localhost/api/ai/video/v1"),
@@ -182,11 +187,11 @@ describe("video", () => {
     );
     expect(await response.json()).toEqual({ job });
     expect(pollVideo).toHaveBeenCalledWith({ userId: "u1", id: "v1" });
-    // 每次轮询都会推进服务端状态，响应按用户区分，不许缓存。
+    // Every poll advances server state and the response is per user, so it must not be cached.
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
-  test("关闭时 404，未登录 401", async () => {
+  test("404 when disabled, 401 when signed out", async () => {
     const startVideo = vi.fn();
     const pollVideo = vi.fn();
     const req = () => post(JSON.stringify({ prompt: "p" }));

@@ -68,11 +68,11 @@ describe("fake checkout session", () => {
     successUrl: "http://localhost:3000/billing/success",
   };
 
-  test("签名后可以原样取回", () => {
+  test("a signed value can be read back unchanged", () => {
     expect(verifyFakeSession(signFakeSession(session))).toEqual(session);
   });
 
-  test("篡改、缺签名、乱码都拒绝", () => {
+  test("rejects tampered, unsigned and garbled values", () => {
     const token = signFakeSession(session);
     const [body = "", signature = ""] = token.split(".");
     const forged = Buffer.from(
@@ -84,7 +84,7 @@ describe("fake checkout session", () => {
     expect(verifyFakeSession(null)).toBeNull();
   });
 
-  test("结账地址是站内的模拟付款页，客户门户也是站内地址", async () => {
+  test("the checkout URL is the on-site mock payment page, and the customer portal is on-site too", async () => {
     const provider = createFakeBillingProvider();
     const { url } = await provider.createCheckout({
       userId: "user_1",
@@ -103,7 +103,7 @@ describe("fake checkout session", () => {
     );
   });
 
-  test("免费套餐和未知套餐不产生付款", () => {
+  test("free and unknown plans produce no payment", () => {
     const provider = createFakeBillingProvider();
     expect(fakePayment(provider, { ...session, planId: "free" })).toBeNull();
     expect(fakePayment(provider, { ...session, planId: "nope" })).toBeNull();
@@ -115,7 +115,7 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 
-describe.skipIf(!url)("结账状态与账单概览", () => {
+describe.skipIf(!url)("checkout status and billing overview", () => {
   let client: DbClient;
   let userId: string;
   const provider = createFakeBillingProvider();
@@ -154,7 +154,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     await client.db.delete(user).where(eq(user.id, userId));
   });
 
-  test("订阅：webhook 到达前 pending，处理完首期扣款后 complete，并发了积分", async () => {
+  test("subscription: pending before the webhook, complete after the first charge is processed, with credits granted", async () => {
     const payment = fakePayment(provider, session("pro"))!;
     const subscriptionId = payment.returnParams.subscription_id;
     expect(payment.events.map((e) => e.type)).toEqual([
@@ -167,7 +167,8 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
       status: "pending",
     });
 
-    // 只到了 subscription.active：订阅已建，但首期扣款还没入账，仍然 pending。
+    // Only subscription.active has arrived: the subscription exists but the first charge isn't
+    // recorded yet, so still pending.
     await handleBillingEvent(payment.events[0]!, { db: client.db });
     await expect(status({ subscriptionId })).resolves.toEqual({
       status: "pending",
@@ -196,7 +197,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     expect(ownedPlans(current)).toEqual({ pro: "subscribed" });
   });
 
-  test("一次性购买：订单付款后 complete，账单概览里显示已购买", async () => {
+  test("one-time purchase: complete once the order is paid, and shown as purchased in the billing overview", async () => {
     const payment = fakePayment(provider, session("lifetime"))!;
     const orderId = payment.returnParams.order_id;
     await expect(status({ orderId })).resolves.toEqual({ status: "pending" });
@@ -214,7 +215,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     expect(ownedPlans(current)).toEqual({ lifetime: "purchased" });
   });
 
-  test("回跳不带订单 ID（Waffo Pancake、Stripe）：按套餐 + 下单时间定位；只看之后的、自己的订单", async () => {
+  test("redirect without an order ID (Waffo Pancake, Stripe): located by plan + checkout time; only later orders of your own count", async () => {
     const since = new Date();
     const byPlan = (planId: string, at = since, uid = userId) =>
       getCheckoutStatus({ db: client.db, userId: uid, planId, since: at });
@@ -227,7 +228,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
       status: "complete",
       planId: "lifetime",
     });
-    // 别的套餐、别人、下单之后很久才发起的查询都不算这一笔。
+    // Other plans, other users, and queries started long after checkout don't count as this payment.
     await expect(byPlan("pro")).resolves.toEqual({ status: "pending" });
     await expect(byPlan("lifetime", since, "someone-else")).resolves.toEqual({
       status: "pending",
@@ -237,7 +238,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     ).resolves.toEqual({ status: "pending" });
   });
 
-  test("扣款失败：订阅进入 past_due 时返回 failed", async () => {
+  test("failed charge: returns failed when the subscription goes past_due", async () => {
     const payment = fakePayment(provider, session("pro"))!;
     const subscriptionId = payment.returnParams.subscription_id;
     await handleBillingEvent(payment.events[0]!, { db: client.db });
@@ -255,7 +256,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     });
   });
 
-  test("只能查到自己的付款：别人的订阅和订单一律 pending", async () => {
+  test("you can only see your own payments: other users' subscriptions and orders are always pending", async () => {
     const payment = fakePayment(provider, session("pro"))!;
     for (const event of payment.events) {
       await handleBillingEvent(event, { db: client.db });
@@ -269,7 +270,7 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     ).resolves.toEqual({ status: "pending" });
   });
 
-  test("没有任何付款时：免费套餐、没有客户记录", async () => {
+  test("with no payments at all: free plan, no customer record", async () => {
     await expect(overview()).resolves.toEqual({
       subscription: null,
       purchasedPlanIds: [],

@@ -12,15 +12,16 @@ import { BILLING_CREDITS_SOURCE, billingGrantSourceId } from "./grant-credits";
 import { historicalGrantSourceId } from "./historical-grant";
 
 /**
- * 退款回收出来的积分流水的来源。
+ * Source of the credit transactions produced by refund reclaims.
  *
- * 刻意不叫 `refund`：那个来源在积分服务里已经有主 —— `refundCredits()` 用它记
- * 「退还一笔扣减」（例如 AI 调用失败退费）。这里记的是支付退款触发的自动回收，
- * 是实打实的扣减，所以走 `deduct` 类型 + 自己的来源。
+ * Deliberately not called `refund`: that source is already taken in the credits service —
+ * `refundCredits()` uses it to record "returning a deduction" (e.g. refunding a failed AI call).
+ * What's recorded here is an automatic reclaim triggered by a payment refund, which is a real
+ * deduction, so it uses the `deduct` type plus its own source.
  */
 export const REFUND_RECLAIM_SOURCE = "billing-refund";
 
-/** 一条回收流水对应一次退款事件；重复推送被 (source, sourceId) 挡住。 */
+/** One reclaim transaction per refund event; repeated deliveries are blocked by (source, sourceId). */
 export function reclaimSourceId(
   provider: string,
   orderId: string,
@@ -29,15 +30,19 @@ export function reclaimSourceId(
   return `${provider}:order:${orderId}:refund:${refundId}`;
 }
 
-/** LIKE 前缀匹配要转义 % _ \。orderId 来自服务商，正常不含这些字符，但别赌。 */
+/**
+ * LIKE prefix matching must escape % _ \. orderId comes from the provider and normally contains none
+ * of these, but don't bet on it.
+ */
 function escapeLike(value: string) {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
 /**
- * 这个订单上已经回收过多少积分（按 sourceId 前缀认领，和写入时同一个格式）。
- * 后台异常台的「重试回收」写的流水也挂在这个前缀下（见 `retryReclaimSourceId`），
- * 所以重试回收的积分同样计入，不会被重复回收。
+ * How many credits have already been reclaimed on this order (claimed by sourceId prefix, in the same
+ * format used when writing). Transactions written by "retry reclaim" on the admin exceptions page also
+ * sit under this prefix (see `retryReclaimSourceId`), so retried reclaims count too and are never
+ * reclaimed twice.
  */
 async function reclaimedForOrder(
   tx: DbTransaction,
@@ -71,16 +76,16 @@ type ReclaimEvent = Extract<
 > & { orderId: string };
 
 export type ReclaimPlan = {
-  /** 这次要回收的积分（还没按余额截断）。 */
+  /** Credits to reclaim this time (not yet capped by the balance). */
   amount: number;
   sourceId: string;
   reason: string;
 };
 
 /**
- * 累计口径下这个订单还欠多少积分（可能 ≤ 0，表示不欠）：
+ * How many credits this order still owes on a cumulative basis (may be ≤ 0, meaning nothing owed):
  *
- *   owed = floor(发放积分 × 累计已退金额 / 订单金额) − 这个订单已回收的积分
+ *   owed = floor(granted × total refunded / order amount) − already reclaimed on this order
  */
 function cumulativeOwed({
   order,
@@ -97,16 +102,17 @@ function cumulativeOwed({
 }
 
 /**
- * 算一次退款应该回收多少积分。比例用**累计口径**：
+ * Compute how many credits one refund should reclaim. The ratio is **cumulative**:
  *
- *   owed = floor(发放积分 × 累计已退金额 / 订单金额) − 这个订单已回收的积分
+ *   owed = floor(granted × total refunded / order amount) − already reclaimed on this order
  *
- * 逐次取整会漏积分（订单 100 分、分三次各退 1/3 时，每次 floor 得 33、33、33，少收 1 分），
- * 累计口径下最后一次正好补上。
+ * Rounding each refund separately leaks credits (a 100-credit order refunded in three 1/3 parts floors
+ * to 33, 33, 33 and misses 1 credit); on a cumulative basis the last refund makes up the difference.
  *
- * 理由文案**不写回收额度**：额度要按余额截断，而流水是先写流水后改余额，
- * 文案在写入时就定了 —— 写进去的数字和流水金额可能对不上。金额本身在流水上，
- * 截断的差额由调用方记日志。
+ * The reason text **doesn't include the reclaim amount**: the amount gets capped by the balance, and
+ * the transaction is written before the balance is updated, so the text is fixed at write time — the
+ * number written into it might not match the transaction amount. The amount itself is on the
+ * transaction, and the capped difference is logged by the caller.
  */
 export function creditsToReclaim({
   event,
@@ -136,11 +142,14 @@ export function creditsToReclaim({
 }
 
 /**
- * 异常台「重试回收」写的流水的 sourceId。挂在同一个订单的 `:refund:` 前缀下，
- * `reclaimedForOrder` 会把它算进已回收，累计口径因此不变。
+ * sourceId for transactions written by "retry reclaim" on the exceptions page. It sits under the same
+ * order's `:refund:` prefix, so `reclaimedForOrder` counts it as reclaimed and the cumulative basis
+ * stays the same.
  *
- * 带上异常单 id 和第几次尝试：同一次尝试（双击、网络重试）撞在 (source, sourceId) 唯一键上
- * 只扣一次；真正的防重是重试时锁住订单行、按账本重算还欠多少（见 ../exceptions/service.ts）。
+ * Includes the exception id and the attempt number: the same attempt (double-click, network retry)
+ * hits the (source, sourceId) unique key and deducts only once. The real guard against duplicates is
+ * locking the order row on retry and recomputing what's still owed from the ledger (see
+ * ../exceptions/service.ts).
  */
 export function retryReclaimSourceId(
   provider: string,
@@ -152,8 +161,9 @@ export function retryReclaimSourceId(
 }
 
 /**
- * 锁住订单行，按账本重算这个订单现在还欠多少积分（和 webhook 回收同一个公式、同一个已回收口径）。
- * 找不到订单或发放流水时返回 null。
+ * Lock the order row and recompute from the ledger how many credits this order owes now (same formula
+ * and same already-reclaimed basis as the webhook reclaim). Returns null if the order or the grant
+ * transaction can't be found.
  */
 export async function owedForOrder(
   tx: DbTransaction,
@@ -196,12 +206,14 @@ export async function owedForOrder(
 }
 
 /**
- * 退款回收集分的 onBillingEvent 钩子。
+ * onBillingEvent hook that reclaims credits on refund.
  *
- * 回收额度取实际 billing 发放流水；退款先到时，由后续付款在发放钩子之后补偿。
- * 实际扣减由积分服务按余额截断：余额不够时扣到 0，差额记日志
- * （流水先写后改余额，且 amount 有非零约束，所以差额进不了流水备注）。
- * 重复由 webhook_events 与流水的 (source, sourceId) 两道幂等挡住。
+ * The reclaim amount is based on the actual billing grant transaction; if the refund arrives first,
+ * the later payment compensates after the grant hook. The actual deduction is capped by the credits
+ * service at the balance: if the balance is too low it goes down to 0 and the difference is logged
+ * (the transaction is written before the balance is updated, and amount has a non-zero constraint, so
+ * the difference can't go into the transaction note). Duplicates are blocked by two layers of
+ * idempotency: webhook_events and the transactions' (source, sourceId).
  */
 export function createReclaimCreditsHandler({
   enabled,
@@ -301,9 +313,12 @@ export function createReclaimCreditsHandler({
     );
 
     if (result.shortfall > 0) {
-      // 余额不够：应扣未扣的部分进不了流水（amount 有非零约束，一分都扣不动时根本没有流水），
-      // 所以开一张异常单记着，后台能看见、能重试。和回收在同一个事务里：事务回滚（比如数据库
-      // 短暂故障）时单子一起消失，webhook 重放后再开 —— 唯一键保证只有一张。日志照旧保留。
+      // Balance too low: the part that should have been deducted but wasn't can't go into a
+      // transaction (amount has a non-zero constraint, and when nothing at all can be deducted there's
+      // no transaction at all), so open an exception to record it, visible and retryable in the admin.
+      // It's in the same transaction as the reclaim: if the transaction rolls back (e.g. a brief
+      // database outage) the exception disappears with it and is reopened when the webhook replays —
+      // the unique key guarantees there's only one. The log is still kept as before.
       const detail = {
         provider: event.provider,
         orderId: event.orderId,

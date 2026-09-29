@@ -12,7 +12,7 @@ const deepseek: AiModel = {
   creditCost: 1,
 };
 
-/** 记录请求地址和请求体，返回一个最小的 chat completion。 */
+/** Records the request URL and body and returns a minimal chat completion. */
 function stubFetch() {
   const calls: { url: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal(
@@ -51,13 +51,13 @@ afterEach(() => {
 });
 
 describe("alibaba", () => {
-  test("有 ALIBABA_API_KEY 才启用", () => {
+  test("is enabled only when ALIBABA_API_KEY is set", () => {
     expect(enabledProviders({})).not.toContain("alibaba");
     expect(enabledProviders({ ALIBABA_API_KEY: "sk-x" })).toEqual(["alibaba"]);
     expect(createModelResolver({})(deepseek)).toBeNull();
   });
 
-  test("默认走国际站；ALIBABA_BASE_URL 切到其他地域；reasoning none 关掉思考", async () => {
+  test("defaults to the international site; ALIBABA_BASE_URL switches regions; reasoning none turns off thinking", async () => {
     const calls = stubFetch();
     await generate({ ALIBABA_API_KEY: "sk-x" });
     await generate({

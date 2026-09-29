@@ -13,17 +13,19 @@ import { EmptyState } from "@/core/ui/empty-state";
 import { Input } from "@/core/ui/input";
 
 /**
- * 流式更新的节流窗口（毫秒）。服务端按模型 delta 逐个推流（`run.ts` 的 streamText →
- * `chat.ts` 的 toUIMessageStreamResponse），而 useChat 默认**每个分片都触发一次重渲染**
- * （`@ai-sdk/react/dist/index.d.ts:119-122`：不传 throttle 就是关闭节流）。
- * 常见 30–80 token/s，即每秒 30–80 次重渲染。
+ * Throttle window for streaming updates (ms). The server streams model deltas one by one
+ * (streamText in `run.ts` → toUIMessageStreamResponse in `chat.ts`), and by default useChat
+ * **re-renders on every chunk** (`@ai-sdk/react/dist/index.d.ts:119-122`: no throttle means
+ * throttling is off). Typical rates are 30–80 tokens/s, i.e. 30–80 re-renders per second.
  *
- * 取 50ms（每秒约 20 次）：吐字看起来仍是连续的，而两次提交之间留出约 3 帧，
- * 输入回显这类紧急更新不用和流式渲染抢主线程。50 也是 AI SDK 文档里 useChat 示例统一用的值
- * （`node_modules/ai/docs/04-ai-sdk-ui/02-chatbot.mdx` 的 "Throttling UI Updates"）。
+ * 50ms (about 20 per second): text still appears to flow continuously, while leaving about 3
+ * frames between commits so urgent updates like input echo don't compete with stream rendering for
+ * the main thread. 50 is also the value every useChat example in the AI SDK docs uses
+ * ("Throttling UI Updates" in `node_modules/ai/docs/04-ai-sdk-ui/02-chatbot.mdx`).
  *
- * 语义（同文档）：只降低 React 通知频率，流处理和回调不受影响，
- * 且进入 ready / error 前会先发布最新消息 —— 不会丢最后一小段文字。
+ * Semantics (same doc): it only lowers how often React is notified; stream processing and callbacks
+ * are unaffected, and the latest message is published before entering ready / error — the last bit
+ * of text is never dropped.
  */
 const STREAM_THROTTLE_MS = 50;
 
@@ -39,7 +41,10 @@ const knownErrors = [
 ] as const;
 type KnownError = (typeof knownErrors)[number];
 
-/** 接口的错误响应是 JSON `{ error }`，useChat 把响应体原样放进 error.message；流中报错是 "model_error"。 */
+/**
+ * Error responses are JSON `{ error }`, and useChat puts the response body as is into
+ * error.message; an error mid-stream is "model_error".
+ */
 export function chatErrorCode(
   error: Error | undefined,
 ): KnownError | "generic" {
@@ -48,7 +53,7 @@ export function chatErrorCode(
   try {
     code = (JSON.parse(error.message) as { error?: unknown }).error;
   } catch {
-    // 不是 JSON，按原文匹配。
+    // Not JSON; match the raw text.
   }
   return knownErrors.includes(code as KnownError)
     ? (code as KnownError)
@@ -56,11 +61,12 @@ export function chatErrorCode(
 }
 
 /**
- * 单条消息。memo 成立的前提是「写回时只有被改的那条消息换新对象」：
- * SDK 的 ReactChatState.replaceMessage 是
+ * A single message. memo works because on write-back only the changed message gets a new object:
+ * the SDK's ReactChatState.replaceMessage is
  * `[...messages.slice(0, index), snapshot(message), ...messages.slice(index + 1)]`
- * （`@ai-sdk/react/dist/index.js:208-215`），snapshot 又会克隆 parts，
- * 所以流式期间只有正在写的那条重渲染，已完成消息的 diff 成本不随对话变长。
+ * (`@ai-sdk/react/dist/index.js:208-215`), and snapshot clones parts, so during streaming only the
+ * message being written re-renders, and diffing finished messages doesn't get costlier as the
+ * conversation grows.
  */
 const MessageBubble = memo(function MessageBubble({
   message,
@@ -88,9 +94,10 @@ const MessageBubble = memo(function MessageBubble({
 });
 
 /**
- * 输入框。input 状态放在这里而不是 Playground：打字只重渲染这个子组件，
- * 不会把整条消息列表一起重渲染 —— 对话越长，这一点越重要。
- * memo 生效依赖 `onSend` / `onStop` 的引用稳定（见 Playground 里的 useCallback）。
+ * The input box. input state lives here rather than in Playground: typing re-renders only this
+ * child, not the whole message list — which matters more the longer the conversation gets.
+ * memo only helps if the `onSend` / `onStop` references are stable (see the useCallback in
+ * Playground).
  */
 const Composer = memo(function Composer({
   busy,
@@ -136,7 +143,10 @@ const Composer = memo(function Composer({
   );
 });
 
-/** 示例 Playground：选模型、发消息、流式显示回复。对话不保存，刷新即清空。 */
+/**
+ * Example Playground: pick a model, send messages, and see replies stream in. Conversations aren't
+ * saved; a reload clears them.
+ */
 export function Playground({
   models,
   defaultModel,
@@ -155,8 +165,9 @@ export function Playground({
   const cost = models.find((m) => m.id === modelId)?.creditCost ?? 0;
   const errorCode = error ? chatErrorCode(error) : null;
 
-  // Composer 是 memo 的，所以这几个引用要稳：sendMessage / clearError / stop 都是 chat
-  // 实例上的属性（引用不随渲染变），这里只有 modelId 会变。
+  // Composer is memoized, so these references must be stable: sendMessage / clearError / stop are
+  // all properties of the chat instance (their references don't change across renders); only
+  // modelId changes here.
   const sendText = useCallback(
     (text: string) => {
       clearError();
@@ -190,7 +201,8 @@ export function Playground({
       </div>
 
       <div
-        // 空的时候把这个盒子本身变成居中容器，空状态才不会贴在 256px 高的框顶上。
+        // When empty, turn this box itself into a centering container so the empty state doesn't
+        // stick to the top of the 256px-tall box.
         className={cn(
           "panel min-h-64 space-y-4 p-4",
           messages.length === 0 && "flex items-center justify-center",

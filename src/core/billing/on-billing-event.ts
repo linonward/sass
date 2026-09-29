@@ -4,18 +4,23 @@ import { logger } from "@/core/observability/logger";
 import type { BillingEvent } from "./events";
 
 export type BillingEventContext = {
-  /** 处理这个事件的事务。钩子里的写库操作都要用它，和事件处理一起提交或回滚。 */
+  /**
+   * Transaction handling this event. All DB writes in hooks must use it, so they commit or roll
+   * back with event handling.
+   */
   tx: DbTransaction;
   /**
-   * 事件到达时已有更新的状态（乱序到达的旧事件），订阅和订单没有被它改动。
-   * 事件本身仍然是真实发生过的，例如迟到的续费仍应发放积分，由钩子按需判断。
+   * A newer state already existed when the event arrived (an old event delivered out of order), so it
+   * did not change the subscription or order. The event itself still really happened — e.g. a late
+   * renewal should still grant credits — so each hook decides as needed.
    */
   stale: boolean;
-  /** 解析出的用户 ID。 */
+  /** Resolved user ID. */
   userId: string;
   /**
-   * 登记一个在事务提交之后才执行的回调，用于发邮件等撤不回来的副作用。
-   * 事务回滚（包括后面的钩子失败）时不会执行；回调失败只记日志，不影响 webhook 的结果。
+   * Register a callback that runs only after the transaction commits, for side effects that can't be
+   * undone, such as sending email. It doesn't run if the transaction rolls back (including when a later
+   * hook fails); a failing callback is only logged and doesn't affect the webhook result.
    */
   afterCommit: (fn: AfterCommitCallback) => void;
 };
@@ -30,9 +35,10 @@ export type OnBillingEventHandler = (
 const handlers = new Map<string, OnBillingEventHandler>();
 
 /**
- * 注册账单事件的后续处理，例如发放积分、发送付款成功邮件。
- * 每个事件只触发一次（重复推送不会再次触发），按注册顺序执行；同名重复注册会覆盖前一个。
- * 在 ./hooks.ts 里 import 注册文件，保证处理事件时所有模块都已注册。
+ * Register follow-up handling for billing events, e.g. granting credits or sending payment-succeeded
+ * emails. Each event fires only once (repeated deliveries don't fire again), hooks run in registration
+ * order, and registering the same name again replaces the previous one. Import the registration file
+ * in ./hooks.ts so every module is registered before events are handled.
  */
 export function registerOnBillingEvent(
   name: string,
@@ -42,17 +48,20 @@ export function registerOnBillingEvent(
   handlers.set(name, handler);
 }
 
-/** 已注册的钩子名称，按执行顺序。 */
+/** Names of registered hooks, in execution order. */
 export function onBillingEventHandlers(): string[] {
   return [...handlers.keys()];
 }
 
-/** 仅供测试：清空注册表。 */
+/** Test-only: clear the registry. */
 export function resetOnBillingEvent() {
   handlers.clear();
 }
 
-/** 某个钩子失败时抛出；整个事件的事务随之回滚，webhook 返回 500 由服务商重试。 */
+/**
+ * Thrown when a hook fails; the whole event transaction rolls back and the webhook returns 500 so the
+ * provider retries.
+ */
 export class OnBillingEventError extends Error {
   constructor(
     readonly handler: string,
@@ -63,7 +72,10 @@ export class OnBillingEventError extends Error {
   }
 }
 
-/** 依次执行 afterCommit 登记的回调；某个失败只记日志，继续执行后面的。 */
+/**
+ * Run callbacks registered via afterCommit in order; a failing one is only logged and the rest
+ * still run.
+ */
 export async function runAfterCommit(callbacks: AfterCommitCallback[]) {
   for (const callback of callbacks) {
     try {
@@ -74,7 +86,10 @@ export async function runAfterCommit(callbacks: AfterCommitCallback[]) {
   }
 }
 
-/** 在事件的事务内依次执行所有钩子；任何一个失败就停止并抛出 OnBillingEventError。 */
+/**
+ * Run all hooks in order inside the event transaction; stop and throw OnBillingEventError as soon
+ * as one fails.
+ */
 export async function runOnBillingEvent(
   event: BillingEvent,
   context: BillingEventContext,

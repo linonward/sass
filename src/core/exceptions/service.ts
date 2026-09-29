@@ -10,22 +10,26 @@ import type { Credits } from "@/core/credits";
 import type { Database, DbTransaction } from "@/core/db/client";
 import { adminActions, aiUsage, billingExceptions } from "@/core/db/schema";
 
-/** 审计表里异常单的 target_kind。 */
+/** The target_kind for billing exceptions in the audit table. */
 export const EXCEPTION_TARGET = "billing_exception";
 
 export type ExceptionActionName =
   "resend" | "retry_reclaim" | "recheck" | "resolve" | "ignore";
 
 /**
- * 一次处理动作的结果。`result` 是写进审计表的机读结果（也在后台的处理历史里显示）：
- * - 重试回收：`reclaimed:<n>`（扣够了，关单）/ `partial:<n>/<owed>`（还不够）/
- *   `uncollectible:<owed>`（余额为 0）/ `nothing_owed`（账上已不欠，关单）/ `order_missing`；
- * - 重新核对：`recovered:<状态>`（任务还在 pending，按恢复路径推进）/ `provider:<状态>`（任务已结束，
- *   只记下服务商现在怎么说）/ `provider_unavailable` / `provider_error`；
- * - 补发邮件：`sent`（发出去了，关单）/ `retry` / `failed`（又没发出去，单子留着）/
- *   `skipped`（这封已经补发不了，比如验证码的原文已清掉）；
- * - 标记处理 / 忽略：`resolved` / `ignored`。
- * `closed` 表示这次动作之后单子不再是 open。
+ * The result of one handling action. `result` is the machine-readable result written to the audit
+ * table (also shown in the handling history in the admin):
+ * - retry reclaim: `reclaimed:<n>` (fully collected, closes the exception) / `partial:<n>/<owed>`
+ *   (still short) / `uncollectible:<owed>` (balance is 0) / `nothing_owed` (the ledger no longer
+ *   shows a debt, closes the exception) / `order_missing`;
+ * - reconcile again: `recovered:<status>` (task still pending, advanced via the recovery path) /
+ *   `provider:<status>` (task already finished, only records what the provider says now) /
+ *   `provider_unavailable` / `provider_error`;
+ * - resend email: `sent` (went out, closes the exception) / `retry` / `failed` (failed again, the
+ *   exception stays open) / `skipped` (this email can no longer be resent, e.g. the verification
+ *   code's plaintext has been purged);
+ * - mark resolved / ignore: `resolved` / `ignored`.
+ * `closed` means the exception is no longer open after this action.
  */
 export type ExceptionActionOutcome =
   | { ok: true; result: string; closed: boolean }
@@ -38,7 +42,10 @@ export type ExceptionServiceDeps = {
     recoverVideo: (id: string) => Promise<{ status: string } | null>;
     providerStatus: (id: string) => Promise<VideoTaskStatus | null>;
   };
-  /** 事务邮件的 outbox：终态失败的邮件在这里补发（见 @/core/email/outbox）。 */
+  /**
+   * Outbox for transactional emails: permanently failed emails are resent from here (see
+   * @/core/email/outbox).
+   */
   outbox: {
     resend: (id: string) => Promise<"sent" | "retry" | "failed" | "skipped">;
   };
@@ -47,12 +54,14 @@ export type ExceptionServiceDeps = {
 type ActionInput = { actorId: string; exceptionId: string; reason: string };
 
 /**
- * 异常台的处理动作。每个动作：
- * - 只处理 open 的单子（已处理的返回 `not_open`，不重复做任何事）；
- * - 复用已有的幂等路径，不新写金额逻辑（回收走 `reclaimCredits`，AI 任务走恢复扫描的结算路径）；
- * - 在 `admin_actions` 里记一行：谁、什么时候、对哪张单、做了什么、为什么、结果如何。
+ * Handling actions for the exceptions page. Every action:
+ * - only handles open exceptions (already handled ones return `not_open` and nothing is repeated);
+ * - reuses the existing idempotent paths instead of writing new money logic (reclaim goes through
+ *   `reclaimCredits`, AI tasks through the recovery sweep's settlement path);
+ * - records one row in `admin_actions`: who, when, which exception, what was done, why, and the
+ *   result.
  *
- * 权限不在这里判断 —— 调用方（Server Action）先验管理员身份。
+ * Permissions are not checked here — the caller (the Server Action) verifies admin identity first.
  */
 export function createExceptionService({
   db,
@@ -84,7 +93,10 @@ export function createExceptionService({
     return row;
   }
 
-  /** 事务里锁住单子再判断状态：并发的两次动作只有一次看到 open。 */
+  /**
+   * Lock the exception inside the transaction before checking its status: of two concurrent
+   * actions, only one sees it open.
+   */
   async function lock(tx: DbTransaction, id: string) {
     const [row] = await tx
       .select()
@@ -129,14 +141,19 @@ export function createExceptionService({
   }
 
   /**
-   * 重试回收：锁住订单行，按账本重算这个订单**现在**还欠多少，欠多少扣多少。
+   * Retry reclaim: lock the order row, recompute from the ledger how much this order owes **now**,
+   * and deduct exactly that.
    *
-   * 防重复扣款靠的是「锁 + 重算」，不是新的幂等键：两次并发的重试里，后到的那次在订单行锁上
-   * 等前一次提交，再重算时已回收的积分里已经包含了前一次扣的，欠款变小或归零，不会多扣。
-   * 写流水用的 sourceId 挂在同一订单的 `:refund:` 前缀下（`retryReclaimSourceId`），
-   * 所以它和 webhook 的回收共用一个「已回收」口径；带上尝试次数，同一次尝试重复提交撞唯一键。
+   * Double deduction is prevented by "lock + recompute", not by a new idempotency key: of two
+   * concurrent retries, the later one waits on the order row lock for the first to commit; when it
+   * recomputes, the reclaimed credits already include what the first one deducted, so the amount
+   * owed shrinks or reaches zero and nothing is over-deducted. The sourceId for the ledger entry
+   * sits under the same order's `:refund:` prefix (`retryReclaimSourceId`), so it shares one
+   * "already reclaimed" measure with the webhook reclaim; it includes the attempt number, so a
+   * duplicate submit of the same attempt hits the unique key.
    *
-   * 锁的顺序和 webhook 回收一致：先订单，后异常单 —— 两边不会互相等死。
+   * Lock order matches the webhook reclaim: order first, then the exception — the two sides can't
+   * deadlock each other.
    */
   async function retryReclaim(
     input: ActionInput,
@@ -164,7 +181,8 @@ export function createExceptionService({
         result = "order_missing";
         await recordAttempt(tx, row.id, "order or credit grant not found", {});
       } else if (owed.owed <= 0) {
-        // 账上已经不欠了（比如同一订单后来的退款回收已经补齐）：关单，理由用管理员写的。
+        // The ledger no longer shows a debt (e.g. a later refund reclaim on the same order made it
+        // up): close the exception with the admin's reason.
         result = "nothing_owed";
         closed = true;
         await close(tx, row.id, "resolved", input.reason);
@@ -217,11 +235,13 @@ export function createExceptionService({
   }
 
   /**
-   * 重新核对 AI 任务：
-   * - 任务还是 pending：交给恢复扫描的同一条路径推进（先问服务商，有结果先保存）；
-   *   推进到终态就关单（理由用管理员写的），还在等就留着；
-   * - 任务已经结束（按「无结果」退了款）：只问服务商现在怎么说，记进单子，不动钱 ——
-   *   服务商后来成功了要追回还是补发，由人决定，然后「标记已处理」。
+   * Reconcile an AI task again:
+   * - task still pending: advance it through the same path as the recovery sweep (ask the
+   *   provider first, save any result first); close the exception (with the admin's reason) if it
+   *   reaches a terminal state, keep it open if it is still waiting;
+   * - task already finished (refunded as "no result"): only ask the provider what it says now and
+   *   record that on the exception, without touching money — if the provider later succeeded,
+   *   whether to claw back or deliver is a human call, followed by "mark resolved".
    */
   async function recheck(input: ActionInput): Promise<ExceptionActionOutcome> {
     const found = await load(input.exceptionId);
@@ -278,7 +298,8 @@ export function createExceptionService({
           .where(eq(billingExceptions.id, row.id));
         await close(tx, row.id, "resolved", input.reason);
       } else {
-        // 核对拿到了服务商状态（lastError 为 null）时顺带清掉上一次的错误信息。
+        // When the reconcile got a provider status (lastError is null), this also clears the
+        // previous error message.
         await recordAttempt(tx, row.id, lastError, detail);
       }
       await audit(tx, input, "recheck", result);
@@ -287,10 +308,12 @@ export function createExceptionService({
   }
 
   /**
-   * 补发一封终态失败的邮件：outbox 里那一行放回队列立即发一次。发出去就关单；
-   * 又没发出去，单子留着（outbox 会按退避继续补发，再次用完时更新这张单的次数和错误）。
-   * 注意这是 at-least-once：终态失败时去重名额已经释放，期间如果同一事件又触发过一封，
-   * 补发会多出一封 —— 所以要人来按，并写理由。
+   * Resend a permanently failed email: put its outbox row back in the queue and send it once right
+   * away. If it goes out, close the exception; if it fails again, keep it open (the outbox keeps
+   * retrying with backoff, and when retries run out again it updates this exception's attempts and
+   * error). Note this is at-least-once: the dedupe slot was released when the email failed for
+   * good, so if the same event triggered another email in the meantime, the resend adds an extra
+   * one — which is why a human has to press the button and write a reason.
    */
   async function resendNotification(
     input: ActionInput,
@@ -318,7 +341,7 @@ export function createExceptionService({
     });
   }
 
-  /** 标记已处理 / 忽略：写处理说明并关单，不动任何钱。 */
+  /** Mark resolved / ignore: write the resolution note and close, without touching any money. */
   async function resolve(
     input: ActionInput & { status: "resolved" | "ignored" },
   ): Promise<ExceptionActionOutcome> {

@@ -5,11 +5,13 @@ import type { ServerTracker } from "@/core/observability/track-server";
 import type { OnBillingEventHandler } from "./on-billing-event";
 
 /**
- * checkout.completed → Vercel Analytics 的 purchase 事件（只带套餐 ID）。
- * 只算首次付款（一次性购买或订阅首付），续费不算转化。每个事件只触发一次（webhook 幂等）。
- * 事务提交之后、响应之后再发，统计失败或变慢都不影响 webhook。
- * webhook 由支付服务商调用，没有访客的请求上下文：显式传空 headers，事件照常记录，
- * 来源、设备和地区为空（不能用 webhook 请求本身的 headers，那是服务商的服务器）。
+ * checkout.completed → Vercel Analytics `purchase` event (with only the plan ID).
+ * Only first payments count (one-time purchase or first subscription payment); renewals are not
+ * conversions. Each event fires once (the webhook is idempotent). It's sent after the transaction
+ * commits and after the response, so a failing or slow analytics call never affects the webhook.
+ * The webhook is called by the payment provider, so there is no visitor request context: we pass
+ * empty headers explicitly, the event is still recorded, and source, device and region are empty
+ * (we can't use the webhook request's own headers — those belong to the provider's servers).
  */
 export function createPurchaseTrackingHandler({
   track,

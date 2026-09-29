@@ -68,7 +68,7 @@ function setup(overrides: Partial<ChatDeps> = {}) {
 }
 
 describe("handleChat", () => {
-  test("流式返回模型输出，并把记账登记到 after", async () => {
+  test("streams the model output and registers the accounting with after", async () => {
     const { deps, post } = setup();
     const response = await post(
       { messages, modelId: "fast" },
@@ -86,28 +86,28 @@ describe("handleChat", () => {
     expect(deps.after).toHaveBeenCalledOnce();
   });
 
-  test("features.ai 关闭时 404", async () => {
+  test("404 when features.ai is off", async () => {
     const { post } = setup({ enabled: false });
     expect((await post({ messages })).status).toBe(404);
   });
 
-  test("未登录 401，不调用模型", async () => {
+  test("401 when signed out, without calling the model", async () => {
     const { deps, post } = setup({ getUserId: async () => null });
     expect((await post({ messages })).status).toBe(401);
     expect(deps.runAI).not.toHaveBeenCalled();
   });
 
   test.each([
-    ["不是 JSON", "nope"],
-    ["没有 messages", {}],
-    ["messages 格式不对", { messages: [{ role: "user" }] }],
-  ])("请求体%s时 400", async (_, body) => {
+    ["is not JSON", "nope"],
+    ["has no messages", {}],
+    ["has malformed messages", { messages: [{ role: "user" }] }],
+  ])("400 when the request body %s", async (_, body) => {
     const { deps, post } = setup();
     expect((await post(body)).status).toBe(400);
     expect(deps.runAI).not.toHaveBeenCalled();
   });
 
-  test("请求体过大 413", async () => {
+  test("413 when the request body is too large", async () => {
     const { post } = setup();
     const big = "x".repeat(MAX_CHAT_BODY_BYTES);
     const response = await post({
@@ -118,7 +118,7 @@ describe("handleChat", () => {
     expect(response.status).toBe(413);
   });
 
-  test("runAI 拒绝时原样返回它的响应（402 / 429）", async () => {
+  test("returns runAI's response as is when it rejects (402 / 429)", async () => {
     const rejected = Response.json(
       { error: "insufficient_credits" },
       { status: 402 },

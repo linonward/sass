@@ -18,24 +18,25 @@ import type { CreemMode } from "../env";
 export const CREEM_PROVIDER_ID = "creem";
 
 /*
- * Creem webhook → BillingEvent 映射（事件结构见 https://docs.creem.io/code/webhooks）：
+ * Creem webhook → BillingEvent mapping (event shapes: https://docs.creem.io/code/webhooks):
  *
- * | Creem eventType                | BillingEvent            | 说明                                              |
- * | ------------------------------ | ----------------------- | ------------------------------------------------- |
- * | checkout.completed             | checkout.completed      | 一次性购买带 orderId（ord_）；订阅结账不带订单      |
- * | subscription.active            | subscription.active     | 只同步状态，不发积分                              |
- * | subscription.paid              | subscription.renewed    | 每个账期付款（含首期）；orderId 用 last_transaction_id |
- * | subscription.scheduled_cancel  | subscription.canceled   | 已取消续费，到 current_period_end 前仍可用         |
- * | subscription.canceled          | subscription.canceled   |                                                   |
- * | subscription.update（active）  | subscription.active     | 恢复续费（撤销 scheduled_cancel）；其他状态忽略    |
- * | subscription.expired           | subscription.expired    |                                                   |
- * | subscription.past_due / unpaid | payment.failed          |                                                   |
- * | refund.created                 | refund.created          | 订阅付款按 transaction.id 对应订单，一次性按 order  |
- * | 其他（dispute、trialing、paused、credits.* 等） | 忽略（返回 null） |                          |
+ * | Creem eventType                 | BillingEvent          | Notes                                                        |
+ * | ------------------------------- | --------------------- | ------------------------------------------------------------ |
+ * | checkout.completed              | checkout.completed    | One-time purchases carry orderId (ord_); subscription checkouts have no order |
+ * | subscription.active             | subscription.active   | Syncs status only, grants no credits                         |
+ * | subscription.paid               | subscription.renewed  | Every period's payment (incl. the first); orderId is last_transaction_id |
+ * | subscription.scheduled_cancel   | subscription.canceled | Renewal canceled, still usable until current_period_end      |
+ * | subscription.canceled           | subscription.canceled |                                                              |
+ * | subscription.update (active)    | subscription.active   | Renewal resumed (scheduled_cancel undone); other statuses ignored |
+ * | subscription.expired            | subscription.expired  |                                                              |
+ * | subscription.past_due / unpaid  | payment.failed        |                                                              |
+ * | refund.created                  | refund.created        | Subscription payments map to the order by transaction.id, one-time by order |
+ * | Others (dispute, trialing, paused, credits.*, etc.) | Ignored (returns null) |                                         |
  *
- * 订单 ID 的约定：一次性购买用 Creem 的 order.id；订阅的每次付款用 transaction.id
- * （subscription.paid 只带 last_transaction_id，不带订单）。退款按同样的规则找到对应订单。
- * 金额以最小货币单位（分）计，和 Creem 一致。
+ * Order ID convention: one-time purchases use Creem's order.id; each subscription payment uses
+ * transaction.id (subscription.paid only carries last_transaction_id, not an order). Refunds find
+ * the matching order by the same rule.
+ * Amounts are in the smallest currency unit (cents), same as Creem.
  */
 
 type Loose = Record<string, unknown>;
@@ -58,11 +59,13 @@ const asDate = (value: unknown): Date | undefined => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date;
 };
-/** Creem 的关联对象有时展开成对象，有时只给 ID。 */
+/** Creem sometimes expands related objects and sometimes gives only the ID. */
 const idOf = (value: unknown): string | undefined =>
   asString(value) ?? asString(asObject(value)?.id);
 
-/** 结账时写入的 metadata：{ userId, planId }。订阅会复制结账的 metadata。 */
+/**
+ * Metadata written at checkout: { userId, planId }. Subscriptions copy the checkout's metadata.
+ */
 function metadataOf(...sources: unknown[]) {
   for (const source of sources) {
     const metadata = asObject(asObject(source)?.metadata);
@@ -82,7 +85,10 @@ function planIdOf(metadataPlanId: string | undefined, product: unknown) {
   return productId ? planByProductId(productId)?.id : undefined;
 }
 
-/** 把已校验的 Creem webhook 请求体转换成 BillingEvent；不关心的事件返回 null。 */
+/**
+ * Converts a verified Creem webhook body into a BillingEvent; returns null for events we don't
+ * care about.
+ */
 export function parseCreemEvent(payload: unknown): BillingEvent | null {
   const data = asObject(payload) as CreemWebhookPayload | undefined;
   const object = asObject(data?.object);
@@ -109,7 +115,8 @@ export function parseCreemEvent(payload: unknown): BillingEvent | null {
         customerId: idOf(object.customer) ?? asString(order?.customer),
         checkoutId: asString(object.id)!,
         planId: planIdOf(planId, object.product ?? order?.product),
-        // 订阅的付款由 subscription.paid 按 transaction 记录，这里只记一次性购买的订单。
+        // Subscription payments are recorded per transaction by subscription.paid; only one-time
+        // purchase orders are recorded here.
         orderId: subscriptionId ? undefined : asString(order?.id),
         subscriptionId,
         amount: asNumber(order?.amount),
@@ -186,7 +193,7 @@ function parseSubscriptionEvent(
         planId: plan,
       };
     case "subscription.update":
-      // 只关心恢复续费；其他变更（改数量等）v1 不处理。
+      // Only resumed renewals matter; v1 ignores other changes (quantity changes, etc.).
       return object.status === "active"
         ? { ...common, ...period, type: "subscription.active", planId: plan }
         : null;
@@ -197,7 +204,8 @@ function parseSubscriptionEvent(
         type: "subscription.renewed",
         planId: plan,
         orderId: asString(object.last_transaction_id),
-        // subscription.paid 不带实付金额，用产品标价（不含税和折扣）作为近似值。
+        // subscription.paid doesn't carry the amount actually paid, so use the product's list price
+        // (excluding tax and discounts) as an approximation.
         amount: asNumber(product?.price),
         currency: asString(product?.currency),
       };
@@ -218,7 +226,7 @@ function parseSubscriptionEvent(
   }
 }
 
-/** 用到的 SDK 方法，测试可以注入假的实现。 */
+/** The SDK methods we use; tests can inject a fake implementation. */
 export type CreemClient = {
   checkouts: Pick<Creem["checkouts"], "create">;
   customers: Pick<Creem["customers"], "generateBillingLinks">;
@@ -229,7 +237,7 @@ export type CreemProviderOptions = {
   apiKey: string;
   webhookSecret: string;
   mode: CreemMode;
-  /** 测试注入；默认按 apiKey 和 mode 创建官方 SDK 客户端。 */
+  /** Injected by tests; defaults to an official SDK client built from apiKey and mode. */
   client?: CreemClient;
 };
 
@@ -252,7 +260,8 @@ export function createCreemProvider({
         productId,
         requestId: `${input.userId}:${input.planId}`,
         successUrl: input.successUrl,
-        // Creem 结账没有取消地址：用户关闭页面即可，input.cancelUrl 不使用。
+        // Creem checkout has no cancel URL: the user just closes the page, so input.cancelUrl is
+        // unused.
         ...(input.customerEmail && {
           customer: { email: input.customerEmail },
         }),
@@ -269,7 +278,10 @@ export function createCreemProvider({
       return links.customerPortalLink;
     },
 
-    /** 立即取消。已取消、已预约在期末取消或不存在都视为成功（之后不会再扣款），便于重试。 */
+    /**
+     * Cancels immediately. Already canceled, already scheduled to cancel at period end, or not
+     * found all count as success (no further charges will happen), so retries are safe.
+     */
     async cancelSubscription(subscriptionId: string): Promise<void> {
       try {
         const current = await creem.subscriptions.get(subscriptionId);

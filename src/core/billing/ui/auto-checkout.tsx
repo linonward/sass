@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 
 import { useCheckout } from "./use-checkout";
 
-/** 登录后回到 /pricing?plan=<id> 时自动继续结账。 */
+/** Resume checkout automatically when the user lands back on /pricing?plan=<id> after signing in. */
 export function AutoCheckout({ planId }: { planId: string }) {
   const t = useTranslations("Billing");
   const { start, error } = useCheckout();

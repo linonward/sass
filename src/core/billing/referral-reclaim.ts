@@ -27,11 +27,11 @@ function referralReclaimSourceId(
 }
 
 /**
- * 退款时回收推荐奖励的 onBillingEvent 钩子。
- * 触发条件：refund.created。
+ * onBillingEvent hook that reclaims referral rewards on refund.
+ * Trigger: refund.created.
  *
- * 部分或全额退款都取消该订单对应的全部双方奖励（不做比例）。
- * 回收时余额不够则记录债务到 referral_reward_debt。
+ * A partial or full refund cancels all of both sides' rewards for that order (not proportional).
+ * If the balance is too low to reclaim, the shortfall is recorded as debt in referral_reward_debt.
  */
 export function createReferralReclaimHandler({
   enabled,
@@ -51,7 +51,7 @@ export function createReferralReclaimHandler({
 
     const orderRef = `${event.provider}:${event.orderId}`;
 
-    // 查找该订单的发放记录
+    // Find the grant records for this order
     const [reward] = await tx
       .select({
         id: referralRewards.id,
@@ -72,7 +72,7 @@ export function createReferralReclaimHandler({
 
     if (!reward) return;
 
-    // 回收双方奖励（全额回收，不做比例）
+    // Reclaim both sides' rewards (in full, not proportional)
     const reclaims = [
       {
         userId: reward.inviterUserId,
@@ -118,7 +118,7 @@ export function createReferralReclaimHandler({
           refundId: event.refundId,
         });
 
-        // 记债
+        // Record the debt
         await tx.insert(referralRewardDebt).values({
           id: randomUUID(),
           userId,
@@ -128,7 +128,7 @@ export function createReferralReclaimHandler({
       }
     }
 
-    // 写撤销记录
+    // Write the reversal record
     await tx.insert(referralRewards).values({
       id: randomUUID(),
       inviteeUserId: reward.inviteeUserId,
@@ -137,7 +137,7 @@ export function createReferralReclaimHandler({
       type: "revoked",
     });
 
-    // 更新关系状态
+    // Update the relationship status
     await tx
       .update(referralRelationships)
       .set({ status: "revoked" })

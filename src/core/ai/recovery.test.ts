@@ -28,8 +28,9 @@ import {
   VIDEO_TIMEOUT_MS,
 } from "./video";
 
-// 恢复扫描的真库测试：每个场景都对照 ai_usage、credit_transactions 和余额三处状态。
-// AI 调用不产生订单（orders），订单那一侧由计费模块的测试覆盖。
+// Real-database tests for the recovery sweep: every scenario checks three places — ai_usage,
+// credit_transactions, and the balance. AI calls create no orders; the order side is covered by the
+// billing module's tests.
 
 const url = process.env.DATABASE_URL_TEST;
 
@@ -37,7 +38,9 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过恢复扫描测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping recovery sweep tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
 const config = aiConfigSchema.parse({
@@ -58,7 +61,7 @@ const VIDEO_URL = "https://dashscope-result.test/v.mp4";
 const mp4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70]);
 const MINUTE = 60 * 1000;
 
-describe.skipIf(!url)("AI 恢复扫描", () => {
+describe.skipIf(!url)("AI recovery sweep", () => {
   let dbClient: DbClient;
   let credits: Credits;
 
@@ -91,8 +94,8 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
   }
 
   /**
-   * 一个「实例」：视频服务 + 恢复扫描，共用一个可调的时钟和服务商。
-   * 进程重启 = 再建一个实例，数据库还是同一个。
+   * One "instance": the video service + the recovery sweep, sharing an adjustable clock and
+   * provider. A process restart = building another instance against the same database.
    */
   function instance({
     clock = { now: Date.now() },
@@ -133,13 +136,14 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     return started.job.id;
   }
 
-  /** 三处状态：ai_usage 行、这条任务的积分流水、余额。 */
+  /** The three places: the ai_usage row, this job's credit transactions, and the balance. */
   async function ledger(userId: string, usageId: string) {
     const [usage] = await dbClient.db
       .select()
       .from(aiUsage)
       .where(eq(aiUsage.id, usageId));
-    // 扣减流水挂在 ai_usage.id 上；退款流水的 source 是 refund、sourceId 是被退的那笔扣减。
+    // Deduction transactions hang off ai_usage.id; a refund transaction has source refund and its
+    // sourceId is the deduction being refunded.
     const deductions = await dbClient.db
       .select({ id: creditTransactions.id })
       .from(creditTransactions)
@@ -172,13 +176,14 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     };
   }
 
-  test("用户关掉页面：没有任何轮询，扫描把完成的视频存进历史，积分不退", async () => {
+  test("user closes the page: with no polling at all, the sweep saves the finished video to history and refunds nothing", async () => {
     const userId = await newUser(50);
     const s = instance();
     const id = await startVideo(s, userId);
     s.provider.next = { status: "succeeded", videoUrl: VIDEO_URL };
 
-    // 刚提交的任务不在扫描范围里：前端可能还在轮询，taskId 也可能还没写回。
+    // Freshly submitted jobs are outside the sweep: the frontend may still be polling, and the
+    // taskId may not be written back yet.
     expect(await s.scan({ userIds: [userId] })).toMatchObject({ scanned: 0 });
     expect(s.client.status).not.toHaveBeenCalled();
 
@@ -202,7 +207,8 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     expect(file).toMatchObject({ userId, mime: "video/mp4" });
     expect(s.storage.bodies.get(file!.key)).toEqual(mp4);
 
-    // 用户回来（换设备也一样）：查询直接拿到结果，不再问服务商、不再下载。
+    // The user comes back (same on another device): the query gets the result directly, without
+    // asking the provider or downloading again.
     const calls = s.client.status.mock.calls.length;
     const back = await s.pollVideo({ userId, id });
     expect(back.ok && back.job.status).toBe("succeeded");
@@ -210,13 +216,14 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     expect(s.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test("进程重启（重新部署）：新实例扫到上一个实例遗留的 pending 并处理", async () => {
+  test("process restart (redeploy): the new instance sweeps up and handles pending rows left by the old one", async () => {
     const userId = await newUser(50);
     const provider = { next: { status: "pending" } as VideoTaskStatus };
     const before = instance({ provider });
     const id = await startVideo(before, userId);
 
-    // 旧实例消失，数据库里只剩一行 pending；新实例拿同一个服务商账号起来。
+    // The old instance is gone, leaving a single pending row in the database; the new instance
+    // starts with the same provider account.
     const clock = { now: before.clock.now + 10 * MINUTE };
     const after = instance({ provider, clock });
     provider.next = { status: "succeeded", videoUrl: VIDEO_URL };
@@ -231,7 +238,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     });
   });
 
-  test("场景 3：服务商已出结果、本地保存失败 —— 先保存结果，不退款；超过 30 分钟也不退", async () => {
+  test("scenario 3: provider has a result but saving locally fails — save the result first, no refund, not even after 30 minutes", async () => {
     const userId = await newUser(50);
     const s = instance();
     const id = await startVideo(s, userId);
@@ -248,7 +255,8 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
       balance: 30,
     });
 
-    // 30 分钟是「服务商还没出结果」的上限；结果已经在服务商那里，不能按它退款。
+    // 30 minutes is the limit for "the provider has no result yet"; the result is already at the
+    // provider, so that limit can't trigger a refund.
     s.clock.now += VIDEO_TIMEOUT_MS;
     expect(await s.scan({ userIds: [userId] })).toMatchObject({ pending: 1 });
     expect(await ledger(userId, id)).toMatchObject({
@@ -256,7 +264,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
       refunded: 0,
     });
 
-    // 存储恢复：下一次扫描把结果存下来。
+    // Storage recovers: the next sweep saves the result.
     s.fetch.mockImplementation(async () => new Response(mp4));
     expect(await s.scan({ userIds: [userId] })).toMatchObject({ succeeded: 1 });
     expect(await ledger(userId, id)).toMatchObject({
@@ -268,7 +276,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     expect(s.storage.objects.size).toBe(1);
   });
 
-  test("保存一直失败到服务商结果过期（24 小时）：才按失败退款", async () => {
+  test("saving keeps failing until the provider result expires (24 hours): only then refund as failed", async () => {
     const userId = await newUser(50);
     const s = instance();
     const id = await startVideo(s, userId);
@@ -285,7 +293,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     expect(state.usage.error).toContain("403");
   });
 
-  test("供应商长期无结果：30 分钟前留着，之后结算失败并退款，error 写明原因", async () => {
+  test("provider has no result for a long time: kept for 30 minutes, then settled as failed and refunded with the reason in error", async () => {
     const userId = await newUser(50);
     const s = instance();
     const id = await startVideo(s, userId);
@@ -296,7 +304,8 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
 
     s.clock.now += 11 * MINUTE;
     expect(await s.scan({ userIds: [userId] })).toMatchObject({ failed: 1 });
-    // 到了上限也先问过服务商（第二次查询），不是看时间直接退。
+    // Even at the limit the provider is asked first (the second query); it doesn't refund on time
+    // alone.
     expect(s.client.status).toHaveBeenCalledTimes(2);
     expect(await ledger(userId, id)).toMatchObject({
       usage: {
@@ -308,7 +317,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     });
   });
 
-  test("供应商明确失败：扫描结算失败并退款", async () => {
+  test("provider fails explicitly: the sweep settles it as failed and refunds", async () => {
     const userId = await newUser(50);
     const s = instance();
     const id = await startVideo(s, userId);
@@ -325,7 +334,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     });
   });
 
-  test("提交时进程中断、没记下 taskId：没东西可查，30 分钟后退款并写明原因", async () => {
+  test("process dies during submission before recording taskId: nothing to query, refunded after 30 minutes with the reason recorded", async () => {
     const userId = await newUser(50);
     const s = instance();
     const id = await startVideo(s, userId);
@@ -351,7 +360,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     });
   });
 
-  test("场景 2：客户端轮询与扫描同时结算同一行 —— 成功只存一份，失败只退一次", async () => {
+  test("scenario 2: client polling and the sweep settle the same row at once — success is saved once, failure refunded once", async () => {
     const userId = await newUser(100);
     const s = instance();
     const done = await startVideo(s, userId);
@@ -389,11 +398,11 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
       deducted: 1,
       refunded: 1,
     });
-    // 100 - 20（成功的那条）- 20 + 20（失败退回）
+    // 100 - 20 (the successful one) - 20 + 20 (the failed one, refunded)
     expect(await credits.getBalance(userId)).toBe(80);
   });
 
-  test("文本 / 图片：函数在结算前被回收，超过上限后退款；未到上限的不碰", async () => {
+  test("text / image: function reclaimed before settling is refunded past the limit; rows under the limit are left alone", async () => {
     const userId = await newUser(50);
     const s = instance();
     const deps = { db: () => dbClient.db, credits, logError: vi.fn() };
@@ -429,7 +438,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     expect(await credits.getBalance(userId)).toBe(50);
   });
 
-  test("可重入：同一批任务扫两次，结果相同，不重复结算", async () => {
+  test("reentrant: sweeping the same jobs twice gives the same result without settling twice", async () => {
     const userId = await newUser(50);
     const s = instance();
     const id = await startVideo(s, userId);
@@ -437,7 +446,7 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     s.clock.now += RECOVERY_VIDEO_STALE_MS + 1000;
     await s.scan({ userIds: [userId] });
     const first = await ledger(userId, id);
-    // 已结束的行不再出现在扫描里。
+    // Finished rows no longer show up in the sweep.
     expect(await s.scan({ userIds: [userId] })).toMatchObject({ scanned: 0 });
     const second = await ledger(userId, id);
     expect(second).toMatchObject({
@@ -447,13 +456,14 @@ describe.skipIf(!url)("AI 恢复扫描", () => {
     });
   });
 
-  test("名额有限时轮转：一时结不了的行不会每次都占住名额", async () => {
+  test("rotates under a limited quota: rows that can't settle yet don't hog the quota on every sweep", async () => {
     const userId = await newUser(100);
     const s = instance();
     const stuck = await startVideo(s, userId);
     const other = await startVideo(s, userId);
     s.clock.now += RECOVERY_VIDEO_STALE_MS + 1000;
-    // 服务商一直说「还在生成」：两条都结不了，但每次扫描要换一条看。
+    // The provider keeps saying "still generating": neither row can settle, but each sweep should
+    // look at a different one.
     await s.scan({ userIds: [userId], limit: 1 });
     await s.scan({ userIds: [userId], limit: 1 });
     const checked = await dbClient.db

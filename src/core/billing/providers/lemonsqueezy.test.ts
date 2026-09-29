@@ -22,7 +22,10 @@ import {
 const SECRET = "ls_whsec_test_secret";
 const STORE_ID = "12345";
 
-/** 站点配置里的产品 ID（Creem 是产品，Lemon Squeezy 是变体）。CI 用环境变量覆盖，所以按运行时读。 */
+/**
+ * Product IDs from the site config (products for Creem, variants for Lemon Squeezy). CI overrides
+ * them with env vars, so read them at runtime.
+ */
 function providerProductId(planId: string) {
   const plan = siteConfig.billing.plans.find((item) => item.id === planId);
   if (!plan?.providerProductId) throw new Error(`plan ${planId} has no id`);
@@ -55,7 +58,10 @@ const provider = (client = fakeClient()) =>
     client,
   });
 
-/** 注入结账时传的 `checkout_data.custom`（真实投递里在 meta.custom_data）。 */
+/**
+ * Injects the `checkout_data.custom` passed at checkout (in real deliveries it's in
+ * meta.custom_data).
+ */
 function withCustomData(
   sample: ReturnType<typeof lemonSqueezySample>,
   custom: Record<string, unknown>,
@@ -64,7 +70,10 @@ function withCustomData(
   return sample;
 }
 
-/** 官方示例里的 variant_id 是文档用的 1 / 2，换成站点配置里的变体 ID 才能命中反查分支。 */
+/**
+ * The variant_id in the official examples is the docs' 1 / 2; swap in a variant ID from the site
+ * config to hit the lookup branch.
+ */
 function withVariant(
   sample: ReturnType<typeof lemonSqueezySample>,
   variantId: unknown,
@@ -78,25 +87,25 @@ function withVariant(
 describe("verifyWebhook", () => {
   const body = JSON.stringify(lemonSqueezySample("order_created"));
 
-  test("签名正确时返回解析后的请求体", async () => {
+  test("returns the parsed body when the signature is valid", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(body)),
     ).resolves.toEqual(JSON.parse(body));
   });
 
-  test("签名错误时拒绝", async () => {
+  test("rejects a wrong signature", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(body, "0".repeat(64))),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("缺少 X-Signature 时拒绝", async () => {
+  test("rejects a missing X-Signature", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(body, "")),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("请求体被篡改时拒绝", async () => {
+  test("rejects a tampered body", async () => {
     const signature = createHmac("sha256", SECRET).update(body).digest("hex");
     const tampered = body.replace('"status":"paid"', '"status":"refunded"');
     expect(tampered).not.toBe(body);
@@ -105,30 +114,30 @@ describe("verifyWebhook", () => {
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("用别的 secret 签名时拒绝", async () => {
+  test("rejects a body signed with a different secret", async () => {
     const signature = createHmac("sha256", "other").update(body).digest("hex");
     await expect(
       provider().verifyWebhook(signedRequest(body, signature)),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  // timingSafeEqual 对长度不等的 buffer 会抛 TypeError，必须先比长度；
-  // 这里断言拿到的是 WebhookVerificationError（而不是那种内部异常）。
-  test("签名长度不对时拒绝（不是抛 TypeError）", async () => {
+  // timingSafeEqual throws a TypeError on buffers of different lengths, so lengths must be
+  // compared first; this asserts we get a WebhookVerificationError (not that internal error).
+  test("rejects a signature of the wrong length (without throwing TypeError)", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(body, "abc")),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("签名有效但不是 JSON 时拒绝", async () => {
+  test("rejects a valid signature over a non-JSON body", async () => {
     await expect(
       provider().verifyWebhook(signedRequest("not json")),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 });
 
-describe("HTTP 客户端", () => {
-  test("带 Bearer 和 JSON:API 媒体类型，解析 JSON:API 响应", async () => {
+describe("HTTP client", () => {
+  test("sends Bearer and the JSON:API media type, parses the JSON:API response", async () => {
     const fakeFetch = vi.fn(
       async () =>
         new Response(JSON.stringify({ data: { id: "1" } }), { status: 200 }),
@@ -154,7 +163,7 @@ describe("HTTP 客户端", () => {
     expect(init.body).toBe(JSON.stringify({ data: {} }));
   });
 
-  test("GET 不带 Content-Type 和 body", async () => {
+  test("GET sends no Content-Type and no body", async () => {
     const fakeFetch = vi.fn(
       async () => new Response("{}", { status: 200 }),
     ) as unknown as LemonSqueezyFetch;
@@ -168,7 +177,7 @@ describe("HTTP 客户端", () => {
     expect(init.body).toBeUndefined();
   });
 
-  test("非 2xx 抛错，带状态码和响应体片段", async () => {
+  test("throws on non-2xx, with the status code and a body snippet", async () => {
     const fakeFetch = vi.fn(
       async () =>
         new Response('{"errors":[{"detail":"nope"}]}', { status: 422 }),
@@ -184,8 +193,9 @@ describe("HTTP 客户端", () => {
     expect((error as LemonSqueezyApiError).message).toContain("nope");
   });
 
-  // 不重试是刻意的：结账由用户点击触发，webhook 由 Lemon Squeezy 自己退避重推。
-  test("429 也不重试：只发一次请求", async () => {
+  // Not retrying is deliberate: checkout is triggered by a user click, and Lemon Squeezy
+  // redelivers webhooks with its own backoff.
+  test("no retry even on 429: sends the request only once", async () => {
     const fakeFetch = vi.fn(
       async () => new Response("slow down", { status: 429 }),
     ) as unknown as LemonSqueezyFetch;
@@ -199,8 +209,8 @@ describe("HTTP 客户端", () => {
   });
 });
 
-describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
-  test("order_created（变体反查不到套餐）：按一次性记订单", () => {
+describe("parseLemonSqueezyEvent: mapping of the official sample payloads", () => {
+  test("order_created (variant maps to no plan): records the order as one-time", () => {
     expect(
       parseLemonSqueezyEvent(lemonSqueezySample("order_created")),
     ).toMatchObject({
@@ -212,13 +222,14 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
       orderId: "1",
       customerId: "1",
       planId: undefined,
-      // 官方示例的 total 是小数 1859.76（文档写的是整数分），按四舍五入兜底。
+      // The official example's total is the decimal 1859.76 (the docs say integer cents), so it is
+      // rounded as a fallback.
       amount: 1860,
       currency: "EUR",
     });
   });
 
-  test("order_created（变体是一次性套餐）：记订单并映射套餐", () => {
+  test("order_created (variant is a one-time plan): records the order and maps the plan", () => {
     const sample = withVariant(
       lemonSqueezySample("order_created"),
       providerProductId("lifetime"),
@@ -230,7 +241,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("order_created（变体是订阅套餐）：不记订单，首期由 invoice 事件记", () => {
+  test("order_created (variant is a subscription plan): no order, the first period is recorded by the invoice event", () => {
     const sample = withVariant(
       lemonSqueezySample("order_created"),
       providerProductId("pro"),
@@ -242,7 +253,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("order_created：meta.custom_data 里的 userId / planId 优先", () => {
+  test("order_created: userId / planId in meta.custom_data win", () => {
     const sample = withCustomData(lemonSqueezySample("order_created"), {
       userId: "user_1",
       planId: "pro",
@@ -266,7 +277,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("subscription_created：变体反查得到套餐", () => {
+  test("subscription_created: the plan is found by variant", () => {
     const sample = lemonSqueezySample("subscription_created");
     sample.data.attributes.variant_id = providerProductId("pro");
     expect(parseLemonSqueezyEvent(sample)).toMatchObject({
@@ -283,13 +294,13 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     expect(parseLemonSqueezyEvent(lemonSqueezySample(sample))).toMatchObject({
       type: "subscription.active",
       subscriptionId: "1",
-      // 续费时间在 updated_at 之后，两点都要在。
+      // The renewal time is after updated_at; both points must be present.
       currentPeriodStart: new Date("2023-01-17T12:43:50.000Z"),
       currentPeriodEnd: new Date("2023-01-24T12:43:48.000Z"),
     });
   });
 
-  test("subscription_updated 带着 cancelled 状态时按取消处理（不能复活已取消的订阅）", () => {
+  test("subscription_updated with cancelled status is treated as a cancellation (must not revive a canceled subscription)", () => {
     const sample = lemonSqueezySample("subscription_created");
     sample.meta.event_name = "subscription_updated";
     sample.data.attributes.status = "cancelled";
@@ -300,7 +311,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("subscription_cancelled → subscription.canceled，用 ends_at 作为可用到的时间", () => {
+  test("subscription_cancelled → subscription.canceled, with ends_at as the time access lasts until", () => {
     expect(
       parseLemonSqueezyEvent(lemonSqueezySample("subscription_cancelled")),
     ).toMatchObject({
@@ -320,13 +331,13 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("subscription_paused 忽略（没有 paused 状态，也不能误判成付款失败）", () => {
+  test("ignores subscription_paused (there is no paused status, and it must not be mistaken for a payment failure)", () => {
     expect(
       parseLemonSqueezyEvent(lemonSqueezySample("subscription_paused")),
     ).toBeNull();
   });
 
-  test("subscription_payment_success → subscription.renewed，orderId 用 invoice ID", () => {
+  test("subscription_payment_success → subscription.renewed, orderId is the invoice ID", () => {
     expect(
       parseLemonSqueezyEvent(
         lemonSqueezySample("subscription_payment_success"),
@@ -339,12 +350,12 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
       currentPeriodStart: new Date("2023-01-17T12:43:51.000Z"),
       amount: 1500,
       currency: "USD",
-      // invoice 事件不带 variant_id，也没有 custom_data：套餐留空。
+      // Invoice events carry no variant_id and no custom_data: the plan stays empty.
       planId: undefined,
     });
   });
 
-  test("subscription_payment_success：planId 只能来自 custom_data", () => {
+  test("subscription_payment_success: planId can only come from custom_data", () => {
     const sample = withCustomData(
       lemonSqueezySample("subscription_payment_success_renewal"),
       { userId: "user_1", planId: "pro" },
@@ -369,7 +380,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("subscription_payment_recovered 忽略（同一次收款会另有 success 事件）", () => {
+  test("ignores subscription_payment_recovered (the same collection also gets a success event)", () => {
     expect(
       parseLemonSqueezyEvent(
         lemonSqueezySample("subscription_payment_recovered"),
@@ -377,7 +388,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     ).toBeNull();
   });
 
-  test("order_refunded（全额）→ refund.created", () => {
+  test("order_refunded (full) → refund.created", () => {
     expect(
       parseLemonSqueezyEvent(lemonSqueezySample("order_refunded")),
     ).toMatchObject({
@@ -390,7 +401,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("subscription_payment_refunded（全额）→ refund.created", () => {
+  test("subscription_payment_refunded (full) → refund.created", () => {
     expect(
       parseLemonSqueezyEvent(
         lemonSqueezySample("subscription_payment_refunded"),
@@ -404,21 +415,22 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  // 已知缺口：refunded_amount 是累计值，下游的 refund 是增量，宁可漏也不重复计数。
+  // Known gap: refunded_amount is cumulative while the downstream refund is an increment; better
+  // to miss one than to double count.
   test.each<LemonSqueezySampleEvent>([
     "order_partially_refunded",
     "subscription_payment_partially_refunded",
-  ])("%s（部分退款）不映射，返回 null", (sample) => {
+  ])("%s (partial refund) is not mapped and returns null", (sample) => {
     expect(parseLemonSqueezyEvent(lemonSqueezySample(sample))).toBeNull();
   });
 
-  test("不关心的事件返回 null", () => {
+  test("returns null for ignored events", () => {
     expect(
       parseLemonSqueezyEvent(lemonSqueezySample("license_key_created")),
     ).toBeNull();
   });
 
-  test("结构不对的 payload 返回 null", () => {
+  test("returns null for a malformed payload", () => {
     expect(parseLemonSqueezyEvent(null)).toBeNull();
     expect(parseLemonSqueezyEvent({})).toBeNull();
     expect(
@@ -430,7 +442,8 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
         data: { id: 1, attributes: {} },
       }),
     ).toBeNull();
-    // 没有时间戳就不猜事件 ID（否则重推会绕过幂等）。
+    // Without a timestamp, don't guess an event ID (otherwise redeliveries would bypass
+    // idempotency).
     expect(
       parseLemonSqueezyEvent({
         meta: { event_name: "order_created" },
@@ -439,7 +452,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
     ).toBeNull();
   });
 
-  test("重复投递得到同一个 eventId，资源更新后换一个", () => {
+  test("a duplicate delivery gets the same eventId, and a new one after the resource updates", () => {
     const first = parseLemonSqueezyEvent(lemonSqueezySample("order_created"));
     const again = parseLemonSqueezyEvent(lemonSqueezySample("order_created"));
     expect(again?.eventId).toBe(first?.eventId);
@@ -451,7 +464,7 @@ describe("parseLemonSqueezyEvent：官方示例 payload 的映射", () => {
 });
 
 describe("createCheckout", () => {
-  test("建结账会话：store + variant 关系，回跳地址在 product_options 里", async () => {
+  test("creates a checkout session: store + variant relationships, redirect URL in product_options", async () => {
     const client = fakeClient();
     client.request.mockResolvedValueOnce({
       data: {
@@ -493,7 +506,7 @@ describe("createCheckout", () => {
     });
   });
 
-  test("没有邮箱时不带 email", async () => {
+  test("omits email when there is none", async () => {
     const client = fakeClient();
     client.request.mockResolvedValueOnce({
       data: { id: "1", attributes: { url: "https://x.test/1" } },
@@ -512,7 +525,7 @@ describe("createCheckout", () => {
     });
   });
 
-  test("免费套餐没有变体 ID 时抛错", async () => {
+  test("throws for a free plan with no variant ID", async () => {
     await expect(
       provider().createCheckout({
         userId: "user_1",
@@ -523,7 +536,7 @@ describe("createCheckout", () => {
     ).rejects.toThrow(/providerProductId/);
   });
 
-  test("响应里没有 url 时抛错", async () => {
+  test("throws when the response has no url", async () => {
     const client = fakeClient();
     client.request.mockResolvedValueOnce({ data: { id: "1", attributes: {} } });
     await expect(
@@ -538,7 +551,7 @@ describe("createCheckout", () => {
 });
 
 describe("getPortalUrl", () => {
-  test("返回客户门户链接（预签名）", async () => {
+  test("returns the customer portal link (pre-signed)", async () => {
     const client = fakeClient();
     client.request.mockResolvedValueOnce({
       data: {
@@ -557,9 +570,10 @@ describe("getPortalUrl", () => {
     expect(client.request).toHaveBeenCalledWith("GET", "/v1/customers/2");
   });
 
-  // 客户没有任何订阅时 customer_portal 是 null：这是「客户记录在但订阅都结束了」，
-  // 和 openPortal 返回 no_customer（没有客户记录）是两条不同的边界，这里只能明确报错。
-  test("customer_portal 为 null 时抛错（客户没有订阅）", async () => {
+  // customer_portal is null when the customer has no subscriptions: that's "the customer record
+  // exists but all subscriptions have ended", a different edge case from openPortal returning
+  // no_customer (no customer record), so all we can do here is throw a clear error.
+  test("throws when customer_portal is null (customer has no subscriptions)", async () => {
     const client = fakeClient();
     client.request.mockResolvedValueOnce({
       data: { id: "2", attributes: { urls: { customer_portal: null } } },
@@ -571,7 +585,7 @@ describe("getPortalUrl", () => {
 });
 
 describe("cancelSubscription", () => {
-  test("有效订阅：DELETE 取消后续扣款", async () => {
+  test("active subscription: DELETE cancels future charges", async () => {
     const client = fakeClient();
     client.request.mockResolvedValueOnce({
       data: { attributes: { status: "active" } },
@@ -590,7 +604,7 @@ describe("cancelSubscription", () => {
   });
 
   test.each(["cancelled", "expired"])(
-    "已经是 %s：不再取消，视为成功",
+    "already %s: skips canceling and counts as success",
     async (status) => {
       const client = fakeClient();
       client.request.mockResolvedValueOnce({
@@ -601,7 +615,7 @@ describe("cancelSubscription", () => {
     },
   );
 
-  test("订阅不存在（GET 404）：视为成功", async () => {
+  test("subscription not found (GET 404): counts as success", async () => {
     const client = fakeClient();
     client.request.mockRejectedValueOnce(new LemonSqueezyApiError(404, "{}"));
     await expect(
@@ -609,7 +623,7 @@ describe("cancelSubscription", () => {
     ).resolves.toBeUndefined();
   });
 
-  test("DELETE 时 404：也视为成功", async () => {
+  test("404 on DELETE: also counts as success", async () => {
     const client = fakeClient();
     client.request
       .mockResolvedValueOnce({ data: { attributes: { status: "active" } } })
@@ -619,7 +633,7 @@ describe("cancelSubscription", () => {
     ).resolves.toBeUndefined();
   });
 
-  test("其他错误：向上抛出", async () => {
+  test("other errors: rethrown", async () => {
     const client = fakeClient();
     client.request.mockRejectedValueOnce(new LemonSqueezyApiError(500, "boom"));
     await expect(provider(client).cancelSubscription("1")).rejects.toThrow(
@@ -628,11 +642,11 @@ describe("cancelSubscription", () => {
   });
 });
 
-test("provider.id 是 lemonsqueezy", () => {
+test("provider.id is lemonsqueezy", () => {
   expect(provider().id).toBe("lemonsqueezy");
 });
 
-test("parseEvent 就是 parseLemonSqueezyEvent", () => {
+test("parseEvent is parseLemonSqueezyEvent", () => {
   expect(provider().parseEvent(lemonSqueezySample("order_created"))).toEqual(
     parseLemonSqueezyEvent(lemonSqueezySample("order_created")),
   );

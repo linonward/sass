@@ -1,5 +1,5 @@
 // @vitest-environment node
-// t3-env 只在服务端校验 server 变量，jsdom 下会被当成客户端。
+// t3-env only validates server variables on the server; under jsdom it would be treated as the client.
 import { describe, expect, test } from "vitest";
 
 import { createAppEnv } from "../create-env";
@@ -40,16 +40,17 @@ const lemonSqueezy = {
 };
 
 describe("billingServerEnv", () => {
-  test("Vercel 生产环境且有付费套餐时，缺少 Creem 凭据会报错", () => {
+  test("in Vercel production with paid plans, missing Creem credentials is an error", () => {
     expect(check({ VERCEL_ENV: "production" })).toThrow("- CREEM_API_KEY: ");
     expect(check({ VERCEL_ENV: "production" })).toThrow(
       "- CREEM_WEBHOOK_SECRET: ",
     );
-    // 只有生效服务商（这里默认取站点配置的 creem）的凭据必填；填了别家的不影响。
+    // Only the credentials of the provider in effect (here the site config's default, creem) are
+    // required; setting another provider's doesn't matter.
     expect(check({ VERCEL_ENV: "production", ...creem })).not.toThrow();
   });
 
-  test("Vercel 生产环境且有付费套餐时，缺少 Lemon Squeezy 凭据会报错", () => {
+  test("in Vercel production with paid plans, missing Lemon Squeezy credentials is an error", () => {
     const lemonsqueezy = { provider: "lemonsqueezy" } as const;
     expect(check({ VERCEL_ENV: "production" }, lemonsqueezy)).toThrow(
       "- LEMONSQUEEZY_API_KEY: ",
@@ -57,16 +58,18 @@ describe("billingServerEnv", () => {
     expect(check({ VERCEL_ENV: "production" }, lemonsqueezy)).toThrow(
       "- LEMONSQUEEZY_WEBHOOK_SECRET: ",
     );
-    // 建结账会话需要 store 关系，store ID 和另外两个一样是必填。
+    // Creating a checkout session needs the store relationship, so the store ID is required like
+    // the other two.
     expect(check({ VERCEL_ENV: "production" }, lemonsqueezy)).toThrow(
       "- LEMONSQUEEZY_STORE_ID: ",
     );
     expect(
       check({ VERCEL_ENV: "production", ...lemonSqueezy }, lemonsqueezy),
     ).not.toThrow();
-    // 反过来：站点用 Creem 时不该要求 LS 的凭据 —— 少填一家也能起。
+    // Conversely: a site using Creem shouldn't require LS credentials — it starts with one
+    // provider's keys missing.
     expect(check({ VERCEL_ENV: "production", ...creem })).not.toThrow();
-    // BILLING_PROVIDER 覆盖站点配置时按覆盖后的服务商判断。
+    // When BILLING_PROVIDER overrides the site config, the overriding provider decides.
     expect(
       check({ VERCEL_ENV: "production", BILLING_PROVIDER: "lemonsqueezy" }),
     ).toThrow("- LEMONSQUEEZY_API_KEY: ");
@@ -79,15 +82,16 @@ describe("billingServerEnv", () => {
     ).not.toThrow();
   });
 
-  test("没有付费套餐时生产环境也不要求", () => {
+  test("not required in production when there are no paid plans", () => {
     expect(
       check({ VERCEL_ENV: "production" }, { hasPaidPlans: false }),
     ).not.toThrow();
   });
 
-  test("只有生效服务商的密钥是必填的", () => {
-    // 生效服务商是 creem（site.config.ts 的默认值）：配了 Stripe 的密钥也不要求 Creem 之外的，
-    // 反过来同理 —— 用 Creem 的站点不该被迫填 Stripe 的密钥，否则部署直接起不来。
+  test("only the keys of the provider in effect are required", () => {
+    // The provider in effect is creem (the site.config.ts default): having Stripe keys set doesn't make
+    // anything beyond Creem's required, and vice versa — a site using Creem shouldn't be forced to set
+    // Stripe keys, or the deployment won't start at all.
     expect(check({ VERCEL_ENV: "production" }, { provider: "stripe" })).toThrow(
       "- STRIPE_SECRET_KEY: ",
     );
@@ -100,7 +104,7 @@ describe("billingServerEnv", () => {
     expect(
       check({ VERCEL_ENV: "production", ...stripe }, { provider: "stripe" }),
     ).not.toThrow();
-    // Creem 的密钥填不填都不影响 Stripe 站点。
+    // Whether Creem's keys are set doesn't affect a Stripe site.
     expect(
       check(
         { VERCEL_ENV: "production", ...stripe, ...creem },
@@ -115,8 +119,8 @@ describe("billingServerEnv", () => {
     );
   });
 
-  test("BILLING_PROVIDER 覆盖生效服务商时按它判断必填", () => {
-    // 站点配置的是 creem，但运行时切到了 stripe：这时要的是 Stripe 的密钥。
+  test("when BILLING_PROVIDER overrides the provider in effect, it decides what is required", () => {
+    // The site config says creem, but the runtime switched to stripe: now Stripe's keys are required.
     expect(
       check({ VERCEL_ENV: "production", BILLING_PROVIDER: "stripe" }),
     ).toThrow("- STRIPE_SECRET_KEY: ");
@@ -132,7 +136,7 @@ describe("billingServerEnv", () => {
     ).toThrow("- CREEM_API_KEY: ");
   });
 
-  test("BILLING_PROVIDER 默认取配置里的 provider", () => {
+  test("BILLING_PROVIDER defaults to the provider in config", () => {
     expect(check({})().BILLING_PROVIDER).toBe("creem");
     expect(check({}, { provider: "stripe" })().BILLING_PROVIDER).toBe("stripe");
     expect(check({}, { provider: "lemonsqueezy" })().BILLING_PROVIDER).toBe(
@@ -150,18 +154,18 @@ describe("billingServerEnv", () => {
     );
   });
 
-  test("本地、CI 和预览不要求", () => {
+  test("not required locally, in CI or in preview", () => {
     expect(check({})).not.toThrow();
     expect(check({ VERCEL_ENV: "preview" })).not.toThrow();
   });
 
-  test("CREEM_MODE 默认 test，只接受 test 或 live", () => {
+  test("CREEM_MODE defaults to test and only accepts test or live", () => {
     expect(check({})().CREEM_MODE).toBe("test");
     expect(check({ CREEM_MODE: "live" })().CREEM_MODE).toBe("live");
     expect(check({ CREEM_MODE: "prod" })).toThrow("- CREEM_MODE: ");
   });
 
-  test("成功页超时默认 60 秒，可以调短", () => {
+  test("success page timeout defaults to 60s and can be shortened", () => {
     expect(check({})().BILLING_SUCCESS_TIMEOUT_MS).toBe(60_000);
     expect(
       check({ BILLING_SUCCESS_TIMEOUT_MS: "5000" })()
@@ -172,15 +176,15 @@ describe("billingServerEnv", () => {
     );
   });
 
-  test("本地（next dev）设 fake 能通过校验", () => {
+  test("fake passes validation locally (next dev)", () => {
     expect(
       check({ NODE_ENV: "development", BILLING_PROVIDER: "fake" }),
     ).not.toThrow();
     expect(check({ NODE_ENV: "test", BILLING_PROVIDER: "fake" })).not.toThrow();
   });
 
-  test("生产运行时设 fake 会启动失败（自托管 next start / Docker）", () => {
-    // 收紧前后唯一的差别：这里以前能静默启动，现在必须报错。
+  test("fake fails at startup in a production runtime (self-hosted next start / Docker)", () => {
+    // The only difference from before tightening: this used to start silently and now must error.
     expect(check({ NODE_ENV: "production", BILLING_PROVIDER: "fake" })).toThrow(
       "- BILLING_PROVIDER: ",
     );
@@ -191,11 +195,11 @@ describe("billingServerEnv", () => {
         BILLING_PROVIDER: "fake",
       }),
     ).toThrow("- BILLING_PROVIDER: ");
-    // NODE_ENV 没设置（自建服务忘了设）也按生产处理。
+    // An unset NODE_ENV (a self-built server that forgot to set it) is treated as production too.
     expect(check({ BILLING_PROVIDER: "fake" })).toThrow("- BILLING_PROVIDER: ");
   });
 
-  test("生产运行时只有显式 ALLOW_FAKE_BILLING=1 才放行 fake（CI 的 e2e）", () => {
+  test("in a production runtime, fake is only allowed with an explicit ALLOW_FAKE_BILLING=1 (CI e2e)", () => {
     for (const ALLOW_FAKE_BILLING of ["1", "true"]) {
       expect(
         check({
@@ -206,7 +210,7 @@ describe("billingServerEnv", () => {
         }),
       ).not.toThrow();
     }
-    // 0 / false 和不填等价。
+    // 0 / false are the same as unset.
     for (const ALLOW_FAKE_BILLING of ["0", "false"]) {
       expect(
         check({
@@ -218,7 +222,7 @@ describe("billingServerEnv", () => {
     }
   });
 
-  test("Vercel 和 CREEM_MODE=live 是硬锁，ALLOW_FAKE_BILLING 也不放开", () => {
+  test("Vercel and CREEM_MODE=live are hard locks that ALLOW_FAKE_BILLING doesn't lift", () => {
     expect(
       check({
         BILLING_PROVIDER: "fake",
@@ -243,7 +247,7 @@ describe("billingServerEnv", () => {
     ).toThrow("- BILLING_PROVIDER: ");
   });
 
-  test("ALLOW_FAKE_BILLING 只接受 1 / true / 0 / false", () => {
+  test("ALLOW_FAKE_BILLING only accepts 1 / true / 0 / false", () => {
     for (const ALLOW_FAKE_BILLING of ["1", "true", "0", "false"]) {
       expect(check({ ALLOW_FAKE_BILLING })).not.toThrow();
     }
@@ -256,9 +260,10 @@ describe("billingServerEnv", () => {
   });
 });
 
-// fakeBillingAllowed 的真值表。列：NODE_ENV、VERCEL_ENV、CREEM_MODE、STRIPE_SECRET_KEY、
-// ALLOW_FAKE_BILLING → 期望。
-// 「不填」表示变量未设置（CREEM_MODE 不填等同 test，「不填」的 NODE_ENV 按生产处理）。
+// Truth table for fakeBillingAllowed. Columns: NODE_ENV, VERCEL_ENV, CREEM_MODE, STRIPE_SECRET_KEY,
+// ALLOW_FAKE_BILLING → expected.
+// "Unset" means the variable isn't set (unset CREEM_MODE equals test; unset NODE_ENV is treated as
+// production).
 const table: Array<{
   NODE_ENV?: string;
   VERCEL_ENV?: string;
@@ -268,12 +273,12 @@ const table: Array<{
   ALLOW_FAKE_BILLING?: string;
   allowed: boolean;
 }> = [
-  // 本地开发与测试：默认放行
+  // Local development and tests: allowed by default
   { NODE_ENV: "development", allowed: true },
   { NODE_ENV: "development", CREEM_MODE: "test", allowed: true },
   { NODE_ENV: "test", allowed: true },
   { NODE_ENV: "test", CREEM_MODE: "test", allowed: true },
-  // 自托管生产：本任务要堵的洞。下面 6 行在收紧前都是 true（见 PR 的红/绿对照）。
+  // Self-hosted production: the hole this tightening closes. The 6 rows below were all true before it.
   { NODE_ENV: "production", CREEM_MODE: "test", allowed: false },
   { NODE_ENV: "production", allowed: false },
   {
@@ -288,10 +293,10 @@ const table: Array<{
     ALLOW_FAKE_BILLING: "false",
     allowed: false,
   },
-  // NODE_ENV 没设置（自建服务 / 非 Next 运行时）：按生产处理
+  // NODE_ENV unset (self-built server / non-Next runtime): treated as production
   { CREEM_MODE: "test", allowed: false },
   { allowed: false },
-  // CI 的 e2e：生产构建 + 显式开关
+  // CI e2e: production build + explicit switch
   {
     NODE_ENV: "production",
     CREEM_MODE: "test",
@@ -306,7 +311,7 @@ const table: Array<{
   },
   { NODE_ENV: "production", ALLOW_FAKE_BILLING: "1", allowed: true },
   { CREEM_MODE: "test", ALLOW_FAKE_BILLING: "1", allowed: true },
-  // 硬锁一：CREEM_MODE=live（真实扣款）——开关也无效
+  // Hard lock one: CREEM_MODE=live (real charges) — the switch has no effect
   { NODE_ENV: "development", CREEM_MODE: "live", allowed: false },
   { NODE_ENV: "test", CREEM_MODE: "live", allowed: false },
   { NODE_ENV: "production", CREEM_MODE: "live", allowed: false },
@@ -322,7 +327,7 @@ const table: Array<{
     ALLOW_FAKE_BILLING: "1",
     allowed: false,
   },
-  // 硬锁：WAFFO_MODE=prod（真实收款）——开关也无效；test 不影响
+  // Hard lock: WAFFO_MODE=prod (real payments) — the switch has no effect; test doesn't matter
   { NODE_ENV: "development", WAFFO_MODE: "prod", allowed: false },
   {
     NODE_ENV: "development",
@@ -331,7 +336,7 @@ const table: Array<{
     allowed: false,
   },
   { NODE_ENV: "development", WAFFO_MODE: "test", allowed: true },
-  // 硬锁二：在 Vercel 上（含 vercel dev 的 development）——开关也无效
+  // Hard lock two: on Vercel (including vercel dev's development) — the switch has no effect
   { NODE_ENV: "development", VERCEL_ENV: "development", allowed: false },
   { NODE_ENV: "production", VERCEL_ENV: "preview", allowed: false },
   { NODE_ENV: "production", VERCEL_ENV: "production", allowed: false },
@@ -362,7 +367,7 @@ const table: Array<{
     CREEM_MODE: "live",
     allowed: false,
   },
-  // 硬锁三：Stripe 的 live 密钥（换了服务商也一样锁死）——开关也无效
+  // Hard lock three: live Stripe keys (locked even with a different provider) — the switch has no effect
   {
     NODE_ENV: "development",
     STRIPE_SECRET_KEY: "sk_live_x",
@@ -375,19 +380,21 @@ const table: Array<{
     ALLOW_FAKE_BILLING: "1",
     allowed: false,
   },
-  // 受限密钥（rk_live_）同样是真实扣款
+  // Restricted keys (rk_live_) also make real charges
   { NODE_ENV: "development", STRIPE_SECRET_KEY: "rk_live_x", allowed: false },
-  // 测试模式的密钥只影响 Stripe 自己，不锁 fake
+  // Test-mode keys only affect Stripe itself and don't lock fake
   { NODE_ENV: "development", STRIPE_SECRET_KEY: "sk_test_x", allowed: true },
   { NODE_ENV: "test", STRIPE_SECRET_KEY: "rk_test_x", allowed: true },
   { NODE_ENV: "production", STRIPE_SECRET_KEY: "sk_test_x", allowed: false },
 ];
 
-describe("fakeBillingAllowed 真值表", () => {
-  test("Lemon Squeezy 的变量不参与判断（没有可用的判据，故意不加硬锁）", () => {
-    // Creem 的同一格靠 CREEM_MODE=live 拦住；Lemon Squeezy 没有模式变量（测试/真实收款是
-    // 店铺上的开关），key 和 store ID 里也看不出模式，所以造不出判据 —— 结论和没带这些
-    // 变量时完全一致，不能凭空拦也不能凭空放。
+describe("fakeBillingAllowed truth table", () => {
+  test("Lemon Squeezy variables play no part (there's no usable signal, so no hard lock on purpose)", () => {
+    // The same cell for Creem is blocked by CREEM_MODE=live; Lemon Squeezy has no mode variable
+    // (test vs.
+    // real payments is a toggle on the store), and neither the key nor the store ID reveals the mode, so
+    // there's no signal to build — the result is exactly the same as without these variables; we can't
+    // block or allow out of thin air.
     expect(
       fakeBillingAllowed({
         NODE_ENV: "production",
@@ -403,13 +410,13 @@ describe("fakeBillingAllowed 真值表", () => {
     const label = (Object.keys(runtimeEnv) as Array<keyof typeof runtimeEnv>)
       .map((key) => `${key}=${runtimeEnv[key]}`)
       .join(" ");
-    // 每行都要能看出是哪一格，名字里带上完整的输入组合。
-    test(`${label || "全部未设置"} → ${allowed}`, () => {
+    // Each row must show which cell it is, so the name includes the full input combination.
+    test(`${label || "all unset"} → ${allowed}`, () => {
       expect(fakeBillingAllowed(runtimeEnv)).toBe(allowed);
     });
   }
 
-  test("全组合扫描（NODE_ENV × VERCEL_ENV × CREEM_MODE × STRIPE_SECRET_KEY × ALLOW_FAKE_BILLING）", () => {
+  test("full combination sweep (NODE_ENV × VERCEL_ENV × CREEM_MODE × STRIPE_SECRET_KEY × ALLOW_FAKE_BILLING)", () => {
     const nodeEnvs = ["development", "test", "production", undefined];
     const vercelEnvs = [undefined, "development", "preview", "production"];
     const creemModes = [undefined, "test", "live"];

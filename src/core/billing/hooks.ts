@@ -1,5 +1,5 @@
-// 汇总所有模块的 onBillingEvent 注册。handleBillingEvent import 本文件，保证处理事件前都已注册。
-// 套件的钩子在 ./register-hooks.ts（发放积分）；
-// 业务模块同样在这里加一行 import "@/features/<name>/on-billing-event"。
+// Collects every module's onBillingEvent registration. handleBillingEvent imports this file so all
+// hooks are registered before any event is handled. The kit's own hooks live in ./register-hooks.ts
+// (granting credits); business modules add a line here too: import "@/features/<name>/on-billing-event".
 import "./register-hooks";
 import "@/features/downloads/on-billing-event";

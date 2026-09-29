@@ -22,13 +22,16 @@ const KNOWN: readonly string[] = [
 ];
 
 /**
- * 发起结账：
- * - 成功：跳到服务商的结账页。
- * - 未登录：去登录页，登录后回到 /pricing?plan=<id> 继续结账。
- * - 已订阅：去客户门户；一次性套餐已买过：去账单页。
- * - 其他错误：返回错误 key，由调用方显示。
+ * Start checkout:
+ * - Success: go to the provider's checkout page.
+ * - Signed out: go to sign-in, then back to /pricing?plan=<id> to continue checkout.
+ * - Already subscribed: go to the customer portal; one-time plan already bought: go to the billing page.
+ * - Other errors: return an error key for the caller to display.
  */
-/** 整页跳转。结账、客户门户要离开本站；登录页和账单页也用整页跳转，组件不依赖 App Router 上下文。 */
+/**
+ * Full-page navigation. Checkout and the customer portal leave the site; sign-in and billing pages use
+ * full-page navigation too, so the component doesn't depend on App Router context.
+ */
 function go(path: string) {
   window.location.assign(new URL(path, window.location.href));
 }
@@ -52,20 +55,20 @@ export function useCheckout() {
         error?: string;
       };
       if (response.ok && body.url) {
-        // 服务商的结账页（fake 模式下是站内的模拟页）。
+        // The provider's checkout page (in fake mode, an on-site mock page).
         track(trackEvents.checkoutStarted, { plan: planId });
         go(body.url);
         return;
       }
       if (response.status === 401) {
-        // 登录页的 callbackURL 是带语言前缀的完整站内路径。
+        // The sign-in page's callbackURL is a full on-site path including the locale prefix.
         const callback = `${getPathname({ href: "/pricing", locale })}?plan=${encodeURIComponent(planId)}`;
         const signIn = getPathname({ href: "/sign-in", locale });
         go(`${signIn}?callbackURL=${encodeURIComponent(callback)}`);
         return;
       }
       if (body.error === "already_subscribed") {
-        // 客户门户由服务端重定向到服务商。
+        // The server redirects to the provider's customer portal.
         go("/api/billing/portal");
         return;
       }
