@@ -95,7 +95,7 @@
       },
       "buyCta": "Buy now · {price}",
       "showcaseCta": "See a live product",
-      "offerNote": "One-time payment · 1 year of updates · Delivered by email within 24 hours"
+      "offerNote": "One-time payment · 1 year of updates · Download link emailed right after payment"
     },
     "features": {
       "title": "From the first payment to every request.",
@@ -200,7 +200,7 @@
         },
         "deliverables": {
           "question": "What exactly do I get?",
-          "answer": "The complete source (auth, payments, credits, AI and admin), the starter guide and business examples. Download instructions are emailed to your payment address within 24 hours."
+          "answer": "The complete source (auth, payments, credits, AI and admin), the starter guide and business examples. Your download link is emailed right after payment, and you can sign in to your downloads page any time."
         },
         "costs": {
           "question": "Are there any other costs?",
@@ -208,7 +208,7 @@
         },
         "updates": {
           "question": "How long do I get updates?",
-          "answer": "Every release within one year of purchase is included, with email support during that time. After that, the code you already have keeps working."
+          "answer": "Every release within one year of purchase is included and appears on your downloads page, with email support during that time. After that, the releases you already have stay downloadable and keep working."
         },
         "refund": {
           "question": "Can I get a refund?",
@@ -229,7 +229,7 @@
       "description": "Source code, configuration, documentation and examples, together in one project.",
       "offer": "OnwardKit template",
       "pending": "Coming soon",
-      "terms": "One-time payment, including all updates for one year and email support. Delivered by email within 24 hours of payment. Digital product — no refunds once delivered.",
+      "terms": "One-time payment, including all updates for one year and email support. Your download link is emailed right after payment. Digital product — no refunds once delivered.",
       "termsPending": "Pricing, update period and support scope are to be confirmed.",
       "buy": "Buy now",
       "demo": "Explore the demo first",
@@ -443,6 +443,16 @@
       "body": "Click below to confirm that you want an email when a component breaks and another when it recovers.",
       "cta": "Confirm subscription",
       "ignore": "If you did not ask for this, ignore this email. Nothing will be sent to you."
+    },
+    "downloadReady": {
+      "subject": "{product} is ready to download · {name}",
+      "preview": "Thanks for your purchase — {product} is ready to download",
+      "heading": "Ready to download",
+      "body": "Thanks for buying {product}. Sign in to get the latest release from your downloads page; future updates will appear there too.",
+      "product": "Product",
+      "updatesUntil": "Updates included until",
+      "cta": "Go to downloads",
+      "signIn": "Sign in with the account you paid with. This link doesn’t expire, so come back to this email whenever you need your files."
     }
   },
   "Auth": {
@@ -507,7 +517,8 @@
       "adminStatus": "Status page",
       "apiKeys": "API keys",
       "adminApiKeys": "API keys",
-      "onboarding": "Getting started"
+      "onboarding": "Getting started",
+      "downloads": "Downloads"
     },
     "navBadge": "{count} open",
     "userMenu": {
@@ -1616,5 +1627,28 @@
     "textNote": "Sample perfume copy. No model call or credits charged.",
     "videoExample": "From a still image to a product story in motion.",
     "videoNote": "Text-to-video and image-to-video are supported. This is a capability preview, not simulated video playback."
+  },
+  "Downloads": {
+    "metaTitle": "Downloads",
+    "title": "Downloads",
+    "description": "Everything you’ve bought lives here. Each download gets a fresh link valid for 5 minutes, so you can come back any time.",
+    "products": {
+      "template": {
+        "name": "OnwardKit template"
+      }
+    },
+    "purchased": "Purchased {date}",
+    "updatesUntil": "Includes updates released before {date}",
+    "revoked": "Refunded — downloads disabled",
+    "noReleases": "The first release will appear here once it’s published.",
+    "latest": "Latest",
+    "download": "Download",
+    "downloadVersion": "Download {version}",
+    "empty": "Nothing to download yet",
+    "emptyDescription": "After you buy, your files appear here and we email your account address.",
+    "emptyCta": "See how to buy",
+    "help": "Trouble downloading? Email <link>{email}</link>.",
+    "successNote": "We’ve emailed you a link to your downloads — or head there now.",
+    "successCta": "Go to downloads"
   }
 }

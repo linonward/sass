@@ -337,6 +337,7 @@ export const dashboardIcons = [
   "key",
   "flag",
   "receipt",
+  "download",
 ] as const;
 
 // 业务的侧边栏菜单项；套件自带的（Dashboard、Settings）写在 src/core/dashboard 里。
@@ -746,6 +747,28 @@ export const userFlagsConfigSchema = z.strictObject({
     .default({}),
 });
 
+// 卖可下载文件（src/features/downloads/）：买了指定套餐的用户获得一份授权，
+// 可以在 /downloads 下载授权期内发布的版本；付款成功后邮件发下载页链接。
+export const downloadsConfigSchema = z.strictObject({
+  // 出厂关闭：大多数 SaaS 不卖文件。关闭时 /downloads 与下载接口 404、不发授权邮件。
+  enabled: z.boolean().default(false),
+  products: z
+    .array(
+      z.strictObject({
+        // 产品 ID，发布版本时用它（pnpm downloads:publish <id> …）；名称在 messages 的 Downloads.products.<id>。
+        id: messageKeySchema,
+        // 买哪个套餐获得这个产品（billing.plans 里一次性套餐的 id）。
+        planId: messageKeySchema,
+        // 授权包含多少个月内发布的版本；之后发布的新版本不再提供，已有版本照常可下。
+        updateMonths: z.number().int().positive(),
+      }),
+    )
+    .refine((items) => unique(items.map((i) => i.id)), {
+      message: "ids must not contain duplicates",
+    })
+    .default([]),
+});
+
 export const siteConfigSchema = z
   .strictObject({
     name: z.string().trim().min(1),
@@ -795,6 +818,7 @@ export const siteConfigSchema = z
     ),
     statusPage: statusPageSchema.default(statusPageSchema.parse({})),
     changelog: changelogConfigSchema.default(changelogConfigSchema.parse({})),
+    downloads: downloadsConfigSchema.default(downloadsConfigSchema.parse({})),
     userFlags: userFlagsConfigSchema.default(userFlagsConfigSchema.parse({})),
     observability: observabilityConfigSchema.default(
       observabilityConfigSchema.parse({}),

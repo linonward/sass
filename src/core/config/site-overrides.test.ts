@@ -39,3 +39,23 @@ describe("站点的套餐覆盖（SITE_PRICE_* / SITE_HIDDEN_PLANS）", () => {
     );
   });
 });
+
+describe("卖可下载文件的开关（SITE_DOWNLOADS）", () => {
+  test("默认关闭：没有下载菜单", async () => {
+    vi.stubEnv("SITE_DOWNLOADS", "");
+    const config = await loadConfig();
+    expect(config.downloads.enabled).toBe(false);
+    expect(config.dashboard.nav.map((i) => i.href)).not.toContain("/downloads");
+  });
+
+  test("SITE_DOWNLOADS=1 打开：侧边栏出现下载页，产品都对应一次性套餐", async () => {
+    vi.stubEnv("SITE_DOWNLOADS", "1");
+    const config = await loadConfig();
+    expect(config.downloads.enabled).toBe(true);
+    expect(config.dashboard.nav.map((i) => i.href)).toContain("/downloads");
+    for (const product of config.downloads.products) {
+      const plan = config.billing.plans.find((p) => p.id === product.planId);
+      expect(plan?.interval).toBe("once");
+    }
+  });
+});

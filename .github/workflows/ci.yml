@@ -143,6 +143,10 @@ jobs:
     name: e2e (${{ matrix.suite }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # 卖可下载文件（src/features/downloads/）只在主套件打开，由 e2e/downloads.spec.ts 覆盖；
+    # 别的腿留空（envOverride 把空值当没设置），保持出厂默认的关闭。
+    env:
+      SITE_DOWNLOADS: ${{ matrix.downloads }}
     services:
       postgres:
         image: postgres:18
@@ -170,18 +174,22 @@ jobs:
             script: pnpm test:e2e
             build: "1"
             artifact: playwright-report
+            downloads: "1"
           - suite: acquisition
             script: pnpm test:e2e:acquisition
             build: ""
             artifact: test-results/acquisition
+            downloads: ""
           - suite: flags
             script: pnpm test:e2e:flags
             build: ""
             artifact: test-results/flags
+            downloads: ""
           - suite: invoices
             script: pnpm test:e2e:invoices
             build: ""
             artifact: test-results/invoices
+            downloads: ""
     steps:
       - uses: actions/checkout@v7
 

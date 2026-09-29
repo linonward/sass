@@ -23,7 +23,8 @@ import { defaultLocale, locales } from "./src/core/i18n/locales";
  *
  * 另有两个「站点和模板默认不一样」时用的覆盖（例如卖家自己的站点只卖一部分套餐、换了价格，
  * 又不想改掉买家拿到的默认值）：`SITE_PRICE_<套餐 id 大写>` 覆盖标价（`SITE_PRICE_LIFETIME=99`），
- * `SITE_HIDDEN_PLANS` 逗号分隔地隐藏套餐（`SITE_HIDDEN_PLANS=pro`，见 plans 的 `hidden`）。
+ * `SITE_HIDDEN_PLANS` 逗号分隔地隐藏套餐（`SITE_HIDDEN_PLANS=pro`，见 plans 的 `hidden`），
+ * `SITE_DOWNLOADS=1` 打开卖可下载文件（见 downloads）。
  * 没有对应变量的字段（颜色、文案）只能改这个文件。
  */
 const envOverride = (name: string): string | undefined => {
@@ -53,6 +54,9 @@ const hiddenPlans = new Set(
     .filter(Boolean),
 );
 const isHidden = (planId: string) => hiddenPlans.has(planId);
+
+/** `SITE_DOWNLOADS=1`：打开卖可下载文件（downloads.enabled）。官方站用它交付模板，模板默认关闭。 */
+const downloadsEnabled = envOverride("SITE_DOWNLOADS") === "1";
 
 /**
  * 用来收款的支付服务商。只能改这里的字面量（要改的是类型校验时的默认值）；
@@ -320,6 +324,10 @@ const config = defineConfig({
   // 不在侧边栏里的业务页面（放在 (app) 下）也会由 layout 校验登录，只是跳转登录页时不带回跳地址。
   dashboard: {
     nav: [
+      // 下载页（src/features/downloads/）：只在 downloads.enabled 时出现。
+      ...(downloadsEnabled
+        ? [{ key: "downloads", href: "/downloads", icon: "download" as const }]
+        : []),
       // 首次运行清单（src/core/onboarding/）：注册后自动落一次，之后从这里随时进。
       // 是套件页，但入口和其它业务菜单排在一起，侧边栏的顺序就只有一个来源。
       { key: "onboarding", href: "/onboarding", icon: "fileText" },
@@ -335,6 +343,12 @@ const config = defineConfig({
   // 关闭时 /changelog 和 /changelog/rss.xml 返回 404，页脚也不显示入口。
   changelog: {
     enabled: true,
+  },
+  // 卖可下载文件（src/features/downloads/）。官方站用它交付模板：设 SITE_DOWNLOADS=1 打开；
+  // 买家不卖文件就保持关闭。新版本用 pnpm downloads:publish <产品 id> <版本> <文件> 发布。
+  downloads: {
+    enabled: downloadsEnabled,
+    products: [{ id: "template", planId: "lifetime", updateMonths: 12 }],
   },
   // 接口限流（AI、上传、结账），计数存 Upstash Redis。每条策略同时按用户和按 IP 计数。
   rateLimit: {

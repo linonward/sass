@@ -31,6 +31,7 @@ export function CheckoutStatus({
   timeoutMs,
   supportEmail,
   planNames,
+  nextSteps = {},
 }: {
   /** 服务商回跳附带的订阅或订单 ID。 */
   reference: {
@@ -42,6 +43,11 @@ export function CheckoutStatus({
   timeoutMs: number;
   supportEmail: string;
   planNames: Record<string, string>;
+  /**
+   * 按套餐给成功页换一个下一步（例如买了可下载文件的套餐 → 「前往下载页」）：
+   * 一句说明，加上替换「查看账单」的主按钮。没有的套餐照常显示账单和仪表盘。
+   */
+  nextSteps?: Record<string, NextStep>;
 }) {
   const t = useTranslations("Billing.success");
   const [result, setResult] = useState<Result>({ status: "pending" });
@@ -91,6 +97,10 @@ export function CheckoutStatus({
   }, [subscriptionId, orderId, planId, since, timeoutMs]);
 
   const plan = (id: string | null) => (id && planNames[id]) || "";
+  const next =
+    result.status === "complete" && result.planId
+      ? nextSteps[result.planId]
+      : undefined;
 
   if (result.status === "complete") {
     return (
@@ -102,7 +112,8 @@ export function CheckoutStatus({
         {result.balance !== undefined && (
           <p className="text-sm">{t("credits", { balance: result.balance })}</p>
         )}
-        <Actions />
+        {next && <p className="text-sm">{next.note}</p>}
+        <Actions next={next} />
       </State>
     );
   }
@@ -177,12 +188,14 @@ function State({
   );
 }
 
-function Actions() {
+export type NextStep = { note: string; href: string; label: string };
+
+function Actions({ next }: { next?: NextStep }) {
   const t = useTranslations("Billing.success");
   return (
     <div className="mt-4 flex flex-wrap justify-center gap-2">
-      <Link href="/billing" className={buttonVariants()}>
-        {t("toBilling")}
+      <Link href={next?.href ?? "/billing"} className={buttonVariants()}>
+        {next?.label ?? t("toBilling")}
       </Link>
       <Link
         href="/dashboard"
