@@ -138,7 +138,10 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
         userId,
         planId: "pro",
         customerEmail: "buyer@example.com",
-        successUrl: "https://sass.test/billing/success",
+        // 带上套餐和下单时间：服务商回跳不带订单 ID 时成功页靠它定位（见 status.ts）。
+        successUrl: expect.stringMatching(
+          /^https:\/\/sass\.test\/billing\/success\?plan=pro&since=\d+$/,
+        ),
         cancelUrl: "https://sass.test/#pricing",
       },
     ]);
@@ -147,7 +150,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
   test("非默认语言的回跳地址带语言前缀；不支持的语言回退到默认语言", async () => {
     await checkout("pro", { locale: "de" });
     await checkout("lifetime", { locale: "xx" });
-    expect(fake.checkouts.map((c) => c.successUrl)).toEqual([
+    expect(fake.checkouts.map((c) => c.successUrl.split("?")[0])).toEqual([
       "https://sass.test/de/billing/success",
       "https://sass.test/billing/success",
     ]);

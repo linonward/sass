@@ -117,7 +117,12 @@ export async function startCheckout({
     typeof locale === "string" && hasLocale(routing.locales, locale)
       ? locale
       : routing.defaultLocale;
-  const successUrl = `${origin}${localizedPath(lang, CHECKOUT_SUCCESS_PATH)}`;
+  // 成功页的兜底定位：套餐 + 下单时间。有的服务商回跳时不带订单 / 订阅 ID（Waffo Pancake、Stripe），
+  // 成功页就按「这个用户、这个套餐、这个时间之后」的订单查（见 ./status.ts）。服务商自己追加的
+  // order_id / subscription_id 仍然优先。
+  const successUrl = `${origin}${localizedPath(lang, CHECKOUT_SUCCESS_PATH)}?${new URLSearchParams(
+    { plan: plan.id, since: String(now.getTime()) },
+  )}`;
   const cancelUrl = `${origin}${localizedPath(lang, "/")}#pricing`;
 
   // 去重与互斥：先锁住这个用户的行（并发/双击在这里排队），再复查重和未过期的会话，
