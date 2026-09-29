@@ -148,6 +148,16 @@
 | T2101                       | ci-split                | `chore/ci-split`               | —                             | done |
 | **阶段 22：Ubuntu 26 迁移** |                         |                                |                               |      |
 | T2201                       | ubuntu-26-e2e           | `fix/ubuntu-26-e2e`            | —                             | done |
+| **阶段 23：交付与恢复**     |                         |                                |                               |      |
+| T2300                       | delivery-plan           | `docs/delivery-plan`           | —                             | done |
+| T2301                       | template-upgrade        | `chore/template-upgrade`       | T2300                         | todo |
+| T2302                       | buyer-agent-guide       | `docs/buyer-agent-guide`       | T2301                         | todo |
+| T2303                       | ai-job-recovery         | `feat/ai-job-recovery`         | T2302                         | todo |
+| T2304                       | billing-exceptions      | `feat/billing-exceptions`      | T2303                         | todo |
+| T2305                       | notification-recovery   | `feat/notification-recovery`   | T2303                         | todo |
+| T2306                       | reference-product       | `docs/reference-product`       | T2305                         | todo |
+| T2307                       | release-candidate       | `chore/release-candidate`      | T2306                         | todo |
+| T2308                       | buyer-trial             | `docs/buyer-trial`             | T2307                         | todo |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
@@ -172,6 +182,8 @@
 阶段 21 只有一个任务（见 [phase-21-ci-speed.md](phase-21-ci-speed.md)）：把 `ci.yml` 从「一个 job 串行跑完 20 个 step」拆成 `static` / `unit` / `e2e`（matrix 四条腿）/ `ci` 汇总闸门，墙钟从 ~10 分钟降到 ~4.7 分钟。e2e 四套本来就彼此独立 —— 各自的端口、各自的临时副本、各自起服务器 —— 串在一条时间线上纯属历史结构。汇总闸门保留 `ci` 这个名字，因为 README 与 `docs/workflow.md` 都让买家把它配成 `main` 的必需检查，改名会让照文档配置的 PR 永久卡住。主套件不再 shard、Playwright 浏览器不加缓存，理由（收益递减 vs 报告链路与 apt 依赖的复杂度）写在卡里。另记了两条：一是 `needs.*.result` 对 matrix job 的确切形状官方文档没写明，闸门写成对两种解释都成立、并要求合并前做变异校验；二是四条腿拆到各自的库之后，子套件若偷偷依赖过主套件的遗留数据才会暴露。
 
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
+
+阶段 23 分三批（见 [phase-23-delivery.md](phase-23-delivery.md)）：批次 A（T2300–T2302）交付基础 —— 落卡、买家能升级、买家 agent 有指引；批次 B（T2303–T2305）收费业务的恢复能力 —— AI 任务不再悬着、计费异常可查可处理、事务邮件可补发；批次 C（T2306–T2308）真实交付 —— 参考产品、候选发行包、买家试用。**顺序是硬的**：`T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308`（T2303 之后 T2304 与 T2305 同改恢复入口，仍串行做）。本阶段暂停扩充通用功能（多租户、SSO、更多支付商/模型/主题、营销自动化、AI 成本分析均不做），共同约束、五种必须实测的结算场景与需要外部输入的阻塞项写在阶段文档开头。
 
 ## 依赖图
 
@@ -241,6 +253,9 @@
 阶段 20  T2001 → T2002（都改任务表，串行；T2002 只改文档）
 
 阶段 22  T2201（独立；时限是 2026-10-19，见 phase-22-ubuntu-26.md）
+
+阶段 23  T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308（严格串行：
+         批次 A 不通过就不承诺「支持持续升级」，批次 B 不通过不进入外部试用，批次 C 不通过不进入正式售卖）
 ```
 
 ## 推荐顺序
@@ -269,6 +284,8 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 
 阶段 22：T2201 独立，可随时做；唯一的硬约束是**在 2026-10-19 之前进 `main`** —— 那天起 `ubuntu-latest` 迁移到 Ubuntu 26，迟了模板自己的 CI 会先红一轮（实测结论见 [phase-22-ubuntu-26.md](phase-22-ubuntu-26.md)）。
 
+阶段 23：`T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308`，**全部串行**，一条合入再开下一条。两条硬依赖要留意：T2301 的升级脚本是 T2302 要写进指引的东西，不先跑通就没法写；T2304 与 T2305 都会碰 T2303 落下的恢复入口，串行省掉一次 rebase 加一次语义冲突。T2307 与 T2308 卡在**需要你提供**的三件事上（发行主体与支持邮箱、三家支付商的测试环境账号、3 位试用用户），准备阶段可以先推进前面的任务。
+
 可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做；T601 / T604；T602 / T603；阶段 8 批次内全部并行（见 phase-8-sell.md）；阶段 9 的 T902 / T903 / T905；阶段 10 的 T1001 / T1004；阶段 12 批次内除 T1203 外全部（T1203 在 T1201 之后，见 phase-12-review.md）；阶段 17 全部可并行；阶段 19 的 T1901 / T1902 / T1903；阶段 18 的 T1801/T1802 可并行。
 
 ## 任务详情
@@ -293,4 +310,6 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 - [阶段 18：支付商扩展](phase-18-payments.md)
 - [阶段 19：模板体验打磨](phase-19-polish.md)
 - [阶段 20：审查收口（二）](phase-20-followups.md)
+- [阶段 21：CI 提速](phase-21-ci-speed.md)
 - [阶段 22：Ubuntu 26 迁移](phase-22-ubuntu-26.md)
+- [阶段 23：交付与恢复](phase-23-delivery.md)
