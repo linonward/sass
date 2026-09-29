@@ -95,9 +95,11 @@ export async function startCheckout({
   const plan = typeof planId === "string" ? getPlan(planId) : undefined;
   if (!plan) return fail("invalid_plan", 400);
   if (plan.price === 0) return fail("free_plan", 400);
+  // 有产品目录的服务商必须配好产品 ID；金额直接传的服务商（inlinePricing）不需要。
   if (
-    !plan.providerProductId ||
-    PLACEHOLDER_PRODUCT.test(plan.providerProductId)
+    !provider.inlinePricing &&
+    (!plan.providerProductId ||
+      PLACEHOLDER_PRODUCT.test(plan.providerProductId))
   ) {
     return fail("plan_not_configured", 503);
   }

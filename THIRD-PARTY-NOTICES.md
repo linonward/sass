@@ -107,9 +107,9 @@
 
 ## 直接依赖明细
 
-`package.json` 里 45 个 `dependencies` + 32 个 `devDependencies`，共 77 个。版本是本次统计时锁定的版本。
+`package.json` 里 46 个 `dependencies` + 32 个 `devDependencies`，共 78 个。版本是本次统计时锁定的版本。
 
-### MIT（54）
+### MIT（55）
 
 | 包                                | 版本    | 依赖类型 |
 | --------------------------------- | ------- | -------- |
@@ -138,6 +138,7 @@
 | `@vercel/otel`                    | 2.1.3   | prod     |
 | `@vitejs/plugin-react`            | 6.1.1   | dev      |
 | `@vitest/coverage-v8`             | 5.0.2   | dev      |
+| `@waffo/waffo-node`               | 3.1.0   | prod     |
 | `auth`                            | 1.7.6   | dev      |
 | `better-auth`                     | 1.7.6   | prod     |
 | `cn`                              | 0.4.0   | prod     |

@@ -43,6 +43,7 @@
 ## 明确不修 / 待定
 
 - **多租户 / SSO / 更多支付商 / 更多模型 / 多套主题 / 完整营销自动化 / AI 成本分析**：本轮不做（阶段性收缩，不是永久决定）。
+  - **例外**：Waffo（T2309）按 2026-09-29 的决定插在 T2306 之前接入，只做默认的 PSP 模式；其它支付商仍不在本轮。
 - **提交幂等（双击重复扣费）**：T2303 **不做**。现在没有提交幂等键，双击会创建两条 `ai_usage` 并扣两次分。本阶段也不做「重复提交检测」—— 没有可靠判据（用户确实可以合法地连续提交两次相同输入），猜出来的判据会把正常用户判成异常。记在这里，等真实工单再说。
 - **`aborted` 状态**：`ai_usage.status` 已经有这个取值，但没有代码写入它。本阶段不清理，等有人在恢复扫描里需要它时再说。
 - **`docs/go-to-market.md` 的定价与渠道**：本阶段只修事实错误（见 T2300），不改价格与渠道计划。
@@ -431,3 +432,41 @@
 - [ ] 3 位试用者的四项记录齐全
 - [ ] 问题清单里所有阻塞项都已解决或明确退出支持范围
 - [ ] 放行条件五条逐条勾选，未满足的写明原因
+
+---
+
+## T2309 waffo-billing
+
+- 分支 / worktree：`feat/waffo-billing` → `../sass-waffo-billing`
+- 依赖：T2305（插在 T2306 之前，见「明确不修 / 待定」里的例外）
+
+**问题**
+
+买家要接 Waffo（全球收单，480+ 支付方式）。按 `docs/billing.md` 的「加第四个支付商」接入，但 Waffo 和现有三家有几处结构性不同，不能只写一个 adapter：
+
+- **没有产品 / 价格目录**：金额每次下单时直接传（小数字符串，按币种精度），模板按 `providerProductId` 结账、占位 ID 会被挡成 `plan_not_configured`；
+- **webhook 的回复要签名**（`X-SIGNATURE`，用商户私钥签 `{"message":"success"}`），否则 Waffo 按失败重推（约 20 小时、8 次）；
+- **webhook 没有事件 ID 和时间戳**；取消订阅**立即生效**；没有现成的当期起止时间；续费重试用完订阅仍是 ACTIVE；
+- 所有请求 / 响应 / webhook 都用 RSA（SHA256WithRSA）签名。
+
+**做**
+
+1. 接口的两处可选扩展（其它服务商不受影响）：`PaymentProvider.inlinePricing`（为 true 时结账不要求 `providerProductId`，金额取套餐的 `price` 与站点币种）；`PaymentProvider.webhookResponse(ok)`（服务商要求特定的 webhook 回复时由它生成）。
+2. `providers/waffo.ts`：官方 SDK `@waffo/waffo-node`（MIT、零依赖）。一次性购买走 `order/create`，订阅走 `subscription/create`（年付 = MONTHLY × 12）；门户走 `subscription/manage`（订阅 ID 记作客户 ID；一次性购买没有门户）；删号时 `subscription/cancel`（立即取消正是删号要的语义）。
+3. 事件映射（写在 adapter 顶部）：合成事件 ID（事件类型 + 业务 ID + 状态），`occurredAt` 取通知里的业务时间；金额按币种精度换成最小货币单位。
+4. 注册：`billingProviderNames`、`billingServerEnv`（`WAFFO_API_KEY` / `WAFFO_PRIVATE_KEY` / `WAFFO_PUBLIC_KEY` / `WAFFO_MERCHANT_ID` / `WAFFO_MODE`）、`createProvider()`、`/api/webhooks/waffo`、`productIdEnvPrefix`；`WAFFO_MODE=live` 加进 fake 的硬锁。
+5. 测试：官方 SDK 离线生成密钥对和签名，fixture 用官方文档的 payload 形状；覆盖验签、全部事件映射、结账请求体（一次性 / 订阅 / 年付）、门户、取消的幂等、签名回复。
+6. 文档：README 上线清单加 Waffo 一节、`docs/billing.md` 对比表（**默认是 PSP 不是 MoR**）、`.env.example`、`THIRD-PARTY-NOTICES.md`。
+
+**不做**
+
+- 不接 Waffo Global Tax（MoR，按合同开通）、不做订阅升降级（`subscription/change`）、不做站内发起退款。
+- 真实沙箱验证等账号就绪后补（记进 T2307 的支付商验证表），**单测通过不算真实验证**。
+
+**验收**
+
+- [ ] `BILLING_PROVIDER=waffo` + 沙箱密钥：一次性购买与订阅都能跳到 Waffo 收银台（沙箱账号就绪后验证）
+- [ ] webhook 验签失败返回 401；成功 / 失败的回复带正确签名
+- [ ] 事件映射覆盖：付款成功 / 失败、订阅激活 / 取消 / 过期、续费、部分 / 全额退款
+- [ ] 其它三家服务商的单测与 e2e 不受影响
+- [ ] `pnpm test` / `pnpm notices:check` 绿；README / billing.md / .env.example 同步

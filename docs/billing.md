@@ -1,6 +1,6 @@
 # 支付服务商
 
-模板出厂用 **Creem**，另外实现了 **Stripe** 和 **Lemon Squeezy**。三家实现同一个 `PaymentProvider` 接口（`src/core/billing/provider.ts`），共用同一套结账、webhook、订单表、积分发放和后台统计 —— 换服务商不碰业务代码，改 `site.config.ts` 的两处字段、再设一组环境变量即可。
+模板出厂用 **Creem**，另外实现了 **Stripe**、**Lemon Squeezy** 和 **Waffo**（见下文 [Waffo](#waffo) 一节）。它们实现同一个 `PaymentProvider` 接口（`src/core/billing/provider.ts`），共用同一套结账、webhook、订单表、积分发放和后台统计 —— 换服务商不碰业务代码，改 `site.config.ts` 的两处字段、再设一组环境变量即可。
 
 本文只讲**选谁、怎么换、怎么加第四个**。每个服务商从零到真实收款的逐条操作在 README 的[上线清单](../README.md#上线清单)里（[支付（Creem / Stripe）](../README.md#支付creem--stripe)、[支付（Lemon Squeezy）](../README.md#支付lemon-squeezy)），本文不重复。
 
@@ -76,6 +76,19 @@ Merchant of Record（记录商户，MoR）是**法律意义上的卖方**：买�
 | 退款回收积分   | 按已退比例回收（`refund.created`）   | **不回收**：退款对象上没有发票字段，v1 忽略退款事件                  | **只回收全额退款**，部分退款不回收                                        |
 | 测试 / 生产    | `CREEM_MODE=test` / `live`，两个域名 | 密钥本身区分（`sk_test_` / `sk_live_`）                              | 店铺上的一个开关，密钥不区分                                              |
 | fake 硬锁      | `CREEM_MODE=live` 时拒绝             | 配了 `sk_live_` / `rk_live_` 时拒绝                                  | 没有：造不出可靠判据，见 `src/core/billing/env.ts` 的注释                 |
+
+## Waffo
+
+第四家，按「加第四个支付商」的路径接入（`src/core/billing/providers/waffo.ts`，官方 SDK `@waffo/waffo-node`）。它和上面三家的差别主要在结构上，费率没有列进上面的对比表（没有逐项核实过，以 [waffo.com](https://www.waffo.com) 和合同为准）：
+
+- **默认不是 MoR**：标准产品里 Waffo 是支付通道（PSP），税务是你的事；MoR（Waffo Global Tax）按合同单独开通，本模板没有接。所以在「怎么选」里它和标准 Stripe 是一类，不是 Creem / Lemon Squeezy 那类。
+- **没有产品目录**：金额每次下单直接传（`inlinePricing`），不需要产品 ID，改价格只改 `site.config.ts`。
+- **全程 RSA 签名**：请求、响应、webhook、以及我们对 webhook 的回复都要签名，四项密钥（API key、商户私钥、Waffo 公钥、商户 ID）缺一不可。
+- **取消订阅立即生效**、续费重试用完订阅仍是 ACTIVE（站内记 `past_due`）；webhook 没有事件 ID（站内按「事件类型 + 业务 ID + 状态」合成）。
+- **退款回收积分**：部分和全额都按比例回收，和 Creem 一样。
+- **fake 硬锁**：`WAFFO_MODE=production` 时拒绝。
+
+逐条上线操作见 README 的[支付（Waffo）](../README.md#支付waffo)。
 
 退款那一行是**真金白银的差别**，值得单独读一遍 README 的[收入口径](../README.md#收入口径)和对应服务商的上线清单小节：Creem 会按比例自动回收集分；Stripe 完全不管（退款只在后台做，积分要人工处理）；Lemon Squeezy 只认全额退款。
 
