@@ -148,8 +148,10 @@ T2401 换了首页叙事，但首页的 title 和 description 还停在旧模板
 - [x] 支持 quote / image / video，作者头像、HTTPS 原始出处可选；视频需封面、尺寸和字幕，本地素材无需放宽 CSP。
 - [x] `landing.sections` 控制顺序和开关；items 为空时，在计算波浪前过滤。
 - [x] 3 / 2 / 1 列，品牌色高亮、硬唇边，亮暗主题；原生视频控件，preload=none，无自动播放。
-- [x] `pnpm test`：133 个文件、1556 项通过；`pnpm typecheck` 与 `pnpm lint` 通过。
-- [x] `E2E_PORT=3240 npx playwright test e2e/ui-shell.spec.ts e2e/landing.spec.ts`：43 passed、1 项按设计跳过。
+- [x] `pnpm test`：136 个文件、1571 项通过；`pnpm typecheck` 与 `pnpm lint` 通过。
+- [x] `E2E_PORT=3250 npx playwright test e2e/ui-shell.spec.ts e2e/landing.spec.ts`：43 passed、1 项按设计跳过。
 - [x] 实际浏览器核对：1440px 桌面、375px 手机亮暗模式，图片加载与品牌色切换正常；页面无 console error / pageerror。
 
 配置说明见 [用户故事配置](../testimonials.md)。没有新增依赖或环境变量。
+
+T2406 合入前修正：同步 main 的购买卡片配置，解决合并冲突并避免任务编号重复；动态评价翻译 key 使用与既有配置区块一致的类型边界，中英文配置引用由测试校验。`tsc --noEmit --incremental false` 通过，避免增量缓存掩盖错误。

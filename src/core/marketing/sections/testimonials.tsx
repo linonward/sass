@@ -18,6 +18,8 @@ export function Testimonials({
   waveFrom?: Band;
 }) {
   const t = useTranslations("Landing.testimonials");
+  // Buyers configure arbitrary item keys; their translations are checked by landing-messages.test.ts.
+  type MessageKey = Parameters<typeof t>[0];
   if (items.length === 0) return null;
 
   return (
@@ -47,7 +49,7 @@ export function Testimonials({
             {item.type === "image" && (
               <Image
                 {...item.media}
-                alt={t(`items.${item.key}.imageAlt`)}
+                alt={t(`items.${item.key}.imageAlt` as MessageKey)}
                 sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                 className="border-border aspect-[16/10] w-full border-b object-cover"
               />
@@ -82,7 +84,7 @@ export function Testimonials({
                 </p>
               )}
               <blockquote className="text-lg leading-relaxed">
-                {t.rich(`items.${item.key}.quote`, {
+                {t.rich(`items.${item.key}.quote` as MessageKey, {
                   highlight: (chunks) => (
                     <mark className="bg-primary-band text-foreground box-decoration-clone px-0.5">
                       {chunks}
@@ -110,7 +112,7 @@ export function Testimonials({
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">{item.author.name}</p>
                   <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                    {t(`items.${item.key}.role`)}
+                    {t(`items.${item.key}.role` as MessageKey)}
                   </p>
                 </div>
               </div>
