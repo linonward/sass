@@ -14,3 +14,12 @@ export const locales = ["en", "zh"];
 
 /** 默认语言，必须出现在上面的 `locales` 里（schema 会校验这条）。 */
 export const defaultLocale = "en";
+
+/**
+ * Open Graph 的 `og:locale` 要写成 `语言_地区`（如 `en_US`），不认裸语言码。
+ * 新增语言时在这里补一项；没登记的语言按原样输出。
+ */
+export const openGraphLocales: Record<string, string> = {
+  en: "en_US",
+  zh: "zh_CN",
+};

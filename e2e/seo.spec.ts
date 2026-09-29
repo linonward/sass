@@ -11,7 +11,14 @@ test("首页包含 canonical、hreflang、Open Graph 与 JSON-LD", async ({
   await page.goto("/");
   const head = page.locator("head");
 
-  await expect(page).toHaveTitle(siteConfig.name);
+  // 首页标题要带上这页讲什么，不能只剩站点名；描述跟着 Hero 走。
+  await expect(page).toHaveTitle(
+    `${messages.Metadata.homeTitle} | ${siteConfig.name}`,
+  );
+  await expect(head.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    messages.Metadata.description,
+  );
   await expect(head.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
     origin,
@@ -25,6 +32,10 @@ test("首页包含 canonical、hreflang、Open Graph 与 JSON-LD", async ({
   await expect(head.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
     `${origin}/opengraph-image`,
+  );
+  await expect(head.locator('meta[property="og:locale"]')).toHaveAttribute(
+    "content",
+    "en_US",
   );
   await expect(head.locator('meta[name="twitter:card"]')).toHaveAttribute(
     "content",

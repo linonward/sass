@@ -51,3 +51,16 @@
 ### 预览切换高度修复
 
 根据 History 切换时首屏跳动的反馈，预览标签页改用同一网格单元叠放，布局始终预留较高内容的空间；积分卡隐藏时也保留手机端占位。非活动面板使用 `invisible`、`aria-hidden` 和 `inert`，不占键盘焦点或可访问树。每个 Tab 对应独立的 panel ID。新增回归在中英文、桌面和手机端断言来回切换后首屏高度与下一区块位置完全不变。类型检查、1470 项单元测试、39 项页面回归通过，另有 1 项预期跳过；内置浏览器确认 History 外框保持稳定。
+
+## T2402 landing-seo
+
+- 分支：`fix/landing-seo`
+- Worktree：`../sass-landing-seo`
+- 依赖：T2401，已合入 `main`。
+
+T2401 换了首页叙事，但首页的 title 和 description 还停在旧模板：`<title>` 只有站点名，描述是 24 个字符的 "Ship your SaaS in a day."，和新 H1 对不上。以 Googlebot UA 取中英首页渲染后 HTML 审计，地基（robots、canonical、hreflang、sitemap、SSR 正文、JSON-LD、首图预加载）没有问题，只补 on-page 这一层。
+
+- [x] 首页 `generateMetadata` 使用 `Metadata.homeTitle`，标题为「Hero 主张 | 站点名」；description 改写为与 Hero 标题和副标题一致的一句话，中英各一份。买家改首页文案时在同一个 messages 文件里一起改。
+- [x] `og:locale` 输出 `en_US` / `zh_CN`（映射在 `src/core/i18n/locales.ts`，没登记的语言原样输出）。
+- [x] 不加 FAQPage 结构化数据（Google 自 2023 年起只对政府和健康类站点展示）；首页不展示价格，所以也不加 Offer / SoftwareApplication。
+- [x] `pnpm test`（1492 passed）、`pnpm typecheck`、`pnpm lint` 通过；`seo`、`ui-shell`、`landing`、`locale` 回归 53 passed、1 项按设计跳过。

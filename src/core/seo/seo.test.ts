@@ -61,6 +61,18 @@ describe("buildMetadata", () => {
     });
   });
 
+  test("og:locale 输出 语言_地区，没登记的语言原样输出", () => {
+    expect(buildMetadata({ locale: "en", path: "/" }).openGraph).toMatchObject({
+      locale: "en_US",
+    });
+    expect(buildMetadata({ locale: "zh", path: "/" }).openGraph).toMatchObject({
+      locale: "zh_CN",
+    });
+    expect(buildMetadata({ locale: "de", path: "/" }).openGraph).toMatchObject({
+      locale: "de",
+    });
+  });
+
   test("子页面套用模板并可覆盖描述和分享图", () => {
     const metadata = buildMetadata({
       locale: "en",
