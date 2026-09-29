@@ -9,12 +9,17 @@ export function SiteFooter() {
   const nav = (key: string) => t(`Nav.${key}` as "Nav.features");
   return (
     <footer className="bg-background border-t">
-      <div className="container-marketing flex flex-col gap-8 py-8 sm:flex-row sm:items-start sm:justify-between">
+      <div className="container-marketing flex flex-col gap-10 py-10 sm:flex-row sm:items-start sm:justify-between">
         <SiteLogo />
-        <div className="flex flex-col gap-4 sm:items-end">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-8 sm:flex sm:flex-wrap sm:gap-x-16 lg:gap-x-24">
           {footerNav(siteConfig).map((group) => (
-            <nav key={group.key} aria-label={nav(group.key)}>
-              <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+            <nav
+              key={group.key}
+              aria-label={nav(group.key)}
+              className="min-w-0"
+            >
+              <h2 className="mb-3 text-sm font-semibold">{nav(group.key)}</h2>
+              <ul className="flex flex-col text-sm">
                 {group.links.map((link) => (
                   <li key={link.href}>
                     <Link
