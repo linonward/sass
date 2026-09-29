@@ -155,7 +155,7 @@
 | T2303                       | ai-job-recovery         | `feat/ai-job-recovery`         | T2302                         | done |
 | T2304                       | billing-exceptions      | `feat/billing-exceptions`      | T2303                         | done |
 | T2305                       | notification-recovery   | `feat/notification-recovery`   | T2303                         | done |
-| T2306                       | reference-product       | `docs/reference-product`       | T2305                         | todo |
+| T2306                       | reference-product       | `docs/reference-product`       | T2305、T2606                  | todo |
 | T2307                       | release-candidate       | `chore/release-candidate`      | T2306                         | todo |
 | T2308                       | sell-gate               | `docs/sell-gate`               | T2307                         | todo |
 | T2309                       | waffo-billing           | `feat/waffo-billing`           | T2305                         | done |
@@ -175,6 +175,14 @@
 | T2503                       | confirm-action          | `feat/confirm-action`          | T2501                         | todo |
 | T2504                       | upload-field            | `feat/upload-field`            | T2501、T2306                  | todo |
 | T2505                       | account-security        | `feat/account-security`        | T2503                         | todo |
+| **阶段 26：交付内容英文化** |                         |                                |                               |      |
+| T2600                       | english-plan            | `docs/english-plan`            | —                             | done |
+| T2601                       | english-core-billing    | `chore/english-core-billing`   | T2600                         | todo |
+| T2602                       | english-core-identity   | `chore/english-core-identity`  | T2601                         | todo |
+| T2603                       | english-core-rest       | `chore/english-core-rest`      | T2602                         | todo |
+| T2604                       | english-app             | `chore/english-app`            | T2603                         | todo |
+| T2605                       | english-docs            | `docs/english-docs`            | T2604                         | todo |
+| T2606                       | english-guard           | `chore/english-guard`          | T2605                         | todo |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
@@ -277,6 +285,7 @@
          批次 A 不通过就不承诺「支持持续升级」，批次 C 不通过不交付第一份发行包；T2310 独立，只改文档）
 
 阶段 25  T2500 → T2501 → T2502 T2503（T2501 之后可并行）；T2503 → T2505；T2501, T2306 → T2504
+阶段 26  T2600 → T2601 → T2602 → T2603 → T2604 → T2605 → T2606 → T2306（插在阶段 23 的 T2305 与 T2306 之间）
 ```
 
 ## 推荐顺序
@@ -308,6 +317,7 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 阶段 23：`T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308`，**全部串行**，一条合入再开下一条。两条硬依赖要留意：T2301 的升级脚本是 T2302 要写进指引的东西，不先跑通就没法写；T2304 与 T2305 都会碰 T2303 落下的恢复入口，串行省掉一次 rebase 加一次语义冲突。T2306 与 T2307 卡在**需要你提供**的两件事上（发行主体与支持邮箱、支付商与模型服务商的测试环境账号，Waffo 必须有），准备阶段可以先推进前面的任务。T2308 放行之前，生产环境用 `SITE_HIDDEN_PLANS` 关掉购买入口。
 
 阶段 25：T2501 先做（后面几张卡的零件）→ T2502 / T2503 并行 → T2505 在 T2503 之后；T2504 等 T2306 合入再开。
+阶段 26：`T2600 → T2601 → … → T2606`，整段插在 T2305 与 T2306 之间 —— 首单交付后再整体换注释，买家升级时会吃满纯注释的合并冲突；T2306 也要自验英文化之后的发行包。T2601–T2605 按目录互不重叠，单人仍串行做，T2606 最后加闸。
 
 可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做；T601 / T604；T602 / T603；阶段 8 批次内全部并行（见 phase-8-sell.md）；阶段 9 的 T902 / T903 / T905；阶段 10 的 T1001 / T1004；阶段 12 批次内除 T1203 外全部（T1203 在 T1201 之后，见 phase-12-review.md）；阶段 17 全部可并行；阶段 19 的 T1901 / T1902 / T1903；阶段 18 的 T1801/T1802 可并行。
 
@@ -339,3 +349,4 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 
 - [阶段 24：Landing 重设计](phase-24-landing-redesign.md)
 - [阶段 25：基础组件](phase-25-foundation-components.md)
+- [阶段 26：交付内容英文化](phase-26-english.md)
