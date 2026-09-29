@@ -38,12 +38,24 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
   ),
   pricing: (config, waveFrom) => (
     <Pricing
-      plans={config.billing.plans}
+      plans={config.billing.plans.filter((plan) => !plan.hidden)}
       currency={config.billing.currency}
       waveFrom={waveFrom}
     />
   ),
-  delivery: (_config, waveFrom) => <Delivery waveFrom={waveFrom} />,
+  delivery: (config, waveFrom) => {
+    // 购买卡片卖的套餐：不存在或被隐藏时传 undefined，卡片退回「即将公布」。
+    const plan = config.billing.plans.find(
+      (p) => p.id === config.landing.purchasePlan && !p.hidden,
+    );
+    return (
+      <Delivery
+        waveFrom={waveFrom}
+        plan={plan}
+        currency={config.billing.currency}
+      />
+    );
+  },
   faq: (config, waveFrom) => (
     <Faq items={config.landing.faq} waveFrom={waveFrom} />
   ),

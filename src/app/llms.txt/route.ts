@@ -1,3 +1,4 @@
+import { listedPlans } from "@/core/billing/plans";
 import { getTranslations } from "next-intl/server";
 
 import { adminEnabled } from "@/core/admin";
@@ -83,7 +84,7 @@ export async function GET() {
     {
       title: tn("pricing"),
       note: t("pricingNote"),
-      items: siteConfig.billing.plans.map((plan) => ({
+      items: listedPlans().map((plan) => ({
         title: `${planName(plan.id)} — ${money(plan.price)} ${tp(`interval.${plan.interval}`)}${plan.highlighted ? ` (${tp("popular")})` : ""}`,
         url: url("/pricing"),
         note: plan.features.map(feature).join(", "),

@@ -20,6 +20,10 @@ import { defaultLocale, locales } from "./src/core/i18n/locales";
  * `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`，lemonsqueezy 是
  * `LEMONSQUEEZY_VARIANT_ID_PRO` / `LEMONSQUEEZY_VARIANT_ID_LIFETIME`）。
  * 模板里只留占位值，真实域名、名称和产品 ID 放在部署环境里；不设这些变量时就是占位配置。
+ *
+ * 另有两个「站点和模板默认不一样」时用的覆盖（例如卖家自己的站点只卖一部分套餐、换了价格，
+ * 又不想改掉买家拿到的默认值）：`SITE_PRICE_<套餐 id 大写>` 覆盖标价（`SITE_PRICE_LIFETIME=99`），
+ * `SITE_HIDDEN_PLANS` 逗号分隔地隐藏套餐（`SITE_HIDDEN_PLANS=pro`，见 plans 的 `hidden`）。
  * 没有对应变量的字段（颜色、文案）只能改这个文件。
  */
 const envOverride = (name: string): string | undefined => {
@@ -28,6 +32,27 @@ const envOverride = (name: string): string | undefined => {
   const value = process.env[name]?.trim();
   return value === "" ? undefined : value;
 };
+
+/** `SITE_PRICE_<套餐>`：覆盖标价（主币单位）。写了但不是非负数时启动即报错，不静默用默认价。 */
+const envPrice = (planId: string, fallback: number): number => {
+  const name = `SITE_PRICE_${planId.toUpperCase()}`;
+  const value = envOverride(name);
+  if (value === undefined) return fallback;
+  const price = Number(value);
+  if (!Number.isFinite(price) || price < 0) {
+    throw new Error(`${name} must be a non-negative number, got "${value}"`);
+  }
+  return price;
+};
+
+/** `SITE_HIDDEN_PLANS`：逗号分隔的套餐 id，这些套餐不展示、不能新购（已有订阅不受影响）。 */
+const hiddenPlans = new Set(
+  (envOverride("SITE_HIDDEN_PLANS") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean),
+);
+const isHidden = (planId: string) => hiddenPlans.has(planId);
 
 /**
  * 用来收款的支付服务商。只能改这里的字面量（要改的是类型校验时的默认值）；
@@ -134,6 +159,8 @@ const config = defineConfig({
   },
   landing: {
     sections: ["hero", "features", "testimonials", "delivery", "faq", "cta"],
+    // 「交付」区块购买卡片卖的套餐：价格、结账都用它（被隐藏时卡片显示「即将公布」）。
+    purchasePlan: "lifetime",
     // hero 不配 image 时，首屏右侧渲染用真实 DOM 拼出来的产品 mock
     // （AI 工作室 + 积分流水，明确标记为示例数据，不触发模型调用）。
     // 想换回静态图片就在 hero 下加 image: { src, darkSrc?, width, height }，
@@ -206,7 +233,8 @@ const config = defineConfig({
       },
       {
         id: "pro",
-        price: 19,
+        price: envPrice("pro", 19),
+        hidden: isHidden("pro"),
         interval: "month",
         features: ["credits2000", "coreFeatures", "prioritySupport"],
         highlighted: true,
@@ -221,7 +249,8 @@ const config = defineConfig({
       },
       {
         id: "lifetime",
-        price: 199,
+        price: envPrice("lifetime", 199),
+        hidden: isHidden("lifetime"),
         interval: "once",
         features: ["credits2000", "coreFeatures", "lifetimeUpdates"],
         // 同上：一次性的产品，用 `..._LIFETIME` 覆盖。

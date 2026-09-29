@@ -177,7 +177,7 @@
         },
         "payments": {
           "question": "Can I switch payment providers?",
-          "answer": "Choose Creem, Stripe or Lemon Squeezy through configuration. Set up the matching products and webhooks when switching; existing subscriptions are not migrated automatically."
+          "answer": "Choose Creem, Stripe, Lemon Squeezy or Waffo Pancake through configuration. Set up the matching products and webhooks when switching; existing subscriptions are not migrated automatically."
         },
         "customize": {
           "question": "How do I build my own features?",
@@ -206,9 +206,11 @@
     "delivery": {
       "title": "A complete starting point.",
       "description": "Source code, configuration, documentation and examples, together in one project.",
-      "offer": "Template purchase",
+      "offer": "OnwardKit template",
       "pending": "Coming soon",
-      "terms": "Pricing, update period and support scope are to be confirmed.",
+      "terms": "One-time payment, including all updates for one year and email support. Digital product — no refunds once delivered.",
+      "termsPending": "Pricing, update period and support scope are to be confirmed.",
+      "buy": "Buy now",
       "demo": "Explore the demo first",
       "items": {
         "source": {

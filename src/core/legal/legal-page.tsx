@@ -1,3 +1,4 @@
+import { activePaymentProcessor } from "@/core/billing/processor";
 import { buildMetadata } from "@/core/seo/metadata";
 
 import siteConfig from "../../../site.config";
@@ -55,7 +56,12 @@ export function LegalPage({
           </time>
         </p>
       </header>
-      <document.Content legal={legal} site={{ name, domain }} email={email} />
+      <document.Content
+        legal={legal}
+        site={{ name, domain }}
+        email={email}
+        payments={activePaymentProcessor()}
+      />
     </article>
   );
 }
