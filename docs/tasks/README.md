@@ -168,6 +168,13 @@
 | T2405                       | template-delivery       | `feat/template-delivery`       | T2404                         | done |
 | T2406                       | landing-testimonials    | `feat/landing-testimonials`    | T2403                         | done |
 | T2407                       | landing-conversion      | `feat/landing-conversion`      | T2404                         | done |
+| **阶段 25：基础组件**       |                         |                                |                               |      |
+| T2500                       | foundation-components   | `docs/foundation-components`   | —                             | done |
+| T2501                       | form-fields             | `feat/form-fields`             | T2500                         | todo |
+| T2502                       | list-kit                | `feat/list-kit`                | T2501                         | todo |
+| T2503                       | confirm-action          | `feat/confirm-action`          | T2501                         | todo |
+| T2504                       | upload-field            | `feat/upload-field`            | T2501、T2306                  | todo |
+| T2505                       | account-security        | `feat/account-security`        | T2503                         | todo |
 
 阶段 8 分三批（见 [phase-8-sell.md](phase-8-sell.md)）：批次 A（T802–T808）上架阻塞，批次 B（T809–T813、T817）上架前建议，批次 C（T814–T816、T818）可后做。T816 是「卖点」项：买家拿到的是 AI agent 能直接读的站点索引。T817 不在原始审查清单里，是 2026-09-26 验证依赖升级时实测到的；T818 是 T808 那张 dependabot 配置的补丁（`@types/node` 的大版本要跟运行时走，不能让 dependabot 自己提）。
 
@@ -194,6 +201,8 @@
 状态取值：`todo` / `in-progress` / `in-review` / `done`。在任务自己的 PR 里更新。
 
 阶段 23 分三批（见 [phase-23-delivery.md](phase-23-delivery.md)）：批次 A（T2300–T2302）交付基础 —— 落卡、买家能升级、买家 agent 有指引；批次 B（T2303–T2305）收费业务的恢复能力 —— AI 任务不再悬着、计费异常可查可处理、事务邮件可补发；批次 C（T2306–T2308）真实交付 —— 作者按买家路径自验、候选发行包、首单放行。**没有外部试用**（T2310）：交付不可回收，验证全部前移到首单交付之前。**顺序是硬的**：`T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308`（T2303 之后 T2304 与 T2305 同改恢复入口，仍串行做）。本阶段暂停扩充通用功能（多租户、SSO、更多支付商/模型/主题、营销自动化、AI 成本分析均不做），共同约束、五种必须实测的结算场景与需要外部输入的阻塞项写在阶段文档开头。
+
+阶段 25 只收「组合层」组件（见 [phase-25-foundation-components.md](phase-25-foundation-components.md)）：T2501 统一表单（shadcn Select / Field / Checkbox / Switch，外加自动接可访问关联的 `FormField`）、T2502 列表（把后台的分页筛选挪到 `src/core/ui/` 给产品面用）、T2503 确认操作、T2504 上传控件、T2505 账户安全入口（改邮箱与登录设备）。每个新组件至少替换一个现有页面，只新增不迁移的不合入。T2504 等 T2306 参考产品给出真实需求再定范围；套餐权益判断记在阶段文档开头，等真实业务驱动再开卡。
 
 ## 依赖图
 
@@ -266,6 +275,8 @@
 
 阶段 23  T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308（严格串行：
          批次 A 不通过就不承诺「支持持续升级」，批次 C 不通过不交付第一份发行包；T2310 独立，只改文档）
+
+阶段 25  T2500 → T2501 → T2502 T2503（T2501 之后可并行）；T2503 → T2505；T2501, T2306 → T2504
 ```
 
 ## 推荐顺序
@@ -296,6 +307,8 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 
 阶段 23：`T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308`，**全部串行**，一条合入再开下一条。两条硬依赖要留意：T2301 的升级脚本是 T2302 要写进指引的东西，不先跑通就没法写；T2304 与 T2305 都会碰 T2303 落下的恢复入口，串行省掉一次 rebase 加一次语义冲突。T2306 与 T2307 卡在**需要你提供**的两件事上（发行主体与支持邮箱、支付商与模型服务商的测试环境账号，Waffo 必须有），准备阶段可以先推进前面的任务。T2308 放行之前，生产环境用 `SITE_HIDDEN_PLANS` 关掉购买入口。
 
+阶段 25：T2501 先做（后面几张卡的零件）→ T2502 / T2503 并行 → T2505 在 T2503 之后；T2504 等 T2306 合入再开。
+
 可以并行的任务（分别开 worktree）：T105 / T106 / T107；T201 / T202；T301 / T302；T401 在 T102 之后随时可做；T601 / T604；T602 / T603；阶段 8 批次内全部并行（见 phase-8-sell.md）；阶段 9 的 T902 / T903 / T905；阶段 10 的 T1001 / T1004；阶段 12 批次内除 T1203 外全部（T1203 在 T1201 之后，见 phase-12-review.md）；阶段 17 全部可并行；阶段 19 的 T1901 / T1902 / T1903；阶段 18 的 T1801/T1802 可并行。
 
 ## 任务详情
@@ -325,3 +338,4 @@ T101 → T102 → T103 → T104 → T105 → T106 → T107 → T108 → T201 →
 - [阶段 23：交付与恢复](phase-23-delivery.md)
 
 - [阶段 24：Landing 重设计](phase-24-landing-redesign.md)
+- [阶段 25：基础组件](phase-25-foundation-components.md)
