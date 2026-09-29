@@ -104,7 +104,7 @@ test("删除账户：二次确认、跳回首页、数据被清除，再次登�
 
   await page.goto("/settings");
   await page.getByRole("button", { name: a.delete.open }).click();
-  const dialog = page.getByRole("dialog", { name: a.delete.title });
+  const dialog = page.getByRole("alertdialog", { name: a.delete.title });
   const confirm = dialog.getByRole("button", { name: a.delete.confirm });
 
   // 输入的邮箱不对时不能提交。

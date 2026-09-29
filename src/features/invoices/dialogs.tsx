@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 
 import { Button } from "@/core/ui/button";
+import { ConfirmActionDialog } from "@/core/ui/confirm-action-dialog";
 import {
   Dialog,
   DialogClose,
@@ -35,13 +36,13 @@ import {
 import { CUSTOMER_NAME_MAX, centsToInput } from "./invoices";
 import { invoiceStatuses, type InvoiceStatus } from "./schema";
 
-// 示例业务模块的三个弹层：新建、编辑、删除确认。
-// 三个都走「提交自己接（startTransition + setState），成功就地换内容、关掉清空状态」——
-// 套件自己的弹层就是这么写的（src/core/api-keys/dialogs.tsx 的 RevokeKeyDialog）。
+// The example feature's three dialogs: create, edit and delete.
 //
-// The create and edit forms submit through onSubmit, not `<form action={fn}>`:
-// React resets every uncontrolled field after a function action, which wiped what
-// the user typed whenever the server rejected it. The delete form has no fields.
+// Create and edit submit themselves (startTransition + setState): on success the
+// dialog swaps to a receipt in place, and closing clears it. They go through
+// onSubmit, not `<form action={fn}>`: React resets every uncontrolled field after
+// a function action, which wiped what the user typed whenever the server
+// rejected it. Delete is a plain ConfirmActionDialog.
 
 const idle: InvoiceActionState = { status: "idle" };
 
@@ -272,63 +273,25 @@ export function EditInvoiceDialog({
 /** 删除确认。删除不可逆：点确认才真的删，失败把错误留在用户眼前。 */
 export function DeleteInvoiceDialog({ invoice }: { invoice: InvoiceDraft }) {
   const t = useTranslations("Invoices.delete");
-  const tc = useTranslations("Common");
-  const [open, setOpen] = useState(false);
-  const [state, setState] = useState<InvoiceActionState>(idle);
-  const error = useErrorMessage(state);
-  const [pending, startTransition] = useTransition();
-
-  // 提交自己接：成功才关弹层。不用 useEffect 观察 state 去关 —— 那会在渲染提交里
-  // 同步 setState，造成级联渲染（同 src/core/api-keys/dialogs.tsx 的 RevokeKeyDialog）。
-  function submit(form: FormData) {
-    startTransition(async () => {
-      const next = await deleteInvoice(idle, form);
-      setState(next);
-      if (next.status === "success") setOpen(false);
-    });
-  }
+  const te = useTranslations("Invoices.errors");
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        // 关掉就清掉上一次的结果：重新打开是干净状态。
-        if (!next) setState(idle);
-      }}
-    >
-      <DialogTrigger
-        render={
-          <Button variant="outline" size="sm" data-testid="invoice-delete" />
-        }
-      >
-        {t("open")}
-      </DialogTrigger>
-      <DialogContent closeLabel={tc("close")}>
-        <form action={submit} className="flex flex-col gap-4">
-          <input type="hidden" name="id" value={invoice.id} />
-          <DialogHeader>
-            <DialogTitle>
-              {t("title", { name: invoice.customerName })}
-            </DialogTitle>
-            <DialogDescription>{t("description")}</DialogDescription>
-          </DialogHeader>
-          <FormMessage error={error} />
-          <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>
-              {t("cancel")}
-            </DialogClose>
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={pending}
-              data-testid="invoice-delete-confirm"
-            >
-              {pending ? t("deleting") : t("confirm")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <ConfirmActionDialog
+      trigger={
+        <Button variant="outline" size="sm" data-testid="invoice-delete">
+          {t("open")}
+        </Button>
+      }
+      title={t("title", { name: invoice.customerName })}
+      description={t("description")}
+      tone="destructive"
+      fields={{ id: invoice.id }}
+      confirmLabel={t("confirm")}
+      pendingLabel={t("deleting")}
+      cancelLabel={t("cancel")}
+      confirmTestId="invoice-delete-confirm"
+      action={(form) => deleteInvoice(idle, form)}
+      errorMessage={(error) => te(error)}
+    />
   );
 }
