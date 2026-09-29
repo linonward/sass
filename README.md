@@ -5,7 +5,7 @@
 v1 包含：邮箱验证码和 Google 登录、Creem / Stripe / Lemon Squeezy 收款（订阅和一次性购买）、积分账本、AI（文字、图片、视频，按次扣积分）、文件上传（R2）、多语言、SEO、法律页、MDX 博客、后台。
 
 - 🚀 10 分钟上线：[从零到上线 checklist](docs/starter-guide.md#10-分钟从零到上线)（克隆 → 本地跑通 → 登录看到仪表盘）
-- 合并模板更新：[UPGRADING.md](UPGRADING.md)
+- 升级到模板的新版本：[UPGRADING.md](UPGRADING.md)
 - 设计系统：[docs/design.md](docs/design.md) · 多语言：[docs/i18n.md](docs/i18n.md) · 支付服务商（选型 / 切换）：[docs/billing.md](docs/billing.md)
 - 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`docs/go-to-market.md`、`docs/competitive-landscape.md`、`AGENTS.md`、`CLAUDE.md` —— 走 GitHub「Use this template」拿到仓库的话，按[第 1 步](#1-用模板建仓库)的清单删掉
 
@@ -32,6 +32,7 @@ v1 包含：邮箱验证码和 Google 登录、Creem / Stripe / Lemon Squeezy �
 - 上手与运维文档：`README.md`（本文）、`docs/starter-guide.md`（模板使用指南）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`、`docs/billing.md`
 - 授权与依赖许可：`LICENSE`、`THIRD-PARTY-NOTICES.md`
 - 环境变量样例 `.env.example`、CI 与 git 钩子：`.github/`、`.husky/`
+- `template.json`：这份包对应的版本与每个文件的 sha256。**别删、别改** —— 以后应用差量更新时靠它确认起点版本（见 [UPGRADING.md](UPGRADING.md)）
 
 **不包含**
 
@@ -41,9 +42,12 @@ v1 包含：邮箱验证码和 Google 登录、Creem / Stripe / Lemon Squeezy �
 包由 `git archive` 导出，未跟踪的文件天然进不去；导出后脚本会解压自检一遍（`README`/`LICENSE`/`package.json` 等在不在、凭据与卖家域名是否零命中），自检不过就不出包。自己验证或重新打包：
 
 ```bash
-scripts/release-package.sh          # 打 HEAD，产物在 dist/（已 gitignore）
-scripts/release-package.sh v1.0.0   # 打某个 tag
+scripts/release-package.sh                            # 打 HEAD，产物在 dist/（已 gitignore）
+scripts/release-package.sh v1.0.0                     # 打某个 tag
+scripts/release-package.sh --update v1.0.0 v1.1.0     # 打两个版本之间的差量更新包（发给已有买家）
 ```
+
+买家拿到新版本后怎么应用（`scripts/apply-template-update.sh`，含冲突与迁移的处理）：[UPGRADING.md](UPGRADING.md)。
 
 解压后 `pnpm install && pnpm test` 应当直接跑通（没配 `.env.local` 时数据库相关的用例会跳过，`pnpm test` 的输出里会写明）。
 
@@ -62,10 +66,16 @@ scripts/release-package.sh v1.0.0   # 打某个 tag
 
 ### 1. 用模板建仓库
 
-在自己的 GitHub 上建一个仓库并克隆到本地（点哪个按钮、会看到什么见指南的[建仓库并克隆](docs/starter-guide.md#建仓库并克隆)；购买后收到 zip 的话不用这一步），然后添加模板为 `upstream`，以后用它合并模板更新（见 [UPGRADING.md](UPGRADING.md)）：
+在自己 GitHub 上建一个仓库并克隆到本地（点哪个按钮、会看到什么见指南的[建仓库并克隆](docs/starter-guide.md#建仓库并克隆)），然后添加模板为 `upstream`，以后用它合并模板更新 —— 这条路走 `git merge`（见 [UPGRADING.md](UPGRADING.md)）：
 
 ```bash
 git remote add upstream https://github.com/linonward/sass.git
+```
+
+购买后收到 zip 的话不用建仓库、也不用加 `upstream`（包里没有模板作者的内部文档，也没有可与模板合并的共同 Git 历史）：解压后在目录里建一个仓库、把当前内容提交一次，作为以后应用差量更新的基线。
+
+```bash
+git init && git add -A && git commit -m "chore: import template"
 ```
 
 **接着删掉模板自己的开发文档。** 走 GitHub 这条路这些文件会原样留在你的仓库里（购买后收到的 zip 里没有它们，脚本已经剔掉了），留着会带来实际麻烦：

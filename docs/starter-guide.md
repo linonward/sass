@@ -29,7 +29,13 @@
   git remote add upstream https://github.com/linonward/sass.git   # 以后用它合并模板更新，见 UPGRADING.md
   ```
 
-  走 zip 分发的买家跳过这一步：zip 里没有模板作者的内部文档，也没有 `upstream` 可加。
+  走 zip 分发的买家跳过这一步，改成在自己的目录里建仓库并提交一次基线（zip 里没有模板作者的内部文档，也没有 `upstream` 可加）：
+
+  ```bash
+  git init && git add -A && git commit -m "chore: import template"
+  ```
+
+  以后模板出新版本时，卖家会给你一个差量更新包，用 `scripts/apply-template-update.sh` 应用 —— 步骤见 [UPGRADING.md](../UPGRADING.md)。
 
   **GitHub 这条路径还要多做一件事：删掉模板作者的内部文档**（`AGENTS.md`、`CLAUDE.md`、`docs/plan.md`、`docs/workflow.md`、`docs/tasks/`、`docs/go-to-market.md`、`docs/competitive-landscape.md`）。命令和逐条理由在 README 的[第 1 步：用模板建仓库](../README.md#1-用模板建仓库)。**别跳过**：`AGENTS.md` 会被 Claude Code 这类工具自动加载，模板作者的工作流会被当成你项目的规则来执行。
 
@@ -110,10 +116,10 @@
 
 两条交付路径，殊途同归：
 
-| 路径                        | 你会拿到                                                 | 还要做什么                                       |
-| --------------------------- | -------------------------------------------------------- | ------------------------------------------------ |
-| GitHub「Use this template」 | 一个属于你的仓库，含模板作者的内部文档（`AGENTS.md` 等） | 克隆到本地、加 `upstream`、删掉内部文档          |
-| 购买后收到的 zip            | 一个目录，内部文档已经剔掉                               | 解压即可（没有 git 历史，需要的话先 `git init`） |
+| 路径                        | 你会拿到                                                 | 还要做什么                                                                              |
+| --------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| GitHub「Use this template」 | 一个属于你的仓库，含模板作者的内部文档（`AGENTS.md` 等） | 克隆到本地、加 `upstream`、删掉内部文档；升级走 `git merge`                             |
+| 购买后收到的 zip            | 一个目录，内部文档已经剔掉，多一份 `template.json`       | 解压、`git init` 并提交一次基线；升级走差量更新包（见 [UPGRADING.md](../UPGRADING.md)） |
 
 GitHub 这条路的按钮顺序：
 
@@ -171,7 +177,7 @@ Vercel 的界面偶尔改版，找不到某个按钮时按名字找，流程不�
 | -------------------------------------------- | --------------------------------------------------- |
 | 改配置（品牌色、开关、套餐、导航、限流阈值） | README 的[配置](../README.md#配置)                  |
 | 上线（域名、环境变量、各模块的外部账号）     | README 的[上线清单](../README.md#上线清单)          |
-| 合并模板之后的更新（修 bug、新模块）         | [UPGRADING.md](../UPGRADING.md)（目录边界也在里面） |
+| 升级到模板的新版本（修 bug、新模块）         | [UPGRADING.md](../UPGRADING.md)（目录边界也在里面） |
 | 写业务功能放哪、怎么调用套件                 | [UPGRADING.md 的目录边界](../UPGRADING.md#目录边界) |
 | 新增一门语言                                 | [docs/i18n.md](i18n.md)                             |
 | 改界面样式、加组件                           | [docs/design.md](design.md)                         |
