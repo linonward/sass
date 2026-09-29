@@ -14,6 +14,7 @@ import {
   useRandomIp,
   withDatabase,
 } from "../auth-helpers";
+import { chooseOption } from "../select-helpers";
 
 const ad = messages.Admin;
 const d = messages.Dashboard;
@@ -119,7 +120,7 @@ test.describe("渠道报表", () => {
     // 精确匹配：页面上还有归因偏好那个 aside（aria-label 也以 Source 开头）。
     await expect(
       admin.getByLabel(ad.acquisition.filters.source, { exact: true }),
-    ).toHaveValue(source);
+    ).toHaveText(source);
 
     // 格式合法但没人用过的来源：不报错，讲清为什么是空的。
     await admin.goto("/admin/acquisition?source=e2e-never-used");
@@ -151,9 +152,10 @@ test.describe("渠道报表", () => {
     await expect(admin).toHaveURL(
       `/admin/acquisition?source=${source}&range=7`,
     );
-    await admin
-      .getByLabel(t.filters.medium, { exact: true })
-      .selectOption(medium);
+    await chooseOption(
+      admin.getByLabel(t.filters.medium, { exact: true }),
+      medium,
+    );
     await admin.getByRole("button", { name: t.filters.apply }).click();
 
     // GET 提交后地址栏就是规范形式：range 与两个筛选都在，没有空的死参数。
@@ -167,7 +169,7 @@ test.describe("渠道报表", () => {
     await expect(rows.getByRole("cell").nth(1)).toHaveText("1");
     await expect(
       admin.getByLabel(t.filters.source, { exact: true }),
-    ).toHaveValue(source);
+    ).toHaveText(source);
   });
 
   test("空参数被收成规范 URL，下拉跟着客户端跳转走", async () => {
@@ -187,7 +189,7 @@ test.describe("渠道报表", () => {
     );
     await expect(
       admin.getByLabel(t.filters.source, { exact: true }),
-    ).toHaveValue(source);
+    ).toHaveText(source);
 
     // 后退回到另一个筛选值：表格与下拉都该是 URL 里那一份。
     await admin.goto("/admin/acquisition?source=e2e-never-used");
@@ -197,7 +199,7 @@ test.describe("渠道报表", () => {
     );
     await expect(
       admin.getByLabel(t.filters.source, { exact: true }),
-    ).toHaveValue(source);
+    ).toHaveText(source);
     await expect(
       admin
         .getByRole("region", { name: t.channels.title })

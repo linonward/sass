@@ -16,7 +16,17 @@ import {
   DialogTrigger,
 } from "@/core/ui/dialog";
 import { Input } from "@/core/ui/input";
+import { FormField } from "@/core/ui/form-field";
+import { FormMessage } from "@/core/ui/form-message";
 import { Label } from "@/core/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/ui/select";
+import { SubmitButton } from "@/core/ui/submit-button";
 
 import {
   deleteAccount,
@@ -27,29 +37,20 @@ import {
 
 const idle: ActionState = { status: "idle" };
 
-function Status({ state }: { state: ActionState }) {
+/** The saved / error line every settings form shows under itself. */
+function useStatusMessage(state: ActionState) {
   const t = useTranslations("Account.status");
-  if (state.status === "idle") return null;
-  const error = state.status === "error";
-  return (
-    <p
-      role={error ? "alert" : "status"}
-      className={
-        error ? "text-destructive text-sm" : "text-muted-foreground text-sm"
-      }
-    >
-      {error ? t(state.error) : t("saved")}
-    </p>
-  );
+  return {
+    error: state.status === "error" ? t(state.error) : undefined,
+    success: state.status === "success" ? t("saved") : undefined,
+  };
 }
 
 export function NameForm({ name }: { name: string }) {
   const t = useTranslations("Account.name");
   const locale = useLocale();
-  const [state, action, pending] = useActionState(
-    updateName.bind(null, locale),
-    idle,
-  );
+  const [state, action] = useActionState(updateName.bind(null, locale), idle);
+  const message = useStatusMessage(state);
 
   return (
     <form
@@ -57,22 +58,20 @@ export function NameForm({ name }: { name: string }) {
       aria-label={t("label")}
       className="flex flex-col gap-3"
     >
-      <Label htmlFor="account-name">{t("label")}</Label>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          id="account-name"
-          name="name"
-          defaultValue={name}
-          maxLength={80}
-          required
-          autoComplete="name"
-          className="sm:max-w-sm"
-        />
-        <Button type="submit" disabled={pending}>
-          {pending ? t("saving") : t("save")}
-        </Button>
-      </div>
-      <Status state={state} />
+      <FormField label={t("label")}>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            name="name"
+            defaultValue={name}
+            maxLength={80}
+            required
+            autoComplete="name"
+            className="sm:max-w-sm"
+          />
+          <SubmitButton pendingLabel={t("saving")}>{t("save")}</SubmitButton>
+        </div>
+      </FormField>
+      <FormMessage {...message} />
     </form>
   );
 }
@@ -86,10 +85,8 @@ export function LocaleForm({
 }) {
   const t = useTranslations("Account.locale");
   const locale = useLocale();
-  const [state, action, pending] = useActionState(
-    updateLocale.bind(null, locale),
-    idle,
-  );
+  const [state, action] = useActionState(updateLocale.bind(null, locale), idle);
+  const message = useStatusMessage(state);
 
   return (
     <form
@@ -97,25 +94,28 @@ export function LocaleForm({
       aria-label={t("label")}
       className="flex flex-col gap-3"
     >
-      <Label htmlFor="account-locale">{t("label")}</Label>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <select
-          id="account-locale"
-          name="locale"
-          defaultValue={current}
-          className="border-border focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3 sm:max-w-sm"
-        >
-          {locales.map((l) => (
-            <option key={l} value={l} lang={l}>
-              {nativeName(l)}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" disabled={pending}>
-          {pending ? t("saving") : t("save")}
-        </Button>
-      </div>
-      <Status state={state} />
+      <FormField label={t("label")} labelFor="button">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Select
+            name="locale"
+            defaultValue={current}
+            items={locales.map((l) => ({ value: l, label: nativeName(l) }))}
+          >
+            <SelectTrigger className="w-full sm:max-w-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {locales.map((l) => (
+                <SelectItem key={l} value={l} lang={l}>
+                  {nativeName(l)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <SubmitButton pendingLabel={t("saving")}>{t("save")}</SubmitButton>
+        </div>
+      </FormField>
+      <FormMessage {...message} />
     </form>
   );
 }
@@ -129,6 +129,7 @@ export function DeleteAccount({ email }: { email: string }) {
     deleteAccount.bind(null, locale),
     idle,
   );
+  const message = useStatusMessage(state);
   const matches = confirm.trim().toLowerCase() === email.toLowerCase();
 
   return (
@@ -158,7 +159,7 @@ export function DeleteAccount({ email }: { email: string }) {
               inputMode="email"
             />
           </div>
-          <Status state={state} />
+          <FormMessage {...message} />
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>
               {t("cancel")}

@@ -11,6 +11,7 @@ import {
   useRandomIp,
   withDatabase,
 } from "./auth-helpers";
+import { chooseOption } from "./select-helpers";
 import siteConfig from "../site.config";
 
 const s = messages.Status;
@@ -186,8 +187,14 @@ test.describe("incident 从创建到恢复", () => {
     ).toBeVisible();
 
     const since = new Date(Date.now() - 1000);
-    await admin.getByLabel(ad.create.component).selectOption("api");
-    await admin.getByLabel(ad.create.status).selectOption("degraded");
+    await chooseOption(
+      admin.getByLabel(ad.create.component),
+      componentLabel("api"),
+    );
+    await chooseOption(
+      admin.getByLabel(ad.create.status),
+      s.statusLabel.degraded,
+    );
     await admin.getByLabel(ad.create.message).fill(message);
     await admin.getByRole("button", { name: ad.create.submit }).click();
     await expect(
@@ -229,7 +236,7 @@ test.describe("incident 从创建到恢复", () => {
     const admin = adminPage();
     await admin.goto("/admin/status");
     const panel = admin.getByRole("listitem").filter({ hasText: message });
-    await panel.getByLabel(ad.open.status).selectOption("outage");
+    await chooseOption(panel.getByLabel(ad.open.status), s.statusLabel.outage);
     await panel.getByLabel(ad.open.message).fill(updated);
     await panel.getByRole("button", { name: ad.open.update }).click();
     // 提交后这一行换了说明，原来的定位符不再匹配，按新说明重新找。

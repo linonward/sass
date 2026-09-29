@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import messages from "../messages/en.json";
 import { openUserMenu, signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
+import { chooseOption } from "./select-helpers";
 
 // 示例业务模块（src/features/invoices/）的端到端流程：登录 → 新建 → 出现在列表 →
 // 编辑 → 搜索 → 删除。删除示例时连同这个文件一起删掉。
@@ -40,7 +41,11 @@ async function createInvoice(
     customer,
     amount = "1250.00",
     status = "draft",
-  }: { customer: string; amount?: string; status?: string },
+  }: {
+    customer: string;
+    amount?: string;
+    status?: keyof typeof inv.form.status;
+  },
 ) {
   const form = await openDialog(
     page.getByTestId("invoice-create"),
@@ -48,7 +53,10 @@ async function createInvoice(
   );
   await form.getByLabel(inv.form.customerLabel).fill(customer);
   await form.getByLabel(inv.form.amountLabel).fill(amount);
-  await form.getByLabel(inv.form.statusLabel).selectOption(status);
+  await chooseOption(
+    form.getByLabel(inv.form.statusLabel),
+    inv.form.status[status],
+  );
   await form.getByTestId("invoice-create-submit").click();
 
   const created = page.getByRole("dialog", { name: inv.create.createdTitle });
@@ -102,7 +110,10 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
   await expect(edit.getByLabel(inv.form.amountLabel)).toHaveValue("1250.00");
   await edit.getByLabel(inv.form.customerLabel).fill("Globex");
   await edit.getByLabel(inv.form.amountLabel).fill("10.50");
-  await edit.getByLabel(inv.form.statusLabel).selectOption("paid");
+  await chooseOption(
+    edit.getByLabel(inv.form.statusLabel),
+    inv.form.status.paid,
+  );
   await edit.getByTestId("invoice-edit-submit").click();
   const saved = page.getByRole("dialog", { name: inv.edit.savedTitle });
   await expect(saved).toBeVisible();
@@ -155,6 +166,34 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
   await page.getByTestId("invoice-delete-confirm").click();
   await expect(row).toHaveCount(0);
   await expect(page.getByText(inv.empty)).toBeVisible();
+});
+
+// jsdom never ran React's post-action form reset, so the unit test for this
+// passed while real browsers cleared the fields. Lock it in a browser.
+test("a rejected create keeps what was typed and marks nothing as saved", async ({
+  page,
+  isMobile,
+}) => {
+  await signIn(page, uniqueEmail("invoices-invalid"));
+  await openInvoices(page, isMobile);
+  const form = await openDialog(
+    page.getByTestId("invoice-create"),
+    page.getByRole("dialog", { name: inv.create.title }),
+  );
+  await form.getByLabel(inv.form.customerLabel).fill("Keep Me");
+  await form.getByLabel(inv.form.amountLabel).fill("abc");
+  await chooseOption(
+    form.getByLabel(inv.form.statusLabel),
+    inv.form.status.sent,
+  );
+  await form.getByTestId("invoice-create-submit").click();
+
+  await expect(form.getByRole("alert")).toHaveText(inv.errors.invalid);
+  await expect(form.getByLabel(inv.form.customerLabel)).toHaveValue("Keep Me");
+  await expect(form.getByLabel(inv.form.amountLabel)).toHaveValue("abc");
+  await expect(form.getByLabel(inv.form.statusLabel)).toHaveText(
+    inv.form.status.sent,
+  );
 });
 
 test("越权：别人的发票既看不到也删不掉", async ({ page, isMobile }) => {

@@ -7,6 +7,13 @@ import { useId, useRef, useState } from "react";
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { Button, buttonVariants } from "@/core/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/ui/select";
 import { Textarea } from "@/core/ui/textarea";
 import { uploadFile } from "@/core/upload/client";
 
@@ -114,9 +121,6 @@ export function VideoStudio({
     }
   }
 
-  const selectClass =
-    "border-border dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2";
-
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={submit} className="flex flex-col gap-3">
@@ -124,39 +128,49 @@ export function VideoStudio({
           <label htmlFor={modelSelectId} className="font-medium">
             {t("model")}
           </label>
-          <select
+          <Select
             id={modelSelectId}
             value={modelId}
-            onChange={(event) => setModelId(event.target.value)}
+            onValueChange={(value) => value && setModelId(value)}
             disabled={submitting}
-            className={selectClass}
+            items={models.map((m) => ({
+              value: m.id,
+              label: `${m.id} · ${t(m.input === "image" ? "fromImage" : "fromText")}`,
+            }))}
           >
-            {models.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.id} · {t(m.input === "image" ? "fromImage" : "fromText")}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.id} · {t(m.input === "image" ? "fromImage" : "fromText")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {model.input === "text" && (
             <>
               <label htmlFor={ratioSelectId} className="font-medium">
                 {t("aspectRatio")}
               </label>
-              <select
+              <Select
                 id={ratioSelectId}
                 value={aspectRatio}
-                onChange={(event) =>
-                  setAspectRatio(event.target.value as typeof aspectRatio)
-                }
+                onValueChange={(value) => value && setAspectRatio(value)}
                 disabled={submitting}
-                className={selectClass}
               >
-                {aspectRatios.map((ratio) => (
-                  <option key={ratio} value={ratio}>
-                    {ratio}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {aspectRatios.map((ratio) => (
+                    <SelectItem key={ratio} value={ratio}>
+                      {ratio}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </>
           )}
           <span className="text-muted-foreground">

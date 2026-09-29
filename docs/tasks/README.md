@@ -171,7 +171,7 @@
 | T2407                       | landing-conversion      | `feat/landing-conversion`      | T2404                         | done |
 | **阶段 25：基础组件**       |                         |                                |                               |      |
 | T2500                       | foundation-components   | `docs/foundation-components`   | —                             | done |
-| T2501                       | form-fields             | `feat/form-fields`             | T2500                         | todo |
+| T2501                       | form-fields             | `feat/form-fields`             | T2500                         | done |
 | T2502                       | list-kit                | `feat/list-kit`                | T2501                         | todo |
 | T2503                       | confirm-action          | `feat/confirm-action`          | T2501                         | todo |
 | T2504                       | upload-field            | `feat/upload-field`            | T2501、T2306                  | todo |
@@ -211,7 +211,7 @@
 
 阶段 23 分三批（见 [phase-23-delivery.md](phase-23-delivery.md)）：批次 A（T2300–T2302）交付基础 —— 落卡、买家能升级、买家 agent 有指引；批次 B（T2303–T2305）收费业务的恢复能力 —— AI 任务不再悬着、计费异常可查可处理、事务邮件可补发；批次 C（T2306–T2308）真实交付 —— 作者按买家路径自验、候选发行包、首单放行。**没有外部试用**（T2310）：交付不可回收，验证全部前移到首单交付之前。**顺序是硬的**：`T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308`（T2303 之后 T2304 与 T2305 同改恢复入口，仍串行做）。本阶段暂停扩充通用功能（多租户、SSO、更多支付商/模型/主题、营销自动化、AI 成本分析均不做），共同约束、五种必须实测的结算场景与需要外部输入的阻塞项写在阶段文档开头。
 
-阶段 25 只收「组合层」组件（见 [phase-25-foundation-components.md](phase-25-foundation-components.md)）：T2501 统一表单（shadcn Select / Field / Checkbox / Switch，外加自动接可访问关联的 `FormField`）、T2502 列表（把后台的分页筛选挪到 `src/core/ui/` 给产品面用）、T2503 确认操作、T2504 上传控件、T2505 账户安全入口（改邮箱与登录设备）。每个新组件至少替换一个现有页面，只新增不迁移的不合入。T2504 等 T2306 参考产品给出真实需求再定范围；套餐权益判断记在阶段文档开头，等真实业务驱动再开卡。
+阶段 25 只收「组合层」组件（见 [phase-25-foundation-components.md](phase-25-foundation-components.md)）：T2501 统一表单（shadcn Select / Checkbox，基于 Base UI Field 自动接可访问关联的 `FormField`，`FormMessage` / `SubmitButton`）、T2502 列表（把后台的分页筛选挪到 `src/core/ui/` 给产品面用）、T2503 确认操作、T2504 上传控件、T2505 账户安全入口（改邮箱与登录设备）。每个新组件至少替换一个现有页面，只新增不迁移的不合入。T2504 等 T2306 参考产品给出真实需求再定范围；套餐权益判断记在阶段文档开头，等真实业务驱动再开卡。
 
 ## 依赖图
 

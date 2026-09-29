@@ -3,9 +3,10 @@
 import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 
-import { Button } from "@/core/ui/button";
+import { FormField } from "@/core/ui/form-field";
+import { FormMessage } from "@/core/ui/form-message";
 import { Input } from "@/core/ui/input";
-import { Label } from "@/core/ui/label";
+import { SubmitButton } from "@/core/ui/submit-button";
 
 import {
   adjustCreditsAction,
@@ -16,29 +17,18 @@ import {
 
 const idle: AdminActionState = { status: "idle" };
 
-function Status({
-  state,
-  success,
-}: {
-  state: AdminActionState;
-  success?: string;
-}) {
+/** The error / success line under an admin form. */
+function useAdminMessage(state: AdminActionState, success?: string) {
   const t = useTranslations("Admin");
-  if (state.status === "error") {
-    return (
-      <p role="alert" className="text-destructive text-sm">
-        {t(`errors.${state.error}`)}
-      </p>
-    );
-  }
-  if (state.status === "success" && success) {
-    return (
-      <p role="status" className="text-muted-foreground text-sm">
-        {state.duplicate ? t("user.duplicate") : success}
-      </p>
-    );
-  }
-  return null;
+  return {
+    error: state.status === "error" ? t(`errors.${state.error}`) : undefined,
+    success:
+      state.status === "success" && success
+        ? state.duplicate
+          ? t("user.duplicate")
+          : success
+        : undefined,
+  };
 }
 
 /**
@@ -53,7 +43,8 @@ export function AdjustCreditsForm({
   requestId: string;
 }) {
   const t = useTranslations("Admin.user");
-  const [state, action, pending] = useActionState(adjustCreditsAction, idle);
+  const [state, action] = useActionState(adjustCreditsAction, idle);
+  const message = useAdminMessage(state, t("adjusted"));
   const form = useRef<HTMLFormElement>(null);
   const nextRequestId =
     state.status === "success" ? state.nextRequestId : undefined;
@@ -76,37 +67,27 @@ export function AdjustCreditsForm({
         value={nextRequestId ?? requestId}
       />
       <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="adjust-amount">{t("amount")}</Label>
+        <FormField label={t("amount")} description={t("amountHint")}>
           <Input
-            id="adjust-amount"
             name="amount"
             type="number"
             step={1}
             required
             inputMode="numeric"
-            aria-describedby="adjust-amount-hint"
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="adjust-reason">{t("reason")}</Label>
+        </FormField>
+        <FormField label={t("reason")}>
           <Input
-            id="adjust-reason"
             name="reason"
             required
             maxLength={500}
             placeholder={t("reasonPlaceholder")}
           />
-        </div>
+        </FormField>
       </div>
-      <p id="adjust-amount-hint" className="text-muted-foreground text-xs">
-        {t("amountHint")}
-      </p>
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {t("adjust")}
-        </Button>
-        <Status state={state} success={t("adjusted")} />
+        <SubmitButton>{t("adjust")}</SubmitButton>
+        <FormMessage {...message} />
       </div>
     </form>
   );
@@ -121,10 +102,11 @@ export function BanForm({
   banned: boolean;
 }) {
   const t = useTranslations("Admin.user");
-  const [state, action, pending] = useActionState(
+  const [state, action] = useActionState(
     banned ? unbanUserAction : banUserAction,
     idle,
   );
+  const message = useAdminMessage(state);
 
   return (
     <form
@@ -134,20 +116,15 @@ export function BanForm({
     >
       <input type="hidden" name="userId" value={userId} />
       {!banned && (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="ban-reason">{t("banReason")}</Label>
-          <Input id="ban-reason" name="reason" maxLength={500} />
-        </div>
+        <FormField label={t("banReason")}>
+          <Input name="reason" maxLength={500} />
+        </FormField>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        <Button
-          type="submit"
-          variant={banned ? "outline" : "destructive"}
-          disabled={pending}
-        >
+        <SubmitButton variant={banned ? "outline" : "destructive"}>
           {banned ? t("unban") : t("ban")}
-        </Button>
-        <Status state={state} />
+        </SubmitButton>
+        <FormMessage {...message} />
       </div>
     </form>
   );

@@ -1,8 +1,14 @@
 import { useTranslations } from "next-intl";
 
-import { cn } from "@/core/lib/utils";
 import { Button } from "@/core/ui/button";
 import { Label } from "@/core/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/ui/select";
 
 import {
   NO_SOURCE_BUCKET,
@@ -14,15 +20,11 @@ import {
  * 渠道筛选：GET 表单，取值在 URL 里（可分享、可刷新），服务端按 context.ts 的
  * 规则重新校验（见 parseReportFilters）。
  *
- * 用原生 select 而不是像 status 筛选那样铺一排链接：三个维度组合起来链接会有几十条，
- * 而且只有取值多的时候才需要它。外观照 `Input`（含深色填充、禁用与 aria-invalid 态），
- * 产品语域用同一条发丝边；`text-base md:text-sm` 不能省 —— 小字号会让 iOS Safari
- * 在聚焦时把整页放大。
+ * Uses selects rather than a row of links like the status filter: three dimensions
+ * combined would be dozens of links, and it only matters when there are many values.
+ * Each select is a Base UI Select; the hidden input rendered for `name` carries the
+ * value into the URL with the GET form.
  */
-const selectClass = cn(
-  "border-border focus-visible:border-ring focus-visible:ring-ring/50 disabled:bg-input/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 h-8 min-w-40 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 md:text-sm",
-);
-
 /**
  * 合成桶（没有归因行 / 已撤回）显示成文案里的名字；快照里的取值原样显示 —— 真的把
  * utm_source 填成 unknown 的流量是独立的一行，不能和「没有归因」显示成同一个词。
@@ -79,6 +81,18 @@ export function ReportFilters({
     },
   ];
 
+  // "All" is the empty string: it submits as `?source=`, and the page treats an
+  // empty value as absent on the server.
+  const withItems = (field: (typeof fields)[number]) => ({
+    ...field,
+    items: [
+      { value: "", label: field.any },
+      ...[...new Set([...field.values, ...(field.value ? [field.value] : [])])]
+        .sort((a, b) => a.localeCompare(b))
+        .map((value) => ({ value, label: field.format(value) })),
+    ],
+  });
+
   // 换了 searchParams 的客户端跳转不会重新挂载节点，React 也就不再把新的
   // defaultValue 应用到 select 的当前值上（实测：同树更新后框里停在旧值，
   // 只有重挂才会变），于是下拉显示的筛选和表格实际用的筛选会对不上。
@@ -99,31 +113,28 @@ export function ReportFilters({
     >
       {/* 30 天是默认值，不写进 URL（和 RangeFilter 一致）。 */}
       {range !== 30 && <input type="hidden" name="range" value={range} />}
-      {fields.map((field) => (
+      {fields.map(withItems).map((field) => (
         <div key={field.name} className="grid gap-1.5">
           <Label htmlFor={`filter-${field.name}`}>{field.label}</Label>
-          <select
+          <Select
             id={`filter-${field.name}`}
             name={field.name}
             // 手写的 URL 里可能是一个当前数据里没有的取值：带上它，
             // 框里才不会显示成「全部」而结果却是空的。
             defaultValue={field.value ?? ""}
-            className={selectClass}
+            items={field.items}
           >
-            <option value="">{field.any}</option>
-            {[
-              ...new Set([
-                ...field.values,
-                ...(field.value ? [field.value] : []),
-              ]),
-            ]
-              .sort((a, b) => a.localeCompare(b))
-              .map((value) => (
-                <option key={value} value={value}>
-                  {field.format(value)}
-                </option>
+            <SelectTrigger className="min-w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {field.items.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
               ))}
-          </select>
+            </SelectContent>
+          </Select>
         </div>
       ))}
       {/* 这一屏唯一的实心主操作。 */}
