@@ -4,11 +4,11 @@ import { adminMetadata } from "@/core/admin/metadata";
 import { planLabel } from "@/core/admin/plan-name";
 import {
   listSubscriptions,
-  parsePage,
   parseSubscriptionStatus,
 } from "@/core/admin/queries";
+import { parsePage } from "@/core/lib/pagination";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow, Pagination, StatusFilter } from "@/core/admin/ui/list";
+import { EmptyRow, Pagination, StatusFilter } from "@/core/ui/list";
 import {
   subscriptionStatuses,
   type SubscriptionStatus,
@@ -91,7 +91,13 @@ export default async function AdminSubscriptionsPage({
         </TableHeader>
         <TableBody>
           {data.rows.length === 0 && (
-            <EmptyRow colSpan={6} text={t("subscriptions.empty")} />
+            <EmptyRow
+              colSpan={6}
+              text={t("subscriptions.empty")}
+              filtered={
+                status ? { pathname: "/admin/subscriptions" } : undefined
+              }
+            />
           )}
           {data.rows.map((sub) => (
             <TableRow key={sub.id}>

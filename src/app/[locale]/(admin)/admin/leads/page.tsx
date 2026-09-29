@@ -9,9 +9,9 @@ import {
   type LeadRow,
   type LeadStatus,
 } from "@/core/admin/leads-queries";
-import { parsePage } from "@/core/admin/queries";
+import { parsePage } from "@/core/lib/pagination";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow, Pagination, StatusFilter } from "@/core/admin/ui/list";
+import { EmptyRow, Pagination, StatusFilter } from "@/core/ui/list";
 import { getDb } from "@/core/db";
 import { localizedPath } from "@/core/seo/urls";
 import { Badge } from "@/core/ui/badge";
@@ -136,7 +136,15 @@ export default async function AdminLeadsPage({ params, searchParams }: Props) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.rows.length === 0 && <EmptyRow colSpan={7} text={t("empty")} />}
+          {data.rows.length === 0 && (
+            <EmptyRow
+              colSpan={7}
+              text={t("empty")}
+              filtered={
+                status || email ? { pathname: "/admin/leads" } : undefined
+              }
+            />
+          )}
           {data.rows.map((row) => (
             <TableRow key={row.id}>
               <TableCell className="max-w-48">

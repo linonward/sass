@@ -1,9 +1,9 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 
 import { adminMetadata } from "@/core/admin/metadata";
-import { parsePage } from "@/core/admin/queries";
+import { parsePage } from "@/core/lib/pagination";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow, Pagination, StatusFilter } from "@/core/admin/ui/list";
+import { EmptyRow, Pagination, StatusFilter } from "@/core/ui/list";
 import {
   billingExceptionKinds,
   billingExceptionStatuses,
@@ -202,7 +202,15 @@ export default async function AdminExceptionsPage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.rows.length === 0 && <EmptyRow colSpan={6} text={t("empty")} />}
+          {data.rows.length === 0 && (
+            <EmptyRow
+              colSpan={6}
+              text={t("empty")}
+              filtered={
+                status || kind ? { pathname: "/admin/exceptions" } : undefined
+              }
+            />
+          )}
           {data.rows.map((row) => (
             <TableRow
               key={row.id}

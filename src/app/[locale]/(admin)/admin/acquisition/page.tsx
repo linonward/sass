@@ -6,7 +6,7 @@ import { metricWindow, parseRange } from "@/core/admin/metrics";
 import { formatMoneyList } from "@/core/admin/money";
 import { revenueEnabled } from "@/core/admin/sections";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow, cleanQuery } from "@/core/admin/ui/list";
+import { EmptyRow, cleanQuery } from "@/core/ui/list";
 import { MetricSection, RangeFilter } from "@/core/admin/ui/metrics";
 import {
   getAcquisitionReport,

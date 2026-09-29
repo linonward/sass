@@ -416,9 +416,14 @@ test.describe("管理员", () => {
       ["/admin/subscriptions", messages.Billing.page.status.active],
     ] as const) {
       await admin.goto(path);
-      const filter = admin.getByRole("navigation", { name: ad.filter.label });
+      const filter = admin.getByRole("navigation", {
+        name: messages.Common.list.filterLabel,
+      });
       await expect(
-        filter.getByRole("link", { name: ad.filter.all, exact: true }),
+        filter.getByRole("link", {
+          name: messages.Common.list.all,
+          exact: true,
+        }),
       ).toHaveAttribute("aria-current", "page");
       await filter.getByRole("link", { name: label, exact: true }).click();
       await expect(admin).toHaveURL(new RegExp(`${path}\\?status=`));

@@ -12,7 +12,7 @@ import {
 import { formatMoney, formatMoneyList } from "@/core/admin/money";
 import { revenueEnabled } from "@/core/admin/sections";
 import { requireAdmin } from "@/core/admin/session";
-import { EmptyRow } from "@/core/admin/ui/list";
+import { EmptyRow } from "@/core/ui/list";
 import {
   ChartGrid,
   DailyColumns,

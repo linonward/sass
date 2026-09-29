@@ -172,7 +172,7 @@
 | **阶段 25：基础组件**       |                         |                                |                               |      |
 | T2500                       | foundation-components   | `docs/foundation-components`   | —                             | done |
 | T2501                       | form-fields             | `feat/form-fields`             | T2500                         | done |
-| T2502                       | list-kit                | `feat/list-kit`                | T2501                         | todo |
+| T2502                       | list-kit                | `feat/list-kit`                | T2501                         | done |
 | T2503                       | confirm-action          | `feat/confirm-action`          | T2501                         | done |
 | T2504                       | upload-field            | `feat/upload-field`            | T2501、T2306                  | todo |
 | T2505                       | account-security        | `feat/account-security`        | T2503                         | todo |

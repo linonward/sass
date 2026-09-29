@@ -126,11 +126,22 @@ T2306 ─────────┴→ T2504
 
 **验收**
 
-- [ ] `src/features/invoices/page.tsx` 里不再有 `cleanQuery` / `Pagination` 的本地实现
-- [ ] `src/core/ui/` 下的列表组件不 import `@/core/admin/**`
-- [ ] 搜索 + 筛选 + 翻页组合时查询参数互相保留，第 1 页不写 `page`（单测覆盖 `cleanQuery`）
-- [ ] 有条件无结果时出现清除链接，点了回到无条件列表
-- [ ] `pnpm test`、`ui-shell` + `landing`、`e2e/invoices.spec.ts` 与后台列表相关 e2e 通过
+- [x] `src/features/invoices/page.tsx` 里不再有 `cleanQuery` / `Pagination` 的本地实现
+- [x] `src/core/ui/` 下的列表组件不 import `@/core/admin/**`
+- [x] 搜索 + 筛选 + 翻页组合时查询参数互相保留，第 1 页不写 `page`（单测覆盖 `cleanQuery`、`ListToolbar` 的隐藏字段、`StatusFilter` / `Pagination` 的链接）
+- [x] 有条件无结果时出现清除链接，点了回到无条件列表（`e2e/invoices.spec.ts` 在浏览器里走一遍）
+- [x] `pnpm test`、`ui-shell` + `landing`、`e2e/invoices.spec.ts` 与后台列表相关 e2e 通过
+
+**实施记录（与上面「做」的出入）**
+
+- **位置**：`cleanQuery` / `ListToolbar` / `StatusFilter` / `Pagination` / `EmptyRow` 在 `src/core/ui/list.tsx`；`parsePage` 不是 UI，放 `src/core/lib/pagination.ts`（后台各页和发票示例都从这里 import，`core/admin/queries.ts` 与发票 `queries.ts` 里的两份已删）。
+- **`admin/ui/list.tsx` 改名为 `admin/ui/badges.tsx`**：挪走通用件之后只剩 `RoleBadge` / `UserStatusBadge`，文件名跟着内容走；不留转发导出（两条 import 路径只会制造漂移）。
+- **文案**：新增 `Common.list`（中英）；`Admin.pagination`、`Admin.filter.label` / `all`、`Invoices.pagination` 已无引用，删掉。`Admin.filter.range` 仍被数据页的时间范围切换使用，保留。
+- **「无结果」是 `EmptyRow` 的 `filtered` 参数**，不是另一个组件：传了就把文案换成「没有符合条件的结果」并给出「清除筛选」链接（`keep` 用来保留不算筛选的参数，如时间范围）。除卡上的发票与用户页，订单、订阅、计费异常、邀请关系、线索这几个带状态筛选的后台列表也一并接上；**渠道报表没接** —— 它的空文案在解释「归因开启前的注册会落在无归因」，比通用的「无结果」有用，且 `report.spec.ts` 锁着这段文案。
+- **`ListToolbar` 的表单按搜索词加 `key`**：同路由的客户端跳转（点「清除筛选」、前进后退）不会重挂载，不加的话非受控输入框会停在旧词上而表格已经是新结果（和 `report-filters.tsx` 同一个坑）。
+- **线索页的搜索没迁**：它按 `?email=` 搜，且和导出链接排在一起，换成 `ListToolbar` 要重排那一栏；只接了 `filtered`。另外它的 `StatusFilter` 点击时会丢掉当前的 email 搜索（没把 `email` 传进 `query`），是原有行为，没改。
+- **发票 e2e 不再用 `data-testid="invoice-search"`**，改成按可访问名找 `searchbox`。
+- `EmptyRow` 里的「清除筛选」链接要过一遍 `cn()`：`buttonVariants()` 自己不做 tailwind-merge，基础串里的 `border-transparent` 会盖掉 outline 的描边，亮色下链接没有边（实测后修正）。仓库里还有几处 `className={buttonVariants({ variant: "outline" })}` 直接用（如 `billing/ui/checkout-status.tsx`），可能有同样的问题，不在本卡范围。
 
 ---
 

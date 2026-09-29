@@ -33,7 +33,17 @@
   },
   "Common": {
     "close": "Close",
-    "effectiveDate": "Effective date:"
+    "effectiveDate": "Effective date:",
+    "list": {
+      "filterLabel": "Filter by status",
+      "all": "All",
+      "pagination": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "summary": "Page {page} of {totalPages} · {total, number} total",
+      "noResults": "Nothing matches these filters.",
+      "clearFilters": "Clear filters"
+    }
   },
   "NotFound": {
     "title": "Page not found",
@@ -1175,18 +1185,10 @@
       "refunded": "Refunded"
     },
     "filter": {
-      "label": "Filter by status",
-      "all": "All",
       "range": {
         "label": "Time range",
         "days": "{days} days"
       }
-    },
-    "pagination": {
-      "label": "Pagination",
-      "previous": "Previous",
-      "next": "Next",
-      "summary": "Page {page} of {totalPages} · {total, number} total"
     },
     "errors": {
       "forbidden": "You don't have permission to do that.",
@@ -1368,12 +1370,6 @@
       "sent": "Sent",
       "paid": "Paid",
       "void": "Void"
-    },
-    "pagination": {
-      "label": "Pagination",
-      "summary": "Page {page} of {totalPages} · {total, number} total",
-      "previous": "Previous",
-      "next": "Next"
     },
     "create": {
       "open": "New invoice",

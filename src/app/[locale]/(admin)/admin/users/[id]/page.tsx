@@ -9,7 +9,7 @@ import { planLabel } from "@/core/admin/plan-name";
 import { getUserDetail } from "@/core/admin/queries";
 import { requireAdmin } from "@/core/admin/session";
 import { AdjustCreditsForm, BanForm } from "@/core/admin/ui/forms";
-import { RoleBadge, UserStatusBadge } from "@/core/admin/ui/list";
+import { RoleBadge, UserStatusBadge } from "@/core/admin/ui/badges";
 import { creditsEnabled } from "@/core/credits";
 import { getDb } from "@/core/db";
 import { Link } from "@/core/i18n/navigation";
