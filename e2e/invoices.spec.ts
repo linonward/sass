@@ -168,6 +168,34 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
   await expect(page.getByText(inv.empty)).toBeVisible();
 });
 
+// jsdom never ran React's post-action form reset, so the unit test for this
+// passed while real browsers cleared the fields. Lock it in a browser.
+test("a rejected create keeps what was typed and marks nothing as saved", async ({
+  page,
+  isMobile,
+}) => {
+  await signIn(page, uniqueEmail("invoices-invalid"));
+  await openInvoices(page, isMobile);
+  const form = await openDialog(
+    page.getByTestId("invoice-create"),
+    page.getByRole("dialog", { name: inv.create.title }),
+  );
+  await form.getByLabel(inv.form.customerLabel).fill("Keep Me");
+  await form.getByLabel(inv.form.amountLabel).fill("abc");
+  await chooseOption(
+    form.getByLabel(inv.form.statusLabel),
+    inv.form.status.sent,
+  );
+  await form.getByTestId("invoice-create-submit").click();
+
+  await expect(form.getByRole("alert")).toHaveText(inv.errors.invalid);
+  await expect(form.getByLabel(inv.form.customerLabel)).toHaveValue("Keep Me");
+  await expect(form.getByLabel(inv.form.amountLabel)).toHaveValue("abc");
+  await expect(form.getByLabel(inv.form.statusLabel)).toHaveText(
+    inv.form.status.sent,
+  );
+});
+
 test("越权：别人的发票既看不到也删不掉", async ({ page, isMobile }) => {
   await signIn(page, uniqueEmail("invoices-owner"));
   await page.goto("/invoices");

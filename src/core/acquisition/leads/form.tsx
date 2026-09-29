@@ -2,6 +2,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/core/ui/button";
+import { Checkbox } from "@/core/ui/checkbox";
 import { Input } from "@/core/ui/input";
 import { Label } from "@/core/ui/label";
 
@@ -66,12 +67,7 @@ export function LeadForm({
         </label>
       </div>
       <label className="flex min-h-10 items-start gap-3 text-sm">
-        <input
-          type="checkbox"
-          name="consent"
-          required
-          className="accent-primary mt-1 size-5 shrink-0"
-        />
+        <Checkbox name="consent" required className="mt-0.5 size-5" />
         <span>{consentText}</span>
       </label>
       <Button type="submit" size="marketing" tone="primary" disabled={busy}>
