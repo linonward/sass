@@ -7,6 +7,8 @@ import messages from "../../../messages/en.json";
 
 import { NO_SOURCE_BUCKET } from "./report";
 import type { FilterOptions } from "./report";
+import { chooseOption, optionLabels, selectedValue } from "@/core/ui/testing";
+
 import { ReportFilters, sourceLabel } from "./report-filters";
 
 describe("sourceLabel", () => {
@@ -54,52 +56,60 @@ function renderFilters(
   };
 }
 
-/** 下拉当前显示的值（仓库的测试不装 jest-dom，直接读 DOM）。 */
-const shown = (label: string) =>
-  (screen.getByLabelText(label, { exact: true }) as HTMLSelectElement).value;
+/** The select's current value, read from its hidden input (no jest-dom here; read the DOM). */
+const shown = (name: string) => selectedValue(document.body, name);
 
-const select = (label: string) =>
-  screen.getByLabelText(label, { exact: true }) as HTMLSelectElement;
+const trigger = (label: string) =>
+  screen.getByLabelText(label, { exact: true });
 
 describe("渠道筛选", () => {
   test("URL 的筛选变化后，下拉显示跟着变", () => {
     const view = renderFilters({});
-    const source = messages.Admin.acquisition.filters.source;
-    expect(shown(source)).toBe("");
+    const source = messages.Admin.acquisition.filters;
+    expect(shown("source")).toBe("");
+    expect(trigger(source.source).textContent).toContain(source.allSources);
 
     view.show({ source: "twitter" });
-    expect(shown(source)).toBe("twitter");
+    expect(shown("source")).toBe("twitter");
+    expect(trigger(source.source).textContent).toContain("twitter");
 
     // 回到不带筛选的 URL：下拉也回到「全部」。
     view.show({});
-    expect(shown(source)).toBe("");
+    expect(shown("source")).toBe("");
+    expect(trigger(source.source).textContent).toContain(source.allSources);
   });
 
   test("手写 URL 里数据中没有的取值也留在框里", () => {
     renderFilters({ source: "e2e-never-used" });
-    expect(shown(messages.Admin.acquisition.filters.source)).toBe(
-      "e2e-never-used",
-    );
+    expect(shown("source")).toBe("e2e-never-used");
+    expect(
+      trigger(messages.Admin.acquisition.filters.source).textContent,
+    ).toContain("e2e-never-used");
   });
 
   // 表格里出现的每一行都要能选到，包括「没有可用归因」那一行：筛选框里的取值来自
   // getFilterOptions，它同时喂给表格和下拉，两边必须是同一份。
-  test("合成桶在下拉里是自己的选项，显示成文案里的名字", () => {
+  test("合成桶在下拉里是自己的选项，显示成文案里的名字", async () => {
     renderFilters(
       { source: NO_SOURCE_BUCKET },
       { ...options, sources: [NO_SOURCE_BUCKET, "twitter"] },
     );
-    const source = messages.Admin.acquisition.filters.source;
-    const entries = [...select(source).options].map((option) => [
-      option.value,
-      option.textContent,
-    ]);
-    expect(entries).toContainEqual([
-      NO_SOURCE_BUCKET,
-      messages.Admin.acquisition.unknown,
-    ]);
-    expect(entries).toContainEqual(["twitter", "twitter"]);
+    const source = trigger(messages.Admin.acquisition.filters.source);
+    expect(await optionLabels(source)).toEqual(
+      expect.arrayContaining([messages.Admin.acquisition.unknown, "twitter"]),
+    );
     // 选中的就是它自己：显示成「No attribution」的那一项，值仍是合成桶的取值。
-    expect(select(source).value).toBe(NO_SOURCE_BUCKET);
+    expect(source.textContent).toContain(messages.Admin.acquisition.unknown);
+    expect(shown("source")).toBe(NO_SOURCE_BUCKET);
+  });
+
+  test("a chosen value submits with the GET form", async () => {
+    const view = renderFilters({});
+    await chooseOption(
+      trigger(messages.Admin.acquisition.filters.source),
+      "twitter",
+    );
+    const form = view.container.querySelector("form")!;
+    expect(new FormData(form).get("source")).toBe("twitter");
   });
 });

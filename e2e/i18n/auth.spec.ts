@@ -11,7 +11,12 @@ import {
   uniqueEmail,
   useRandomIp,
 } from "../auth-helpers";
+import { chooseOption } from "../select-helpers";
 import { i18nCopyDir, pseudoTranslate, TEST_LOCALE } from "./test-locale";
+
+/** How the locale select labels a language (same as `nativeName` in the locale switcher). */
+const nativeName = (locale: string) =>
+  new Intl.DisplayNames([locale], { type: "language" }).of(locale) ?? locale;
 
 const copy = pseudoTranslate(en);
 
@@ -71,9 +76,10 @@ test("设置偏好语言后界面切换到该语言，并保存到用户资料",
   await expect(page).toHaveURL("/onboarding");
   await page.goto("/settings");
   const form = page.getByRole("form", { name: en.Account.locale.label });
-  await form
-    .getByRole("combobox", { name: en.Account.locale.label })
-    .selectOption(TEST_LOCALE);
+  await chooseOption(
+    form.getByRole("combobox", { name: en.Account.locale.label }),
+    nativeName(TEST_LOCALE),
+  );
   await form.getByRole("button", { name: en.Account.locale.save }).click();
 
   await expect(page).toHaveURL(`/${TEST_LOCALE}/settings`);
@@ -83,5 +89,5 @@ test("设置偏好语言后界面切换到该语言，并保存到用户资料",
   );
   await expect(
     page.getByRole("combobox", { name: copy.Account.locale.label }),
-  ).toHaveValue(TEST_LOCALE);
+  ).toHaveText(nativeName(TEST_LOCALE));
 });

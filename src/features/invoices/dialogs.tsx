@@ -16,6 +16,13 @@ import {
 } from "@/core/ui/dialog";
 import { Input } from "@/core/ui/input";
 import { Label } from "@/core/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/ui/select";
 
 import {
   createInvoice,
@@ -31,10 +38,6 @@ import { invoiceStatuses, type InvoiceStatus } from "./schema";
 // 套件自己的弹层就是这么写的（src/core/api-keys/dialogs.tsx 的 RevokeKeyDialog）。
 
 const idle: InvoiceActionState = { status: "idle" };
-
-/** 原生 select 的外观照 `Input`（同一条串在 status/admin-forms.tsx；Tailwind 只认字面量）。 */
-const selectClass =
-  "border-border focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50";
 
 export type InvoiceDraft = {
   id: string;
@@ -95,18 +98,26 @@ function InvoiceFields({
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${id}-status`}>{t("statusLabel")}</Label>
-        <select
+        <Select
           id={`${id}-status`}
           name="status"
-          className={selectClass}
           defaultValue={invoice?.status ?? "draft"}
+          items={invoiceStatuses.map((status) => ({
+            value: status,
+            label: t(`status.${status}`),
+          }))}
         >
-          {invoiceStatuses.map((status) => (
-            <option key={status} value={status}>
-              {t(`status.${status}`)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {invoiceStatuses.map((status) => (
+              <SelectItem key={status} value={status}>
+                {t(`status.${status}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </>
   );

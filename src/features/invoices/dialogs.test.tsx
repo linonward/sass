@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import en from "../../../messages/en.json";
+import { chooseOption, selectedValue } from "@/core/ui/testing";
 import {
   CreateInvoiceDialog,
   DeleteInvoiceDialog,
@@ -151,14 +152,12 @@ describe("EditInvoiceDialog", () => {
         ) as HTMLInputElement
       ).value,
     ).toBe("Acme Inc.");
-    expect(
-      (screen.getByLabelText(en.Invoices.form.statusLabel) as HTMLSelectElement)
-        .selectedOptions[0]!.value,
-    ).toBe("draft");
+    expect(selectedValue(document.body, "status")).toBe("draft");
 
-    fireEvent.change(screen.getByLabelText(en.Invoices.form.statusLabel), {
-      target: { value: "paid" },
-    });
+    await chooseOption(
+      screen.getByLabelText(en.Invoices.form.statusLabel),
+      en.Invoices.form.status.paid,
+    );
     fireEvent.click(screen.getByTestId("invoice-edit-submit"));
 
     await waitFor(() =>

@@ -6,6 +6,13 @@ import { useId, useState } from "react";
 
 import { Link } from "@/core/i18n/navigation";
 import { Button, buttonVariants } from "@/core/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/ui/select";
 import { Textarea } from "@/core/ui/textarea";
 
 import { imageErrorCode, type ImageErrorCode } from "./errors";
@@ -77,37 +84,47 @@ export function ImageStudio({
           <label htmlFor={modelSelectId} className="font-medium">
             {t("model")}
           </label>
-          <select
+          <Select
             id={modelSelectId}
             value={modelId}
-            onChange={(event) => setModelId(event.target.value)}
+            onValueChange={(value) => value && setModelId(value)}
             disabled={busy}
-            className="border-border dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
+            items={models.map((model) => ({
+              value: model.id,
+              label: model.id,
+            }))}
           >
-            {models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.id}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  {model.id}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <label htmlFor={ratioSelectId} className="font-medium">
             {t("aspectRatio")}
           </label>
-          <select
+          <Select
             id={ratioSelectId}
             value={aspectRatio}
-            onChange={(event) =>
-              setAspectRatio(event.target.value as typeof aspectRatio)
-            }
+            onValueChange={(value) => value && setAspectRatio(value)}
             disabled={busy}
-            className="border-border dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
           >
-            {aspectRatios.map((ratio) => (
-              <option key={ratio} value={ratio}>
-                {ratio}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {aspectRatios.map((ratio) => (
+                <SelectItem key={ratio} value={ratio}>
+                  {ratio}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span className="text-muted-foreground">
             {cost > 0 ? t("cost", { cost }) : t("free")}
           </span>

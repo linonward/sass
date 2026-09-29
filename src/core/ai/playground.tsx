@@ -9,6 +9,13 @@ import { memo, useCallback, useId, useState } from "react";
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { Button, buttonVariants } from "@/core/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/ui/select";
 import { EmptyState } from "@/core/ui/empty-state";
 import { Input } from "@/core/ui/input";
 
@@ -182,19 +189,23 @@ export function Playground({
         <label htmlFor={selectId} className="font-medium">
           {t("model")}
         </label>
-        <select
+        <Select
           id={selectId}
           value={modelId}
-          onChange={(event) => setModelId(event.target.value)}
+          onValueChange={(value) => value && setModelId(value)}
           disabled={busy}
-          className="border-border dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2"
         >
-          {models.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.id}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {models.map((model) => (
+              <SelectItem key={model.id} value={model.id}>
+                {model.id}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="text-muted-foreground">
           {cost > 0 ? t("cost", { cost }) : t("free")}
         </span>

@@ -17,6 +17,13 @@ import {
 } from "@/core/ui/dialog";
 import { Input } from "@/core/ui/input";
 import { Label } from "@/core/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/ui/select";
 
 import {
   deleteAccount,
@@ -99,18 +106,23 @@ export function LocaleForm({
     >
       <Label htmlFor="account-locale">{t("label")}</Label>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <select
+        <Select
           id="account-locale"
           name="locale"
           defaultValue={current}
-          className="border-border focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3 sm:max-w-sm"
+          items={locales.map((l) => ({ value: l, label: nativeName(l) }))}
         >
-          {locales.map((l) => (
-            <option key={l} value={l} lang={l}>
-              {nativeName(l)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full sm:max-w-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {locales.map((l) => (
+              <SelectItem key={l} value={l} lang={l}>
+                {nativeName(l)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button type="submit" disabled={pending}>
           {pending ? t("saving") : t("save")}
         </Button>

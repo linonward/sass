@@ -4,10 +4,16 @@ import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 
 import type { StatusEventStatus } from "@/core/db/schema/status";
-import { cn } from "@/core/lib/utils";
 import { Button } from "@/core/ui/button";
 import { Input } from "@/core/ui/input";
 import { Label } from "@/core/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/core/ui/select";
 import { Textarea } from "@/core/ui/textarea";
 
 import {
@@ -16,15 +22,6 @@ import {
   updateIncidentAction,
   type StatusActionState,
 } from "./actions";
-
-/**
- * 原生 select 的外观照 `Input`，产品语域用同一条发丝边。
- * （`acquisition/report-filters.tsx` 有一份同样的串；两处都必须是字面量，
- * Tailwind 扫源码文本才生成得出这些 class。）
- */
-const selectClass = cn(
-  "border-border focus-visible:border-ring focus-visible:ring-ring/50 h-8 min-w-36 rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50",
-);
 
 const idle: StatusActionState = { status: "idle" };
 
@@ -49,19 +46,26 @@ function LevelSelect({
 }) {
   const t = useTranslations("Status");
   return (
-    <select
+    <Select
       id={id}
       name={name}
       defaultValue={defaultValue}
-      aria-label={ariaLabel}
-      className={selectClass}
+      items={levels.map((level) => ({
+        value: level,
+        label: t(`statusLabel.${level}`),
+      }))}
     >
-      {levels.map((level) => (
-        <option key={level} value={level}>
-          {t(`statusLabel.${level}`)}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger aria-label={ariaLabel} className="min-w-36">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {levels.map((level) => (
+          <SelectItem key={level} value={level}>
+            {t(`statusLabel.${level}`)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -105,18 +109,26 @@ export function CreateIncidentForm({
       <div className="grid gap-4 sm:grid-cols-[1fr_1fr]">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="incident-component">{t("create.component")}</Label>
-          <select
+          <Select
             id="incident-component"
             name="component"
             defaultValue={first}
-            className={selectClass}
+            items={components.map((component) => ({
+              value: component.key,
+              label: component.label,
+            }))}
           >
-            {components.map((component) => (
-              <option key={component.key} value={component.key}>
-                {component.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {components.map((component) => (
+                <SelectItem key={component.key} value={component.key}>
+                  {component.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="incident-status">{t("create.status")}</Label>
