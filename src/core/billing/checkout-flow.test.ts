@@ -214,6 +214,29 @@ describe.skipIf(!url)("结账状态与账单概览", () => {
     expect(ownedPlans(current)).toEqual({ lifetime: "purchased" });
   });
 
+  test("回跳不带订单 ID（Waffo Pancake、Stripe）：按套餐 + 下单时间定位；只看之后的、自己的订单", async () => {
+    const since = new Date();
+    const byPlan = (planId: string, at = since, uid = userId) =>
+      getCheckoutStatus({ db: client.db, userId: uid, planId, since: at });
+
+    await expect(byPlan("lifetime")).resolves.toEqual({ status: "pending" });
+
+    const payment = fakePayment(provider, session("lifetime"))!;
+    await handleBillingEvent(payment.events[0]!, { db: client.db });
+    await expect(byPlan("lifetime")).resolves.toEqual({
+      status: "complete",
+      planId: "lifetime",
+    });
+    // 别的套餐、别人、下单之后很久才发起的查询都不算这一笔。
+    await expect(byPlan("pro")).resolves.toEqual({ status: "pending" });
+    await expect(byPlan("lifetime", since, "someone-else")).resolves.toEqual({
+      status: "pending",
+    });
+    await expect(
+      byPlan("lifetime", new Date(Date.now() + 10 * 60 * 1000)),
+    ).resolves.toEqual({ status: "pending" });
+  });
+
   test("扣款失败：订阅进入 past_due 时返回 failed", async () => {
     const payment = fakePayment(provider, session("pro"))!;
     const subscriptionId = payment.returnParams.subscription_id;

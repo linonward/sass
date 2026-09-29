@@ -6,6 +6,7 @@ import { createCreemProvider } from "./creem";
 import { createFakeBillingProvider } from "./fake";
 import { createLemonSqueezyProvider } from "./lemonsqueezy";
 import { createStripeProvider } from "./stripe";
+import { createWaffoProvider } from "./waffo";
 
 let cached: PaymentProvider | null | undefined;
 
@@ -49,6 +50,16 @@ function createProvider(): PaymentProvider | null {
           apiKey: env.LEMONSQUEEZY_API_KEY,
           webhookSecret: env.LEMONSQUEEZY_WEBHOOK_SECRET,
           storeId: env.LEMONSQUEEZY_STORE_ID,
+        })
+      : null;
+  }
+
+  if (env.BILLING_PROVIDER === "waffo") {
+    return env.WAFFO_MERCHANT_ID && env.WAFFO_PRIVATE_KEY
+      ? createWaffoProvider({
+          merchantId: env.WAFFO_MERCHANT_ID,
+          privateKey: env.WAFFO_PRIVATE_KEY,
+          mode: env.WAFFO_MODE,
         })
       : null;
   }

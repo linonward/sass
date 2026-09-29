@@ -36,9 +36,12 @@ export default async function CheckoutSuccessPage({
   const query = await searchParams;
   const subscriptionId = param(query.subscription_id);
   const orderId = param(query.order_id);
+  // 服务商回跳不带 ID 时的兜底：结账时站内加的套餐 + 下单时间（见 core/billing/checkout.ts）。
+  const planId = param(query.plan);
+  const since = param(query.since);
   const t = await getTranslations({ locale, namespace: "Billing.success" });
 
-  if (!subscriptionId && !orderId) {
+  if (!subscriptionId && !orderId && !(planId && since)) {
     return (
       <EmptyState
         titleAs="h1"
@@ -69,7 +72,7 @@ export default async function CheckoutSuccessPage({
 
   return (
     <CheckoutStatus
-      reference={{ subscriptionId, orderId }}
+      reference={{ subscriptionId, orderId, planId, since }}
       timeoutMs={env.BILLING_SUCCESS_TIMEOUT_MS}
       supportEmail={siteConfig.legal.contactEmail}
       planNames={planNames}

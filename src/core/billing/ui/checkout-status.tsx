@@ -33,7 +33,12 @@ export function CheckoutStatus({
   planNames,
 }: {
   /** 服务商回跳附带的订阅或订单 ID。 */
-  reference: { subscriptionId?: string; orderId?: string };
+  reference: {
+    subscriptionId?: string;
+    orderId?: string;
+    planId?: string;
+    since?: string;
+  };
   timeoutMs: number;
   supportEmail: string;
   planNames: Record<string, string>;
@@ -41,7 +46,7 @@ export function CheckoutStatus({
   const t = useTranslations("Billing.success");
   const [result, setResult] = useState<Result>({ status: "pending" });
   const [timedOut, setTimedOut] = useState(false);
-  const { subscriptionId, orderId } = reference;
+  const { subscriptionId, orderId, planId, since } = reference;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -50,6 +55,10 @@ export function CheckoutStatus({
     const query = new URLSearchParams();
     if (subscriptionId) query.set("subscription_id", subscriptionId);
     if (orderId) query.set("order_id", orderId);
+    if (!subscriptionId && !orderId && planId && since) {
+      query.set("plan", planId);
+      query.set("since", since);
+    }
 
     async function poll() {
       try {
@@ -79,7 +88,7 @@ export function CheckoutStatus({
       clearTimeout(timer);
       clearTimeout(timeout);
     };
-  }, [subscriptionId, orderId, timeoutMs]);
+  }, [subscriptionId, orderId, planId, since, timeoutMs]);
 
   const plan = (id: string | null) => (id && planNames[id]) || "";
 

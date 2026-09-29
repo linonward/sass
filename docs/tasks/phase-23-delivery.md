@@ -43,6 +43,7 @@
 ## 明确不修 / 待定
 
 - **多租户 / SSO / 更多支付商 / 更多模型 / 多套主题 / 完整营销自动化 / AI 成本分析**：本轮不做（阶段性收缩，不是永久决定）。
+  - **例外**：Waffo（T2309）按 2026-09-29 的决定插在 T2306 之前接入，只做默认的 PSP 模式；其它支付商仍不在本轮。
 - **提交幂等（双击重复扣费）**：T2303 **不做**。现在没有提交幂等键，双击会创建两条 `ai_usage` 并扣两次分。本阶段也不做「重复提交检测」—— 没有可靠判据（用户确实可以合法地连续提交两次相同输入），猜出来的判据会把正常用户判成异常。记在这里，等真实工单再说。
 - **`aborted` 状态**：`ai_usage.status` 已经有这个取值，但没有代码写入它。本阶段不清理，等有人在恢复扫描里需要它时再说。
 - **`docs/go-to-market.md` 的定价与渠道**：本阶段只修事实错误（见 T2300），不改价格与渠道计划。
@@ -431,3 +432,35 @@
 - [ ] 3 位试用者的四项记录齐全
 - [ ] 问题清单里所有阻塞项都已解决或明确退出支持范围
 - [ ] 放行条件五条逐条勾选，未满足的写明原因
+
+---
+
+## T2309 waffo-billing
+
+- 分支 / worktree：`feat/waffo-billing` → `../sass-waffo-billing`
+- 依赖：T2305（插在 T2306 之前，见「明确不修 / 待定」里的例外）
+
+**问题**
+
+买家要接 Waffo。Waffo 有两条产品线：面向开发者自助开通的 **Waffo Pancake**（pancake.waffo.ai，MoR，有产品目录）和企业签约的支付 API（dashboard.waffo.com，PSP）。按 2026-09-29 的决定接 **Pancake**（已有账号）。按 `docs/billing.md` 的「加第四个支付商」接入。
+
+**做**
+
+1. `providers/waffo.ts`：官方 SDK `@waffo/pancake-ts`（MIT、零依赖）。`checkout.authenticated.create`（`buyerIdentity` = 用户 ID，`metadata` 带回 userId / planId）；订单 = Pancake 的一笔付款（`paymentId`），退款按被退的那笔对上；订阅 ID = 订阅单的 `orderId`；门户返回托管门户登录页（官方没有预登录链接）；删号取消用 `orders.cancelSubscription`（用到期末），已结束的视为成功。
+2. 事件映射写在 adapter 顶部；幂等键「事件类型 + eventId」；webhook 固定按 `WAFFO_MODE` 的环境验签并核对 `mode`（生产拒收测试事件）。
+3. 注册：`billingProviderNames`、`billingServerEnv`（`WAFFO_MERCHANT_ID` / `WAFFO_PRIVATE_KEY` / `WAFFO_MODE`）、`createProvider()`、`/api/webhooks/waffo`、`productIdEnvPrefix`（`WAFFO_PRODUCT_ID_*`）；`WAFFO_MODE=prod` 加进 fake 硬锁。
+4. 测试：真实 SDK + 注入的 fetch，本地生成密钥按 Pancake 的格式签 webhook。
+5. 文档：README 上线清单、`docs/billing.md`（**提现只到大陆人民币账户、税费代收未开启**）、`.env.example`、`THIRD-PARTY-NOTICES.md`。
+
+**不做**
+
+- 套餐升降级（plan_change）、站内发起退款、自建客户自助界面（用托管门户）。
+- 真实测试环境验证等 Test API Key 就绪后补（记进 T2307），**单测通过不算真实验证**。
+
+**验收**
+
+- [ ] `BILLING_PROVIDER=waffo` + Test Key：一次性购买与订阅都能跳到 Pancake 收银台，webhook 到账后三张表正确（Key 就绪后验证）
+- [ ] webhook 验签失败 / 环境不符返回 401
+- [ ] 事件映射覆盖：付款成功、订阅激活 / 续期 / 取消 / 终止 / 欠费、部分 / 全额退款
+- [ ] 其它三家服务商的单测与 e2e 不受影响
+- [ ] `pnpm test` / `pnpm notices:check` 绿；README / billing.md / .env.example 同步

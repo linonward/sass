@@ -158,6 +158,7 @@
 | T2306                       | reference-product       | `docs/reference-product`       | T2305                         | todo |
 | T2307                       | release-candidate       | `chore/release-candidate`      | T2306                         | todo |
 | T2308                       | buyer-trial             | `docs/buyer-trial`             | T2307                         | todo |
+| T2309                       | waffo-billing           | `feat/waffo-billing`           | T2305                         | done |
 | **阶段 24：Landing 重设计** |                         |                                |                               |      |
 | T2401                       | landing-redesign        | `feat/landing-redesign`        | T105、T605、T1803             | done |
 | T2402                       | landing-seo             | `fix/landing-seo`              | T2401                         | done |

@@ -53,6 +53,8 @@ const productIdEnvPrefix: Record<BillingProviderName, string> = {
   creem: "CREEM_PRODUCT_ID",
   stripe: "STRIPE_PRICE_ID",
   lemonsqueezy: "LEMONSQUEEZY_VARIANT_ID",
+  // Waffo Pancake 的产品 ID（`PROD_…`），test / prod 两套。
+  waffo: "WAFFO_PRODUCT_ID",
 };
 
 /**

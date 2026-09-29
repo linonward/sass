@@ -449,6 +449,7 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 | `BETTER_AUTH_URL`                                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                                                                                                                                     |
 | `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                                    | 生效服务商是 Creem 且站点有付费套餐时 Production 必填（见下文"支付（Creem / Stripe）"）。Preview 可以不填，此时结账返回 503。                                                                                                     |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                                               | 生效服务商是 Stripe 且有付费套餐时 Production 必填（见下文"支付（Creem / Stripe）"）。两组密钥只填**生效服务商**那一组。                                                                                                          |
+| `WAFFO_MERCHANT_ID` / `WAFFO_PRIVATE_KEY`                                                   | 生效服务商是 Waffo Pancake 且有付费套餐时 Production 必填（见下文"支付（Waffo Pancake）"）。`WAFFO_MODE` 默认 `test`，真实收款设 `prod`。                                                                                         |
 | `LEMONSQUEEZY_API_KEY` / `LEMONSQUEEZY_WEBHOOK_SECRET` / `LEMONSQUEEZY_STORE_ID`            | 生效服务商是 Lemon Squeezy 且有付费套餐时 Production 必填（见下文"支付（Lemon Squeezy）"）。Preview 可以不填，此时结账返回 503。                                                                                                  |
 | `CREEM_MODE`                                                                                | 只在用 Creem 时有意义：`test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                                                                                                               |
 | `BILLING_PROVIDER`                                                                          | 不填时用 `site.config.ts` 的 `billing.provider`（出厂 `creem`）。可选 `creem` / `stripe` / `lemonsqueezy` / `fake`；`fake` 只用于本地和 CI 的 e2e，生产运行时、Vercel、`CREEM_MODE=live` 或 live 的 Stripe 密钥下设置会启动失败。 |
@@ -568,6 +569,20 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 6. 已知缺口：**部分退款不回收积分**。LS 的订单 / invoice 上只有「累计已退金额」，而站内 `refund.created` 的约定是「这一次退了多少钱」（会累加到订单上）；把累计值当成新增值发出去，同一张订单第二次部分退款就会重复计数、多回收积分。所以 adapter 只在能证明是**全额**退款时（状态为 `refunded` 且累计已退不少于总额）才发事件：全额退款只触发一次，不受影响；部分退款一律不发事件，钱和积分都**不会**自动对上，需要人工核对后处理。宁可不回收，也不猜金额。
 7. 切到真实收款：关掉后台的 Test mode，用生产店铺的 API key、webhook secret、store ID 和变体 ID 把 `LEMONSQUEEZY_*` 全部换新（不是改一个开关的事），并在生产模式下重建 webhook，重新部署。LS 没有 `CREEM_MODE` 那样的环境变量，测试与真收是店铺上的一个开关。
 8. 退款仍然只在 LS 后台操作，站内不调用 LS 的退款接口；删除账户时会先取消该用户仍在计费的 LS 订阅（`DELETE /v1/subscriptions/:id`），取消失败时删除中止。
+
+#### 支付（Waffo Pancake）
+
+把 `billing.provider` 设为 `waffo`（或只设环境变量 `BILLING_PROVIDER=waffo`），套餐的 `providerProductId` 填 Pancake 的产品 ID（`PROD_…`，也可以用 `WAFFO_PRODUCT_ID_PRO` / `WAFFO_PRODUCT_ID_LIFETIME` 覆盖）。Pancake（[pancake.waffo.ai](https://pancake.waffo.ai)，文档 [docs.waffo.ai](https://docs.waffo.ai)）是 MoR，和 Creem 一样替你当卖方；选它之前先看 [docs/billing.md 的 Waffo Pancake 一节](docs/billing.md#waffo-pancake) —— **提现目前只能到中国大陆的人民币银行卡或支付宝**，税费代收也还没开启。
+
+1. 注册 Pancake，建店铺。Dashboard → Integration 里点 **Create API Key**：Key 在创建时绑定 **Test** 或 **Live** 环境，私钥**只能下载一次**。把商户 ID（`MER_…`）填 `WAFFO_MERCHANT_ID`、私钥填 `WAFFO_PRIVATE_KEY`（PEM、一行 Base64、带字面 `\n` 的都行）。测试环境 `WAFFO_MODE` 不填（默认 `test`）。
+2. Products 里建产品：订阅套餐建 subscription 产品（周期和 `site.config.ts` 的 `interval` 一致：`month` → monthly、`year` → yearly），一次性套餐建 one-time 产品；价格按 `billing.currency` 填。把产品 ID 填进对应套餐的 `providerProductId`。
+3. Webhooks 里加 `https://<domain>/api/webhooks/waffo`，**勾上全部订阅和退款事件**（`order.completed`、`subscription.*`、`refund.*`）。验签用 SDK 内置的 Waffo 平台公钥，不用配密钥；站内按 `WAFFO_MODE` 的环境验，另一个环境的事件一律拒收（生产站点不会因为测试卡的付款发积分）。
+4. 用 Test 模式测：成功卡 `4576 7500 0000 0110`（Visa）/ `2226 9000 0000 0110`（Mastercard），失败卡把末尾 `0110` 换成 `0220`，任意未来日期和 CVC。本地收 webhook 用 ngrok 之类的隧道（没有 CLI 转发）；Dashboard 的 Subscriptions 抽屉里能「模拟续费成功 / 失败」。买一次订阅、一次一次性付款，检查 `subscriptions`、`orders`、`credit_transactions` 三张表。
+5. 结账页付款成功后，买家点「Done」才回到你的成功页（不会自动跳转）；Pancake 不支持取消地址，买家关掉页面即可。放弃结账、一次性付款被拒都**没有** webhook。
+6. 客户门户（`/billing` 的「管理订阅」）跳到 Pancake 的托管门户登录页：买家用付款时的邮箱收魔法链接登录，能查订单、下发票、取消 / 恢复订阅、申请退款。官方还没有「预登录」链接的接口，所以多一步登录。
+7. 取消订阅（删号时）是**用到当期结束**：订阅变成 canceling，到期后 Pancake 发 `subscription.canceled`。续费失败一次进 `past_due`（站内记付款失败），再失败一次订阅终止。
+8. 退款在 Dashboard 里发起（**付款后 14 天内**，可部分退款），`refund.succeeded` 按被退的那笔付款比例回收积分 —— 一次性订单和订阅的某一期都能对上。
+9. 切到真实收款：店铺要先过 Pancake 的审核（1–3 个工作日，需要能访问的产品页、价格、服务条款、隐私政策和支持邮箱）；建一把 **Live** 的 API Key 换上，设 `WAFFO_MODE=prod`（设了它 fake 支付就被硬锁拒绝），产品发布到生产，webhook 在 Live 环境再配一次，重新部署。
 
 #### AI 服务商
 

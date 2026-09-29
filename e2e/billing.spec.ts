@@ -38,6 +38,16 @@ test("webhook 不接受未签名的请求", async ({ request }) => {
   }
 });
 
+test("非生效服务商的 webhook 路由（Waffo）返回 503，不抢别家的事件", async ({
+  request,
+}) => {
+  const response = await request.post("/api/webhooks/waffo", {
+    data: { eventType: "PAYMENT_NOTIFICATION", result: {} },
+  });
+  expect(response.status()).toBe(503);
+  expect(await response.json()).toEqual({ error: "billing_not_configured" });
+});
+
 test("登录后调用结账：fake 模式返回站内结账页，未配置 Creem 时返回 503", async ({
   page,
 }) => {

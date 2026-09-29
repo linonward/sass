@@ -4,7 +4,8 @@ import { creditsEnabled, getBalance } from "@/core/credits";
 import { getDb } from "@/core/db";
 
 /**
- * 成功页轮询：GET /api/billing/status?subscription_id=...|order_id=...（服务商回跳时附带的参数）。
+ * 成功页轮询：GET /api/billing/status?subscription_id=...|order_id=...（服务商回跳时附带的参数），
+ * 或 ?plan=...&since=...（结账时站内自己加在成功地址上的兜底定位，服务商不带 ID 时用）。
  * 只查当前登录用户自己的记录；返回 { status: pending | complete | failed, planId?, balance? }。
  */
 export async function GET(request: Request) {
@@ -16,7 +17,11 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const subscriptionId = params.get("subscription_id");
   const orderId = params.get("order_id");
-  if (!subscriptionId && !orderId) {
+  const planId = params.get("plan");
+  const sinceMs = Number(params.get("since"));
+  const since =
+    Number.isFinite(sinceMs) && sinceMs > 0 ? new Date(sinceMs) : null;
+  if (!subscriptionId && !orderId && !(planId && since)) {
     return Response.json({ error: "missing_reference" }, { status: 400 });
   }
 
@@ -25,6 +30,8 @@ export async function GET(request: Request) {
     userId: session.user.id,
     subscriptionId,
     orderId,
+    planId,
+    since,
   });
   const balance =
     result.status === "complete" && creditsEnabled

@@ -1,6 +1,6 @@
 # 支付服务商
 
-模板出厂用 **Creem**，另外实现了 **Stripe** 和 **Lemon Squeezy**。三家实现同一个 `PaymentProvider` 接口（`src/core/billing/provider.ts`），共用同一套结账、webhook、订单表、积分发放和后台统计 —— 换服务商不碰业务代码，改 `site.config.ts` 的两处字段、再设一组环境变量即可。
+模板出厂用 **Creem**，另外实现了 **Stripe**、**Lemon Squeezy** 和 **Waffo Pancake**（见下文 [Waffo Pancake](#waffo-pancake) 一节）。它们实现同一个 `PaymentProvider` 接口（`src/core/billing/provider.ts`），共用同一套结账、webhook、订单表、积分发放和后台统计 —— 换服务商不碰业务代码，改 `site.config.ts` 的两处字段、再设一组环境变量即可。
 
 本文只讲**选谁、怎么换、怎么加第四个**。每个服务商从零到真实收款的逐条操作在 README 的[上线清单](../README.md#上线清单)里（[支付（Creem / Stripe）](../README.md#支付creem--stripe)、[支付（Lemon Squeezy）](../README.md#支付lemon-squeezy)），本文不重复。
 
@@ -76,6 +76,19 @@ Merchant of Record（记录商户，MoR）是**法律意义上的卖方**：买�
 | 退款回收积分   | 按已退比例回收（`refund.created`）   | **不回收**：退款对象上没有发票字段，v1 忽略退款事件                  | **只回收全额退款**，部分退款不回收                                        |
 | 测试 / 生产    | `CREEM_MODE=test` / `live`，两个域名 | 密钥本身区分（`sk_test_` / `sk_live_`）                              | 店铺上的一个开关，密钥不区分                                              |
 | fake 硬锁      | `CREEM_MODE=live` 时拒绝             | 配了 `sk_live_` / `rk_live_` 时拒绝                                  | 没有：造不出可靠判据，见 `src/core/billing/env.ts` 的注释                 |
+
+## Waffo Pancake
+
+第四家，按「加第四个支付商」的路径接入（`src/core/billing/providers/waffo.ts`，官方 SDK `@waffo/pancake-ts`）。它是 MoR（Waffo.com Limited，香港），有产品目录，接法和 Creem / Lemon Squeezy 最像。选它之前要知道的几件事（核对于 **2026-09**，出处 [docs.waffo.ai](https://docs.waffo.ai)）：
+
+- **提现目前只能是人民币**：到中国大陆的银行卡或支付宝（支付宝单次 5 万、每年 30 万上限），身份核验用大陆身份证或护照，公司账户提现「即将支持」。实际上是给**中国大陆个人卖家**用的 —— 没有大陆银行卡 / 支付宝的卖家收不到钱。
+- **MoR，但税费代收还没开启**：官方 webhook 文档写明目前每笔订单的税率都是 0。卖方身份、拒付由它承担，税务这块要按它的进展再确认。
+- **费率**：卡和钱包 3.9% + $0.50，无月费；退款每笔 $1（原手续费不退）；提现 1%（最低 $10）；拒付 $25。
+- **买家侧**：卡、Apple Pay、Google Pay；币种 USD / EUR / GBP / JPY / HKD（CNY 只支持一次性商品）。
+- **站内差异**：客户门户是托管的魔法链接登录页（没有预登录链接）；取消订阅用到当期结束；退款按被退的那笔付款回收积分（部分 / 全额都行，付款后 14 天内）；fake 硬锁是 `WAFFO_MODE=prod`；webhook 固定按当前环境验签，拒收另一个环境的事件。
+- **上线前**店铺要过审核（1–3 个工作日）。
+
+逐条上线操作见 README 的[支付（Waffo Pancake）](../README.md#支付waffo-pancake)。
 
 退款那一行是**真金白银的差别**，值得单独读一遍 README 的[收入口径](../README.md#收入口径)和对应服务商的上线清单小节：Creem 会按比例自动回收集分；Stripe 完全不管（退款只在后台做，积分要人工处理）；Lemon Squeezy 只认全额退款。
 
