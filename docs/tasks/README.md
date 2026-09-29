@@ -151,7 +151,7 @@
 | **阶段 23：交付与恢复**     |                         |                                |                               |      |
 | T2300                       | delivery-plan           | `docs/delivery-plan`           | —                             | done |
 | T2301                       | template-upgrade        | `chore/template-upgrade`       | T2300                         | done |
-| T2302                       | buyer-agent-guide       | `docs/buyer-agent-guide`       | T2301                         | todo |
+| T2302                       | buyer-agent-guide       | `docs/buyer-agent-guide`       | T2301                         | done |
 | T2303                       | ai-job-recovery         | `feat/ai-job-recovery`         | T2302                         | todo |
 | T2304                       | billing-exceptions      | `feat/billing-exceptions`      | T2303                         | todo |
 | T2305                       | notification-recovery   | `feat/notification-recovery`   | T2303                         | todo |

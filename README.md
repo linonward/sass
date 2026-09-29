@@ -29,7 +29,7 @@ v1 包含：邮箱验证码和 Google 登录、Creem / Stripe / Lemon Squeezy �
 **包含**
 
 - 全部源码与配置：`src/`、`content/`、`messages/`、`e2e/`、`drizzle/`（数据库迁移）、`scripts/`、`site.config.ts`、`package.json` + `pnpm-lock.yaml`
-- 上手与运维文档：`README.md`（本文）、`docs/starter-guide.md`（模板使用指南）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`、`docs/billing.md`
+- 上手与运维文档：`README.md`（本文）、`docs/starter-guide.md`（模板使用指南）、`docs/agent-guide.md`（给 AI 编码助手的项目指引）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`、`docs/billing.md`
 - 授权与依赖许可：`LICENSE`、`THIRD-PARTY-NOTICES.md`
 - 环境变量样例 `.env.example`、CI 与 git 钩子：`.github/`、`.husky/`
 - `template.json`：这份包对应的版本与每个文件的 sha256。**别删、别改** —— 以后应用差量更新时靠它确认起点版本（见 [UPGRADING.md](UPGRADING.md)）
@@ -99,7 +99,7 @@ git commit -m "chore: remove template author's internal docs"
 
 补充两点：
 
-- 如果在 Claude Code 里跑 `pnpm dev`，Next.js 会**重新生成** `AGENTS.md` 和 `CLAUDE.md`，里面只有它自己那段「This is NOT the Next.js you know」的 Next.js 版本提示（由 `next dev` 写入，与模板作者无关）。看到它们回来是正常的，留着或再删都可以。
+- 如果在 Claude Code 里跑 `pnpm dev`，Next.js 会**重新生成** `AGENTS.md` 和 `CLAUDE.md`，里面只有它自己那段「This is NOT the Next.js you know」的 Next.js 版本提示（由 `next dev` 写入，与模板作者无关）。看到它们回来是正常的，留着或再删都可以。想让助手按这个项目的规矩写代码（目录边界、迁移、测试），在你自己的 `AGENTS.md` 里指向 [docs/agent-guide.md](docs/agent-guide.md)，做法见它的第一节。
 - `docs/design.md`（视觉系统）、`docs/i18n.md`（多语言）和 `docs/billing.md`（支付服务商）是**面向买家**的，两条交付路径里都有，不要删。
 
 ### 2. 本地跑起来
