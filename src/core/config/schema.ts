@@ -74,6 +74,7 @@ function unique<T>(items: T[]) {
 export const landingSectionIds = [
   "hero",
   "features",
+  "testimonials",
   "pricing",
   "delivery",
   "faq",
@@ -88,6 +89,47 @@ export const featureIcons = [
   "creditCard",
   "chart",
 ] as const;
+
+// Testimonial assets are local public/ files; no third-party embeds or remote image allowlist.
+const testimonialAsset = z
+  .string()
+  .regex(/^\/(?!\/)[^\s]+$/, "must be a local public/ path");
+const testimonialBase = z.strictObject({
+  key: messageKeySchema,
+  author: z.strictObject({
+    name: z.string().trim().min(1),
+    avatar: testimonialAsset.optional(),
+  }),
+  sourceUrl: z.url({ protocol: /^https$/ }).optional(),
+  example: z.boolean().default(false),
+});
+const testimonialImage = z.strictObject({
+  src: testimonialAsset,
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+const testimonialItem = z.discriminatedUnion("type", [
+  testimonialBase.extend({ type: z.literal("quote") }),
+  testimonialBase.extend({ type: z.literal("image"), media: testimonialImage }),
+  testimonialBase.extend({
+    type: z.literal("video"),
+    media: z.strictObject({
+      src: testimonialAsset,
+      poster: testimonialAsset,
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      captions: z
+        .array(
+          z.strictObject({
+            src: testimonialAsset,
+            srcLang: z.string().min(1),
+            label: z.string().min(1),
+          }),
+        )
+        .min(1),
+    }),
+  }),
+]);
 
 export const landingSchema = z.strictObject({
   // 首页显示哪些区块、按什么顺序。
@@ -133,6 +175,17 @@ export const landingSchema = z.strictObject({
       message: "keys must not contain duplicates",
     })
     .default([]),
+  // 文案在 Landing.testimonials.items.<key>；空数组自动隐藏整个区块。
+  testimonials: z
+    .strictObject({
+      items: z
+        .array(testimonialItem)
+        .refine((items) => unique(items.map((item) => item.key)), {
+          message: "keys must not contain duplicates",
+        })
+        .default([]),
+    })
+    .default({ items: [] }),
   // 首页「交付」区块购买卡片卖的套餐（billing.plans 里付费套餐的 id）。
   // 不填、找不到这个套餐、或套餐被隐藏时，卡片显示「即将公布」、没有购买按钮 —— 不报错：
   // 买家删掉这个套餐时站点照常启动。

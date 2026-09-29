@@ -114,3 +114,50 @@ test("中文 375px 亮暗主题不横向溢出", async ({ page }) => {
     ).toBeLessThanOrEqual(0);
   }
 });
+
+for (const path of ["/", "/zh"]) {
+  test(`${path} 用户故事跟随配置、主题与品牌色，375px 无溢出`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.setViewportSize({ width: 375, height: 812 });
+    for (const theme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto(path);
+      const wall = page.locator("#testimonials");
+      await wall.scrollIntoViewIfNeeded();
+      await expect(wall.getByRole("heading", { level: 2 })).toBeVisible();
+      await expect(wall.locator("article")).toHaveCount(
+        landing.testimonials.items.length,
+      );
+      await expect(wall.locator("mark")).toHaveCount(
+        landing.testimonials.items.length,
+      );
+      await expect(wall.getByRole("img")).toHaveCount(2);
+      for (const img of await wall.getByRole("img").all()) {
+        await img.scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            img.evaluate((el) => (el as HTMLImageElement).naturalWidth),
+          )
+          .toBeGreaterThan(0);
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(0);
+      const mark = wall.locator("mark").first();
+      const before = await mark.evaluate(
+        (el) => getComputedStyle(el).backgroundColor,
+      );
+      const swatch = page.locator('button[aria-label$="#4f46e5"]').first();
+      await swatch.click();
+      await expect
+        .poll(() => mark.evaluate((el) => getComputedStyle(el).backgroundColor))
+        .not.toBe(before);
+    }
+    expect(errors).toEqual([]);
+  });
+}

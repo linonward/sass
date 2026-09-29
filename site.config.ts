@@ -158,7 +158,7 @@ const config = defineConfig({
     effectiveDate: "2026-01-01",
   },
   landing: {
-    sections: ["hero", "features", "delivery", "faq", "cta"],
+    sections: ["hero", "features", "testimonials", "delivery", "faq", "cta"],
     // 「交付」区块购买卡片卖的套餐：价格、结账都用它（被隐藏时卡片显示「即将公布」）。
     purchasePlan: "lifetime",
     // hero 不配 image 时，首屏右侧渲染用真实 DOM 拼出来的产品 mock
@@ -171,6 +171,52 @@ const config = defineConfig({
       { key: "ai", icon: "sparkles", preview: "ai" },
       { key: "operations", icon: "chart", preview: "usage" },
     ],
+    // 示例评价不是客户背书。换成已获授权的真实评价后，逐项移除 example。
+    // 改排序/关区块用 sections；清空 items 也会隐藏，不留下空白色带。
+    // 正文、身份和图片 alt 在 messages 的 Landing.testimonials.items.<key>。
+    // image/video 素材与头像放 public/；video 必须提供 poster、尺寸和字幕。
+    testimonials: {
+      items: [
+        {
+          key: "focus",
+          type: "quote",
+          example: true,
+          author: { name: "Maker A" },
+        },
+        {
+          key: "validate",
+          type: "image",
+          example: true,
+          author: { name: "Maker B" },
+          media: { src: "/landing/perfume.webp", width: 1536, height: 1024 },
+        },
+        {
+          key: "flow",
+          type: "quote",
+          example: true,
+          author: { name: "Maker C" },
+        },
+        {
+          key: "brand",
+          type: "quote",
+          example: true,
+          author: { name: "Maker D" },
+        },
+        {
+          key: "operate",
+          type: "image",
+          example: true,
+          author: { name: "Maker E" },
+          media: { src: "/landing/skincare.webp", width: 1122, height: 1402 },
+        },
+        {
+          key: "build",
+          type: "quote",
+          example: true,
+          author: { name: "Maker F" },
+        },
+      ],
+    },
     faq: ["fit", "services", "payments", "customize"],
   },
   billing: {

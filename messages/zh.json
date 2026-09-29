@@ -230,6 +230,44 @@
           "description": "参考现有实现，接入自己的功能"
         }
       }
+    },
+    "testimonials": {
+      "eyebrow": "用户故事",
+      "title": "把想法上线的人，这样说。",
+      "subtitle": "从 AI 工具到订阅服务，看看开发者如何迈出下一步。",
+      "exampleNotice": "版式预览 · 以下为示例文案，非真实用户评价。",
+      "exampleLabel": "示例评价",
+      "source": "查看原始评价",
+      "videoLabel": "观看 {name} 的用户故事",
+      "videoFallback": "下载视频",
+      "items": {
+        "focus": {
+          "quote": "“基础流程有了起点，<highlight>终于把时间花在产品本身。</highlight>”",
+          "role": "独立开发者 / AI 工具"
+        },
+        "validate": {
+          "quote": "“登录和收款有了起点，<highlight>我能先验证用户是否需要这个功能</highlight>，再决定往哪里投入。”",
+          "role": "订阅产品创始人",
+          "imageAlt": "示意产品摄影：香水瓶，非用户成果截图。"
+        },
+        "flow": {
+          "quote": "“从付款、积分到账到 AI 调用，<highlight>可以顺着完整流程修改</highlight>，不用自己把几套示例拼起来。”",
+          "role": "AI 产品开发者"
+        },
+        "brand": {
+          "quote": "“换上自己的品牌色和文案，<highlight>产品就有了自己的样子</highlight>。不必逐页修改配色。”",
+          "role": "独立开发者"
+        },
+        "operate": {
+          "quote": "“上线之后，订单和使用记录都能查到。<highlight>处理用户反馈时，心里更有底</highlight>。”",
+          "role": "小团队 / SaaS",
+          "imageAlt": "示意产品摄影：护肤瓶，非用户成果截图。"
+        },
+        "build": {
+          "quote": "“基础流程已经串好，<highlight>我可以集中打磨最重要的那一个功能</highlight>。”",
+          "role": "AI 应用创作者"
+        }
+      }
     }
   },
   "Email": {

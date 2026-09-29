@@ -29,3 +29,20 @@ describe("落地页配置引用的文案 key 都在 en.json 中", () => {
     );
   });
 });
+
+// Dynamic buyer-configured keys cross a type assertion at the rendering boundary.
+// Check actual locale dictionaries, including image alt text, rather than sample key names.
+describe("testimonial translations", () => {
+  test.each(["en", "zh"])("configured items exist in %s", async (locale) => {
+    const { default: messages } = await import(
+      `../../../messages/${locale}.json`
+    );
+    for (const item of landing.testimonials.items) {
+      const copy = messages.Landing.testimonials.items[item.key];
+      expect(copy?.quote).toEqual(expect.any(String));
+      expect(copy?.role).toEqual(expect.any(String));
+      if (item.type === "image")
+        expect(copy?.imageAlt).toEqual(expect.any(String));
+    }
+  });
+});
