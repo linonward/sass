@@ -270,6 +270,6 @@ describe("footerNav", () => {
     // 同一组里的其他链接一个不少。
     expect(
       groups.find((group) => group.key === "product")?.links.map((l) => l.href),
-    ).toEqual(["/#features", "/#pricing", "/#faq", "/blog"]);
+    ).toEqual(["/#features", "/pricing", "/#faq", "/blog"]);
   });
 });

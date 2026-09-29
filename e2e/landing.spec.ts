@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import messages from "../messages/en.json";
 import siteConfig from "../site.config";
 
-const { landing, billing } = siteConfig;
+const { landing } = siteConfig;
 const t = messages.Landing;
 
 test("首页按配置顺序渲染全部区块", async ({ page }) => {
@@ -34,24 +34,20 @@ test("各区块内容来自配置与文案", async ({ page }) => {
     landing.features.length,
   );
 
-  const pricing = page.locator("#pricing");
-  await expect(pricing.locator("[data-plan]")).toHaveCount(
-    billing.plans.length,
-  );
-  for (const plan of billing.plans) {
-    await expect(
-      pricing.getByRole("heading", {
-        name: t.pricing.plans[plan.id as "free"].name,
-      }),
-    ).toBeVisible();
-  }
+  await expect(
+    page.locator("#delivery").getByText(t.delivery.pending),
+  ).toBeVisible();
+  await expect(
+    page.locator("#delivery").getByText(t.delivery.terms),
+  ).toBeVisible();
+  await expect(page.locator("[data-plan]")).toHaveCount(0);
 
   const faq = page.locator("#faq");
   await expect(faq.locator("details")).toHaveCount(landing.faq.length);
-  const first = t.faq.items[landing.faq[0] as "stack"];
-  await expect(faq.getByText(first.answer)).toBeHidden();
-  await faq.getByText(first.question).click();
+  const first = t.faq.items[landing.faq[0] as "fit"];
   await expect(faq.getByText(first.answer)).toBeVisible();
+  await faq.getByText(first.question).click();
+  await expect(faq.getByText(first.answer)).toBeHidden();
 
   await expect(
     page.locator("#cta").getByRole("link", { name: t.cta.button }),
@@ -63,8 +59,46 @@ test("导航锚点跳到对应区块", async ({ page, isMobile }) => {
   await page.goto("/");
   await page
     .getByRole("navigation", { name: messages.Header.main })
-    .getByRole("link", { name: messages.Nav.pricing })
+    .getByRole("link", { name: messages.Nav.delivery })
     .click();
-  await expect(page).toHaveURL("/#pricing");
-  await expect(page.locator("#pricing")).toBeInViewport();
+  await expect(page).toHaveURL("/#delivery");
+  await expect(page.locator("#delivery")).toBeInViewport();
+});
+
+for (const path of ["/", "/zh"]) {
+  test(`${path} 产品预览可用键盘切换且不触发 AI 请求`, async ({ page }) => {
+    const aiRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/api/ai/")) aiRequests.push(request.url());
+    });
+    await page.goto(path);
+    const hero = page.locator("#hero");
+    const tabs = hero.getByRole("tab");
+    await tabs.first().focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+    await expect(hero.getByRole("table")).toBeVisible();
+    await page.keyboard.press("Home");
+    await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+    await expect(hero.getByRole("img")).toBeVisible();
+    expect(aiRequests).toEqual([]);
+    const demoLink = hero.locator('a[href$="/demo"]');
+    await expect(demoLink).toHaveCount(1);
+    await demoLink.click();
+    await expect(page).toHaveURL(path === "/zh" ? "/zh/demo" : "/demo");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+}
+
+test("中文 375px 亮暗主题不横向溢出", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const theme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: theme });
+    await page.goto("/zh");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - innerWidth,
+      ),
+    ).toBeLessThanOrEqual(0);
+  }
 });

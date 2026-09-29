@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import type { LandingSectionId, SiteConfig } from "@/core/config/schema";
 
 import { bands, type Band } from "./sections/band";
+import { Delivery } from "./sections/delivery";
 import { Cta } from "./sections/cta";
 import { Faq } from "./sections/faq";
 import { Features } from "./sections/features";
@@ -17,19 +18,11 @@ type SectionRenderer = (
   waveFrom: Band | undefined,
 ) => React.ReactNode;
 
-/** hero 的拼贴 mock 展示真实的高亮套餐，而不是编的假数据。 */
-function highlightPlan(config: Config) {
-  const { plans } = config.billing;
-  return plans.find((plan) => plan.highlighted) ?? plans[0];
-}
-
 const sections: Record<LandingSectionId, SectionRenderer> = {
   hero: (config, waveFrom) => (
     <Hero
       {...config.landing.hero}
       waveFrom={waveFrom}
-      plan={highlightPlan(config)}
-      currency={config.billing.currency}
       primaryColor={config.brand.primaryColor}
     />
   ),
@@ -43,6 +36,7 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
       waveFrom={waveFrom}
     />
   ),
+  delivery: (_config, waveFrom) => <Delivery waveFrom={waveFrom} />,
   faq: (config, waveFrom) => (
     <Faq items={config.landing.faq} waveFrom={waveFrom} />
   ),
@@ -53,13 +47,17 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
 export function Landing({ config }: { config: Config }) {
   // 波浪取决于相邻两段，只能在这里算：区块自己不知道邻居是谁，
   // 而 landing.sections 是可配置的，写死邻居会在调换顺序后画出对不上的波浪。
-  return config.landing.sections.map((id, index) => {
-    // 第一段没有上一段，不画波浪（waveFrom 为 undefined）。
-    const previous = config.landing.sections[index - 1];
-    return (
-      <Fragment key={id}>
-        {sections[id](config, previous ? bands[previous] : undefined)}
-      </Fragment>
-    );
-  });
+  return (
+    <div className="landing-page">
+      {config.landing.sections.map((id, index) => {
+        // 第一段没有上一段，不画波浪（waveFrom 为 undefined）。
+        const previous = config.landing.sections[index - 1];
+        return (
+          <Fragment key={id}>
+            {sections[id](config, previous ? bands[previous] : undefined)}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
 }

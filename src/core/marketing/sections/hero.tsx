@@ -1,161 +1,166 @@
-import { ArrowRightIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  ArrowUpRightIcon,
+  DatabaseIcon,
+  NotebookTextIcon,
+  WalletCardsIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 
-import type { LandingConfig, Plan } from "@/core/config/schema";
+import type { LandingConfig } from "@/core/config/schema";
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
 import { buttonVariants } from "@/core/ui/button";
-
 import { bands, type Band } from "./band";
-import { ColorSwitcher } from "./color-switcher";
-import { HeroCanvas } from "./hero-canvas";
 import { Section } from "./section";
+import { StudioPreview } from "./product-preview";
+import { ColorSwitcher } from "./color-switcher";
+import { Wave } from "./wave";
 
 export function Hero({
   image,
-  plan,
-  currency,
-  primaryColor,
   waveFrom,
-}: LandingConfig["hero"] & {
-  plan?: Plan;
-  currency: string;
-  primaryColor: string;
-  waveFrom?: Band;
-}) {
+  primaryColor,
+}: LandingConfig["hero"] & { waveFrom?: Band; primaryColor: string }) {
   const t = useTranslations("Landing.hero");
-
+  const title = t("title");
+  const accent = t("titleAccent");
+  const accentAt = title.lastIndexOf(accent);
+  const clauseAt = title.indexOf("，") + 1;
   return (
-    <Section id="hero" band={bands.hero} waveFrom={waveFrom}>
-      {/* 两栏、文字在左。不用「居中 hero + 两个并排 CTA」那套默认版式。 */}
-      <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-        <div className="min-w-0">
-          <p className="bg-background sticker inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
-            {t("badge")}
-          </p>
-          <ColorSwitcher
-            current={primaryColor}
-            label={t("colorSwitcher.label")}
-            prompt={t("colorSwitcher.prompt")}
-            switchToLabel={t("colorSwitcher.switchTo")}
-          />
-          {/* h1 必须是单一文本节点：e2e 断言它的可访问名精确等于 hero.title。
-              拆成多个 span 逐词上色会改变可访问名，所以这里不做。 */}
-          <h1 className="heading-display mt-6 text-[clamp(2.25rem,7vw,4.25rem)]">
-            {t("title")}
-          </h1>
-          <p className="text-muted-foreground mt-6 max-w-[46ch] text-lg text-pretty">
-            {t("subtitle")}
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/#pricing"
-              className={buttonVariants({ size: "marketing", tone: "primary" })}
-            >
-              {t("primaryCta")}
-            </Link>
-            <Link
-              href="/#features"
-              className={cn(
-                buttonVariants({
-                  size: "marketing",
-                  variant: "outline",
-                  tone: "primary",
-                }),
-                // 次要按钮在品牌色带上要自己撑出实底，否则和带子融在一起。
-                "bg-background hover:bg-background/90",
+    <div>
+      <Section
+        id="hero"
+        band={bands.hero}
+        waveFrom={waveFrom}
+        className="landing-hero"
+      >
+        <div className="grid items-center gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
+          <div className="min-w-0">
+            <h1 className="landing-headline" aria-label={title}>
+              {accentAt >= 0 ? (
+                <>
+                  {clauseAt > 0 ? (
+                    <>
+                      <span className="block">{title.slice(0, clauseAt)}</span>
+                      {title.slice(clauseAt, accentAt)}
+                    </>
+                  ) : (
+                    title.slice(0, accentAt)
+                  )}
+                  <span className="text-primary-text">
+                    {title.slice(accentAt)}
+                  </span>
+                </>
+              ) : (
+                title
               )}
-            >
-              {t("secondaryCta")}
-              <ArrowRightIcon aria-hidden />
-            </Link>
-            <Link
-              href="/demo"
-              className={cn(
-                buttonVariants({
-                  size: "marketing",
-                  variant: "outline",
-                  tone: "primary",
-                }),
-                "bg-background hover:bg-background/90",
-              )}
-            >
-              {t("demoCta")}
-            </Link>
-            <a
-              href="https://vercel.com/new/clone?repository-url=https://github.com/linonward/sass"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                buttonVariants({
-                  size: "marketing",
-                  variant: "outline",
-                  tone: "primary",
-                }),
-                "bg-background hover:bg-background/90",
-              )}
-            >
-              {t("deployToVercel")}
-            </a>
+            </h1>
+            <p className="text-muted-foreground mt-7 max-w-[34ch] text-lg leading-relaxed whitespace-pre-line sm:text-xl">
+              {t("subtitle")}
+            </p>
+            <div className="mt-9 flex flex-wrap gap-4">
+              <Link
+                href="/demo"
+                className={cn(
+                  buttonVariants({ size: "marketing", tone: "primary" }),
+                  "landing-button",
+                )}
+              >
+                {t("primaryCta")}
+                <ArrowUpRightIcon aria-hidden />
+              </Link>
+              <Link
+                href="/#delivery"
+                className={cn(
+                  buttonVariants({
+                    size: "marketing",
+                    variant: "outline",
+                    tone: "primary",
+                  }),
+                  "landing-button bg-background",
+                )}
+              >
+                {t("secondaryCta")}
+                <ArrowRightIcon aria-hidden />
+              </Link>
+            </div>
+            <ColorSwitcher
+              current={primaryColor}
+              label={t("colorSwitcher.label")}
+              prompt={t("colorSwitcher.prompt")}
+              switchToLabel={t("colorSwitcher.switchTo")}
+            />
+            <p className="text-muted-foreground mt-8 text-xs leading-relaxed sm:text-sm">
+              {t("stack")}
+            </p>
+          </div>
+          <div className="min-w-0">
+            {image ? (
+              <div className="landing-frame overflow-hidden">
+                <Image
+                  src={image.src}
+                  alt={t("imageAlt")}
+                  width={image.width}
+                  height={image.height}
+                  sizes="(min-width: 1024px) 640px, 100vw"
+                  loading="eager"
+                  fetchPriority="high"
+                  className={cn(
+                    "h-auto w-full",
+                    image.darkSrc && "dark:hidden",
+                  )}
+                />
+                {image.darkSrc && (
+                  <Image
+                    src={image.darkSrc}
+                    alt={t("imageAlt")}
+                    width={image.width}
+                    height={image.height}
+                    sizes="(min-width: 1024px) 640px, 100vw"
+                    className="hidden h-auto w-full dark:block"
+                  />
+                )}
+              </div>
+            ) : (
+              <StudioPreview />
+            )}
           </div>
         </div>
-
-        <div className="min-w-0">
-          {/* 配了图片就优先用图片，没配则渲染拼贴出来的产品 mock。
-              拼贴用的是配置里真实的高亮套餐，不是假数据。 */}
-          {image ? (
-            <HeroImage {...image} alt={t("imageAlt")} />
-          ) : (
-            <HeroCanvas plan={plan} currency={currency} />
+      </Section>
+      <div className="bg-primary-band">
+        <Wave from="canvas" className="h-6 sm:h-9" />
+        <div className="container-marketing grid gap-6 py-6 sm:grid-cols-3 sm:gap-8">
+          {([WalletCardsIcon, DatabaseIcon, NotebookTextIcon] as const).map(
+            (Icon, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <span className="text-primary-text bg-background/50 flex size-12 shrink-0 items-center justify-center rounded-full">
+                  <Icon className="size-6" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-base font-semibold">
+                    <span className="text-primary-text mr-2 font-mono text-sm">
+                      0{i + 1}
+                    </span>
+                    {t(`steps.step${i + 1}` as "steps.step1")}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+                    {t(`steps.detail${i + 1}` as "steps.detail1")}
+                  </p>
+                </div>
+                {i < 2 && (
+                  <ArrowRightIcon
+                    className="text-muted-foreground ml-auto hidden size-5 lg:block"
+                    aria-hidden
+                  />
+                )}
+              </div>
+            ),
           )}
         </div>
+        <Wave from="primary" className="bg-background h-6 sm:h-9" />
       </div>
-    </Section>
-  );
-}
-
-function HeroImage({
-  src,
-  darkSrc,
-  width,
-  height,
-  alt,
-}: {
-  src: string;
-  darkSrc?: string;
-  width: number;
-  height: number;
-  alt: string;
-}) {
-  const sizes = "(min-width: 1024px) 640px, 100vw";
-  return (
-    <div className="sticker-lg overflow-hidden rounded-xl">
-      <Image
-        src={src}
-        width={width}
-        height={height}
-        alt={alt}
-        // 首屏大图，尽早加载并同步解码以优化 LCP。
-        loading="eager"
-        fetchPriority="high"
-        decoding="sync"
-        sizes={sizes}
-        className={cn("h-auto w-full", darkSrc && "dark:hidden")}
-      />
-      {darkSrc && (
-        <Image
-          src={darkSrc}
-          width={width}
-          height={height}
-          alt={alt}
-          loading="eager"
-          fetchPriority="high"
-          decoding="sync"
-          sizes={sizes}
-          className="hidden h-auto w-full dark:block"
-        />
-      )}
     </div>
   );
 }

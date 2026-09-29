@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl";
 
-import { SIGN_IN_PATH } from "@/core/auth/routes";
+import { ArrowUpRightIcon } from "lucide-react";
 import { LocaleSwitcher } from "@/core/i18n/locale-switcher";
 import { Link } from "@/core/i18n/navigation";
 import { routing } from "@/core/i18n/routing";
@@ -23,10 +23,10 @@ export function SiteHeader() {
     // 实底，不做 backdrop-blur：玻璃感会击碎贴纸那套硬边的分层逻辑。
     // 底边那条 2px 硬阴影和正文里卡片的唇边是同一套语言。
     <header className="bg-background sticky top-0 z-40 border-b shadow-[0_2px_0_0_var(--border)]">
-      <div className="container-marketing flex h-(--header-height) items-center gap-8">
+      <div className="container-marketing flex h-(--header-height) items-center gap-5">
         <SiteLogo />
         <nav
-          className="hidden items-center gap-1 text-sm md:flex"
+          className="ml-auto hidden items-center gap-1 text-sm md:flex"
           aria-label={t("Header.main")}
         >
           {links.map((link) => (
@@ -44,19 +44,16 @@ export function SiteHeader() {
             <LocaleSwitcher locales={routing.locales} />
           )}
           <ThemeToggle />
-          {/* 顶栏 CTA 去登录页。刻意不叫 "Get started"：那个名字是 hero 主 CTA 的，
-              e2e 用 getByRole 精确定位它，出现第二个同名链接会让严格模式报错。
-
-              窄屏藏起来：375px 下 logo + 主题 + CTA + 汉堡挤成一行太憋，
-              而首屏正文里本来就有两个差不多大的按钮。 */}
+          {/* 窄屏保留主题、语言与菜单；演示入口在首屏正文。 */}
           <Link
-            href={SIGN_IN_PATH}
+            href="/demo"
             className={cn(
-              buttonVariants({ variant: "default", tone: "primary" }),
+              buttonVariants({ variant: "outline", tone: "primary" }),
               "hidden px-4 sm:inline-flex",
             )}
           >
             {t("Header.cta")}
+            <ArrowUpRightIcon aria-hidden className="size-4" />
           </Link>
           {links.length > 0 && (
             <MobileNav title={siteConfig.name} links={links} />

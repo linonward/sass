@@ -1,6 +1,6 @@
 {
   "Nav": {
-    "features": "Features",
+    "features": "Product",
     "pricing": "Pricing",
     "faq": "FAQ",
     "blog": "Blog",
@@ -9,13 +9,14 @@
     "legal": "Legal",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
-    "refund": "Refund Policy"
+    "refund": "Refund Policy",
+    "delivery": "What’s included"
   },
   "Header": {
     "main": "Main",
     "mobile": "Mobile",
     "openMenu": "Open menu",
-    "cta": "Start free"
+    "cta": "View demo"
   },
   "Footer": {
     "tagline": "Ship your SaaS in a day.",
@@ -69,36 +70,32 @@
   "Landing": {
     "hero": {
       "badge": "Next.js SaaS starter",
-      "title": "Launch your SaaS this weekend",
-      "subtitle": "Auth, payments, credits, AI and SEO are already wired up. Change the config, write your product, ship.",
-      "primaryCta": "Get started",
-      "secondaryCta": "See features",
+      "title": "Turn your AI product into a business.",
+      "subtitle": "Auth, payments, credits and AI, already connected.\nMake time for your product.",
+      "primaryCta": "Explore demo",
+      "secondaryCta": "See what’s included",
       "imageAlt": "Product dashboard preview",
-      "mock": {
-        "terminalTitle": "terminal",
-        "terminalCommand": "cd your-project && pnpm dev",
-        "terminalReady": "Checkout ready",
-        "terminalCredits": "credits issued on payment",
-        "checkoutTitle": "Checkout",
-        "checkoutCustomer": "Customer",
-        "checkoutCustomerValue": "Priya Mehta",
-        "checkoutCountry": "Billing country",
-        "checkoutCountryValue": "Germany",
-        "checkoutTotal": "Total due today",
-        "toastTitle": "Payment received",
-        "toastBody": "Subscription active"
-      },
       "demoCta": "View demo",
       "deployToVercel": "Deploy to Vercel",
       "colorSwitcher": {
         "label": "Brand color",
         "prompt": "Try a color →",
         "switchTo": "Switch brand color to __HEX__"
+      },
+      "titleAccent": "a business.",
+      "stack": "Next.js · TypeScript · Built for independent makers",
+      "steps": {
+        "step1": "Accept payments",
+        "step2": "Charge in credits",
+        "step3": "Track every request",
+        "detail1": "Connect your provider and start accepting payments.",
+        "detail2": "Set credit rules and control usage costs.",
+        "detail3": "Keep credit activity and usage in view."
       }
     },
     "features": {
-      "title": "Everything you need to ship",
-      "subtitle": "The boring parts are done, so you can focus on what makes your product different.",
+      "title": "From the first payment to every request.",
+      "subtitle": "The essential flows are connected. The product is yours to define.",
       "items": {
         "auth": {
           "title": "Authentication",
@@ -106,9 +103,9 @@
           "detail": "role: user | admin"
         },
         "billing": {
-          "title": "Payments",
-          "description": "Subscriptions and one-time purchases through a provider-agnostic billing layer.",
-          "detail": "subscription.created → 2,000 credits"
+          "title": "Payment received. Credits ready.",
+          "description": "Subscriptions and one-time purchases, connected to a single credit ledger.",
+          "detail": "Creem / Stripe / Lemon Squeezy"
         },
         "i18n": {
           "title": "Internationalization",
@@ -116,9 +113,9 @@
           "detail": "en · zh · ja"
         },
         "ai": {
-          "title": "AI ready",
-          "description": "Call any model with the Vercel AI SDK and charge per request in credits.",
-          "detail": "streamText() → credits debited"
+          "title": "Make AI your product.",
+          "description": "Text, image and video generation, connected to credit billing and usage records.",
+          "detail": "Credits are returned when a model call fails."
         },
         "seo": {
           "title": "SEO built in",
@@ -129,6 +126,11 @@
           "title": "Fast by default",
           "description": "Static rendering, optimized fonts and images, and a tiny client bundle.",
           "detail": "static · no client JS by default"
+        },
+        "operations": {
+          "title": "Know what happens after launch.",
+          "description": "See orders, users and usage. Enable attribution, lead capture and referral rewards when you need them.",
+          "detail": "Understand product usage from one admin dashboard."
         }
       }
     },
@@ -166,30 +168,65 @@
       }
     },
     "faq": {
-      "title": "Frequently asked questions",
+      "title": "A few things before you start.",
       "items": {
         "stack": {
           "question": "What is it built with?",
           "answer": "Next.js, TypeScript, Tailwind CSS and shadcn/ui, with Postgres for data."
         },
         "payments": {
-          "question": "Which payment providers are supported?",
-          "answer": "Creem is supported out of the box. Other providers can be added behind the same billing interface."
+          "question": "Can I switch payment providers?",
+          "answer": "Choose Creem, Stripe or Lemon Squeezy through configuration. Set up the matching products and webhooks when switching; existing subscriptions are not migrated automatically."
         },
         "customize": {
-          "question": "How do I customize it?",
-          "answer": "Edit site.config.ts for branding, sections and plans, and messages for copy. Your product code lives outside the core folder."
+          "question": "How do I build my own features?",
+          "answer": "Configure branding, pages and plans, then write features in the business directory using the shared auth, credits and AI interfaces. The starter guide includes examples."
         },
         "license": {
           "question": "Can I use it for commercial projects?",
           "answer": "Yes. Personal and commercial use are both covered."
+        },
+        "fit": {
+          "question": "Which projects is this for?",
+          "answer": "AI tools that need authentication, payments and credit billing. Team collaboration and multi-tenancy require additional development."
+        },
+        "services": {
+          "question": "Which external services do I need?",
+          "answer": "Deployment needs a database and email service. Configure payments, AI models, object storage and rate limiting for the features you enable. Local development supports substitutes."
         }
       }
     },
     "cta": {
-      "title": "Ready to ship?",
+      "title": "The foundation is ready.\nYour product comes next.",
       "subtitle": "Go from idea to paying customers in a day.",
-      "button": "Start building"
+      "button": "Explore demo",
+      "secondaryCta": "See what’s included"
+    },
+    "delivery": {
+      "title": "A complete starting point.",
+      "description": "Source code, configuration, documentation and examples, together in one project.",
+      "offer": "Template purchase",
+      "pending": "Coming soon",
+      "terms": "Pricing, update period and support scope are to be confirmed.",
+      "demo": "Explore the demo first",
+      "items": {
+        "source": {
+          "title": "Complete source",
+          "description": "Auth, payments, credits, AI and administration"
+        },
+        "brand": {
+          "title": "Configuration & branding",
+          "description": "Make it yours with your own copy and primary color"
+        },
+        "docs": {
+          "title": "Getting started guide",
+          "description": "Instructions from local setup to deployment"
+        },
+        "examples": {
+          "title": "Business examples",
+          "description": "Build your own features on working implementations"
+        }
+      }
     }
   },
   "Email": {
@@ -1378,5 +1415,40 @@
         "generic": "Something went wrong. Try again in a moment."
       }
     }
+  },
+  "LandingPreview": {
+    "studio": "Your AI studio",
+    "sample": "Sample data",
+    "generate": "Generate",
+    "history": "History",
+    "promptLabel": "Describe the image you want to create",
+    "prompt": "A perfume product image for a summer launch",
+    "perfumeAlt": "AI output illustration: perfume, citrus and a mint stone pedestal",
+    "skincareAlt": "AI output illustration: amber skincare bottle on pale stone",
+    "completed": "Completed",
+    "cost": "5 credits used",
+    "ledger": "Credit ledger",
+    "paymentTitle": "Payments & credits",
+    "paid": "Order paid",
+    "subscription": "Subscription purchase",
+    "purchase": "Purchase credits",
+    "deduction": "Generation debit",
+    "balance": "Current balance",
+    "usage": "Usage records",
+    "type": "Type",
+    "credits": "Credits",
+    "status": "Status",
+    "textGeneration": "Text generation",
+    "imageGeneration": "Image generation",
+    "refunded": "Refunded",
+    "aiTitle": "AI generation",
+    "text": "Text",
+    "image": "Images",
+    "video": "Video",
+    "generations": "Generation history",
+    "textExample": "A little summer, in every breath.",
+    "textNote": "Sample perfume copy. No model call or credits charged.",
+    "videoExample": "From a still image to a product story in motion.",
+    "videoNote": "Text-to-video and image-to-video are supported. This is a capability preview, not simulated video playback."
   }
 }

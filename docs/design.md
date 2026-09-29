@@ -117,7 +117,7 @@
 - 容器 `.container-marketing`：`max-width 80rem`，内边距 16 / 32 / 40px 三段
 - 区块纵向留白 `py-14 sm:py-20`（比常见的 96–160px 紧），分隔靠色带和波浪，不靠留白
 - 顶栏 `--header-height: 4.375rem`；区块的 `scroll-mt` 从这里推出来，锚点跳转才不会被顶栏盖住
-- 网格：特性 3 列 + 跨度错落（bento）；定价按套餐数 2/3 列；FAQ 左标题右列表
+- 网格：首页特性用三组交替图文行；定价页按套餐数 2/3 列；FAQ 左标题右列表
 
 ## 6. 深度与抬升
 
@@ -134,7 +134,7 @@
 - **不加模糊投影。** 深度只来自描边和唇边，需要更强的抬升就加厚唇边或退一档背景。
 - **不用渐变，不用 `backdrop-filter`。** 顶栏是实底，玻璃感会击碎硬边的分层逻辑。
 - **组件里不写死 hex。** 全部走 token；新颜色先加 token。
-- **不切开 h1 的文本节点。** e2e 断言 h1 的可访问名精确等于 `Landing.hero.title`，拆成多个 span 会改变可访问名。
+- **h1 的可访问名保持完整。** 首页为强调末句允许使用 span 分色与换行，但通过 `aria-label={title}` 保持可访问名精确等于 `Landing.hero.title`，由 e2e 锁定。
 - **价格和标签不用省略号截断。** 长内容换行或压缩格式。
 - **Tailwind class 名必须是字面量。** 扫描器读的是源文件文本，`` `[--edge:var(--${tone}-edge)]` `` 抽出来的是废片段，样式会静默消失。
 - **文案里别写裸花括号。** next-intl 按 ICU 解析，`streamText({ model })` 会被当成占位符报错。`landing.test.tsx` 有一条测试兜这个。
@@ -164,3 +164,11 @@
 > 在产品面/后台加一块内容：`panel p-6`，标题 `.heading-display text-lg`。面板没有唇边；要语义色描边就加 `border-[var(--info-edge)]`。状态徽章加 `flat`：`<Badge variant="warning" flat>`。
 
 > 产品面的页头用 `<PageHeader title description>`（`src/core/ui/page-header.tsx`）。它不 import `Link`，因为那会把服务端页面拖进客户端边界 —— 返回链接和右侧操作以 children 传进去。
+
+## 10. Landing 产品叙事（T2401）
+
+默认顺序为 hero → features → delivery → faq → cta。首屏左侧标题、演示与交付入口，右侧是标明「示例数据」的原生产品预览；产品摄影放 `public/landing/`，图片本身不包含 UI。特性用收款积分、AI 生成、使用记录三组交替图文行，避免重复卡片网格。交付区单独说明模板购买方案尚未公布；演示 SaaS 套餐继续放 `/pricing`。
+
+新表面 `.landing-frame` 使用 `--edge: var(--primary-edge)` 的描边和 3px 硬唇边。中文主标题末句使用 `--primary-text`，英文允许自然换行。手机端单列，积分卡回到文档流。
+
+浅色／深色／跟随系统、语言切换、首页品牌色预览均保留。预览色调用整站 `brandCss` 同时生成明暗 token，离开首页后移除预览覆盖；深浅偏好仍由原主题组件持久化。

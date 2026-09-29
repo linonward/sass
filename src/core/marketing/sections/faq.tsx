@@ -1,35 +1,36 @@
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, CircleHelpIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { bands, type Band } from "./band";
-import { Section, SectionHeading } from "./section";
+import { Section } from "./section";
 
-// 用原生 <details> 实现折叠，不需要客户端 JS。
 export function Faq({ items, waveFrom }: { items: string[]; waveFrom?: Band }) {
   const t = useTranslations("Landing.faq");
-  // key 来自配置，由 messages 测试保证存在。
   const item = (key: string, field: "question" | "answer") =>
     t(`items.${key}.${field}` as "items.stack.question");
-
   return (
-    <Section id="faq" band={bands.faq} waveFrom={waveFrom}>
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-16">
-        <SectionHeading title={t("title")} />
-        {/* 每条问答是一张独立贴纸卡，不再是连成一体的分割线列表。 */}
-        <div className="space-y-3">
-          {items.map((key) => (
+    <Section id="faq" band={bands.faq} waveFrom={waveFrom} className="border-t">
+      <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:gap-20">
+        <h2 className="landing-section-title max-w-[12ch]">{t("title")}</h2>
+        <div>
+          {items.map((key, index) => (
             <details
               key={key}
-              className="bg-card sticker group rounded-xl px-5 py-4"
+              open={index === 0}
+              className="group open:bg-primary-band/40 border-b open:mb-3 open:rounded-lg open:border"
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium [&::-webkit-details-marker]:hidden">
-                {item(key, "question")}
+              <summary className="focus-visible:outline-ring flex min-h-16 cursor-pointer list-none items-center gap-4 px-4 py-5 text-base font-medium focus-visible:outline-2 sm:text-lg [&::-webkit-details-marker]:hidden">
+                <CircleHelpIcon
+                  className="text-primary-text size-5 shrink-0"
+                  aria-hidden
+                />
+                <span>{item(key, "question")}</span>
                 <ChevronDownIcon
-                  className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-180"
+                  className="text-muted-foreground ml-auto size-5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
                   aria-hidden
                 />
               </summary>
-              <p className="text-muted-foreground mt-3 text-sm text-pretty">
+              <p className="text-muted-foreground px-4 pb-6 pl-13 text-sm leading-relaxed">
                 {item(key, "answer")}
               </p>
             </details>

@@ -53,10 +53,10 @@ function planCard(page: Page, id: string) {
   return page.locator(`[data-plan="${id}"]`);
 }
 
-test("未登录从落地页购买：登录 → 继续结账 → webhook 延迟 → 成功 → 账单页", async ({
+test("未登录从定价页购买：登录 → 继续结账 → webhook 延迟 → 成功 → 账单页", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/pricing");
   await buy(page, "pro");
 
   // 先去登录，登录后回到 /pricing?plan=pro 并自动继续结账。
@@ -99,9 +99,10 @@ test("未登录从落地页购买：登录 → 继续结账 → webhook 延迟 �
     planCard(page, "pro").getByRole("link", { name: b.actions.manage }),
   ).toBeVisible();
 
-  // 落地页不区分用户：点购买时接口返回已订阅，转到客户门户。
-  await page.goto("/");
-  await buy(page, "pro");
+  // 已订阅用户通过定价页的管理入口进入客户门户。
+  await planCard(page, "pro")
+    .getByRole("link", { name: b.actions.manage })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Fake customer portal" }),
   ).toBeVisible();

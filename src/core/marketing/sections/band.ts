@@ -9,14 +9,14 @@ import type { LandingSectionId } from "@/core/config/schema";
 export type Band = "canvas" | "tint" | "primary" | "success" | "dark";
 
 /**
- * 每个区块用什么色带。节奏是「品牌色 → 画布 → 浅灰 → 画布 → 品牌色 → 深色页脚」，
- * 首尾两段品牌色把页面框住，中间靠明度台阶分开。
+ * 每个区块的外层色带；首屏流程条和特性交替行在区块内使用品牌浅色。
  * Landing 用它算相邻两段之间的波浪，所以这里是唯一的事实来源。
  */
 export const bands: Record<LandingSectionId, Band> = {
-  hero: "primary",
+  hero: "canvas",
   features: "canvas",
   pricing: "tint",
+  delivery: "canvas",
   faq: "canvas",
   cta: "primary",
 };
