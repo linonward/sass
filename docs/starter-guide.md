@@ -179,6 +179,7 @@ Vercel 的界面偶尔改版，找不到某个按钮时按名字找，流程不�
 | 上线（域名、环境变量、各模块的外部账号）     | README 的[上线清单](../README.md#上线清单)          |
 | 升级到模板的新版本（修 bug、新模块）         | [UPGRADING.md](../UPGRADING.md)（目录边界也在里面） |
 | 写业务功能放哪、怎么调用套件                 | [UPGRADING.md 的目录边界](../UPGRADING.md#目录边界) |
+| 用 Claude Code / Cursor 写业务               | [docs/agent-guide.md](agent-guide.md)               |
 | 新增一门语言                                 | [docs/i18n.md](i18n.md)                             |
 | 改界面样式、加组件                           | [docs/design.md](design.md)                         |
 | 换支付商、加第四个支付商                     | [docs/billing.md](billing.md)                       |

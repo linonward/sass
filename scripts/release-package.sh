@@ -110,7 +110,7 @@ selfcheck() {
   if [ "$require_files" = 1 ]; then
     for required in README.md LICENSE package.json .env.example pnpm-lock.yaml \
       src e2e scripts drizzle messages content site.config.ts UPGRADING.md \
-      docs/starter-guide.md template.json; do
+      docs/starter-guide.md docs/agent-guide.md template.json; do
       if [ ! -e "$dir/$required" ]; then
         printf '✗ 缺少 %s\n' "$required"
         fail=1
@@ -146,7 +146,7 @@ selfcheck() {
       grep -rInE "T[0-9]{3}" "$dir/src" "$dir/e2e" "$dir/scripts" \
       "$dir/drizzle" "$dir/messages" "$dir/content" \
       "$dir/site.config.ts" "$dir/README.md" "$dir/UPGRADING.md" \
-      "$dir/docs/starter-guide.md"
+      "$dir/docs/starter-guide.md" "$dir/docs/agent-guide.md"
   else
     check "没有内部任务编号（T###，更新包全树）" \
       grep -rInE --exclude=pnpm-lock.yaml "T[0-9]{3}" "$dir/new" "$dir/base"
