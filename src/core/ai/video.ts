@@ -22,10 +22,18 @@ import { logUsage, reserveUsage, settleUsage, type UsageDeps } from "./usage";
 export const videoAspectRatios = ["16:9", "9:16", "1:1", "4:3", "3:4"] as const;
 
 /**
- * 任务提交后超过这个时长还没完成，按失败处理并退款。
- * 没有后台任务扫描，只在查询时推进：用户离开后再回来查询时才会结算。
+ * 任务提交后超过这个时长，服务商仍说「还在生成」（或根本没有可查的任务），按失败处理并退款。
+ * 推进靠两条路：前端轮询（`pollVideo`），以及恢复扫描（`recoverVideo`，见 ./recovery.ts）——
+ * 用户关掉页面之后由后者兜底。
  */
 export const VIDEO_TIMEOUT_MS = 30 * 60 * 1000;
+
+/**
+ * 「结论还拿不到」的硬上限：查不到服务商状态、或服务商已出结果但本地转存失败 / 存储没配。
+ * 超时不等于失败 —— 这些情况下视频可能已经生成好了，30 分钟就退款等于把结果扔掉。
+ * 服务商的视频地址 24 小时后失效，过了这个点结果确实拿不回来，才按失败退款。
+ */
+export const VIDEO_RESULT_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type StartVideoInput = {
   userId: string | null | undefined;
@@ -81,6 +89,7 @@ function fail(status: Fail["status"], error: string): Fail {
  *   记下 taskId。提交失败退款。
  * - pollVideo：查询任务。完成后下载视频存进 R2、写 files；失败或超时退款。
  *   多个请求同时查询时，只有一个会结算。
+ * - recoverVideo：恢复扫描用，按 id 推进一条任务（不校验用户），和 pollVideo 走同一条结算路径。
  */
 export function createVideoService({
   db,
@@ -250,9 +259,31 @@ export function createVideoService({
         ),
       );
     if (!row) return fail(404, "not_found");
-    const { usage } = row;
-    if (usage.status === "succeeded" && row.file) {
-      return { ok: true, job: await succeededJob(usage, row.file) };
+    return advance(row.usage, row.file);
+  }
+
+  /** 恢复扫描：按 id 推进一条视频任务。任务不存在时返回 null。 */
+  async function recoverVideo(id: string): Promise<VideoJob | null> {
+    const [row] = await getDb()
+      .select({ usage: aiUsage, file: files })
+      .from(aiUsage)
+      .leftJoin(files, eq(files.id, aiUsage.fileId))
+      .where(and(eq(aiUsage.id, id), eq(aiUsage.kind, "video")));
+    if (!row) return null;
+    return (await advance(row.usage, row.file)).job;
+  }
+
+  /**
+   * 推进一条任务：已结束的直接返回；pending 的先问服务商，再按结果转存、结算或继续等。
+   * pollVideo 与 recoverVideo 共用这一条路径，并发时靠 `onlyIfPending` 和下面的认领只结算一次。
+   */
+  async function advance(
+    usage: typeof aiUsage.$inferSelect,
+    file: typeof files.$inferSelect | null,
+  ): Promise<{ ok: true; job: VideoJob }> {
+    const { id, userId } = usage;
+    if (usage.status === "succeeded" && file) {
+      return { ok: true, job: await succeededJob(usage, file) };
     }
     if (usage.status !== "pending") {
       return { ok: true, job: { id, status: "failed" } };
@@ -287,12 +318,27 @@ export function createVideoService({
       return failed;
     };
 
+    // 两种上限：服务商明确「还没好」（或没有可查的任务）按 VIDEO_TIMEOUT_MS；
+    // 结论拿不到（查询出错、已出结果但存不下来）按 VIDEO_RESULT_TTL_MS —— 超时不等于失败。
+    const waitOr = (limitMs: number, reason: unknown) =>
+      elapsed > limitMs ? settleFailed(reason) : pending;
+
     const configured = config.videoModels.find((m) => m.id === usage.modelId);
     const client = configured ? getClient(configured) : null;
     const taskId = usage.operation?.taskId;
-    if (!client || !taskId) {
-      // 模型下线、key 被移除，或提交时进程中断没记下 taskId：超时后退款。
-      return elapsed > VIDEO_TIMEOUT_MS ? settleFailed("timeout") : pending;
+    if (!taskId) {
+      // 提交时进程中断，没记下 taskId：服务商那边没有能按 id 核对的任务。
+      return waitOr(
+        VIDEO_TIMEOUT_MS,
+        "timeout: no provider task id recorded (submission was interrupted)",
+      );
+    }
+    if (!client) {
+      // 模型下线或 key 被移除：没法去问服务商。
+      return waitOr(
+        VIDEO_TIMEOUT_MS,
+        "timeout: video model unavailable, provider task could not be checked",
+      );
     }
 
     let status;
@@ -301,20 +347,22 @@ export function createVideoService({
     } catch (error) {
       // 查询失败按暂时性错误处理，下次再查。
       logError("ai.video_status_failed", { error, taskId });
-      return elapsed > VIDEO_TIMEOUT_MS ? settleFailed("timeout") : pending;
+      return waitOr(
+        VIDEO_RESULT_TTL_MS,
+        "timeout: provider task status unavailable for 24 hours",
+      );
     }
     if (status.status === "failed") return settleFailed(status.error);
     if (status.status === "pending") {
-      return elapsed > VIDEO_TIMEOUT_MS ? settleFailed("timeout") : pending;
+      return waitOr(
+        VIDEO_TIMEOUT_MS,
+        "timeout: provider returned no result within 30 minutes",
+      );
     }
 
-    // 只有转存需要存储；没配置时等配好或超时，失败的任务上面已经退款。
+    // 只有转存需要存储；没配置时等配好，失败的任务上面已经退款。
     const storage = getStorage();
-    if (!storage) {
-      return elapsed > VIDEO_TIMEOUT_MS
-        ? settleFailed("storage_unavailable")
-        : pending;
-    }
+    if (!storage) return waitOr(VIDEO_RESULT_TTL_MS, "storage_unavailable");
     // key 由 ai_usage.id 决定：并发查询写的是同一个对象，files 按 key 去重。
     const key = buildObjectKey({
       userId,
@@ -407,10 +455,11 @@ export function createVideoService({
       });
       return { ok: true, job: await succeededJob(usage, outcome.file) };
     } catch (error) {
-      // 服务商的视频地址 24 小时后失效；超时之前都当作暂时性错误重试。
+      // 服务商已经出了结果，是本地存不下来：视频地址 24 小时后才失效，之前都当作暂时性错误重试，
+      // 不退款（退了款再存成功就是「视频 + 退款」双拿，而且结果本来拿得到）。
       logError("ai.video_store_failed", { error, usageId: id });
       if (stored) await removeOrphanObject(storage, key);
-      return elapsed > VIDEO_TIMEOUT_MS ? settleFailed(error) : pending;
+      return waitOr(VIDEO_RESULT_TTL_MS, error);
     }
   }
 
@@ -419,6 +468,8 @@ export function createVideoService({
       withSpan("ai.video.start", {}, () => startVideo(input)),
     pollVideo: (input: Parameters<typeof pollVideo>[0]) =>
       withSpan("ai.video.poll", {}, () => pollVideo(input)),
+    recoverVideo: (id: string) =>
+      withSpan("ai.video.recover", {}, () => recoverVideo(id)),
   };
 }
 
