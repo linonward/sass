@@ -145,6 +145,9 @@ export async function reserveUsage(
  *
  * `onlyIfPending`：异步任务可能被多个请求同时推进。只有把 pending 改成终态的那一次
  * 才退款，返回 true；记录已经结束时什么都不做，返回 false。
+ *
+ * `inSettlement`：结算真的发生时，在同一个事务里再做一件事（比如开一张异常单）——
+ * 和状态、退款一起提交或一起回滚。
  */
 export async function settleUsage(
   { db, credits, logError }: UsageDeps,
@@ -159,6 +162,7 @@ export async function settleUsage(
     error,
     fileId,
     onlyIfPending = false,
+    inSettlement,
   }: {
     userId: string;
     usageId: string;
@@ -170,6 +174,7 @@ export async function settleUsage(
     error?: unknown;
     fileId?: string;
     onlyIfPending?: boolean;
+    inSettlement?: (tx: DbTransaction) => Promise<void>;
   },
 ): Promise<boolean> {
   const refund = (tx: DbTransaction) =>
@@ -214,6 +219,7 @@ export async function settleUsage(
         await refund(tx);
         await update(tx);
       }
+      await inSettlement?.(tx);
       return true;
     });
     if (!settled) return false;

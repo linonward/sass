@@ -24,17 +24,28 @@ export function cleanQuery(query: Query) {
   ) as Record<string, string>;
 }
 
-/** 状态筛选：一排链接，服务端按 ?status= 过滤。 */
+/**
+ * 状态筛选：一排链接，服务端按 ?status= 过滤。
+ *
+ * 一页上有两组筛选时（比如状态 + 种类），用 `param` 指定这一组的查询参数，
+ * `query` 传另一组的当前值 —— 点这一组时保留另一组，翻页回到第 1 页。
+ */
 export function StatusFilter<T extends string>({
   pathname,
   statuses,
   current,
   label,
+  param = "status",
+  query = {},
+  ariaLabel,
 }: {
   pathname: string;
   statuses: readonly T[];
   current: T | undefined;
   label: (status: T) => string;
+  param?: string;
+  query?: Query;
+  ariaLabel?: string;
 }) {
   const t = useTranslations("Admin.filter");
   const options: { value: T | undefined; label: string }[] = [
@@ -43,13 +54,19 @@ export function StatusFilter<T extends string>({
   ];
 
   return (
-    <nav aria-label={t("label")} className="flex flex-wrap gap-1.5">
+    <nav
+      aria-label={ariaLabel ?? t("label")}
+      className="flex flex-wrap gap-1.5"
+    >
       {options.map((option) => {
         const active = option.value === current;
         return (
           <Link
             key={option.value ?? "all"}
-            href={{ pathname, query: cleanQuery({ status: option.value }) }}
+            href={{
+              pathname,
+              query: cleanQuery({ ...query, [param]: option.value }),
+            }}
             aria-current={active ? "page" : undefined}
             className={cn(
               // 激活态是中性填充，不是实心品牌色：实心留给每一屏唯一的主操作。

@@ -231,6 +231,7 @@ describe("adminNav", () => {
       "/admin/status",
       "/admin/users",
       "/admin/orders",
+      "/admin/exceptions",
       "/admin/subscriptions",
     ]);
   });
@@ -253,6 +254,7 @@ describe("adminNav", () => {
       "/admin/metrics",
       "/admin/users",
       "/admin/orders",
+      "/admin/exceptions",
       "/admin/subscriptions",
     ]);
   });
@@ -271,6 +273,7 @@ describe("adminNav", () => {
       "/admin/flags",
       "/admin/users",
       "/admin/orders",
+      "/admin/exceptions",
       "/admin/subscriptions",
     ]);
   });
@@ -291,6 +294,7 @@ describe("adminNav", () => {
       "/admin/acquisition",
       "/admin/users",
       "/admin/orders",
+      "/admin/exceptions",
       "/admin/subscriptions",
     ]);
   });
@@ -352,6 +356,49 @@ describe("AppSidebar", () => {
     expect(
       screen.getByRole("link", { name: messages.Dashboard.nav.invoices }),
     ).toHaveProperty("href", expect.stringMatching(/\/invoices$/));
+  });
+
+  function renderAdminSidebar(openExceptions: number) {
+    const admin = adminNav(siteConfig).map((item) =>
+      item.key === "adminExceptions"
+        ? { ...item, badge: openExceptions }
+        : item,
+    );
+    return render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar
+              nav={{ suite: [], business: [], admin }}
+              header={null}
+              footer={null}
+            />
+          </SidebarProvider>
+        </TooltipProvider>
+      </NextIntlClientProvider>,
+    );
+  }
+
+  test("待处理的异常单数显示在 Exceptions 上；链接的可访问名不变", () => {
+    renderAdminSidebar(3);
+    const badge = screen.getByTestId("nav-badge-adminExceptions");
+    expect(badge.textContent).toBe("3");
+    expect(badge.getAttribute("aria-label")).toBe("3 open");
+    expect(
+      screen.getByRole("link", {
+        name: messages.Dashboard.nav.adminExceptions,
+      }),
+    ).toHaveProperty("href", expect.stringMatching(/\/admin\/exceptions$/));
+  });
+
+  test("open 清零后计数消失", () => {
+    renderAdminSidebar(0);
+    expect(screen.queryByTestId("nav-badge-adminExceptions")).toBeNull();
+    expect(
+      screen.getByRole("link", {
+        name: messages.Dashboard.nav.adminExceptions,
+      }),
+    ).toBeDefined();
   });
 
   test("当前页的菜单项高亮", () => {

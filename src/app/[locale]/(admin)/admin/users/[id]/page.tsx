@@ -121,7 +121,8 @@ export default async function AdminUserPage({ params }: Props) {
       )}
 
       {creditsEnabled && (
-        <Card>
+        // #credits：异常台的「积分流水」链接直接落到这里。
+        <Card id="credits" className="scroll-mt-20">
           <CardHeader>
             <CardTitle>{t("user.creditsTitle")}</CardTitle>
             <CardDescription data-testid="admin-credit-balance">

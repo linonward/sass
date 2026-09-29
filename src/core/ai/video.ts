@@ -4,6 +4,7 @@ import type { AiConfig, AiVideoModel } from "@/core/config/schema";
 import type { Credits } from "@/core/credits";
 import type { Database } from "@/core/db/client";
 import { aiUsage, files } from "@/core/db/schema";
+import { openException } from "@/core/exceptions/open";
 import { logger, type LogFn } from "@/core/observability/logger";
 import { withSpan } from "@/core/observability/trace";
 import type {
@@ -14,9 +15,12 @@ import { rateLimitResponse } from "@/core/ratelimit/limiter";
 import type { ObjectStorage } from "@/core/upload/storage";
 import { buildObjectKey } from "@/core/upload/validate";
 
-import type { VideoClient } from "./alibaba-video";
+import type { VideoClient, VideoTaskStatus } from "./alibaba-video";
 import { MAX_IMAGE_PROMPT_LENGTH, type Generation } from "./image";
 import { logUsage, reserveUsage, settleUsage, type UsageDeps } from "./usage";
+
+/** 异常台上 AI 任务单的 source：source_id 是 ai_usage.id。 */
+export const AI_EXCEPTION_SOURCE = "ai_usage";
 
 /** 文生视频可选的画幅；图生视频跟随首帧。 */
 export const videoAspectRatios = ["16:9", "9:16", "1:1", "4:3", "3:4"] as const;
@@ -274,6 +278,22 @@ export function createVideoService({
   }
 
   /**
+   * 异常台「重新核对」：只问服务商这条任务现在是什么状态，不改任何东西。
+   * 没有 taskId、模型不可用时返回 null。
+   */
+  async function providerStatus(id: string): Promise<VideoTaskStatus | null> {
+    const [usage] = await getDb()
+      .select()
+      .from(aiUsage)
+      .where(and(eq(aiUsage.id, id), eq(aiUsage.kind, "video")));
+    const taskId = usage?.operation?.taskId;
+    const configured = config.videoModels.find((m) => m.id === usage?.modelId);
+    const client = configured ? getClient(configured) : null;
+    if (!taskId || !client) return null;
+    return client.status(taskId);
+  }
+
+  /**
    * 推进一条任务：已结束的直接返回；pending 的先问服务商，再按结果转存、结算或继续等。
    * pollVideo 与 recoverVideo 共用这一条路径，并发时靠 `onlyIfPending` 和下面的认领只结算一次。
    */
@@ -299,7 +319,22 @@ export function createVideoService({
     };
     // createdAt 由 drizzle 的列映射按 UTC 解析（客户端保证会话时区也是 UTC，见 core/db/client.ts）。
     const elapsed = now() - usage.createdAt.getTime();
-    const settleFailed = async (error: unknown) => {
+    // 需要人看的任务：开（或更新）一张异常单。detail 里放核对时用得上的上下文。
+    const reviewDetail = (reason: string) => ({
+      usageId: id,
+      taskId: usage.operation?.taskId ?? null,
+      modelId: usage.modelId,
+      credits: usage.credits,
+      reason,
+    });
+    /**
+     * `review`：这次退款不是服务商明确说失败，而是「等太久、拿不到结论」—— 服务商那边可能
+     * 其实成功了。和退款在同一个事务里开一张 `ai_job_needs_review`，让人判断追回还是补发。
+     */
+    const settleFailed = async (
+      error: unknown,
+      { review = false }: { review?: boolean } = {},
+    ) => {
       await settleUsage(usageDeps, {
         userId,
         usageId: id,
@@ -314,6 +349,22 @@ export function createVideoService({
         durationMs: elapsed,
         error,
         onlyIfPending: true,
+        inSettlement: review
+          ? (tx) =>
+              openException(tx, {
+                kind: "ai_job_needs_review",
+                userId,
+                source: AI_EXCEPTION_SOURCE,
+                sourceId: id,
+                detail: {
+                  ...reviewDetail(
+                    error instanceof Error ? error.message : String(error),
+                  ),
+                  refunded: true,
+                },
+                bump: true,
+              })
+          : undefined,
       });
       return failed;
     };
@@ -321,7 +372,7 @@ export function createVideoService({
     // 两种上限：服务商明确「还没好」（或没有可查的任务）按 VIDEO_TIMEOUT_MS；
     // 结论拿不到（查询出错、已出结果但存不下来）按 VIDEO_RESULT_TTL_MS —— 超时不等于失败。
     const waitOr = (limitMs: number, reason: unknown) =>
-      elapsed > limitMs ? settleFailed(reason) : pending;
+      elapsed > limitMs ? settleFailed(reason, { review: true }) : pending;
 
     const configured = config.videoModels.find((m) => m.id === usage.modelId);
     const client = configured ? getClient(configured) : null;
@@ -347,6 +398,29 @@ export function createVideoService({
     } catch (error) {
       // 查询失败按暂时性错误处理，下次再查。
       logError("ai.video_status_failed", { error, taskId });
+      // 过了正常的出结果时间还查不到状态：既不能判成功也不能判失败，开单让人看见。
+      // 同一张单反复查不到只累加次数；开单失败不影响这次查询。
+      if (elapsed > VIDEO_TIMEOUT_MS) {
+        try {
+          await openException(getDb(), {
+            kind: "ai_job_needs_review",
+            userId,
+            source: AI_EXCEPTION_SOURCE,
+            sourceId: id,
+            detail: reviewDetail("provider task status unavailable"),
+            lastError: (error instanceof Error
+              ? error.message
+              : String(error)
+            ).slice(0, 1000),
+            bump: true,
+          });
+        } catch (openError) {
+          logError("ai.exception_open_failed", {
+            error: openError,
+            usageId: id,
+          });
+        }
+      }
       return waitOr(
         VIDEO_RESULT_TTL_MS,
         "timeout: provider task status unavailable for 24 hours",
@@ -470,6 +544,8 @@ export function createVideoService({
       withSpan("ai.video.poll", {}, () => pollVideo(input)),
     recoverVideo: (id: string) =>
       withSpan("ai.video.recover", {}, () => recoverVideo(id)),
+    providerStatus: (id: string) =>
+      withSpan("ai.video.provider_status", {}, () => providerStatus(id)),
   };
 }
 

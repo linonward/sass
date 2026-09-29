@@ -399,6 +399,7 @@
       "adminAcquisition": "获客分析",
       "adminUsers": "用户",
       "adminOrders": "订单",
+      "adminExceptions": "异常单",
       "adminSubscriptions": "订阅",
       "adminLeads": "线索",
       "adminReferrals": "邀请",
@@ -410,6 +411,7 @@
       "adminApiKeys": "API 密钥",
       "onboarding": "上手引导"
     },
+    "navBadge": "{count} 条待处理",
     "userMenu": {
       "open": "账户菜单",
       "settings": "设置",
@@ -991,6 +993,68 @@
         "periodEnd": "当前周期截至",
         "reference": "参考号"
       }
+    },
+    "exceptions": {
+      "title": "异常单",
+      "description": "需要有人看的钱和结果：余额不够、没收回来的退款积分，以及没拿到服务商明确结论就退了款的 AI 任务。",
+      "empty": "没有异常单，暂时没有要处理的事。",
+      "kindFilter": "按种类筛选",
+      "kinds": {
+        "refund_reclaim_shortfall": "回收差额",
+        "ai_job_needs_review": "AI 任务待核对"
+      },
+      "statuses": {
+        "open": "待处理",
+        "resolved": "已处理",
+        "ignored": "已忽略"
+      },
+      "columns": {
+        "opened": "开出时间",
+        "user": "用户",
+        "summary": "摘要",
+        "status": "状态",
+        "attempts": "尝试",
+        "lastError": "最近错误"
+      },
+      "shortfall": "订单 {orderId}：还欠 {shortfall} 积分（应回收 {owed}，已回收 {reclaimed}）",
+      "aiJob": "任务 {usageId} · {modelId} · {credits} 积分",
+      "refunded": "已退款",
+      "providerStatus": "服务商现在的状态：{status}",
+      "reason": "原因：{reason}",
+      "links": {
+        "user": "用户",
+        "orders": "订单",
+        "credits": "积分流水"
+      },
+      "history": {
+        "summary": "处理历史（{count}）",
+        "entry": "{date} · {actor} · {action} → {result}",
+        "reason": "“{reason}”",
+        "unknownActor": "已删除的管理员"
+      },
+      "actions": {
+        "retry_reclaim": "重试回收",
+        "recheck": "重新核对",
+        "resolve": "标记已处理",
+        "ignore": "忽略"
+      },
+      "dialog": {
+        "open": "处理",
+        "title": "处理异常单",
+        "description": "每个动作都会连同你的账号和理由记下来。重试回收最多扣到这个订单还欠的数，不会多扣。",
+        "reasonLabel": "理由",
+        "reasonPlaceholder": "你核对了什么、为什么这样处理",
+        "working": "处理中…",
+        "done": "已完成：{result}",
+        "doneClosed": "已完成并关单：{result}"
+      },
+      "errors": {
+        "forbidden": "你没有权限执行这个操作。",
+        "reasonRequired": "请填写理由。",
+        "invalid": "这个动作不适用于这张单。",
+        "notOpen": "这张单已经被处理过了。"
+      },
+      "resolution": "处理说明：{resolution}"
     },
     "orderStatus": {
       "failed": "失败",

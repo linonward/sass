@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 
-import type { DashboardNavItem } from "@/core/config/schema";
 import { Link, usePathname } from "@/core/i18n/navigation";
 import {
   Sidebar,
@@ -13,6 +12,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -20,16 +20,17 @@ import {
 } from "@/core/ui/sidebar";
 
 import { dashboardIconComponents } from "./icons";
-import { isActiveNav, type DashboardNav } from "./nav";
+import { isActiveNav, type DashboardNav, type NavEntry } from "./nav";
 
 function NavGroup({
   items,
   label,
 }: {
-  items: readonly DashboardNavItem[];
+  items: readonly NavEntry[];
   label: string;
 }) {
   const t = useTranslations("Dashboard.nav");
+  const tb = useTranslations("Dashboard");
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
   if (items.length === 0) return null;
@@ -73,6 +74,15 @@ function NavGroup({
                   <Icon />
                   <span>{title}</span>
                 </SidebarMenuButton>
+                {/* 计数在链接外面：链接的可访问名保持菜单项本身（e2e 按它找）。 */}
+                {item.badge ? (
+                  <SidebarMenuBadge
+                    aria-label={tb("navBadge", { count: item.badge })}
+                    data-testid={`nav-badge-${item.key}`}
+                  >
+                    {item.badge}
+                  </SidebarMenuBadge>
+                ) : null}
               </SidebarMenuItem>
             );
           })}

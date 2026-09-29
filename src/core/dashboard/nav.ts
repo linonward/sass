@@ -7,11 +7,17 @@ export const suiteNav: readonly DashboardNavItem[] = [
   { key: "settings", href: "/settings", icon: "settings" },
 ];
 
+/**
+ * 侧边栏里的一项：配置里的菜单项，外加运行时才知道的计数（比如待处理的异常单）。
+ * `badge` 大于 0 时显示在右侧；0 或不传就不显示 —— 清零后计数消失。
+ */
+export type NavEntry = DashboardNavItem & { badge?: number };
+
 export type DashboardNav = {
-  suite: readonly DashboardNavItem[];
-  business: readonly DashboardNavItem[];
+  suite: readonly NavEntry[];
+  business: readonly NavEntry[];
   /** 后台菜单：管理员在 dashboard 里看到一个入口，在 /admin 里看到完整菜单。 */
-  admin?: readonly DashboardNavItem[];
+  admin?: readonly NavEntry[];
 };
 
 /** 管理员在 dashboard 侧边栏里看到的后台入口。 */
@@ -25,6 +31,8 @@ const adminNavBase: readonly DashboardNavItem[] = [
   { key: "adminMetrics", href: "/admin/metrics", icon: "chart" },
   { key: "adminUsers", href: "/admin/users", icon: "users" },
   { key: "adminOrders", href: "/admin/orders", icon: "creditCard" },
+  // 计费异常台：钱或结果需要人看的地方，紧挨着订单。侧边栏上带待处理计数（见 (admin)/layout.tsx）。
+  { key: "adminExceptions", href: "/admin/exceptions", icon: "receipt" },
   { key: "adminSubscriptions", href: "/admin/subscriptions", icon: "layers" },
 ];
 
@@ -71,7 +79,7 @@ const flagsNav: DashboardNavItem = {
 /**
  * /admin 里的菜单。获客报表、线索管理、邀请管理、状态页、feature flags 和 API Key 报表只在对应模块开启时出现 ——
  * 关闭时那些页面 404，菜单里留一个点进去就 404 的入口只会让人以为坏了。
- * 顺序：Metrics →（flags / 归因 / 留资报表）→（邀请管理 / 状态页）→ Users →（API Key 报表）→ Orders → Subscriptions。
+ * 顺序：Metrics →（flags / 归因 / 留资报表）→（邀请管理 / 状态页）→ Users →（API Key 报表）→ Orders → Exceptions → Subscriptions。
  */
 export function adminNav(
   config: Pick<
