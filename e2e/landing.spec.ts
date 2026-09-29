@@ -74,13 +74,24 @@ for (const path of ["/", "/zh"]) {
     await page.goto(path);
     const hero = page.locator("#hero");
     const tabs = hero.getByRole("tab");
+    const layout = () =>
+      page.evaluate(() => ({
+        heroHeight: document.querySelector("#hero")!.getBoundingClientRect()
+          .height,
+        nextSectionTop: (document.querySelector("#features") as HTMLElement)
+          .offsetTop,
+      }));
+    const initialLayout = await layout();
     await tabs.first().focus();
     await page.keyboard.press("ArrowRight");
     await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
     await expect(hero.getByRole("table")).toBeVisible();
+    await expect.poll(layout).toEqual(initialLayout);
+    await expect(hero.getByRole("tabpanel")).toHaveCount(1);
     await page.keyboard.press("Home");
     await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
     await expect(hero.getByRole("img")).toBeVisible();
+    await expect.poll(layout).toEqual(initialLayout);
     expect(aiRequests).toEqual([]);
     const demoLink = hero.locator('a[href$="/demo"]');
     await expect(demoLink).toHaveCount(1);
