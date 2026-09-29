@@ -14,8 +14,8 @@ import {
 
 import en from "../../../messages/en.json";
 import { createDbClient, type DbClient } from "@/core/db/client";
-import { notificationLog, user } from "@/core/db/schema";
-import type { DeliveryRetry } from "@/core/email/delivery";
+import { notificationLog, pendingNotifications, user } from "@/core/db/schema";
+import { createOutbox, type DeliveryRetry } from "@/core/email/outbox";
 import { sendEmail, type SendEmailOptions } from "@/core/email/send";
 import { readLatestEmail } from "@/core/email/testing";
 
@@ -177,6 +177,11 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
   /** 这个用户的去重名额（每个用例用新用户，所以不会串）。 */
   const claims = () =>
     db.select().from(notificationLog).where(eq(notificationLog.userId, userId));
+  const outboxRows = () =>
+    db
+      .select()
+      .from(pendingNotifications)
+      .where(eq(pendingNotifications.userId, userId));
 
   const handle = (event: Parameters<typeof handleBillingEvent>[0]) =>
     handleBillingEvent(event, { db });
@@ -446,7 +451,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("重试都失败：释放名额，同一笔付款之后还能发出", async () => {
+  test("立即发送失败：邮件留在 outbox、名额保留；重放不多排一封，服务恢复后补发扫描只发一封", async () => {
     useHandler(capture, { attempts: 2, delayMs: 1 });
 
     const sub = `sub_${randomUUID()}`;
@@ -457,18 +462,37 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
       ...period("2026-09-25T00:00:00.000Z"),
     };
 
-    // 发不出去（服务商宕机、SMTP 拒绝）：事件照常处理，只有邮件没发出去。
+    // 发不出去（服务商宕机、SMTP 拒绝）：事件照常处理，邮件留在库里。
     failSend = true;
     expect(
       (await handle(fake.event("subscription.renewed", fields))).status,
     ).toBe("processed");
     expect(sent).toHaveLength(0);
-    expect(await claims()).toHaveLength(0);
+    expect(await claims()).toHaveLength(1);
+    expect(await outboxRows()).toEqual([
+      expect.objectContaining({
+        status: "pending",
+        template: "payment-succeeded",
+        attempts: 2,
+        lastError: "SMTP down",
+      }),
+    ]);
 
-    // 之后同一笔付款再处理一次（服务商重放、人工补发）就能发出 —— 修复前名额会被占死。
-    failSend = false;
+    // 同一笔付款换事件 ID 重推：名额还占着，不会再排一封。
     await handle(fake.event("subscription.renewed", fields));
+    expect(await outboxRows()).toHaveLength(1);
+
+    // 服务恢复：补发扫描（新实例，相当于应用重启后）发出去，扫两遍也只有一封。
+    failSend = false;
+    const later = createOutbox({
+      db,
+      send: capture as never,
+      now: () => new Date(Date.now() + 10 * 60_000),
+    });
+    await later.scan({ userIds: [userId] });
+    await later.scan({ userIds: [userId] });
     expect(sent.map((m) => m.template)).toEqual(["payment-succeeded"]);
+    expect((await outboxRows())[0]).toMatchObject({ status: "sent" });
     expect(await claims()).toHaveLength(1);
   });
 

@@ -24,7 +24,16 @@ export type StoredEmail = OutgoingEmail & { id: string; sentAt: string };
 
 export const EMAIL_OUTBOX_DIR = path.join(process.cwd(), ".tmp", "emails");
 
-type Send = (email: OutgoingEmail) => Promise<{ id: string }>;
+/**
+ * 发送选项。`idempotencyKey`：同一封信（outbox 的同一行）重发时带同一个键，
+ * 服务商据此认出是同一封、不再投递第二次（Resend 保留 24 小时）。console / file 忽略它。
+ */
+export type SendOptions = { idempotencyKey?: string };
+
+type Send = (
+  email: OutgoingEmail,
+  options?: SendOptions,
+) => Promise<{ id: string }>;
 
 function consoleTransport(): Send {
   return async (email) => {
@@ -70,18 +79,26 @@ function resendTransport(apiKey: string | undefined): Send {
   if (!apiKey)
     throw new Error("RESEND_API_KEY is required for EMAIL_TRANSPORT=resend");
   const resend = new Resend(apiKey);
-  return async (email) => {
-    const { data, error } = await resend.emails.send({
-      from: email.from,
-      to: email.to,
-      replyTo: email.replyTo,
-      subject: email.subject,
-      html: email.html,
-      text: email.text,
-      tags: [
-        { name: "template", value: email.template.replace(/[^\w-]/g, "_") },
-      ],
-    });
+  return async (email, options = {}) => {
+    const { data, error } = await resend.emails.send(
+      {
+        from: email.from,
+        to: email.to,
+        replyTo: email.replyTo,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+        tags: [
+          { name: "template", value: email.template.replace(/[^\w-]/g, "_") },
+        ],
+      },
+      { idempotencyKey: options.idempotencyKey },
+    );
+    // 同一个幂等键之前已经被收下、这次内容却不同（比如重发之间换了模板）：
+    // 服务商那边已经有这封信了，按「已发送」处理，而不是当成失败再重试一轮。
+    if (error?.name === "invalid_idempotent_request") {
+      return { id: `idempotent:${options.idempotencyKey}` };
+    }
     if (error) {
       throw new Error(
         `Resend failed to send "${email.template}": ${error.message}`,

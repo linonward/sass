@@ -291,7 +291,15 @@ ALLOW_DB_SEED=1 pnpm db:seed   # 幂等，重复执行不会重复插入
 - SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
 - `/llms.txt`：给 AI agent 和答案引擎的站点索引（约定见 [llmstxt.org](https://llmstxt.org)）。内容全部从 `site.config.ts`、`messages/*.json` 和博客文章生成，改配置就会跟着变；公开页面、套餐价格、博客、法律页、sitemap/robots/RSS，以及需要登录的路径各一节。排版在 `src/core/seo/llms.ts`（可单测），内容组装在 `src/app/llms.txt/route.ts`。多语言站点只出一份，固定用默认语言的 URL。
 - 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。生产运行时只允许 `resend`：`console` / `file` 会把登录验证码写进服务端日志或磁盘，设了会启动失败；CI 的 e2e 跑在生产构建上，靠 `ALLOW_NON_RESEND_EMAIL=1` 放行。
-  - 账单邮件：付款成功、付款失败、订阅取消由 `onBillingEvent` 钩子触发（`src/core/billing/emails.ts`），余额跌破 `credits.lowBalanceThreshold` 时发 `credits-low`（同一用户 24 小时内最多一封）。邮件都在数据库事务提交之后才发送：钩子通过 `afterCommit(fn)` 登记，事务回滚时不会发出；同一笔付款、同一订阅的取消只通知一次（`notification_log` 表去重）。发信失败会重试（默认 3 次、指数退避），重试都用完才释放 (kind, key) 的去重名额，之后同 key 的尝试（服务商重放、人工补发）能补发；发信失败不影响 webhook 和扣减。
+  - 账单邮件：付款成功、付款失败、订阅取消由 `onBillingEvent` 钩子触发（`src/core/billing/emails.ts`），余额跌破 `credits.lowBalanceThreshold` 时发 `credits-low`（同一用户 24 小时内最多一封）。同一笔付款、同一订阅的取消只通知一次（`notification_log` 表去重）。发信失败不影响 webhook 和扣减。投递方式见下一条。
+  - 关键事务邮件走 **outbox**（`src/core/email/outbox.ts`，表 `pending_notifications`）：付款成功 / 付款失败 / 订阅取消 / 余额不足，加上登录验证码和改邮箱验证码。
+    - **入队**：在业务事务里写一行（和去重名额、订单更新一起提交或一起回滚）；**提交后立即发一次**（带 3 次快速重试）。
+    - **补发**：还没发出去的留在库里，由恢复扫描（同一个 `/api/cron/recovery` 入口和机会式触发，见上线清单「恢复扫描」）按退避补发 —— 1 分钟、5 分钟、15 分钟……累计约 7 小时、共 8 次。应用重启、函数被回收都不会丢信。
+    - **只发一次**：发送前用状态转换抢占（pending → sending），并发的扫描只有一个能发；发送时带 Resend 的幂等键 `notification/<行 id>`（Resend 保留 24 小时），进程在「服务商已收下、我们还没记下」之间死掉时，重发会被服务商认出来。
+    - **去重名额**：入队时占，发出后保留（窗口内不会重复发）；重试用完记终态 `failed` 才释放，之后同一事件再触发（服务商重放、下一个窗口）还能发。
+    - **终态失败**：行保留，日志里有 `email.delivery_failed`，后台异常单（`/admin/exceptions` 的「邮件没发出」）可以一键**补发**（要填理由，写审计）。直接查库：`select * from pending_notifications where status = 'failed' order by updated_at desc`。
+    - **验证码**：库里的验证码只存哈希，所以 outbox 里的验证码也**加密**存放（密钥从 `BETTER_AUTH_SECRET` 派生，只读得到数据库拿不到可用的码），发出或作废后清空；过了有效期不再发；重新请求时新码取代还没发出的旧码。立即发送失败时用户看到「发不出邮件，请稍后重试或用 Google 登录」，冷却照旧清掉可以马上重试；数据库不可用导致入队失败也是同一个提示，不是 500。
+    - **没迁进来的**：欢迎邮件、状态页通知、留资确认邮件仍是直接发送 —— 它们不涉及钱和登录，失败时用户可以自己重新触发（留资可以重新提交、状态页订阅者会收到下一条更新），不值得为它们多占一张表的行。
   - 生产构建（`next build` / `next start`）默认使用 `resend` 并要求 `RESEND_API_KEY`；本地没有 key 又想跑一次构建时用 `ALLOW_NON_RESEND_EMAIL=1 EMAIL_TRANSPORT=console pnpm build`。
 - 登录：Better Auth（`src/core/auth/`），Google 登录和邮箱验证码登录，路由 `/sign-in`、`/api/auth/*`。验证码参数在 `site.config.ts` 的 `auth.emailOtp`。
   - 需要登录的页面放在 `src/app/[locale]/(app)/` 下：(app) 的 layout 校验 session，未登录时跳转登录页（307，见[错误与权限的边界](#错误与权限的边界)）。写进 `site.config.ts` 的 `dashboard.nav` 的路径，proxy 还会按 cookie 提前拦截并带上回跳地址（`src/core/auth/routes.ts` 的 `protectedPrefixes`）。
@@ -618,9 +626,11 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
 3. 自定义事件（`sign_up`、`checkout_started`、`purchase`）需要 Pro 或 Enterprise 计划，Hobby 只统计页面浏览。开启了 Deployment Protection 的预览环境，服务端事件需要在项目里创建 Protection Bypass for Automation（`VERCEL_AUTOMATION_BYPASS_SECRET`）。
 4. `purchase` 由 webhook 触发，没有访客上下文，所以在 Analytics 里看不到它的来源和设备；按 `plan` 筛选即可。
 
-### 5. 恢复扫描（悬着的 AI 任务）
+### 5. 恢复扫描（悬着的 AI 任务、没发出去的邮件）
 
 视频生成是异步的：提交后服务商在后台生成，结果要有人去问、下载、存进 R2 并结算。前端轮询会做这件事，但用户关掉页面、换了设备、或者函数在结算前被回收（重新部署、超时）之后，就没人推进了 —— 那一行停在 `pending`，积分一直扣着，视频明明生成好了也拿不到。
+
+同一个扫描还负责补发没发出去的关键事务邮件（付款、余额提醒、验证码；机制见「配置」里账单邮件那一条），日志事件是 `notifications.recovery`。
 
 恢复扫描负责兜底：找出没人推进的 `pending` 任务，**先去服务商那边核对**，能拿到结果就先保存结果（不退款），服务商明确失败或长期没有结果才退款，`error` 里写明原因。和前端轮询同时结算同一条任务时只结算一次、只退一次。
 

@@ -12,7 +12,11 @@ import {
   type EmailTemplateName,
   type EmailTemplateProps,
 } from "./templates";
-import { createTransport, type OutgoingEmail } from "./transports";
+import {
+  createTransport,
+  type OutgoingEmail,
+  type SendOptions,
+} from "./transports";
 import { emailTranslator, loadMessages } from "./translator";
 
 export type SendEmailOptions<T extends EmailTemplateName> = {
@@ -62,10 +66,12 @@ export async function renderEmail<T extends EmailTemplateName>({
  */
 export async function sendEmail<T extends EmailTemplateName>(
   options: SendEmailOptions<T>,
+  sendOptions?: SendOptions,
 ): Promise<{ id: string }> {
   const email = await renderEmail(options);
   const transport = resolveEmailTransport(process.env) as EmailTransport;
   return createTransport(transport, { resendApiKey: env.RESEND_API_KEY })(
     email,
+    sendOptions,
   );
 }

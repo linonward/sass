@@ -16,7 +16,7 @@ export type ExceptionActionState =
 
 const input = z.object({
   exceptionId: z.uuid(),
-  action: z.enum(["retry_reclaim", "recheck", "resolve", "ignore"]),
+  action: z.enum(["retry_reclaim", "recheck", "resend", "resolve", "ignore"]),
   reason: z.string().trim().min(1).max(500),
 });
 
@@ -52,10 +52,12 @@ export async function exceptionAction(
       ? await exceptionService.retryReclaim(args)
       : action === "recheck"
         ? await exceptionService.recheck(args)
-        : await exceptionService.resolve({
-            ...args,
-            status: action === "resolve" ? "resolved" : "ignored",
-          });
+        : action === "resend"
+          ? await exceptionService.resendNotification(args)
+          : await exceptionService.resolve({
+              ...args,
+              status: action === "resolve" ? "resolved" : "ignored",
+            });
 
   if (!outcome.ok) {
     return {

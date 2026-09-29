@@ -1001,7 +1001,8 @@
       "kindFilter": "按种类筛选",
       "kinds": {
         "refund_reclaim_shortfall": "回收差额",
-        "ai_job_needs_review": "AI 任务待核对"
+        "ai_job_needs_review": "AI 任务待核对",
+        "notification_failed": "邮件没发出"
       },
       "statuses": {
         "open": "待处理",
@@ -1018,6 +1019,7 @@
       },
       "shortfall": "订单 {orderId}：还欠 {shortfall} 积分（应回收 {owed}，已回收 {reclaimed}）",
       "aiJob": "任务 {usageId} · {modelId} · {credits} 积分",
+      "notification": "邮件「{template}」发往 {to}",
       "refunded": "已退款",
       "providerStatus": "服务商现在的状态：{status}",
       "reason": "原因：{reason}",
@@ -1035,6 +1037,7 @@
       "actions": {
         "retry_reclaim": "重试回收",
         "recheck": "重新核对",
+        "resend": "补发",
         "resolve": "标记已处理",
         "ignore": "忽略"
       },

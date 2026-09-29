@@ -4,14 +4,15 @@ import { preferredLocale } from "@/core/account/locale";
 import { db as defaultDb } from "@/core/db";
 import { subscriptions, user } from "@/core/db/schema";
 import {
-  createNotificationDelivery,
+  createOutbox,
   type DatabaseSource,
   type DeliveryRetry,
-} from "@/core/email/delivery";
+} from "@/core/email/outbox";
 import { siteLink } from "@/core/email/links";
 import { claimNotification } from "@/core/email/notification-log";
 import { planDisplayName } from "@/core/email/plan-name";
 import type { SendEmailOptions } from "@/core/email/send";
+import type { SendOptions } from "@/core/email/transports";
 import type { EmailTemplateName } from "@/core/email/templates";
 
 import siteConfig from "../../../site.config";
@@ -90,6 +91,7 @@ export function billingEmailFor(
 
 type Send = <T extends EmailTemplateName>(
   options: SendEmailOptions<T>,
+  sendOptions?: SendOptions,
 ) => Promise<unknown>;
 
 /**
@@ -97,8 +99,10 @@ type Send = <T extends EmailTemplateName>(
  * 在事件的事务里读取收件人、占用去重名额；邮件本身用 afterCommit 在事务提交后发送，
  * 所以事务回滚（Creem 会重试）时不会发出邮件，重复投递也因 webhook_events 幂等不会再触发。
  *
- * 提交后的发送失败会重试，最终失败则释放名额（见 `@/core/email/delivery`）：付款成功这类
- * 关键邮件不会因为一次失败就永远发不出去。`db` 只用于释放名额（事务已经提交，不能再用它）。
+ * 邮件先在同一个事务里写进 outbox（`pending_notifications`），提交后立即发一次；发不出去
+ * 就留在库里由恢复扫描补发，重试用完才记终态失败、释放名额（见 `@/core/email/outbox`）。
+ * 付款成功这类关键邮件因此不会因为进程重启或一次故障就永远发不出去。
+ * `db` 用于提交后的发送与记账（事务已经提交，不能再用它）。
  */
 export function createBillingEmailHandler({
   send,
@@ -109,12 +113,13 @@ export function createBillingEmailHandler({
 }: {
   send: Send;
   creditsEnabled: boolean;
-  /** 释放名额用的数据库；默认全局连接。 */
+  /** 提交后发送与记账用的数据库；默认全局连接。 */
   db?: DatabaseSource;
-  /** 发送失败的重试参数；默认 3 次、500ms 起指数退避。 */
+  /** 提交后立即发送时的快速重试；默认 3 次、500ms 起指数退避。 */
   retry?: DeliveryRetry;
   now?: () => Date;
 }): OnBillingEventHandler {
+  const outbox = createOutbox({ db, send, retry, now });
   return async (event, { tx, userId, stale, afterCommit }) => {
     const spec = billingEmailFor(event, { stale });
     if (!spec) return;
@@ -199,7 +204,7 @@ export function createBillingEmailHandler({
       }
     })();
 
-    // 名额和事件处理一起提交；邮件在提交之后才发，失败会重试、最终失败则释放名额。
+    // 名额、outbox 记录和事件处理一起提交（回滚时一起消失）；邮件在提交之后才发。
     const claimedAt = now();
     const claimed = await claimNotification(tx, {
       kind: spec.template,
@@ -209,16 +214,19 @@ export function createBillingEmailHandler({
       now: claimedAt,
     });
     if (!claimed) return;
-    afterCommit(
-      createNotificationDelivery({
-        db,
-        kind: spec.template,
-        key: spec.key,
-        now: claimedAt,
-        send: () => send(message),
-        retry,
-      }),
-    );
+    const id = await outbox.enqueue(tx, {
+      kind: spec.template,
+      key: spec.key,
+      userId,
+      to: recipient.email,
+      template: message.template,
+      props: message.props as Record<string, unknown>,
+      locale,
+      claimedAt,
+    });
+    afterCommit(async () => {
+      await outbox.deliver(id);
+    });
   };
 }
 

@@ -154,7 +154,7 @@
 | T2302                       | buyer-agent-guide       | `docs/buyer-agent-guide`       | T2301                         | done |
 | T2303                       | ai-job-recovery         | `feat/ai-job-recovery`         | T2302                         | done |
 | T2304                       | billing-exceptions      | `feat/billing-exceptions`      | T2303                         | done |
-| T2305                       | notification-recovery   | `feat/notification-recovery`   | T2303                         | todo |
+| T2305                       | notification-recovery   | `feat/notification-recovery`   | T2303                         | done |
 | T2306                       | reference-product       | `docs/reference-product`       | T2305                         | todo |
 | T2307                       | release-candidate       | `chore/release-candidate`      | T2306                         | todo |
 | T2308                       | buyer-trial             | `docs/buyer-trial`             | T2307                         | todo |

@@ -14,7 +14,7 @@ import { adminActions, aiUsage, billingExceptions } from "@/core/db/schema";
 export const EXCEPTION_TARGET = "billing_exception";
 
 export type ExceptionActionName =
-  "retry_reclaim" | "recheck" | "resolve" | "ignore";
+  "resend" | "retry_reclaim" | "recheck" | "resolve" | "ignore";
 
 /**
  * 一次处理动作的结果。`result` 是写进审计表的机读结果（也在后台的处理历史里显示）：
@@ -22,6 +22,8 @@ export type ExceptionActionName =
  *   `uncollectible:<owed>`（余额为 0）/ `nothing_owed`（账上已不欠，关单）/ `order_missing`；
  * - 重新核对：`recovered:<状态>`（任务还在 pending，按恢复路径推进）/ `provider:<状态>`（任务已结束，
  *   只记下服务商现在怎么说）/ `provider_unavailable` / `provider_error`；
+ * - 补发邮件：`sent`（发出去了，关单）/ `retry` / `failed`（又没发出去，单子留着）/
+ *   `skipped`（这封已经补发不了，比如验证码的原文已清掉）；
  * - 标记处理 / 忽略：`resolved` / `ignored`。
  * `closed` 表示这次动作之后单子不再是 open。
  */
@@ -35,6 +37,10 @@ export type ExceptionServiceDeps = {
   video: {
     recoverVideo: (id: string) => Promise<{ status: string } | null>;
     providerStatus: (id: string) => Promise<VideoTaskStatus | null>;
+  };
+  /** 事务邮件的 outbox：终态失败的邮件在这里补发（见 @/core/email/outbox）。 */
+  outbox: {
+    resend: (id: string) => Promise<"sent" | "retry" | "failed" | "skipped">;
   };
 };
 
@@ -52,6 +58,7 @@ export function createExceptionService({
   db,
   credits,
   video,
+  outbox,
 }: ExceptionServiceDeps) {
   async function audit(
     executor: Database | DbTransaction,
@@ -279,6 +286,38 @@ export function createExceptionService({
     });
   }
 
+  /**
+   * 补发一封终态失败的邮件：outbox 里那一行放回队列立即发一次。发出去就关单；
+   * 又没发出去，单子留着（outbox 会按退避继续补发，再次用完时更新这张单的次数和错误）。
+   * 注意这是 at-least-once：终态失败时去重名额已经释放，期间如果同一事件又触发过一封，
+   * 补发会多出一封 —— 所以要人来按，并写理由。
+   */
+  async function resendNotification(
+    input: ActionInput,
+  ): Promise<ExceptionActionOutcome> {
+    const found = await load(input.exceptionId);
+    if (!found) return { ok: false, error: "not_found" };
+    if (found.kind !== "notification_failed") {
+      return { ok: false, error: "wrong_kind" };
+    }
+    if (found.status !== "open") return { ok: false, error: "not_open" };
+
+    const result = await outbox.resend(found.sourceId);
+    const sent = result === "sent";
+    return db().transaction(async (tx): Promise<ExceptionActionOutcome> => {
+      const row = await lock(tx, found.id);
+      if (!row || row.status !== "open")
+        return { ok: false, error: "not_open" };
+      if (sent) {
+        await close(tx, row.id, "resolved", input.reason);
+      } else {
+        await recordAttempt(tx, row.id, `resend: ${result}`, {});
+      }
+      await audit(tx, input, "resend", result);
+      return { ok: true, result, closed: sent };
+    });
+  }
+
   /** 标记已处理 / 忽略：写处理说明并关单，不动任何钱。 */
   async function resolve(
     input: ActionInput & { status: "resolved" | "ignored" },
@@ -298,7 +337,7 @@ export function createExceptionService({
     });
   }
 
-  return { retryReclaim, recheck, resolve };
+  return { retryReclaim, recheck, resendNotification, resolve };
 }
 
 export type ExceptionService = ReturnType<typeof createExceptionService>;
