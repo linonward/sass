@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { openGraphLocales } from "@/core/i18n/locales";
+
 import siteConfig from "../../../site.config";
 import { ogImageSize } from "./og-image-size";
 import { absoluteUrl, languageAlternates, siteUrl } from "./urls";
@@ -84,7 +86,7 @@ export function buildMetadata({
         ? { type: "article", ...article }
         : { type: "website" as const }),
       siteName: siteConfig.name,
-      locale,
+      locale: openGraphLocales[locale] ?? locale,
       ...(path !== null && { url: absoluteUrl(locale, path) }),
       title: fullTitle,
       description,

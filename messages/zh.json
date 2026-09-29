@@ -47,7 +47,8 @@
     "retry": "重试"
   },
   "Metadata": {
-    "description": "一天上线你的 SaaS。"
+    "homeTitle": "把你的 AI 产品做成可以收费的生意",
+    "description": "登录、收款、积分与 AI 已经接好的 Next.js SaaS 模板。把 AI 产品上线并开始收费，把时间留给产品本身。"
   },
   "Llms": {
     "intro": "{name} 的机器可读索引，供 AI 代理和搜索引擎使用。公开页面在前，带一行描述；然后是仅供机器使用的 URL；最后是需要登录的区域。",

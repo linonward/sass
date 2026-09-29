@@ -47,7 +47,8 @@
     "retry": "Try again"
   },
   "Metadata": {
-    "description": "Ship your SaaS in a day."
+    "homeTitle": "Turn your AI product into a business",
+    "description": "Next.js SaaS starter with auth, payments, credits and AI already connected. Launch your AI product and start charging, then spend your time on the product."
   },
   "Llms": {
     "intro": "Machine-readable index of {name} for AI agents and answer engines. Public pages come first with a one-line description, then the URLs that only exist for machines, then the areas that need an account.",
