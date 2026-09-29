@@ -10,7 +10,6 @@ import {
   StatTile,
 } from "@/core/admin/ui/metrics";
 import { buttonVariants } from "@/core/ui/button";
-import { cn } from "@/core/lib/utils";
 
 export async function generateMetadata({
   params,
@@ -133,7 +132,7 @@ export default async function DemoPage({
           href="https://vercel.com/new/clone?repository-url=https://github.com/linonward/sass"
           target="_blank"
           rel="noopener noreferrer"
-          className={cn(buttonVariants({ size: "marketing", tone: "primary" }))}
+          className={buttonVariants({ size: "marketing", tone: "primary" })}
         >
           {t("deployButton")}
         </a>
