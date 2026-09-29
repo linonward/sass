@@ -80,3 +80,59 @@ T2401 换了首页叙事，但首页的 title 和 description 还停在旧模板
 - [x] 本地 `/opengraph-image` 为 1200×630，展示 OnwardKit 和新英文标语，无裁切。
 
 预览通过忽略的 `.env.local` 设置 SITE_NAME，本地测试域名仅用于验收。线上环境未修改；上线时按推广文档设置实际站点身份并重新构建。
+
+---
+
+## T2404 onwardkit-pricing
+
+- 分支 / worktree：`feat/onwardkit-pricing` → `../sass-onwardkit-pricing`
+- 依赖：T2309（Waffo Pancake）、T2403，已合入 `main`
+
+**问题**
+
+这个仓库既是卖给买家的模板，也是 OnwardKit 自己的销售站点。OnwardKit 实际卖法是：Waffo Pancake 收款、只卖一次性（$99）、数字产品不退款、1 年更新 + 邮件支持。但首页的购买卡片还写着「即将公布 / 待确认」、没有购买按钮；法律页写死了 Creem；而直接改 `site.config.ts` 会改掉买家拿到的默认值，还会让依赖 `pro` 订阅套餐的一批模板测试失去覆盖。
+
+**做**
+
+1. 站点差异用环境变量覆盖，模板默认值与测试不动（延续 `SITE_NAME` 等的做法）：
+   - `SITE_PRICE_<套餐>`：覆盖套餐标价（例如 `SITE_PRICE_LIFETIME=99`），非法值启动即报错；
+   - `SITE_HIDDEN_PLANS`：逗号分隔，被隐藏的套餐不展示、不能新购，但仍在配置里（已有订阅照常续费、发积分）；
+   - 支付商用已有的 `BILLING_PROVIDER=waffo`（在部署环境设，不改代码）。
+2. 首页「交付」区块的购买卡片：价格取 `landing.purchasePlan` 指向的套餐（含覆盖后的价格），条款写「一次性付款 · 1 年更新 · 邮件支持 · 数字产品售出不退款」，加购买按钮（复用 `PlanButton` 的结账流程）；套餐不存在或被隐藏时退回「即将公布」。
+3. 法律页按生效的支付商写名称（MoR / 非 MoR 的措辞随之变化），不再写死 Creem；退款页改为数字产品售出不退款（法律措辞请卖家审阅）。
+4. FAQ「能否更换支付服务商」补上 Waffo Pancake。
+
+**不做**
+
+- 付款后的交付（下载链接邮件）：见 T2405。**T2405 合入前不要在生产环境设 `BILLING_PROVIDER=waffo` 和产品 ID**，否则能收款却交付不了。
+
+**验收**
+
+- [ ] 不设这几个环境变量时，站点和所有模板测试与改动前一致
+- [ ] 设 `SITE_HIDDEN_PLANS=pro`、`SITE_PRICE_LIFETIME=99` 后：定价页不显示 pro、结账 pro 被拒、首页购买卡片显示 $99 且能发起结账
+- [ ] 法律页随 `BILLING_PROVIDER` 显示正确的支付商
+- [ ] `pnpm test`、`e2e/ui-shell.spec.ts`、`e2e/landing.spec.ts` 全绿（含 375px 不横向溢出）
+
+---
+
+## T2405 template-delivery
+
+- 分支 / worktree：`feat/template-delivery` → `../sass-template-delivery`
+- 依赖：T2404
+
+**问题**
+
+买家付款后要拿到 OnwardKit 模板。决定：付款成功后**邮件自动发下载链接**。
+
+**做**（放在 `src/features/`，不进 `src/core/`）
+
+1. 发行包存在私有存储里（R2 私有 bucket 或同等），按版本存放；下载走带时效的签名链接。
+2. 付款成功（购买卡片对应的套餐）时记一条授权（用户、订单、购买时间、更新截止 = 购买 + 1 年），并经 T2305 的 outbox 发下载链接邮件（可靠补发）。
+3. 买家能在站内重新获取链接（链接过期后不必找人工）；成功页写明「下载链接已发到邮箱」。
+4. 1 年内的新版本：授权有效期内可以取到最新发行包 / 差量更新包。
+
+**验收**
+
+- [ ] 测试环境真实付款后收到邮件、链接可下载、过期后失效且能重新获取
+- [ ] 重复 webhook / 补发不重复授权、不重复发信
+- [ ] 业务代码全部在 `src/features/`，`src/core` 只加通用钩子（若需要，逐条说明）

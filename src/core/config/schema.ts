@@ -133,6 +133,10 @@ export const landingSchema = z.strictObject({
       message: "keys must not contain duplicates",
     })
     .default([]),
+  // 首页「交付」区块购买卡片卖的套餐（billing.plans 里付费套餐的 id）。
+  // 不填、找不到这个套餐、或套餐被隐藏时，卡片显示「即将公布」、没有购买按钮 —— 不报错：
+  // 买家删掉这个套餐时站点照常启动。
+  purchasePlan: messageKeySchema.optional(),
   // 每项的问题和回答在 Landing.faq.items.<key>。
   faq: z
     .array(messageKeySchema)
@@ -162,6 +166,9 @@ export const billingSchema = z.strictObject({
           // 每项文案在 Landing.pricing.features.<key>。
           features: z.array(messageKeySchema).min(1),
           highlighted: z.boolean().default(false),
+          // 不在定价页 / 首页展示、不能新购；但仍留在配置里 —— 已有这个套餐的订阅照常续费、
+          // 照常发积分（直接删掉套餐的话，老订阅续费时找不到套餐，积分就发不出去）。
+          hidden: z.boolean().default(false),
           // —— 交易字段 ——
           // 省略时按 interval 推导：once → one_time，month / year → subscription。
           type: z.enum(["subscription", "one_time"]).optional(),

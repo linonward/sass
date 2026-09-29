@@ -1,3 +1,4 @@
+import { listedPlans } from "@/core/billing/plans";
 import { getTranslations } from "next-intl/server";
 
 import { getSession } from "@/core/auth/session";
@@ -50,7 +51,7 @@ export default async function PricingPage({
         </div>
       )}
       <Pricing
-        plans={siteConfig.billing.plans}
+        plans={listedPlans()}
         currency={siteConfig.billing.currency}
         owned={owned}
         headingLevel={1}

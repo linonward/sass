@@ -1,12 +1,29 @@
 import { ArrowUpRightIcon, CheckIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+
+import { PlanButton } from "@/core/billing/ui/plan-button";
+import type { Plan } from "@/core/config/schema";
 
 import { Link } from "@/core/i18n/navigation";
 import { bands, type Band } from "./band";
 import { Section } from "./section";
 
-export function Delivery({ waveFrom }: { waveFrom?: Band }) {
+/**
+ * 「交付」区块：左边是购买卡片（`landing.purchasePlan` 指向的套餐），右边是交付内容清单。
+ * 没配购买套餐、或套餐被隐藏时，卡片显示「即将公布」、没有购买按钮。
+ */
+export function Delivery({
+  waveFrom,
+  plan,
+  currency,
+}: {
+  waveFrom?: Band;
+  plan?: Plan;
+  currency: string;
+}) {
   const t = useTranslations("Landing.delivery");
+  const tp = useTranslations("Landing.pricing");
+  const format = useFormatter();
   return (
     <Section id="delivery" band={bands.delivery} waveFrom={waveFrom}>
       <div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
@@ -15,13 +32,46 @@ export function Delivery({ waveFrom }: { waveFrom?: Band }) {
           <p className="text-muted-foreground mt-5 max-w-[35ch] text-lg leading-relaxed">
             {t("description")}
           </p>
-          <div className="bg-warning-band border-warning-edge mt-8 rounded-lg border p-6">
-            <p className="text-sm font-medium">{t("offer")}</p>
-            <p className="heading-display mt-4 text-4xl">{t("pending")}</p>
-            <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-              {t("terms")}
-            </p>
-          </div>
+          {plan ? (
+            <div
+              className="bg-card sticker mt-8 rounded-xl border-[var(--primary-edge)] p-6 [--edge:var(--primary-edge)]"
+              data-testid="delivery-offer"
+            >
+              <p className="text-sm font-medium">{t("offer")}</p>
+              <p className="mt-4 flex items-baseline gap-1.5">
+                <span
+                  data-numeric
+                  className="heading-display text-4xl leading-none"
+                >
+                  {format.number(plan.price, {
+                    style: "currency",
+                    currency,
+                    maximumFractionDigits: Number.isInteger(plan.price) ? 0 : 2,
+                  })}
+                </span>
+                <span className="text-muted-foreground text-sm">
+                  {tp(`interval.${plan.interval}`)}
+                </span>
+              </p>
+              <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
+                {t("terms")}
+              </p>
+              <PlanButton
+                planId={plan.id}
+                label={t("buy")}
+                free={false}
+                highlighted
+              />
+            </div>
+          ) : (
+            <div className="bg-warning-band border-warning-edge mt-8 rounded-lg border p-6">
+              <p className="text-sm font-medium">{t("offer")}</p>
+              <p className="heading-display mt-4 text-4xl">{t("pending")}</p>
+              <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
+                {t("termsPending")}
+              </p>
+            </div>
+          )}
           <Link
             href="/demo"
             className="text-primary-text mt-6 inline-flex min-h-11 items-center gap-2 border-b text-base font-semibold"

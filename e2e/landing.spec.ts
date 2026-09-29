@@ -34,11 +34,12 @@ test("各区块内容来自配置与文案", async ({ page }) => {
     landing.features.length,
   );
 
+  // 交付区块卖 landing.purchasePlan：价格、条款和购买按钮（结账流程由 billing.spec 覆盖）。
+  const offer = page.getByTestId("delivery-offer");
+  await expect(offer).toBeVisible();
+  await expect(offer.getByText(t.delivery.terms)).toBeVisible();
   await expect(
-    page.locator("#delivery").getByText(t.delivery.pending),
-  ).toBeVisible();
-  await expect(
-    page.locator("#delivery").getByText(t.delivery.terms),
+    offer.getByRole("button", { name: t.delivery.buy }),
   ).toBeVisible();
   await expect(page.locator("[data-plan]")).toHaveCount(0);
 
