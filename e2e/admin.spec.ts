@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { expect, test, type Browser } from "@playwright/test";
 
 import messages from "../messages/en.json";
@@ -36,6 +38,7 @@ test("未登录访问 /admin 返回 404，不跳转登录页", async ({ page }) 
     "/admin",
     "/admin/users",
     "/admin/orders",
+    "/admin/exceptions",
     "/admin/metrics",
     "/admin/acquisition",
     "/admin/api-keys",
@@ -61,6 +64,7 @@ test("普通用户访问后台返回 404，侧边栏没有后台入口", async (
     "/admin/users",
     `/admin/users/${userId}`,
     "/admin/orders",
+    "/admin/exceptions",
     "/admin/subscriptions",
     "/admin/metrics",
     "/admin/acquisition",
@@ -228,10 +232,10 @@ test.describe("管理员", () => {
     if (isMobile) {
       await admin.getByRole("button", { name: d.toggleSidebar }).click();
     }
-    // 六项：指标 / 状态页 / 用户 / API keys / 订单 / 订阅（状态页与 API keys 分别由
-    // site.config.ts 的 statusPage.enabled、apiKeys.enabled 开启；归因入口不在这六项里）。
+    // 七项：指标 / 状态页 / 用户 / API keys / 订单 / 异常单 / 订阅（状态页与 API keys 分别由
+    // site.config.ts 的 statusPage.enabled、apiKeys.enabled 开启；归因入口不在这七项里）。
     const nav = admin.getByRole("list", { name: d.adminNav });
-    await expect(nav.getByRole("link")).toHaveCount(6);
+    await expect(nav.getByRole("link")).toHaveCount(7);
     await expect(
       nav.getByRole("link", { name: d.nav.adminStatus }),
     ).toHaveAttribute("href", "/admin/status");
@@ -309,6 +313,93 @@ test.describe("管理员", () => {
     for (const theme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: theme });
       await page.goto("/admin/metrics");
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow, `${theme} 模式下溢出 ${overflow}px`).toBeLessThanOrEqual(
+        0,
+      );
+    }
+    await page.close();
+  });
+
+  test("异常台：待处理的单子带计数；填理由处理后关单，处理历史留在行内", async ({}, testInfo) => {
+    const ex = ad.exceptions;
+    // 一个用户、一张差额单（余额不够、退款积分没收回来）。直接落库：真实的开单路径
+    // 在 src/core/exceptions/exceptions.test.ts 里用真库和 webhook 覆盖。
+    const ownerEmail = uniqueEmail(`exceptions-${testInfo.project.name}`);
+    const exceptionId = await withDatabase(async (client) => {
+      const ownerId = `e2e-exceptions-${randomUUID()}`;
+      await client.query(
+        `insert into "user" (id, name, email, email_verified, created_at, updated_at)
+         values ($1, 'Exceptions', $2, true, now(), now())`,
+        [ownerId, ownerEmail],
+      );
+      const { rows } = await client.query<{ id: string }>(
+        `insert into billing_exceptions (kind, user_id, source, source_id, detail)
+         values ('refund_reclaim_shortfall', $1, 'billing-refund', $2, $3)
+         returning id`,
+        [
+          ownerId,
+          `e2e:order:${randomUUID()}:refund:r1`,
+          JSON.stringify({
+            orderId: "ord_e2e",
+            owed: 2000,
+            reclaimed: 500,
+            shortfall: 1500,
+          }),
+        ],
+      );
+      return rows[0]!.id;
+    });
+
+    await admin.goto("/admin/exceptions?status=open");
+    await expect(
+      admin.getByRole("heading", { name: ex.title, level: 1 }),
+    ).toBeVisible();
+    // 侧边栏上的计数（别的用例也可能开着单子，只断言有数字）。
+    if (!testInfo.project.name.includes("mobile")) {
+      await expect(admin.getByTestId("nav-badge-adminExceptions")).toHaveText(
+        /^[1-9]\d*$/,
+      );
+    }
+
+    const row = admin.locator(`[data-exception-id="${exceptionId}"]`);
+    await expect(row).toContainText(ownerEmail);
+    await expect(row).toContainText("ord_e2e");
+    await expect(row).toContainText("1500");
+    await expect(row).toContainText(ex.statuses.open);
+
+    await row.getByTestId("exception-handle").click();
+    const dialog = admin.getByRole("dialog", { name: ex.dialog.title });
+    await dialog
+      .getByLabel(ex.dialog.reasonLabel)
+      .fill("Customer disputed the charge; written off");
+    await dialog.getByTestId("exception-action-ignore").click();
+    await expect(dialog.getByTestId("exception-result")).toContainText(
+      "ignored",
+    );
+    await dialog.getByRole("button", { name: messages.Common.close }).click();
+
+    await admin.goto("/admin/exceptions?status=ignored");
+    const closed = admin.locator(`[data-exception-id="${exceptionId}"]`);
+    await expect(closed).toContainText(ex.statuses.ignored);
+    await expect(closed.getByTestId("exception-handle")).toHaveCount(0);
+    const history = closed.getByTestId("exception-history");
+    await history.locator("summary").click();
+    await expect(history).toContainText(
+      "Customer disputed the charge; written off",
+    );
+    await expect(history).toContainText(ex.actions.ignore);
+    await expect(history).toContainText(adminEmail(testInfo.project.name));
+  });
+
+  test("窄屏下异常台不横向溢出", async () => {
+    const page = await admin.context().newPage();
+    await page.setViewportSize({ width: 375, height: 740 });
+    for (const theme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto("/admin/exceptions");
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
       );

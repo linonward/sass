@@ -398,6 +398,7 @@
       "adminAcquisition": "Acquisition",
       "adminUsers": "Users",
       "adminOrders": "Orders",
+      "adminExceptions": "Exceptions",
       "adminSubscriptions": "Subscriptions",
       "adminLeads": "Leads",
       "adminReferrals": "Referrals",
@@ -409,6 +410,7 @@
       "adminApiKeys": "API keys",
       "onboarding": "Getting started"
     },
+    "navBadge": "{count} open",
     "userMenu": {
       "open": "Account menu",
       "settings": "Settings",
@@ -990,6 +992,68 @@
         "periodEnd": "Current period ends",
         "reference": "Reference"
       }
+    },
+    "exceptions": {
+      "title": "Exceptions",
+      "description": "Money or results that need a person: refund reclaims the balance couldn't cover, and AI jobs refunded without a definite answer from the provider.",
+      "empty": "No exceptions. Nothing needs attention.",
+      "kindFilter": "Filter by kind",
+      "kinds": {
+        "refund_reclaim_shortfall": "Reclaim shortfall",
+        "ai_job_needs_review": "AI job to review"
+      },
+      "statuses": {
+        "open": "Open",
+        "resolved": "Resolved",
+        "ignored": "Ignored"
+      },
+      "columns": {
+        "opened": "Opened",
+        "user": "User",
+        "summary": "Summary",
+        "status": "Status",
+        "attempts": "Attempts",
+        "lastError": "Last error"
+      },
+      "shortfall": "Order {orderId}: {shortfall} credits still owed ({reclaimed} of {owed} reclaimed)",
+      "aiJob": "Job {usageId} · {modelId} · {credits} credits",
+      "refunded": "Refunded",
+      "providerStatus": "Provider now says: {status}",
+      "reason": "Reason: {reason}",
+      "links": {
+        "user": "User",
+        "orders": "Orders",
+        "credits": "Credit history"
+      },
+      "history": {
+        "summary": "History ({count})",
+        "entry": "{date} · {actor} · {action} → {result}",
+        "reason": "“{reason}”",
+        "unknownActor": "deleted admin"
+      },
+      "actions": {
+        "retry_reclaim": "Retry reclaim",
+        "recheck": "Recheck provider",
+        "resolve": "Mark resolved",
+        "ignore": "Ignore"
+      },
+      "dialog": {
+        "open": "Handle",
+        "title": "Handle exception",
+        "description": "Every action is recorded with your name and reason. Retrying never charges more than the order still owes.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "What you checked and why",
+        "working": "Working…",
+        "done": "Done: {result}",
+        "doneClosed": "Done and closed: {result}"
+      },
+      "errors": {
+        "forbidden": "You don't have permission to do that.",
+        "reasonRequired": "Enter a reason.",
+        "invalid": "This action doesn't apply to this exception.",
+        "notOpen": "This exception was already handled."
+      },
+      "resolution": "Resolution: {resolution}"
     },
     "orderStatus": {
       "failed": "Failed",

@@ -1,6 +1,8 @@
 import { requireAdmin } from "@/core/admin/session";
 import { adminNav, suiteNav } from "@/core/dashboard/nav";
 import { DashboardShell } from "@/core/dashboard/shell";
+import { getDb } from "@/core/db";
+import { countOpenExceptions } from "@/core/exceptions/queries";
 
 import siteConfig from "../../../../site.config";
 
@@ -12,12 +14,17 @@ export default async function AdminLayout({
 }: LayoutProps<"/[locale]">) {
   const { locale } = await params;
   const session = await requireAdmin();
+  // 待处理的异常单数挂在侧边栏的 Exceptions 上，免得异常放着没人发现。
+  const openExceptions = await countOpenExceptions(getDb());
+  const admin = adminNav(siteConfig).map((item) =>
+    item.key === "adminExceptions" ? { ...item, badge: openExceptions } : item,
+  );
 
   return (
     <DashboardShell
       locale={locale}
       session={session}
-      nav={{ suite: [suiteNav[0]!], business: [], admin: adminNav(siteConfig) }}
+      nav={{ suite: [suiteNav[0]!], business: [], admin }}
       width="wide"
     >
       {children}
