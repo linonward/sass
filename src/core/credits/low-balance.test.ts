@@ -12,7 +12,8 @@ import {
 } from "vitest";
 
 import { createDbClient, type DbClient } from "@/core/db/client";
-import { notificationLog, user } from "@/core/db/schema";
+import { notificationLog, pendingNotifications, user } from "@/core/db/schema";
+import { createOutbox } from "@/core/email/outbox";
 import { claimNotification } from "@/core/email/notification-log";
 import { sendEmail, type SendEmailOptions } from "@/core/email/send";
 import { readLatestEmail } from "@/core/email/testing";
@@ -56,7 +57,7 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
         threshold: THRESHOLD,
         send: options.send ?? capture,
         db,
-        // 用例里不关心重试次数，失败一次就直接释放名额。
+        // 用例里不关心立即发送的快速重试，失败一次就留给补发扫描。
         retry: { attempts: 1, delayMs: 0 },
         now: () => clock,
       }),
@@ -65,6 +66,11 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
   /** 这个用户的去重名额（每个用例用新用户，所以不会串）。 */
   const claims = () =>
     db.select().from(notificationLog).where(eq(notificationLog.userId, userId));
+  const outboxRows = () =>
+    db
+      .select()
+      .from(pendingNotifications)
+      .where(eq(pendingNotifications.userId, userId));
 
   const grant = (amount: number) =>
     credits().grantCredits({
@@ -185,20 +191,32 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     expect(result).toMatchObject({ status: "applied", balance: 90 });
   });
 
-  test("发信失败会释放名额：24 小时内再次跨过阈值会重发", async () => {
+  test("立即发送失败：提醒留在 outbox、名额保留；补发扫描发出一封，不会因重跨阈值多发", async () => {
     await grant(150);
     failSend = true;
-    await deduct(60); // 150 → 90，跨过阈值；发送失败 → 名额释放
+    await deduct(60); // 150 → 90，跨过阈值；立即发送失败 → 留在 outbox 等补发
     expect(sent).toHaveLength(0);
-    expect(await claims()).toHaveLength(0);
-
-    // 距上次尝试只有 1 小时，但那次没发成功，所以这次还能提醒（窗口按发成功的那次算）。
-    failSend = false;
-    clock = new Date(clock.getTime() + HOUR);
-    await grant(100); // → 190
-    await deduct(100); // → 90，再次跨过阈值
-    expect(sent).toHaveLength(1);
     expect(await claims()).toHaveLength(1);
+    const [queued] = await outboxRows();
+    expect(queued).toMatchObject({
+      status: "pending",
+      template: "credits-low",
+    });
+
+    // 名额还占着：1 小时后再次跨过阈值不会再排一封。
+    clock = new Date(clock.getTime() + HOUR);
+    await grant(100);
+    await deduct(100);
+    expect(await outboxRows()).toHaveLength(1);
+
+    // 服务恢复，补发扫描（相当于重启后的新实例）把它发出去。
+    failSend = false;
+    await createOutbox({ db, send: capture as never, now: () => clock }).scan({
+      userIds: [userId],
+    });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ to: email, template: "credits-low" });
+    expect((await outboxRows())[0]).toMatchObject({ status: "sent" });
   });
 
   test("外部事务：提交后由调用方的 afterCommit 发送；回滚时不发且名额回滚", async () => {

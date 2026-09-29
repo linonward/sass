@@ -1,5 +1,6 @@
 import { aiRecovery } from "@/core/ai";
 import { getDb } from "@/core/db";
+import { notificationOutbox } from "@/core/email/queue";
 import { runAfterResponse } from "@/core/lib/after-response";
 import { logger } from "@/core/observability/logger";
 
@@ -8,7 +9,7 @@ import { createRecoveryRunner } from "./run";
 export { handleCronRecovery } from "./handler";
 
 /**
- * 恢复：把没人推进的后台状态推进到终态（目前是悬着的 AI 任务）。
+ * 恢复：把没人推进的后台状态推进到终态 —— 悬着的 AI 任务、没发出去的事务邮件。
  *
  * 触发频率由部署方式决定，入口与频率解耦：
  * - 平台 cron / 自托管调度器 → `GET /api/cron/recovery`（带 CRON_SECRET），每次最多处理 20 条；
@@ -17,7 +18,10 @@ export { handleCronRecovery } from "./handler";
  */
 export const runRecovery = createRecoveryRunner({
   db: getDb,
-  tasks: { ai: (options) => aiRecovery(options) },
+  tasks: {
+    ai: (options) => aiRecovery(options),
+    notifications: (options) => notificationOutbox.scan(options),
+  },
 });
 
 /** cron 入口一次处理的条数：入口的 maxDuration 是 300 秒，一条视频转存通常几秒。 */

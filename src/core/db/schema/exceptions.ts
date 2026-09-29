@@ -17,11 +17,14 @@ import { user } from "./auth";
  * 异常单的种类。新增种类时加在这里，并同步 check 约束（`pnpm db:generate` 会生成迁移）。
  * - `refund_reclaim_shortfall`：支付退款后回收积分，余额不够，差额还欠着；
  * - `ai_job_needs_review`：AI 任务的结论需要人看 —— 服务商状态一直查不到，
- *   或者按「服务商没有结果」退了款（服务商后来可能其实成功了）。
+ *   或者按「服务商没有结果」退了款（服务商后来可能其实成功了）；
+ * - `notification_failed`：关键事务邮件重试用完仍没发出去（source_id 是 pending_notifications.id），
+ *   可以在后台补发。
  */
 export const billingExceptionKinds = [
   "refund_reclaim_shortfall",
   "ai_job_needs_review",
+  "notification_failed",
 ] as const;
 export type BillingExceptionKind = (typeof billingExceptionKinds)[number];
 
@@ -85,7 +88,7 @@ export const billingExceptions = pgTable(
     ),
     check(
       "billing_exceptions_kind_valid",
-      sql`${table.kind} in ('refund_reclaim_shortfall', 'ai_job_needs_review')`,
+      sql`${table.kind} in ('refund_reclaim_shortfall', 'ai_job_needs_review', 'notification_failed')`,
     ),
     check(
       "billing_exceptions_status_valid",

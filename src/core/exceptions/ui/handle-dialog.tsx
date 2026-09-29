@@ -26,6 +26,7 @@ const idle: ExceptionActionState = { status: "idle" };
 const actionsFor = {
   refund_reclaim_shortfall: ["retry_reclaim", "resolve", "ignore"],
   ai_job_needs_review: ["recheck", "resolve", "ignore"],
+  notification_failed: ["resend", "resolve", "ignore"],
 } as const satisfies Record<BillingExceptionKind, readonly string[]>;
 
 /**

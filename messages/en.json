@@ -1001,7 +1001,8 @@
       "kindFilter": "Filter by kind",
       "kinds": {
         "refund_reclaim_shortfall": "Reclaim shortfall",
-        "ai_job_needs_review": "AI job to review"
+        "ai_job_needs_review": "AI job to review",
+        "notification_failed": "Email not delivered"
       },
       "statuses": {
         "open": "Open",
@@ -1018,6 +1019,7 @@
       },
       "shortfall": "Order {orderId}: {shortfall} credits still owed ({reclaimed} of {owed} reclaimed)",
       "aiJob": "Job {usageId} · {modelId} · {credits} credits",
+      "notification": "Email “{template}” to {to}",
       "refunded": "Refunded",
       "providerStatus": "Provider now says: {status}",
       "reason": "Reason: {reason}",
@@ -1035,6 +1037,7 @@
       "actions": {
         "retry_reclaim": "Retry reclaim",
         "recheck": "Recheck provider",
+        "resend": "Resend",
         "resolve": "Mark resolved",
         "ignore": "Ignore"
       },

@@ -23,6 +23,7 @@ import { createAttributionStore } from "@/core/acquisition/store";
 import { db } from "@/core/db";
 import * as schema from "@/core/db/schema";
 import { sendEmail } from "@/core/email";
+import { notificationOutbox } from "@/core/email/queue";
 import { env } from "@/core/env";
 import { routing } from "@/core/i18n/routing";
 import { runAfterResponse } from "@/core/lib/after-response";
@@ -215,14 +216,30 @@ export const auth = betterAuth({
         });
         // 本站只发登录验证码和改邮箱流程的两个验证码，其它类型不发信。
         if (!content) return;
+        // 先写进 outbox（验证码加密存放、到期作废，同一邮箱上一封没发出的旧码作废），再立即发。
+        // 立即发没成功时这一行留着：服务恢复后恢复扫描会在有效期内补发；用户照样看到明确的
+        // 「稍后重试 / 用 Google 登录」，重新请求时新码取代旧码。入队本身失败（数据库不可用）
+        // 也走同一个提示，而不是一个 500。
+        let outcome: string = "enqueue_failed";
         try {
-          await sendEmail({
+          const id = await notificationOutbox.enqueue(db, {
+            kind: content.template,
+            key: `${type}:${email.toLowerCase()}`,
             to: email,
-            ...content,
+            template: content.template,
+            props: content.props,
             locale: resolveRequestLocale(ctx?.headers ?? ctx?.request?.headers),
+            sensitive: true,
+            expiresAt: new Date(Date.now() + otp.expiresIn * 1000),
+            supersede: true,
           });
+          outcome = await notificationOutbox.deliver(id);
         } catch (error) {
-          logger.error("auth.otp_email_failed", { error, type });
+          logger.error("auth.otp_enqueue_failed", { error, type });
+        }
+        if (outcome !== "sent") {
+          // retry：这一行留着，服务恢复后在有效期内补发；enqueue_failed：连入队都没成功。
+          logger.error("auth.otp_email_failed", { type, outcome });
           // 没发出去就不计入冷却，让用户可以立即重试。
           await ctx?.context.internalAdapter
             .deleteVerificationByIdentifier(cooldownIdentifier(email))

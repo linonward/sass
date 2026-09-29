@@ -98,7 +98,12 @@ describe.skipIf(!url)("计费异常台", () => {
       providerStatus: vi.fn(async () => provider.next),
     };
     return {
-      ...createExceptionService({ db: () => db, credits, video }),
+      ...createExceptionService({
+        db: () => db,
+        credits,
+        video,
+        outbox: { resend: vi.fn(async () => "sent" as const) },
+      }),
       video,
       provider,
     };
@@ -500,6 +505,75 @@ describe.skipIf(!url)("计费异常台", () => {
         reason: "x",
       }),
     ).toEqual({ ok: false, error: "wrong_kind" });
+  });
+
+  test("邮件没发出的单：补发又失败时单子留着并记次数；补发成功才关单；都写审计", async () => {
+    const notificationId = randomUUID();
+    const [exception] = await db
+      .insert(billingExceptions)
+      .values({
+        kind: "notification_failed",
+        userId,
+        source: "pending_notifications",
+        sourceId: notificationId,
+        detail: { template: "payment-succeeded", to: "a@example.com" },
+        attempts: 1,
+        lastError: "resend 503",
+      })
+      .returning();
+    const resend = vi
+      .fn()
+      .mockResolvedValueOnce("retry")
+      .mockResolvedValueOnce("sent");
+    const s = createExceptionService({
+      db: () => db,
+      credits,
+      video: { recoverVideo: vi.fn(), providerStatus: vi.fn() },
+      outbox: { resend },
+    });
+    const input = {
+      actorId: adminId,
+      exceptionId: exception!.id,
+      reason: "provider back up",
+    };
+
+    expect(await s.resendNotification(input)).toEqual({
+      ok: true,
+      result: "retry",
+      closed: false,
+    });
+    let [row] = await db
+      .select()
+      .from(billingExceptions)
+      .where(eq(billingExceptions.id, exception!.id));
+    expect(row).toMatchObject({
+      status: "open",
+      attempts: 2,
+      lastError: "resend: retry",
+    });
+
+    expect(await s.resendNotification(input)).toEqual({
+      ok: true,
+      result: "sent",
+      closed: true,
+    });
+    [row] = await db
+      .select()
+      .from(billingExceptions)
+      .where(eq(billingExceptions.id, exception!.id));
+    expect(row).toMatchObject({
+      status: "resolved",
+      resolution: "provider back up",
+    });
+    expect(resend).toHaveBeenCalledWith(notificationId);
+    expect((await history(exception!.id)).map((h) => h.result)).toEqual([
+      "retry",
+      "sent",
+    ]);
+    expect(await s.resendNotification(input)).toEqual({
+      ok: false,
+      error: "not_open",
+    });
   });
 
   describe("AI 任务", () => {

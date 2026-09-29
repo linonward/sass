@@ -8,6 +8,7 @@ import { env } from "@/core/env";
 import { routing } from "@/core/i18n/routing";
 
 import siteConfig from "../../../site.config";
+import { notificationOutbox } from "@/core/email/queue";
 import { cooldownIdentifier } from "./cooldown";
 import { googleCredentials, resolveAuthBaseURL } from "./env";
 import { EMAIL_SEND_FAILED } from "./errors";
@@ -53,6 +54,34 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("@/core/email", () => ({ sendEmail: mocks.sendEmail }));
+// 验证码走 outbox：这里换成内存版，deliver 直接转调 sendEmail（和真实 outbox 立即发送的那一次一样），
+// 发送失败返回 "retry"（行留在库里等补发）。outbox 自己的行为见 src/core/email/outbox.test.ts。
+vi.mock("@/core/email/queue", () => {
+  const rows = new Map<string, Record<string, unknown>>();
+  return {
+    notificationOutbox: {
+      enqueue: vi.fn(async (_db: unknown, input: Record<string, unknown>) => {
+        const id = `row-${rows.size + 1}`;
+        rows.set(id, input);
+        return id;
+      }),
+      deliver: vi.fn(async (id: string) => {
+        const row = rows.get(id)!;
+        try {
+          await mocks.sendEmail({
+            to: row.to,
+            template: row.template,
+            props: row.props,
+            locale: row.locale,
+          });
+          return "sent";
+        } catch {
+          return "retry";
+        }
+      }),
+    },
+  };
+});
 
 // 不真调 next/server 的 after（测试里不在请求作用域），只把任务排队，
 // 这样能验证「发信排在响应之后」而不是「注册时同步发信」。
@@ -462,8 +491,8 @@ describe("sendVerificationOTP", () => {
     ).catch((thrown: unknown) => thrown);
 
     expect(mocks.loggerError).toHaveBeenCalledWith("auth.otp_email_failed", {
-      error: expect.any(Error),
       type: "sign-in",
+      outcome: "retry",
     });
     // identifier 按邮箱归一化，和 cooldown 插件写进去的是同一个 key。
     expect(ctx.deleteVerificationByIdentifier).toHaveBeenCalledWith(
@@ -475,6 +504,56 @@ describe("sendVerificationOTP", () => {
       statusCode: 502,
       body: { code: EMAIL_SEND_FAILED },
     });
+  });
+
+  test("入队本身失败（数据库不可用）：同样是明确的 EMAIL_SEND_FAILED，不是 500；冷却清掉可立即重试", async () => {
+    const ctx = otpCtx({ headers: new Headers({ "x-locale": "en" }) });
+    vi.mocked(notificationOutbox.enqueue).mockRejectedValueOnce(
+      new Error("connection refused"),
+    );
+
+    const error = await sendVerificationOTP()(
+      { email: "ada@example.com", otp: "123456", type: "sign-in" },
+      ctx,
+    ).catch((thrown: unknown) => thrown);
+
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(mocks.loggerError).toHaveBeenCalledWith("auth.otp_email_failed", {
+      type: "sign-in",
+      outcome: "enqueue_failed",
+    });
+    expect(ctx.deleteVerificationByIdentifier).toHaveBeenCalledWith(
+      cooldownIdentifier("ada@example.com"),
+    );
+    expect(error).toMatchObject({
+      statusCode: 502,
+      body: { code: EMAIL_SEND_FAILED },
+    });
+
+    // 数据库恢复后再请求一次（冷却已清）：正常发出。
+    await sendVerificationOTP()(
+      { email: "ada@example.com", otp: "654321", type: "sign-in" },
+      ctx,
+    );
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  test("验证码入队时加密存放、到期作废、取代同一邮箱没发出的旧码", async () => {
+    const ctx = otpCtx({ headers: new Headers({ "x-locale": "en" }) });
+    await sendVerificationOTP()(
+      { email: "Ada@Example.com", otp: "123456", type: "sign-in" },
+      ctx,
+    );
+    expect(notificationOutbox.enqueue).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        kind: "sign-in-code",
+        key: "sign-in:ada@example.com",
+        sensitive: true,
+        supersede: true,
+        expiresAt: expect.any(Date),
+      }),
+    );
   });
 
   test("删冷却记录本身失败也要抛同一个错误（冷却没清掉好过不报错）", async () => {

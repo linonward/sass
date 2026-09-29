@@ -85,6 +85,13 @@ export default async function AdminExceptionsPage({
               reclaimed: Number(d.reclaimed ?? 0),
             })}
           </span>
+        ) : row.kind === "notification_failed" ? (
+          <span>
+            {t("notification", {
+              template: String(d.template ?? "—"),
+              to: String(d.to ?? "—"),
+            })}
+          </span>
         ) : (
           <>
             <span>
@@ -142,7 +149,7 @@ export default async function AdminExceptionsPage({
                       date: when(entry.createdAt),
                       actor: entry.actorEmail ?? t("history.unknownActor"),
                       action: t(
-                        `actions.${entry.action as "resolve" | "ignore" | "retry_reclaim" | "recheck"}`,
+                        `actions.${entry.action as "resolve" | "ignore" | "retry_reclaim" | "recheck" | "resend"}`,
                       ),
                       result: entry.result,
                     })}
