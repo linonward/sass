@@ -165,7 +165,7 @@
 | T2402                       | landing-seo             | `fix/landing-seo`              | T2401                         | done |
 | T2403                       | onwardkit-brand         | `feat/onwardkit-brand`         | T2402                         | done |
 | T2404                       | onwardkit-pricing       | `feat/onwardkit-pricing`       | T2309、T2403                  | done |
-| T2405                       | template-delivery       | `feat/template-delivery`       | T2404                         | todo |
+| T2405                       | template-delivery       | `feat/template-delivery`       | T2404                         | done |
 | T2406                       | landing-testimonials    | `feat/landing-testimonials`    | T2403                         | done |
 | T2407                       | landing-conversion      | `feat/landing-conversion`      | T2404                         | done |
 

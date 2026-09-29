@@ -70,8 +70,24 @@ export default async function CheckoutSuccessPage({
     ]),
   );
 
+  // 卖可下载文件的套餐（site.config.ts 的 downloads）：成功页提示邮件已发、主按钮换成下载页。
+  const td = await getTranslations({ locale, namespace: "Downloads" });
+  const nextSteps = siteConfig.downloads.enabled
+    ? Object.fromEntries(
+        siteConfig.downloads.products.map((product) => [
+          product.planId,
+          {
+            note: td("successNote"),
+            href: "/downloads",
+            label: td("successCta"),
+          },
+        ]),
+      )
+    : {};
+
   return (
     <CheckoutStatus
+      nextSteps={nextSteps}
       reference={{ subscriptionId, orderId, planId, since }}
       timeoutMs={env.BILLING_SUCCESS_TIMEOUT_MS}
       supportEmail={siteConfig.legal.contactEmail}

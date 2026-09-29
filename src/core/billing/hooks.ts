@@ -2,3 +2,4 @@
 // 套件的钩子在 ./register-hooks.ts（发放积分）；
 // 业务模块同样在这里加一行 import "@/features/<name>/on-billing-event"。
 import "./register-hooks";
+import "@/features/downloads/on-billing-event";

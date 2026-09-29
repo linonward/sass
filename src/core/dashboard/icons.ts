@@ -1,6 +1,7 @@
 import {
   ChartColumnIcon,
   CreditCardIcon,
+  DownloadIcon,
   FileTextIcon,
   FlagIcon,
   HouseIcon,
@@ -27,4 +28,5 @@ export const dashboardIconComponents: Record<DashboardIcon, LucideIcon> = {
   key: KeyRoundIcon,
   flag: FlagIcon,
   receipt: ReceiptIcon,
+  download: DownloadIcon,
 };

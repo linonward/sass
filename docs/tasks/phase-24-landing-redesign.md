@@ -131,11 +131,25 @@ T2401 换了首页叙事，但首页的 title 和 description 还停在旧模板
 3. 买家能在站内重新获取链接（链接过期后不必找人工）；成功页写明「下载链接已发到邮箱」。
 4. 1 年内的新版本：授权有效期内可以取到最新发行包 / 差量更新包。
 
+**决定**
+
+- 做成通用的「卖可下载文件」模块 `src/features/downloads/`（出厂关闭，官方站 `SITE_DOWNLOADS=1` 打开）：买家多一个现成示例，而不是一个用不上、得自己删的模板专用模块。
+- 邮件里的链接指向站内 `/downloads`（需登录），不是免登录的签名链接：链接长期有效、转发出去也下不了；下载时现签 5 分钟的 R2 地址。
+- 版本由 `pnpm downloads:publish` 发布（先传 R2、后写 `download_releases`），不做后台上传界面。
+
+**`src/core` 的改动**（都是通用扩展点）
+
+1. `site.config` 加 `downloads` 配置段；侧边栏图标加 `download`。
+2. `src/core/billing/hooks.ts` 加一行 import 注册钩子（钩子本来就按这个方式扩展）。
+3. `src/core/email/templates.ts` 登记 `download-ready` 模板（组件在模块目录里）。
+4. `CheckoutStatus` 加可选 `nextSteps`：按套餐替换成功页的说明和主按钮。
+
 **验收**
 
-- [ ] 测试环境真实付款后收到邮件、链接可下载、过期后失效且能重新获取
-- [ ] 重复 webhook / 补发不重复授权、不重复发信
-- [ ] 业务代码全部在 `src/features/`，`src/core` 只加通用钩子（若需要，逐条说明）
+- [x] 付款（fake 服务商）后：成功页提示邮件已发、主按钮到下载页；收到 `download-ready` 邮件；下载页列出版本；下载接口对买家跳转、未登录 401（`e2e/downloads.spec.ts`，CI 主套件打开 `SITE_DOWNLOADS=1`）
+- [x] 重复 webhook / 补发不重复授权、不重复发信；全额退款收回、部分退款不动；更新期外的版本和别人的授权拿不到（`downloads-db.test.ts`，真库）
+- [x] 业务代码在 `src/features/downloads/`，`src/core` 只加上面四个通用点
+- [ ] 上线前：用真实 R2 和 Waffo 测试环境走一遍（本地没有 R2 凭据，签名跳转只在单测里验证）
 
 ## T2406 landing-testimonials
 

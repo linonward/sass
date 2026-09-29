@@ -41,6 +41,11 @@ import WelcomeEmail, {
   type WelcomeProps,
 } from "./templates/welcome";
 import type { EmailT } from "./translator";
+// 业务模块的模板：组件放在模块自己的目录里，在这里登记。
+import DownloadReadyEmail, {
+  downloadReadySubject,
+  type DownloadReadyProps,
+} from "@/features/downloads/email";
 
 type TemplateDefinition<P> = {
   Component: ComponentType<P & { t: EmailT; locale: string }>;
@@ -89,6 +94,10 @@ export const emailTemplates = {
     Component: StatusSubscriptionEmail,
     subject: statusSubscriptionSubject,
   } satisfies TemplateDefinition<StatusSubscriptionProps>,
+  "download-ready": {
+    Component: DownloadReadyEmail,
+    subject: downloadReadySubject,
+  } satisfies TemplateDefinition<DownloadReadyProps>,
 };
 
 export type EmailTemplateName = keyof typeof emailTemplates;
@@ -104,6 +113,7 @@ export type EmailTemplateProps = {
   "credits-low": CreditsLowProps;
   "status-incident": StatusIncidentProps;
   "status-subscription": StatusSubscriptionProps;
+  "download-ready": DownloadReadyProps;
 };
 
 /** 按模板名取定义，props 类型随模板名收窄。 */
