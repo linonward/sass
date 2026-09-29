@@ -39,7 +39,7 @@
 
   **GitHub 这条路径还要多做一件事：删掉模板作者的内部文档**（`AGENTS.md`、`CLAUDE.md`、`docs/plan.md`、`docs/workflow.md`、`docs/tasks/`、`docs/go-to-market.md`、`docs/competitive-landscape.md`）。命令和逐条理由在 README 的[第 1 步：用模板建仓库](../README.md#1-用模板建仓库)。**别跳过**：`AGENTS.md` 会被 Claude Code 这类工具自动加载，模板作者的工作流会被当成你项目的规则来执行。
 
-  验证：`git remote -v` 里能看到 `upstream` 那一行；GitHub 路径再确认 `ls docs/tasks` 报 `No such file or directory`。
+  验证：zip 路径 `git log --oneline` 能看到那一条基线提交；GitHub 路径 `git remote -v` 里能看到 `upstream` 那一行，再确认 `ls docs/tasks` 报 `No such file or directory`。
 
 - [ ] **2. 装依赖、写 `.env.local`（约 2 分钟）**
 
@@ -165,7 +165,7 @@ Vercel 的界面偶尔改版，找不到某个按钮时按名字找，流程不�
 1. **4 个占位值不改，生产构建直接失败。** `site.config.ts` 的 `name`、`domain`、`legal.companyName`、`email.fromAddress` 还是出厂值时，`pnpm dev` 只打印一行警告，`pnpm build`（以及 Vercel 上的构建）会抛错并逐条列出字段名和改法。这套判断在 `src/core/config/sentinels.ts`：开发环境只警告，生产直接拦人，免得站点挂着 Acme 和 example.com 上线。想用环境变量覆盖（一套代码跑多个环境）：`SITE_NAME` / `SITE_DOMAIN` / `SITE_LEGAL_NAME` / `SITE_EMAIL_FROM`，`.env.example` 里有说明。
 2. **忘了 `pnpm db:migrate`。** 库是空的时，登录、后台、账单这些页面会报缺表。迁移在 `drizzle/`，由 `pnpm db:migrate` 执行；Vercel 上由 `vercel.json` 的构建命令自动执行。换了库或拉了新迁移都要重跑一遍。
 3. **改了 `drizzle/` 就顺手跑 `pnpm migrations:check`。** 它离线检查迁移元数据自洽（编号从 0 连续、`when` 严格递增、tag 不重号、快照链闭合）。`when` 不是严格递增的迁移，在已经有账本的库上会被 drizzle **静默跳过**（不报错、不重试，线上直接缺表），仓库里出过一次这样的事故，所以这条检查 CI 每个 PR 都跑。
-4. **`pnpm test` 里数据库用例会「静默跳过」。** 没设 `DATABASE_URL_TEST` 时，需要数据库的用例整组跳过、退出码仍然是 0（输出里会写明跳过了）。想在本地跑全量：把 `.env.example` 里那行 `DATABASE_URL_TEST` 填进 `.env.local`。
+4. **`pnpm test` 里数据库用例会「静默跳过」。** 没设 `DATABASE_URL_TEST` 时，需要数据库的用例整组跳过、退出码仍然是 0（输出里会写明跳过了）。`.env.example` 里这一行默认启用、指向和 `DATABASE_URL` 同一个库，照 checklist 复制过来就会跑全量 —— 测试数据会写进开发库，想分开就给它换一个单独的库。
 5. **`SKIP_ENV_VALIDATION=1` 在生产运行时无效。** `next build`、`next start`、Docker 里 `NODE_ENV` 都是 `production`，变量校验强制生效 —— 一个环境变量换不来「跳过必填项」。它只在本地开发时方便。
 6. **邮件：生产运行时只允许 `resend`。** 本地默认 `console`（整封信打印在终端）；生产运行时设成 `console` / `file` 会启动失败 —— 那等于把登录验证码写进服务端日志或磁盘。想在本地跑一次生产构建：`ALLOW_NON_RESEND_EMAIL=1 EMAIL_TRANSPORT=console pnpm build`。
 7. **付费套餐还挂着 `prod_placeholder_*` 时不能结账。** 点购买会拿到 `plan_not_configured`。在 Creem 建好产品后，把真实 ID 填进 `site.config.ts` 的 `billing.plans[*].providerProductId`，或用 `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME` 覆盖。

@@ -6,6 +6,8 @@
 
 ## 让助手读到这份指引
 
+前提：已经按 [docs/starter-guide.md](starter-guide.md) 第 1–4 步建好基线提交、装好依赖、写好 `.env.local` 并执行过 `pnpm db:migrate`（先 `git init` 再 `pnpm install`，git 钩子才装得上）。
+
 编码助手打开仓库时自动加载的是根目录的 `AGENTS.md`（Cursor、Codex 等）或 `CLAUDE.md`（Claude Code），不会自己去翻 `docs/`。分发包里**没有**这两个文件：它们属于你的项目，模板不提供、差量更新也不会碰。在仓库根目录建一次：
 
 ```bash
@@ -20,7 +22,7 @@ git add AGENTS.md CLAUDE.md && git commit -m "docs: point coding agents to the a
 
 之后你自己的规则（产品是做什么的、命名习惯、哪些页面不要动）都往 `AGENTS.md` 里加。
 
-**`pnpm dev` 会往 `AGENTS.md` 里追加一段英文。** Next.js 的开发服务器检测到自己跑在 AI 编码助手里时，会在 `AGENTS.md` 末尾写入一段以 `<!-- BEGIN:nextjs-agent-rules -->` 开头、标题为「This is NOT the Next.js you know」的说明（提醒助手按 `node_modules/next/dist/docs/` 里的文档写代码，而不是凭训练数据）。这是 Next.js 自己的行为（`node_modules/next/dist/server/lib/generate-agent-files.js`），不是文件被改坏了：
+**`pnpm dev` 会往 `AGENTS.md` 里追加一段英文**（跑 e2e 也会：Playwright 启动的就是 `pnpm dev`）。 Next.js 的开发服务器检测到自己跑在 AI 编码助手里时，会在 `AGENTS.md` 末尾写入一段以 `<!-- BEGIN:nextjs-agent-rules -->` 开头、标题为「This is NOT the Next.js you know」的说明（提醒助手按 `node_modules/next/dist/docs/` 里的文档写代码，而不是凭训练数据）。这是 Next.js 自己的行为（`node_modules/next/dist/server/lib/generate-agent-files.js`），不是文件被改坏了：
 
 - 你上面写的内容不会被覆盖，它只维护那两个标记之间的一段；
 - 删掉它，下次 `pnpm dev` 还会写回来 —— 直接和你的改动一起提交，工作区就干净了；
@@ -134,11 +136,12 @@ dashboard: {
 
 - `key` 对应文案 `Dashboard.nav.<key>`；`href` 必须是站内路径；
 - `icon` 只能从 `src/core/config/schema.ts` 的 `dashboardIcons` 里选（`home`、`settings`、`layers`、`sparkles`、`fileText`、`chart`、`users`、`creditCard`、`key`、`flag`、`receipt`），写别的会在启动时报配置错误；
+- 这些项显示在侧边栏的 **Product** 组（文案 `Dashboard.businessNav`），Dashboard / Billing / Settings 这些套件自带的项在另一组；
 - 列在这里的路径，未登录访问时跳登录页会带上回跳地址（`/sign-in?callbackURL=%2Fprojects`）。
 
 ### 4. 文案
 
-`messages/en.json` 和 `messages/zh.json` **都要改，key 必须一致**：
+`messages/en.json` 和 `messages/zh.json` **都要改，key 必须一致**。下面是示意结构（注释只为说明，真正的 JSON 里不能写注释）：
 
 ```jsonc
 // messages/en.json
@@ -242,7 +245,7 @@ pnpm db:migrate                  # 4. 应用到 DATABASE_URL 指向的库（先�
 
 - 生成的 SQL 和 `drizzle/meta/` **不要手改**，要改就改 schema 再生成一条新迁移。
 - 已经在生产库执行过的迁移不要删掉重建。
-- 数据库单测要设 `DATABASE_URL_TEST`（`.env.example` 里有那一行），否则整组跳过、退出码仍然是 0。
+- 数据库单测读 `DATABASE_URL_TEST`：没设时整组跳过、退出码仍然是 0。`.env.example` 里这一行默认启用，且和 `DATABASE_URL` 指向**同一个库** —— 照抄 `.env.local` 的话，测试数据会写进你的开发库；想分开就建一个单独的库（例如 `.../postgres_test`）再改这一行。
 - **升级时编号撞车**（你加了 `0024_projects`，模板的新版本也带来一条 `0024_…`）：升级脚本会在 `drizzle/` 整块停下、一个文件都不动，并打印处理步骤 —— 保留模板那条的编号，用 `pnpm db:generate --name <你原来的名字>` 重新生成你自己的那一条。完整步骤在 [UPGRADING.md 的迁移冲突](../UPGRADING.md#迁移冲突)。
 
 ## 测试
@@ -275,6 +278,7 @@ EMAIL_TRANSPORT=file E2E_PORT=3100 npx playwright test e2e/projects.spec.ts --pr
 - `EMAIL_TRANSPORT=file` 是必须的：登录验证码要写到 `.tmp/emails/`，`signIn()` 从那里读。本地默认是 `console`，验证码只打到终端，用例会卡在输验证码那一步。
 - `E2E_PORT` 换一个不是 3000 的端口：你开着 `pnpm dev` 时，Playwright 会直接复用那个服务器，测的可能不是当前代码。
 - 去掉 `--project=desktop` 会再按手机尺寸（`mobile`）跑一遍。
+- 跑完 `AGENTS.md` 多出一段英文是正常的，见[让助手读到这份指引](#让助手读到这份指引)。
 - 每次运行会额外起一个多语言副本站点（`e2e/i18n/serve.ts`：把仓库复制到临时目录、装依赖、启动），第一次要多等一两分钟。它用 `git ls-files` 列文件，所以仓库要先 `git init`。
 
 **跑全量**（改了共享的东西，或者提交前想跑一遍完整的）。模板自带的用例依赖下面这整组变量，**整组照抄**：
