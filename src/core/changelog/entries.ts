@@ -7,18 +7,19 @@ export type ChangelogEntry = Changelog;
 export type { ChangelogCategory };
 export { changelogPath, entryAnchor, feedPath } from "./paths";
 
-/** `changelog.enabled` 是否开启。关闭时 /changelog 和它的 feed 都返回 404、页脚不显示入口。 */
+/** Whether `changelog.enabled` is on. When off, /changelog and its feed return 404 and the footer hides the link. */
 export const changelogEnabled = siteConfig.changelog.enabled;
 
-/** 日期倒序；同一天按 slug 排，输出不随构建顺序变。 */
+/** Newest first; same-day entries sort by slug so output doesn't depend on build order. */
 const newestFirst = (a: ChangelogEntry, b: ChangelogEntry) =>
   b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug);
 
 /**
- * 全部条目，按日期倒序。changelog 关闭时为空。
+ * All entries, newest first. Empty when changelog is off.
  *
- * 条目不分语言：内容只有一份，页面外框跟着当前语言走（和法律页同一个取舍，见
- * content-collections.ts 里 changelog 的注释）。
+ * Entries are not localized: there is one copy of the content, and the page chrome follows the
+ * current locale (the same tradeoff as the legal pages; see the changelog comment in
+ * content-collections.ts).
  */
 export function getEntries(): ChangelogEntry[] {
   if (!changelogEnabled) return [];
@@ -26,14 +27,14 @@ export function getEntries(): ChangelogEntry[] {
 }
 
 export type ChangelogMonth = {
-  /** `2026-09`，页面上渲染成本地化的「September 2026」。 */
+  /** `2026-09`, rendered on the page as a localized "September 2026". */
   month: string;
   entries: ChangelogEntry[];
 };
 
 /**
- * 按月份分组。`entries` 已按日期倒序，所以 Map 的插入顺序就是月份的倒序，
- * 组内也保持倒序 —— 两个输出都不用再排一次。
+ * Groups by month. `entries` is already sorted newest first, so the Map's insertion order is months
+ * newest first and each group stays newest first — neither output needs sorting again.
  */
 export function groupByMonth(
   entries: readonly ChangelogEntry[],

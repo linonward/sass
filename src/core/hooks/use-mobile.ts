@@ -9,7 +9,8 @@ function subscribe(onChange: () => void) {
   return () => mql.removeEventListener("change", onChange);
 }
 
-// 用 useSyncExternalStore 订阅媒体查询，避免在 effect 里同步 setState；服务端渲染时按桌面端处理。
+// Subscribes to the media query with useSyncExternalStore instead of calling setState synchronously
+// inside an effect; server rendering treats the viewport as desktop.
 export function useIsMobile() {
   return React.useSyncExternalStore(
     subscribe,

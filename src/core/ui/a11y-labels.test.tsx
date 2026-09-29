@@ -12,14 +12,16 @@ import {
 } from "./sidebar";
 
 /**
- * UI 原语的可访问名一律由调用方传入，原语只留英文兜底值。
+ * Accessible names of UI primitives are always passed in by the caller; primitives keep only an
+ * English fallback.
  *
- * 为什么要有这条契约：`sr-only` 文本、`aria-label`、`title` 都是读屏/悬停会念出来的
- * 文案，写死在原语里买家就没法翻译，也盖不住。这里锁的是「默认值 + 可覆盖」两面：
- * 兜底值不传时行为不变（英文），传了就按传的念。
+ * Why this contract exists: `sr-only` text, `aria-label` and `title` are all read aloud by screen
+ * readers or shown on hover. Hard-coded in the primitive, a buyer could neither translate nor
+ * override them. This locks both sides of "default + overridable": when nothing is passed the
+ * behavior is unchanged (English); when a value is passed, that is what gets read.
  */
 
-/** jsdom 默认按桌面端渲染（`useIsMobile` 的媒体查询不匹配）。 */
+/** jsdom renders as desktop by default (the `useIsMobile` media query doesn't match). */
 function setMobile(isMobile: boolean) {
   window.matchMedia = ((query: string) => ({
     matches: isMobile && query.includes("max-width"),
@@ -40,7 +42,7 @@ function renderSidebar(labels?: SidebarLabels) {
   );
 }
 
-/** 打开移动端抽屉（移动端 `Sidebar` 渲染的是 Sheet，默认关着）。 */
+/** Opens the mobile sheet (on mobile `Sidebar` renders a Sheet, closed by default). */
 function openMobileDrawer(labels?: SidebarLabels) {
   setMobile(true);
   renderSidebar(labels);
@@ -48,8 +50,8 @@ function openMobileDrawer(labels?: SidebarLabels) {
   return screen.getByRole("dialog");
 }
 
-describe("Sidebar 的移动端抽屉", () => {
-  test("不传 labels 时是英文兜底值", () => {
+describe("Sidebar mobile sheet", () => {
+  test("falls back to English when labels are omitted", () => {
     const drawer = openMobileDrawer();
     expect(drawer.getAttribute("aria-labelledby")).not.toBeNull();
     expect(screen.getByRole("dialog", { name: "Sidebar" })).toBe(drawer);
@@ -58,7 +60,7 @@ describe("Sidebar 的移动端抽屉", () => {
     ).toBeDefined();
   });
 
-  test("labels 覆盖标题与描述", () => {
+  test("labels override the title and description", () => {
     const drawer = openMobileDrawer({
       title: "[de] Sidebar",
       description: "[de] Displays the mobile sidebar.",
@@ -72,7 +74,7 @@ describe("Sidebar 的移动端抽屉", () => {
     ).toBeDefined();
   });
 
-  test("只传一个字段时另一个仍用兜底值", () => {
+  test("passing only one field keeps the fallback for the other", () => {
     const drawer = openMobileDrawer({ title: "Seitenleiste" });
     expect(screen.getByRole("dialog", { name: "Seitenleiste" })).toBeDefined();
     expect(
@@ -82,7 +84,7 @@ describe("Sidebar 的移动端抽屉", () => {
 });
 
 describe("SidebarTrigger", () => {
-  test("默认可访问名是英文兜底值", () => {
+  test("the default accessible name is the English fallback", () => {
     setMobile(false);
     renderSidebar();
     expect(
@@ -90,7 +92,7 @@ describe("SidebarTrigger", () => {
     ).toBeDefined();
   });
 
-  test("label 覆盖可访问名", () => {
+  test("label overrides the accessible name", () => {
     setMobile(false);
     render(
       <SidebarProvider>
@@ -102,7 +104,7 @@ describe("SidebarTrigger", () => {
     ).toBeDefined();
   });
 
-  test("显式 aria-label 优先于 label", () => {
+  test("an explicit aria-label wins over label", () => {
     setMobile(false);
     render(
       <SidebarProvider>
@@ -116,7 +118,7 @@ describe("SidebarTrigger", () => {
 });
 
 describe("SidebarRail", () => {
-  test("默认 aria-label 与 title 都是英文兜底值", () => {
+  test("default aria-label and title are both English fallbacks", () => {
     render(
       <SidebarProvider>
         <SidebarRail />
@@ -126,7 +128,7 @@ describe("SidebarRail", () => {
     expect(rail.getAttribute("title")).toBe("Toggle sidebar");
   });
 
-  test("label 同时覆盖 aria-label 与 title", () => {
+  test("label overrides both aria-label and title", () => {
     render(
       <SidebarProvider>
         <SidebarRail label="Seitenleiste umschalten" />
@@ -138,7 +140,7 @@ describe("SidebarRail", () => {
     expect(rail.getAttribute("title")).toBe("Seitenleiste umschalten");
   });
 
-  test("显式 aria-label / title 仍可各自覆盖", () => {
+  test("an explicit aria-label / title can still override each separately", () => {
     render(
       <SidebarProvider>
         <SidebarRail
@@ -153,8 +155,8 @@ describe("SidebarRail", () => {
   });
 });
 
-describe("SheetContent 的关闭按钮", () => {
-  test("默认可访问名是 Close", () => {
+describe("SheetContent close button", () => {
+  test("the default accessible name is Close", () => {
     render(
       <Sheet open>
         <SheetContent>
@@ -165,7 +167,7 @@ describe("SheetContent 的关闭按钮", () => {
     expect(screen.getByRole("button", { name: "Close" })).toBeDefined();
   });
 
-  test("closeLabel 覆盖可访问名", () => {
+  test("closeLabel overrides the accessible name", () => {
     render(
       <Sheet open>
         <SheetContent closeLabel="Schließen">
@@ -177,8 +179,8 @@ describe("SheetContent 的关闭按钮", () => {
   });
 });
 
-describe("Dialog 的关闭按钮", () => {
-  test("默认可访问名是 Close", () => {
+describe("Dialog close button", () => {
+  test("the default accessible name is Close", () => {
     render(
       <Dialog open>
         <DialogContent>
@@ -189,7 +191,7 @@ describe("Dialog 的关闭按钮", () => {
     expect(screen.getByRole("button", { name: "Close" })).toBeDefined();
   });
 
-  test("closeLabel 覆盖可访问名", () => {
+  test("closeLabel overrides the accessible name", () => {
     render(
       <Dialog open>
         <DialogContent closeLabel="Schließen">
@@ -200,7 +202,7 @@ describe("Dialog 的关闭按钮", () => {
     expect(screen.getByRole("button", { name: "Schließen" })).toBeDefined();
   });
 
-  test("DialogFooter 的 showCloseButton 用同一个 closeLabel", () => {
+  test("DialogFooter's showCloseButton uses the same closeLabel", () => {
     render(
       <Dialog open>
         <DialogContent showCloseButton={false}>

@@ -9,12 +9,13 @@ import { serializeJsonLd } from "./json-ld";
 import { buildMetadata } from "./metadata";
 import { languageAlternates, localizedPath } from "./urls";
 
-// 模拟多语言站点，覆盖带前缀的语言。
+// Simulates a multilingual site to cover prefixed locales.
 vi.mock("@/core/i18n/routing", () => ({
   routing: { locales: ["en", "de"], defaultLocale: "en" },
 }));
 
-// 博客条目在 src/core/blog/blog.test.ts 里用固定数据测试，这里不受示例文章影响。
+// Blog entries are tested with fixed data in src/core/blog/blog.test.ts, so example posts don't
+// affect this file.
 vi.mock("content-collections", () => ({ allPosts: [] }));
 
 const origin = `https://${siteConfig.domain}`;
@@ -29,7 +30,7 @@ describe("urls", () => {
     expect(localizedPath(locale, path)).toBe(expected);
   });
 
-  test("只有部分语言的页面，x-default 优先指向默认语言", () => {
+  test("for a page in only some locales, x-default prefers the default locale", () => {
     expect(languageAlternates("/blog/a", ["de"])).toEqual({
       de: `${origin}/de/blog/a`,
       "x-default": `${origin}/de/blog/a`,
@@ -37,7 +38,7 @@ describe("urls", () => {
     expect(languageAlternates("/blog/a", [])).toEqual({});
   });
 
-  test("hreflang 包含每个语言和 x-default", () => {
+  test("hreflang includes every locale and x-default", () => {
     expect(languageAlternates("/privacy")).toEqual({
       en: `${origin}/privacy`,
       de: `${origin}/de/privacy`,
@@ -47,7 +48,7 @@ describe("urls", () => {
 });
 
 describe("buildMetadata", () => {
-  test("首页使用站点名和标题模板", () => {
+  test("home page uses the site name and title template", () => {
     const metadata = buildMetadata({ locale: "de", path: "/" });
     expect(metadata.title).toEqual({
       default: siteConfig.name,
@@ -61,7 +62,7 @@ describe("buildMetadata", () => {
     });
   });
 
-  test("og:locale 输出 语言_地区，没登记的语言原样输出", () => {
+  test("og:locale is emitted as language_TERRITORY; unlisted locales are emitted as-is", () => {
     expect(buildMetadata({ locale: "en", path: "/" }).openGraph).toMatchObject({
       locale: "en_US",
     });
@@ -73,7 +74,7 @@ describe("buildMetadata", () => {
     });
   });
 
-  test("子页面套用模板并可覆盖描述和分享图", () => {
+  test("subpages use the template and can override description and share image", () => {
     const metadata = buildMetadata({
       locale: "en",
       path: "/privacy",
@@ -93,20 +94,21 @@ describe("buildMetadata", () => {
     expect(metadata.robots).toBeUndefined();
   });
 
-  test("noIndex 关闭收录", () => {
+  test("noIndex disables indexing", () => {
     const metadata = buildMetadata({ locale: "en", path: "/x", noIndex: true });
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 
-  test("path 为 null 时不输出 canonical / hreflang / og:url（404）", () => {
+  test("with path null, emits no canonical / hreflang / og:url (404)", () => {
     const metadata = buildMetadata({
       locale: "en",
       path: null,
       title: "Page not found",
       description: "The page you are looking for doesn't exist.",
     });
-    // 空对象而不是省略 —— Next 的 metadata 按字段浅合并，省略只会让 layout 那份
-    // 指向首页的 canonical 会继承到 404 上 —— 这个表现出过一次，空对象才挡得住。
+    // An empty object rather than omission — Next shallow-merges metadata per field, so omitting it
+    // would let the layout's canonical pointing at the home page be inherited by the 404. That has
+    // happened before; only the empty object prevents it.
     expect(Object.keys(metadata.alternates ?? {})).toEqual([]);
     expect(metadata.openGraph).toMatchObject({
       title: `Page not found | ${siteConfig.name}`,
@@ -118,20 +120,21 @@ describe("buildMetadata", () => {
 });
 
 describe("sitemap", () => {
-  test("营销路由 × 语言，带 hreflang", () => {
+  test("marketing routes × locales, with hreflang", () => {
     expect(withoutSiteDomain(sitemap())).toMatchSnapshot();
   });
 });
 
 describe("robots", () => {
-  test("只挡机器端点 /api 并指向 sitemap", () => {
+  test("blocks only the machine endpoint /api and points to the sitemap", () => {
     expect(withoutSiteDomain(robots())).toMatchSnapshot();
   });
 
-  test("dashboard / admin 不写进 Disallow，收录交给页面自己的 noIndex", () => {
-    // Disallow 挡住的路径爬虫抓不到，也就读不到页面上的 meta noindex，有外链时反而可能
-    // 以裸 URL 出现在结果里 —— 两套封锁叠在一起是互相抵消。页面那一半（noIndex）在
-    // src/app/[locale]/(app)/dashboard/page.tsx 和 src/core/admin/metadata.ts。
+  test("dashboard / admin are not in Disallow; indexing is left to each page's noIndex", () => {
+    // Crawlers can't fetch a Disallowed path, so they never see the page's meta noindex, and with
+    // external links it may actually show up in results as a bare URL — stacking both blocks makes
+    // them cancel out. The page half (noIndex) is in src/app/[locale]/(app)/dashboard/page.tsx and
+    // src/core/admin/metadata.ts.
     const { rules } = robots();
     const disallow = (Array.isArray(rules) ? rules[0] : rules)?.disallow;
     expect(disallow).toEqual(["/api"]);
@@ -139,7 +142,7 @@ describe("robots", () => {
 });
 
 describe("serializeJsonLd", () => {
-  test("转义可以闭合 script 标签的字符", () => {
+  test("escapes characters that could close a script tag", () => {
     const json = serializeJsonLd({
       name: "</script><script>alert(1)</script>&",
     });

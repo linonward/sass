@@ -13,7 +13,7 @@ import {
 } from "./handlers";
 import { MemoryStorage } from "./testing";
 
-// 这些用例都在写库之前返回；写库的路径见 service.test.ts。
+// These cases all return before any database write; for the write paths see service.test.ts.
 const db = new Proxy({} as Database, {
   get: () => {
     throw new Error("database should not be used");
@@ -46,15 +46,15 @@ const request = (body: unknown) =>
     body: JSON.stringify(body),
   });
 
-describe("上传路由", () => {
-  test("features.upload 关闭时三个接口都返回 404", async () => {
+describe("upload routes", () => {
+  test("all three endpoints return 404 when features.upload is off", async () => {
     const ctx = context({ enabled: false });
     expect((await handlePresign(request({}), ctx)).status).toBe(404);
     expect((await handleComplete(request({}), ctx)).status).toBe(404);
     expect((await handleFileRedirect(request({}), "f", ctx)).status).toBe(404);
   });
 
-  test("未登录返回 401，且不计入限流", async () => {
+  test("returns 401 when signed out and doesn't count toward the rate limit", async () => {
     const ctx = context({ getUserId: async () => null });
     expect((await handlePresign(request({}), ctx)).status).toBe(401);
     expect((await handleComplete(request({}), ctx)).status).toBe(401);
@@ -62,7 +62,7 @@ describe("上传路由", () => {
     expect(ctx.checkRateLimit).not.toHaveBeenCalled();
   });
 
-  test("预签名按用户和 IP 走 upload 限流，超限返回 429 和 Retry-After", async () => {
+  test("presign applies the upload rate limit by user and IP, returning 429 with Retry-After when exceeded", async () => {
     const ctx = context();
     ctx.checkRateLimit.mockResolvedValueOnce({
       ok: false,
@@ -81,7 +81,7 @@ describe("上传路由", () => {
     });
   });
 
-  test("确认上传也走 upload 限流", async () => {
+  test("complete also applies the upload rate limit", async () => {
     const ctx = context();
     ctx.checkRateLimit.mockResolvedValueOnce({
       ok: false,
@@ -97,7 +97,7 @@ describe("上传路由", () => {
     });
   });
 
-  test("文件跳转也走 upload 限流", async () => {
+  test("file redirect also applies the upload rate limit", async () => {
     const ctx = context();
     ctx.checkRateLimit.mockResolvedValueOnce({
       ok: false,
@@ -113,7 +113,7 @@ describe("上传路由", () => {
     });
   });
 
-  test("类型或大小不合法时返回错误码", async () => {
+  test("returns an error code for an invalid type or size", async () => {
     const ctx = context();
     const svg = await handlePresign(
       request({ mime: "image/svg+xml", size: 1 }),
@@ -136,7 +136,7 @@ describe("上传路由", () => {
     expect(junk.status).toBe(400);
   });
 
-  test("没有配置 R2 时返回 503", async () => {
+  test("returns 503 when R2 isn't configured", async () => {
     const ctx = context({
       deps: () => ({ db, storage: null, config: uploadConfigSchema.parse({}) }),
     });

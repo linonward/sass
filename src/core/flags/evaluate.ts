@@ -5,37 +5,41 @@ import type { SiteConfig, UserFlagDefinition } from "@/core/config/schema";
 import siteConfig from "../../../site.config";
 
 /**
- * 用户面 feature flag 的评估。定义在 `site.config.ts` 的 `userFlags` 段，
- * 这里不做任何 I/O：给定身份和 flag 名，结果完全确定。
+ * Evaluation of user-facing feature flags. Definitions live in the `userFlags` section of
+ * `site.config.ts`. No I/O happens here: given an identity and a flag name, the result is fully
+ * deterministic.
  *
- * 判定顺序（见 `isEnabledFor`）：
- *   1. `userFlags.enabled` 关 → false（总开关）
- *   2. flag 没定义、或 `def.enabled` 为 false → false（单个 flag 的开关）
- *   3. `adminOnly` 且不是 admin → false；是 admin → true（adminOnly 的 flag 不分桶）
- *   4. `rollout <= 0` → false（硬关闭：非 adminOnly 的 flag 谁都不给，admin 也一样）
- *   5. 是 admin → true（灰度中的 flag 不限制自己人，先给自己看再放量）
- *   6. 未登录（userId 为 null）→ false（没身份就没法分桶）
- *   7. `rollout >= 100` → true，否则按 `sha256(userId + flagName)` 前 8 位 hex 分桶
+ * Evaluation order (see `isEnabledFor`):
+ *   1. `userFlags.enabled` off → false (master switch)
+ *   2. flag not defined, or `def.enabled` false → false (per-flag switch)
+ *   3. `adminOnly` and not an admin → false; admin → true (adminOnly flags aren't bucketed)
+ *   4. `rollout <= 0` → false (hard off: a non-adminOnly flag goes to nobody, admins included)
+ *   5. admin → true (flags in rollout don't restrict your own team: see it yourself first, then
+ *      ramp up)
+ *   6. signed out (userId null) → false (no identity, no bucket)
+ *   7. `rollout >= 100` → true; otherwise bucket by the first 8 hex digits of
+ *      `sha256(userId + flagName)`
  *
- * 这个模块 import 了 `site.config.ts`（会带上 zod），**只在服务端用**。
- * 客户端侧的值由服务端算好后经 `<FlagsProvider>` 传入（`src/core/flags/components.tsx`）。
+ * This module imports `site.config.ts` (which brings in zod), so it is **server-only**.
+ * Client-side values are computed on the server and passed in through `<FlagsProvider>`
+ * (`src/core/flags/components.tsx`).
  */
 
 export type UserFlagsConfig = SiteConfig["userFlags"];
-/** 一次评估的身份。`userId` 为 null 表示未登录。 */
+/** Identity for one evaluation. `userId` null means signed out. */
 export type FlagUser = { userId: string | null; isAdmin?: boolean };
-/** flag 名 + 定义，按配置里的书写顺序。 */
+/** Flag name + definition, in the order written in config. */
 export type NamedFlagDefinition = {
   name: string;
   definition: UserFlagDefinition;
 };
 
-/** 总开关是否打开。关闭时整个模块静默：评估恒 false、后台页面 404。 */
+/** Whether the master switch is on. When off the whole module goes quiet: evaluation is always false and the admin page 404s. */
 export function flagsEnabled(config: UserFlagsConfig = siteConfig.userFlags) {
   return config.enabled;
 }
 
-/** 所有定义，按配置顺序。后台列表和 `<FlagsProvider>` 都用它。 */
+/** All definitions, in config order. Used by the admin list and `<FlagsProvider>`. */
 export function flagDefinitions(
   config: UserFlagsConfig = siteConfig.userFlags,
 ): NamedFlagDefinition[] {
@@ -46,8 +50,9 @@ export function flagDefinitions(
 }
 
 /**
- * 确定性分桶：`sha256(userId + flagName)` 的前 8 位 hex 映射到 [0, 1)。
- * 同一个 user + flag 永远落在同一桶，所以灰度比例调大时只会有人进来、不会有人掉出去。
+ * Deterministic bucketing: the first 8 hex digits of `sha256(userId + flagName)` map to [0, 1).
+ * The same user + flag always lands in the same bucket, so raising the rollout percentage only lets
+ * people in and never drops anyone out.
  */
 export function flagBucket(userId: string, flagName: string): number {
   const hex = createHash("sha256")
@@ -57,7 +62,7 @@ export function flagBucket(userId: string, flagName: string): number {
   return Number.parseInt(hex, 16) / 0x100000000;
 }
 
-/** 给定配置评估单个 flag。纯函数：测试里直接传自己构造的 `userFlags` 段。 */
+/** Evaluates one flag against the given config. Pure function: tests pass in their own `userFlags` section. */
 export function isEnabledFor(
   userFlags: UserFlagsConfig,
   user: FlagUser,
@@ -68,21 +73,22 @@ export function isEnabledFor(
   if (!def?.enabled) return false;
   const isAdmin = user.userId !== null && user.isAdmin === true;
   if (def.adminOnly && !isAdmin) return false;
-  // adminOnly 的 flag 是「只给 admin 看」：admin 不参与分桶，rollout 写 0 也看得见。
+  // An adminOnly flag is "admins only": admins skip bucketing and see it even with rollout 0.
   if (def.adminOnly) return true;
-  // 其余的 flag，rollout 0 是硬关闭：谁都拿不到（要只给自己人就配上 adminOnly）。
+  // For every other flag, rollout 0 is hard off: nobody gets it (use adminOnly to show it only to
+  // your team).
   if (def.rollout <= 0) return false;
-  // 灰度中的 flag 不限制自己人：先给自己看，再按比例放量。
+  // Flags in rollout don't restrict your own team: see it yourself first, then ramp up by percentage.
   if (isAdmin) return true;
-  // 没有身份就没法分桶，也没法判断 adminOnly，一律不可见。
+  // Without an identity there's no bucket and no way to check adminOnly, so it's always hidden.
   if (user.userId === null) return false;
   if (def.rollout >= 100) return true;
   return flagBucket(user.userId, flagName) < def.rollout / 100;
 }
 
 /**
- * 用站点配置评估单个 flag：`isEnabled(userId, "beta-dashboard", { isAdmin })`。
- * 服务端组件、Server Action、路由里都可以直接用。
+ * Evaluates one flag against the site config: `isEnabled(userId, "beta-dashboard", { isAdmin })`.
+ * Usable directly in server components, Server Actions, and route handlers.
  */
 export function isEnabled(
   userId: string | null,
@@ -97,8 +103,9 @@ export function isEnabled(
 }
 
 /**
- * 算出这个用户能看到的所有 flag，交给客户端的 `<FlagsProvider>`。
- * 总开关关闭时返回空对象：客户端拿不到任何 key，`useFlag()` 一律 false。
+ * Computes every flag this user can see, for the client's `<FlagsProvider>`.
+ * Returns an empty object when the master switch is off: the client gets no keys and `useFlag()`
+ * is always false.
  */
 export function resolveFlags(
   user: FlagUser,

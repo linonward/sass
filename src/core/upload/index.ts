@@ -13,12 +13,12 @@ export {
   type UploadError,
 } from "./service";
 
-/** `features.upload` 是否开启。关闭时上传接口返回 404。 */
+/** Whether `features.upload` is on. When off, the upload API returns 404. */
 export const uploadEnabled = siteConfig.features.upload;
 
 let storage: ObjectStorage | null | undefined;
 
-/** 按 env 创建的 R2 存储；缺少任一 R2 变量时为 null（接口返回 503）。 */
+/** R2 storage built from env; null when any R2 variable is missing (the API returns 503). */
 export function getUploadStorage(): ObjectStorage | null {
   if (storage === undefined) {
     const {
@@ -35,7 +35,7 @@ export function getUploadStorage(): ObjectStorage | null {
   return storage;
 }
 
-/** 绑定全局数据库、R2 和站点配置的依赖，传给 presignUpload 等函数。 */
+/** Dependencies bound to the global database, R2 and site config, passed to presignUpload and friends. */
 export function uploadDeps(db: UploadDeps["db"]): UploadDeps {
   return {
     db,

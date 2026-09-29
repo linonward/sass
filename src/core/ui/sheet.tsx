@@ -27,7 +27,7 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   return (
     <SheetPrimitive.Backdrop
       data-slot="sheet-overlay"
-      // 暗色遮罩，不做 backdrop-blur（见 docs/design.md §7）。
+      // Dark overlay, no backdrop-blur (see docs/design.md §7).
       className={cn(
         "fixed inset-0 z-50 bg-black/10 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
@@ -48,8 +48,9 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left";
   showCloseButton?: boolean;
   /**
-   * 关闭按钮的可访问名。原语不认识任何文案命名空间（套件代码），默认值是英文兜底，
-   * 调用方传本地化值覆盖（见 `MobileNav` 的 `t("close")`）。
+   * Accessible name of the close button. The primitive knows no message namespace (it is kit
+   * code), so the default is an English fallback; callers override it with a localized value (see
+   * `t("close")` in `MobileNav`).
    */
   closeLabel?: string;
 }) {
@@ -60,8 +61,9 @@ function SheetContent({
         data-slot="sheet-content"
         data-side={side}
         className={cn(
-          // 抽屉靠边框和背景分界，不用投影：整面贴边的面板加一层唇边会很怪，
-          // 而模糊投影在这套系统里不存在（见 docs/design.md §7）。
+          // The sheet is separated by its border and background, not a shadow: a lip on a
+          // full-bleed, edge-attached panel would look odd, and blurred shadows don't exist in this
+          // system (see docs/design.md §7).
           "bg-popover text-popover-foreground fixed z-50 flex flex-col gap-4 bg-clip-padding text-sm transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
           className,
         )}

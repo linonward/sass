@@ -44,7 +44,7 @@ export function TagLinks({ tags }: { tags: string[] }) {
     <ul className="flex flex-wrap gap-2">
       {tags.map((tag) => (
         <li key={tag}>
-          {/* 标签是贴着卡片的独立小物件，所以用贴纸而不是纯底色块。 */}
+          {/* Tags are small standalone objects stuck onto the card, so they use the sticker style rather than a flat tinted block. */}
           <Link
             href={tagPath(tag)}
             className="bg-muted text-muted-foreground hover:text-primary-text sticker rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors"
@@ -61,7 +61,7 @@ function PostCard({ post }: { post: Post }) {
   return (
     <article className="bg-card sticker group flex flex-1 flex-col overflow-hidden rounded-xl">
       {post.cover && (
-        // 封面顶到卡片边缘，圆角交给卡片的 overflow-hidden 裁。
+        // The cover runs to the card edge; the card's overflow-hidden clips the rounded corners.
         <div className="bg-muted relative aspect-[1200/630] border-b">
           <Image
             src={post.cover}
@@ -88,7 +88,7 @@ function PostCard({ post }: { post: Post }) {
         <p className="text-muted-foreground line-clamp-3 text-pretty">
           {post.description}
         </p>
-        {/* mt-auto 把标签压到卡片底边，同一行里正文长短不一时卡片仍对齐。 */}
+        {/* mt-auto pushes tags to the card's bottom edge so cards in a row stay aligned when their text lengths differ. */}
         <div className="mt-auto pt-1">
           <TagLinks tags={post.tags} />
         </div>
@@ -108,7 +108,7 @@ function Pagination({
 }) {
   const t = useTranslations("Blog");
   if (totalPages <= 1) return null;
-  // 营销面的按钮是 44px 的，翻页也是要点的东西，跟着走。
+  // Marketing-surface buttons are 44px; pagination is also a tap target, so it matches.
   const link = buttonVariants({ variant: "outline", size: "marketing" });
 
   return (
@@ -142,16 +142,17 @@ function Pagination({
 export type PostListProps = {
   title: string;
   description: string;
-  /** 分页的基础路径：/blog 或 /blog/tags/<tag>。 */
+  /** Base path for pagination: /blog or /blog/tags/<tag>. */
   basePath: string;
   data: PostPage;
 };
 
 /**
- * 博客列表页和标签页共用的布局：页头色带、文章网格、分页。
+ * Layout shared by the blog index and tag pages: header band, post grid, pagination.
  *
- * 走营销面的语域（`docs/design.md` §4.5）：页头压在浅色带上，波浪过渡到画布，
- * 文章是贴纸卡片。它自带色带所以不套 `(marketing)/layout.tsx` 里的任何容器。
+ * Uses the marketing-surface register (`docs/design.md` §4.5): the header sits on a light band
+ * with a wave transition to the canvas, and posts are sticker cards. It brings its own band, so it
+ * doesn't use any container from `(marketing)/layout.tsx`.
  */
 export function PostList({
   title,
@@ -173,7 +174,7 @@ export function PostList({
                 {description}
               </p>
             </div>
-            {/* RSS 是 route handler，用普通链接，不走客户端路由。 */}
+            {/* RSS is a route handler, so use a plain link rather than client-side routing. */}
             <a
               href={localizedPath(locale, feedPath)}
               className={buttonVariants({

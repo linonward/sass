@@ -10,7 +10,7 @@ import { postJsonLd } from "./json-ld";
 import { blogPath, type Post } from "./posts";
 import { DraftBadge, PostDate, TagLinks } from "./post-list";
 
-/** 文章页：标题区、封面、MDX 正文（@tailwindcss/typography 排版）和 BlogPosting 结构化数据。 */
+/** Post page: header, cover, MDX body (typeset with @tailwindcss/typography), and BlogPosting structured data. */
 export function PostArticle({ post }: { post: Post }) {
   const t = useTranslations("Blog");
 
@@ -47,8 +47,9 @@ export function PostArticle({ post }: { post: Post }) {
           />
         </div>
       )}
-      {/* typography 默认给行内代码加反引号、给引用加引号和斜体，这里去掉，行内代码改成底色块。
-          标题换成 display 面：正文和标题的分工靠字体对比，不靠加粗。 */}
+      {/* By default typography wraps inline code in backticks and gives blockquotes quotes and
+          italics; we remove those and render inline code as a tinted block. Headings use the
+          display face: body and headings are distinguished by typeface contrast, not bold. */}
       <div className="prose prose-neutral dark:prose-invert prose-a:text-primary-text prose-a:underline-offset-4 prose-headings:font-display prose-headings:font-semibold prose-headings:tracking-tight prose-headings:scroll-mt-20 prose-pre:border prose-code:before:content-none prose-code:after:content-none prose-blockquote:font-normal prose-blockquote:not-italic [&_:not(pre)>code]:bg-muted mt-10 max-w-none [&_:not(pre)>code]:rounded [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:font-medium [&_blockquote_p]:before:content-none [&_blockquote_p]:after:content-none">
         <MDXContent code={post.mdx} />
       </div>

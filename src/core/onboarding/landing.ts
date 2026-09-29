@@ -1,25 +1,27 @@
-/** 首次运行引导页（不含语言前缀）。 */
+/** The first-run onboarding page (without the locale prefix). */
 export const ONBOARDING_PATH = "/onboarding";
 
 /**
- * 登录成功后的落点。
+ * Where to land after a successful sign-in.
  *
- * 规则（顺序即优先级）：
- * 1. 这次登录带了 `callbackURL`（受保护页面的回跳、邀请链接）→ 一律尊重原目标：
- *    深链比引导重要，`onboardingPath` 传 null 就表示这种情况。
- * 2. 用户还没走完清单（`onboardingCompleted === false`）→ 引导页。
- * 3. 其余情况（已完成、或读不到这个字段）→ 原目标。
+ * Rules (in priority order):
+ * 1. The sign-in carried a `callbackURL` (returning to a protected page, an invite link) → always
+ *    honor the original target: deep links matter more than onboarding. Passing null as
+ *    `onboardingPath` signals this case.
+ * 2. The user hasn't finished the checklist (`onboardingCompleted === false`) → onboarding page.
+ * 3. Anything else (done, or the field can't be read) → the original target.
  *
- * 已完成的用户拿到的是和以前逐字节相同的跳转：一次跳转、一次加载，不闪。
- * 字段读不到时也按「已完成」处理 —— 宁可少引导一次，也不要把已经做完的人反复丢回引导页。
+ * Users who are done get a redirect byte-for-byte identical to before: one redirect, one load, no
+ * flash. A field that can't be read is also treated as "done" — better to skip onboarding once
+ * than to keep sending people who already finished it back to the onboarding page.
  *
- * `user` 是 better-auth 返回的用户对象；客户端没有开 `inferAdditionalFields`，
- * 所以这里自己窄化，不依赖它的类型。
+ * `user` is the user object returned by better-auth; the client doesn't enable
+ * `inferAdditionalFields`, so this narrows it here instead of relying on its type.
  */
 export function resolvePostSignInPath(input: {
-  /** 已经清洗过的站内目标（含语言前缀）。 */
+  /** The already-sanitized on-site target (with the locale prefix). */
   callbackURL: string;
-  /** 这次的引导页地址；带了 callbackURL 的登录传 null。 */
+  /** This sign-in's onboarding page URL; null for sign-ins that carry a callbackURL. */
   onboardingPath: string | null;
   user: unknown;
 }): string {
@@ -29,7 +31,7 @@ export function resolvePostSignInPath(input: {
     : input.callbackURL;
 }
 
-/** 用户对象上的 onboardingCompleted：不是布尔就当作「不知道」。 */
+/** onboardingCompleted on the user object: anything other than a boolean means "unknown". */
 function onboardingCompleted(user: unknown): boolean | undefined {
   if (typeof user !== "object" || user === null) return undefined;
   const value = (user as { onboardingCompleted?: unknown }).onboardingCompleted;

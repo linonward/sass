@@ -4,10 +4,12 @@ import type {
 } from "@/core/db/schema/status";
 
 /**
- * 状态页的纯计算：当前状态、uptime 和通知合并窗口。
+ * Pure computations for the status page: current status, uptime, and the notification merge
+ * window.
  *
- * 这里刻意不碰数据库 —— 计算部分（尤其是 uptime 的区间重叠）是要单测的，
- * 取数的部分在 ./store.ts。两边的类型都来自下面的 `StatusEvent`。
+ * Deliberately stays away from the database — the computations (especially uptime's interval
+ * overlap) need unit tests; data fetching lives in ./store.ts. Both sides share the `StatusEvent`
+ * type below.
  */
 export type StatusEvent = {
   id: string;
@@ -21,16 +23,16 @@ export type StatusEvent = {
 };
 
 export type ComponentStatus = {
-  /** 当前影响级别；没有未解决的事件就是 operational。 */
+  /** Current impact level; operational when there are no unresolved events. */
   status: StatusEventStatus;
-  /** 当前 incident 的说明；operational 时为 null。 */
+  /** Message of the current incident; null when operational. */
   message: string | null;
-  /** 当前 incident 的开始时间；operational 时为 null。 */
+  /** Start time of the current incident; null when operational. */
   since: Date | null;
   incidentId: string | null;
 };
 
-/** 整体状态的分档，对应横幅上的三句话。 */
+/** Overall status tiers, matching the three sentences on the banner. */
 export type OverallStatus = "operational" | "degraded" | "outage";
 
 const OPERATIONAL: ComponentStatus = {
@@ -41,10 +43,11 @@ const OPERATIONAL: ComponentStatus = {
 };
 
 /**
- * 某个组件的当前状态：**最近的未解决事件**决定。
+ * A component's current status is decided by **the most recent unresolved event**.
  *
- * 事件按时间倒序传进来（取数那边已经排好）。`operational` 的事件是「没有影响的公告」，
- * 命中它时同样返回 operational，只是带上说明 —— 这样管理员可以先发通知再升级影响级别。
+ * Events arrive newest first (the query already sorts them). An `operational` event is an
+ * "announcement with no impact": matching it still returns operational, just with the message —
+ * so an admin can post a notice first and escalate the impact level later.
  */
 export function getComponentStatus(events: StatusEvent[]): ComponentStatus {
   const open = events.find((event) => event.resolvedAt === null);
@@ -57,7 +60,7 @@ export function getComponentStatus(events: StatusEvent[]): ComponentStatus {
   };
 }
 
-/** 有 outage 就是 outage，否则有 degraded 就是 degraded，都没有就是 operational。 */
+/** Any outage means outage; otherwise any degraded means degraded; otherwise operational. */
 export function overallStatus(statuses: StatusEventStatus[]): OverallStatus {
   if (statuses.includes("outage")) return "outage";
   if (statuses.includes("degraded")) return "degraded";
@@ -65,13 +68,15 @@ export function overallStatus(statuses: StatusEventStatus[]): OverallStatus {
 }
 
 /**
- * 最近 N 天的 uptime 百分比（0–100）。
+ * Uptime percentage (0–100) over the last N days.
  *
- * degraded 和 outage 都算不可用：对访客来说「能登录但很慢」和「登不上」都是「不是全好」，
- * 分成两档会让这个数字多一个没人解释得清的定义。`operational` 的公告不计入。
+ * Both degraded and outage count as unavailable: to a visitor, "can sign in but it's slow" and
+ * "can't sign in" are both "not fully working", and splitting them would give this number an extra
+ * definition nobody can explain. `operational` announcements don't count.
  *
- * 区间裁剪到窗口内，仍在进行中的事件按 `now` 收尾；多起重叠的 incident 会把总时长
- * 累加到超过窗口，最后按窗口封顶，避免出现负的 uptime。
+ * Intervals are clipped to the window, and still-ongoing events end at `now`; overlapping
+ * incidents can add up to more than the window, so the total is capped at the window length to
+ * avoid a negative uptime.
  */
 export function getUptime(
   events: StatusEvent[],
@@ -94,15 +99,19 @@ export function getUptime(
   return Math.max(0, Math.min(100, ratio * 100));
 }
 
-/** 同一个 incident 的创建、更新和解决在这个窗口内只发一封通知。 */
+/**
+ * Within this window, the creation, updates, and resolution of one incident send only one
+ * notification.
+ */
 export const NOTIFY_MERGE_WINDOW_MS = 5 * 60 * 1000;
 
 /**
- * 这次变更要不要给订阅者发通知。
+ * Whether this change should notify subscribers.
  *
- * 合并规则落在 incident 行的 `notifiedAt` 上：窗口内已经发过就跳过，下一次真正发出时
- * 把时间往后推。没有订阅者时也会记这一笔 —— 通知是「这次事件在某时刻广播过」，
- * 而不是「有人收到了」。
+ * The merge rule lives on the incident row's `notifiedAt`: if an email already went out within the
+ * window, skip; the next real send pushes the timestamp forward. It is recorded even when there
+ * are no subscribers — a notification means "this incident was broadcast at some moment", not
+ * "someone received it".
  */
 export function shouldNotify(
   event: Pick<StatusEvent, "notifiedAt">,
@@ -113,7 +122,10 @@ export function shouldNotify(
   return now.getTime() - event.notifiedAt.getTime() >= windowMs;
 }
 
-/** 组件已经不在 `statusPage.components` 里了（展示时回退成 key 本身）。 */
+/**
+ * Display label for a component; falls back to the key itself once the component is no longer in
+ * `statusPage.components`.
+ */
 export function componentLabel(
   components: Record<string, { label: string }>,
   component: string,

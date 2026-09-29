@@ -30,8 +30,8 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
-      // 遮罩只有一层暗色，不做 backdrop-blur：玻璃感会击碎硬边的分层逻辑
-      //（和顶栏同一条规则，见 docs/design.md §7）。
+      // The overlay is a single dark layer with no backdrop-blur: a glass effect would break the
+      // layering logic of hard edges (same rule as the top bar; see docs/design.md §7).
       className={cn(
         "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-black/10 duration-100",
         className,
@@ -50,8 +50,9 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
   /**
-   * 角落关闭按钮的可访问名。原语不认识任何文案命名空间（套件代码），默认值是英文兜底，
-   * 调用方传本地化值覆盖（见 `DeleteAccount` 的 `t("close")`）。
+   * Accessible name of the corner close button. The primitive knows no message namespace (it is
+   * kit code), so the default is an English fallback; callers override it with a localized value
+   * (see `t("close")` in `DeleteAccount`).
    */
   closeLabel?: string;
 }) {
@@ -61,8 +62,9 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          // 弹层是浮在表面之上的物件，所以用贴纸（1px 描边 + 硬唇边）而不是模糊投影 ——
-          // 和下拉菜单、图表 tooltip 同一种处理。
+          // A popup is an object floating above the surface, so it gets a sticker (1px outline +
+          // hard lip) rather than a blurred shadow — the same treatment as dropdown menus and chart
+          // tooltips.
           "bg-popover text-popover-foreground sticker data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm duration-100 outline-none sm:max-w-sm",
           className,
         )}
@@ -107,7 +109,7 @@ function DialogFooter({
   ...props
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean;
-  /** `showCloseButton` 那个按钮的文案。默认英文，调用方传本地化值覆盖。 */
+  /** Label of the `showCloseButton` button. Defaults to English; callers pass a localized value. */
   closeLabel?: string;
 }) {
   return (

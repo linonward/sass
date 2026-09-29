@@ -28,7 +28,7 @@ export function Hero({
 }: LandingConfig["hero"] & {
   waveFrom?: Band;
   primaryColor: string;
-  /** 购买卡片卖的套餐；没有（未配置或被隐藏）时主按钮退回演示。 */
+  /** The plan sold by the purchase card; when absent (unconfigured or hidden) the primary button falls back to the demo. */
   plan?: Plan;
   currency: string;
   showcaseUrl?: string;

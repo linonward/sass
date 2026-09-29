@@ -1,4 +1,4 @@
-// 法律页的路径（不含语言前缀）。sitemap、Footer 等处从这里取。
+// Legal page paths (without the locale prefix). The sitemap, Footer, etc. read them from here.
 export const legalPages = {
   privacy: "/privacy",
   terms: "/terms",

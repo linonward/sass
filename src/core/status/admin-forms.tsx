@@ -32,7 +32,10 @@ const levels: readonly StatusEventStatus[] = [
   "outage",
 ];
 
-/** 影响级别的下拉。文案和状态页上的徽章共用一处（`Status.statusLabel`）。 */
+/**
+ * Impact level dropdown. Its labels are shared with the status page badges
+ * (`Status.statusLabel`).
+ */
 function LevelSelect({
   name,
   defaultValue,
@@ -42,7 +45,7 @@ function LevelSelect({
   name: string;
   defaultValue: StatusEventStatus;
   id?: string;
-  /** 表单里没有可见 label 时（如行内的更新表单）给一个可访问名。 */
+  /** Accessible name for when the form has no visible label (e.g. the inline update form). */
   ariaLabel?: string;
 }) {
   const t = useTranslations("Status");
@@ -79,7 +82,10 @@ function useFeedback(state: StatusActionState, success: string) {
   };
 }
 
-/** 开一条 incident。`operational` 是「没有影响的公告」，用来先发个通知。 */
+/**
+ * Opens an incident. `operational` is an "announcement with no impact", for posting a notice
+ * first.
+ */
 export function CreateIncidentForm({
   components,
 }: {
@@ -135,7 +141,7 @@ export function CreateIncidentForm({
   );
 }
 
-/** 进行中的 incident：改影响级别和说明，或者标记恢复。 */
+/** An ongoing incident: change the impact level and message, or mark it resolved. */
 export function IncidentActions({
   incident,
 }: {

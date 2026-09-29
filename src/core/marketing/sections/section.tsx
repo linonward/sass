@@ -5,10 +5,12 @@ import { bandBg, type Band } from "./band";
 import { Wave } from "./wave";
 
 /**
- * 区块外壳：统一锚点 id、色带、间距，并用 data-section 标记，便于测试顺序。
+ * Section shell: consistent anchor id, band, and spacing, tagged with data-section so tests can
+ * check order.
  *
- * `waveFrom` 指上一段的色带。波浪由 Landing 按相邻两段的色带算出来传进来，
- * 不由区块自己猜，这样配置调换顺序时也不会画出对不上的波浪。
+ * `waveFrom` is the previous section's band. Landing computes the wave from the two adjacent bands
+ * and passes it in rather than letting the section guess, so reordering the config never draws a
+ * mismatched wave.
  */
 export function Section({
   id,
@@ -19,7 +21,7 @@ export function Section({
 }: {
   id: LandingSectionId;
   band?: Band;
-  /** 上一段的色带；与 band 相同（或没传）时不画波浪。 */
+  /** The previous section's band; no wave is drawn when it equals band (or is omitted). */
   waveFrom?: Band;
   className?: string;
   children: React.ReactNode;
@@ -29,7 +31,7 @@ export function Section({
       id={id}
       data-section={id}
       className={cn(
-        // scroll-mt 从顶栏高度推出来，锚点跳转后标题不会被顶栏压住。
+        // scroll-mt is derived from the header height so anchor jumps don't hide the title under the header.
         "scroll-mt-[calc(var(--header-height)+1rem)]",
         bandBg[band],
         className,
@@ -49,13 +51,14 @@ export function SectionHeading({
 }: {
   title: string;
   subtitle?: string;
-  /** 区块单独成页时（例如 /pricing）用作页面的 h1。 */
+  /** Used as the page h1 when the section is its own page (e.g. /pricing). */
   level?: 1 | 2;
   className?: string;
 }) {
   const Heading = level === 1 ? "h1" : "h2";
   return (
-    // 左对齐，不居中：居中的区块标题配三张一样的卡是默认套路，去掉。
+    // Left-aligned, not centered: a centered section title over three identical cards is the default
+    // cliché, so we avoid it.
     <div className={cn("max-w-2xl", className)}>
       <Heading className="heading-display text-3xl sm:text-4xl">
         {title}

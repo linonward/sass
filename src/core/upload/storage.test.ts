@@ -15,8 +15,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("R2 预签名地址", () => {
-  test("PUT 地址指向 R2，签名覆盖 Content-Type 和 Content-Length，不带校验和", async () => {
+describe("R2 presigned URLs", () => {
+  test("PUT URL points to R2, signs Content-Type and Content-Length, and carries no checksum", async () => {
     const url = new URL(
       await storage.presignPut({
         key: "u1/2026-09/x.png",
@@ -33,12 +33,13 @@ describe("R2 预签名地址", () => {
     expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe(
       "content-length;content-type;host",
     );
-    // 签名时没有文件内容，SDK 默认写进去的 CRC32 会让浏览器上传被拒绝。
+    // There is no file content at signing time; the CRC32 the SDK adds by default would get the
+    // browser's upload rejected.
     const params = [...url.searchParams.keys()].map((k) => k.toLowerCase());
     expect(params.filter((k) => k.includes("checksum"))).toEqual([]);
   });
 
-  test("GET 地址带有效期，只签 host", async () => {
+  test("GET URL has an expiry and signs only host", async () => {
     const url = new URL(
       await storage.presignGet({ key: "u1/2026-09/x.png", expiresIn: 3600 }),
     );
@@ -49,7 +50,7 @@ describe("R2 预签名地址", () => {
 });
 
 describe("putObject", () => {
-  test("写入 bucket，带上类型和内容", async () => {
+  test("writes to the bucket with the type and body", async () => {
     const send = vi
       .spyOn(S3Client.prototype, "send")
       .mockResolvedValue({} as never);
@@ -65,7 +66,7 @@ describe("putObject", () => {
 });
 
 describe("head", () => {
-  test("返回对象的大小和类型", async () => {
+  test("returns the object's size and type", async () => {
     const send = vi.spyOn(S3Client.prototype, "send").mockResolvedValue({
       ContentLength: 10,
       ContentType: "image/png",
@@ -80,7 +81,7 @@ describe("head", () => {
     });
   });
 
-  test("对象不存在时返回 null，其他错误抛出", async () => {
+  test("returns null when the object doesn't exist and rethrows other errors", async () => {
     const error = (status: number) =>
       new S3ServiceException({
         name: status === 404 ? "NotFound" : "InternalError",

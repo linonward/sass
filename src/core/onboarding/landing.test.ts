@@ -8,7 +8,7 @@ const base = {
 };
 
 describe("resolvePostSignInPath", () => {
-  test("还没走完清单的用户落到引导页", () => {
+  test("users who haven't finished the checklist land on the onboarding page", () => {
     expect(
       resolvePostSignInPath({
         ...base,
@@ -17,7 +17,7 @@ describe("resolvePostSignInPath", () => {
     ).toBe("/onboarding");
   });
 
-  test("已完成的用户原样去目标页：不多一次跳转", () => {
+  test("users who are done go straight to the target: no extra redirect", () => {
     expect(
       resolvePostSignInPath({
         ...base,
@@ -26,7 +26,7 @@ describe("resolvePostSignInPath", () => {
     ).toBe("/dashboard");
   });
 
-  test("读不到这个字段时按已完成处理，不把老用户丢回引导页", () => {
+  test("a missing field counts as done, so existing users aren't sent back to onboarding", () => {
     for (const user of [{ id: "u1" }, null, undefined, "not-an-object"]) {
       expect(resolvePostSignInPath({ ...base, user })).toBe("/dashboard");
     }
@@ -38,7 +38,7 @@ describe("resolvePostSignInPath", () => {
     ).toBe("/dashboard");
   });
 
-  test("带了 callbackURL 的登录一律尊重原目标（深链优先）", () => {
+  test("sign-ins with a callbackURL always honor the original target (deep links win)", () => {
     expect(
       resolvePostSignInPath({
         callbackURL: "/dashboard?from=e2e",

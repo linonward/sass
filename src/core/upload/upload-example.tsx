@@ -9,7 +9,7 @@ import { Label } from "@/core/ui/label";
 import { uploadFile, UploadFailedError } from "./client";
 import type { UploadedFile } from "./service";
 
-// 有专门文案的错误码（messages 的 Dashboard.upload.errors），其他显示 unknown。
+// Error codes with dedicated copy (Dashboard.upload.errors in messages); everything else shows unknown.
 const knownErrors = [
   "invalid_type",
   "invalid_size",
@@ -28,7 +28,10 @@ function errorCode(error: unknown): KnownError {
     : "unknown";
 }
 
-/** Dashboard 里的上传示例，用来验证 R2 配置；业务可以照着 uploadFile() 的用法写自己的界面。 */
+/**
+ * Upload example in the dashboard, used to verify the R2 setup; your product code can follow how
+ * it uses uploadFile() to build its own UI.
+ */
 export function UploadExample({ accept }: { accept: string[] }) {
   const t = useTranslations("Dashboard.upload");
   const [state, setState] = useState<

@@ -7,11 +7,13 @@ import {
   type Span,
 } from "@opentelemetry/api";
 
-// 没有注册 OTel（observability.otel 关闭、测试环境）时，这里拿到的是空实现，开销可以忽略。
-// 名字用站点名：上报到 OTel 后端时一眼能看出是哪个站，也免得模板名留在买家的链路里。
+// Without a registered OTel provider (observability.otel off, tests), this returns a no-op
+// implementation with negligible overhead.
+// Named after the site: in the OTel backend you can tell at a glance which site sent the spans,
+// and the template's name doesn't end up in the buyer's traces.
 const tracer = () => trace.getTracer(siteConfig.name);
 
-/** 把错误记到 span 上并标记失败。 */
+/** Records the error on the span and marks it as failed. */
 export function recordSpanError(span: Span, error: unknown) {
   span.recordException(
     error instanceof Error ? error : { message: String(error) },
@@ -23,8 +25,9 @@ export function recordSpanError(span: Span, error: unknown) {
 }
 
 /**
- * 在一个 span 里执行 fn，fn 内部的日志自动带上这个 span 的 traceId。
- * fn 抛错时记录异常、标记失败后原样抛出；span 总会结束。
+ * Runs fn inside a span; logs written inside fn automatically carry this span's traceId.
+ * If fn throws, the exception is recorded, the span is marked failed, and the error is rethrown
+ * as-is. The span always ends.
  */
 export function withSpan<T>(
   name: string,
@@ -43,12 +46,15 @@ export function withSpan<T>(
   });
 }
 
-/** 开一个不绑定上下文的 span，由调用方负责 end()（流式调用在回调里结束）。 */
+/**
+ * Starts a span not bound to the active context; the caller is responsible for end() (streaming
+ * calls end it in a callback).
+ */
 export function startSpan(name: string, attributes: Attributes) {
   return tracer().startSpan(name, { attributes });
 }
 
-/** 给当前活动的 span（如果有）补充属性。 */
+/** Adds attributes to the currently active span, if any. */
 export function setSpanAttributes(attributes: Attributes) {
   trace.getActiveSpan()?.setAttributes(attributes);
 }

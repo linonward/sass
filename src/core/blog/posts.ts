@@ -10,35 +10,36 @@ export const blogEnabled = siteConfig.features.blog;
 
 export const POSTS_PER_PAGE = 12;
 
-// 站内路径（不含语言前缀）。
+// Site-relative paths (without the locale prefix).
 export const blogPath = "/blog";
 export const feedPath = "/blog/rss.xml";
 export const postPath = (slug: string) => `${blogPath}/${slug}`;
-/** 文章分享图（src/app/[locale]/(marketing)/blog/[slug]/og/route.tsx）。 */
+/** Post share image (src/app/[locale]/(marketing)/blog/[slug]/og/route.tsx). */
 export const postOgPath = (slug: string) => `${postPath(slug)}/og`;
 /**
- * 标签页的站内路径。标签来自 frontmatter，可能含非 ASCII（`中文`）或 `/`，所以拼 URL
- * 的这一层做编码：canonical、og、sitemap、llms.txt 和内链都从这里取，编码只有一份。
+ * Site-relative path of a tag page. Tags come from frontmatter and may contain non-ASCII (`中文`)
+ * or `/`, so encoding happens at the layer that builds URLs: canonical, og, sitemap, llms.txt, and
+ * internal links all take it from here, so there is only one encoding.
  *
- * 编的是 URL，不是路由参数 —— `[tag]` 拿到的 params 已经过 Next 解码
- * （`/blog/tags/%E4%B8%AD%E6%96%87` 对应 `tag === "中文"`），`generateStaticParams`
- * 返回的也是原值，用 `tagPath()` 的结果去查文章会查不到。
+ * This encodes the URL, not the route param — the params `[tag]` receives are already decoded by
+ * Next (`/blog/tags/%E4%B8%AD%E6%96%87` maps to `tag === "中文"`), and `generateStaticParams` also
+ * returns raw values, so looking up posts with the result of `tagPath()` finds nothing.
  */
 export const tagPath = (tag: string) =>
   `${blogPath}/tags/${encodeURIComponent(tag)}`;
-/** 列表的第 n 页。第 1 页就是列表本身，不带 /page/1。 */
+/** Page n of a list. Page 1 is the list itself, without /page/1. */
 export const pagePath = (base: string, page: number) =>
   page === 1 ? base : `${base}/page/${page}`;
 
-/** 开发环境显示草稿便于预览；生产构建（含 Vercel 预览和 CI 的 e2e）里草稿不存在。 */
+/** Development shows drafts for previewing; in production builds (including Vercel previews and CI e2e) drafts don't exist. */
 const showDrafts = process.env.NODE_ENV === "development";
 
 const newestFirst = (a: Post, b: Post) =>
   b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug);
 
 /**
- * 某语言下的文章，按日期倒序。blog 关闭或语言未启用时为空。
- * sitemap、RSS 传 `drafts: false`，开发环境也不收录草稿。
+ * Posts in a locale, newest first. Empty when blog is off or the locale is not enabled.
+ * sitemap and RSS pass `drafts: false`, so they exclude drafts even in development.
  */
 export function getPosts(
   locale: string,
@@ -54,7 +55,7 @@ export function getPost(locale: string, slug: string): Post | undefined {
   return getPosts(locale).find((post) => post.slug === slug);
 }
 
-/** 有这篇文章（同一 slug）的语言，用于 hreflang 和 sitemap。 */
+/** Locales that have this post (same slug), for hreflang and the sitemap. */
 export function postLocales(
   slug: string,
   options?: { drafts?: boolean },
@@ -64,7 +65,7 @@ export function postLocales(
   );
 }
 
-/** 至少有一篇已发布文章的语言。 */
+/** Locales with at least one published post. */
 export function blogLocales(): string[] {
   return routing.locales.filter(
     (locale) => getPosts(locale, { drafts: false }).length > 0,
@@ -72,19 +73,21 @@ export function blogLocales(): string[] {
 }
 
 /**
- * 列表页（`/blog` 和它的翻页）声明 hreflang 的语言：第 1 页列出所有有文章的语言，
- * 翻页后的页码在各语言间不对应，只列当前语言。
+ * Locales a list page (`/blog` and its pages) declares in hreflang: page 1 lists every locale with
+ * posts; later page numbers don't correspond across locales, so only the current locale is listed.
  *
- * 页面 metadata（pages.tsx 的 blogIndexMetadata）和 sitemap 共用这一条，两边才不会
- * 各说各话 —— 标签页是例外，各语言的标签集合不同，始终只列当前语言。
+ * Page metadata (blogIndexMetadata in pages.tsx) and the sitemap share this rule so they can't
+ * disagree — tag pages are the exception: each locale has a different tag set, so only the
+ * current locale is ever listed.
  */
 export function listLocales(locale: string, page: number): string[] {
   return page === 1 ? blogLocales() : [locale];
 }
 
 /**
- * 某语言下用到的全部标签，按字母排序。sitemap 传 `drafts: false`：只有草稿用到的标签
- * 在生产里没有页面（路由的 generateStaticParams 也收不到它）。
+ * All tags used in a locale, sorted alphabetically. The sitemap passes `drafts: false`: tags used
+ * only by drafts have no page in production (the route's generateStaticParams doesn't see them
+ * either).
  */
 export function getTags(
   locale: string,
@@ -101,7 +104,7 @@ export function getPostsByTag(locale: string, tag: string): Post[] {
 
 export type PostPage = { posts: Post[]; page: number; totalPages: number };
 
-/** 取第 `page` 页；页码超出范围时返回 null。没有文章时第 1 页为空列表。 */
+/** Returns page `page`, or null when out of range. Page 1 is an empty list when there are no posts. */
 export function paginate(posts: Post[], page: number): PostPage | null {
   const totalPages = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
   if (!Number.isInteger(page) || page < 1 || page > totalPages) return null;
@@ -113,7 +116,7 @@ export function paginate(posts: Post[], page: number): PostPage | null {
   };
 }
 
-/** `/page/[page]` 路由的静态参数：第 2 页起（第 1 页是列表本身）。 */
+/** Static params for the `/page/[page]` route: page 2 onward (page 1 is the list itself). */
 export function extraPageParams(posts: Post[]): { page: string }[] {
   const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
   return Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => ({
@@ -121,7 +124,7 @@ export function extraPageParams(posts: Post[]): { page: string }[] {
   }));
 }
 
-/** 解析 `/page/[page]` 的参数。只接受 2 及以上的规范写法，/page/1、/page/02 返回 null。 */
+/** Parses the `/page/[page]` param. Only accepts the canonical form for 2 and up; /page/1 and /page/02 return null. */
 export function parsePageParam(value: string): number | null {
   return /^[1-9]\d*$/.test(value) && value !== "1" ? Number(value) : null;
 }

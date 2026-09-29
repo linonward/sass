@@ -2,11 +2,12 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-// 贴纸表面：1px 描边 + 零模糊硬唇边，两者同色（见 globals.css 的 .sticker）。
-// 这两个常量必须保持字面量 —— Tailwind 扫的是源文件文本，`[--edge:var(--primary-edge)]`
-// 这类名字要能在源码里原样找到才会生成，拼接出来的 class 会被静默丢掉。
+// Sticker surface: 1px outline + zero-blur hard lip, both the same color (see .sticker in
+// globals.css). These two constants must stay literal: Tailwind scans source text, so a name like
+// `[--edge:var(--primary-edge)]` must appear verbatim in the source to be generated; classes built
+// by concatenation are silently dropped.
 const STICKER = "sticker border-[var(--edge)]";
-/** 按下时唇边收掉、按钮下沉，做出被压扁的手感。 */
+/** On press the lip collapses and the button sinks, for a squashed feel. */
 const STICKER_PRESS =
   "hover:[--tw-shadow:0_1px_0_0_var(--edge)] active:not-aria-[haspopup]:translate-y-[2px] active:[--tw-shadow:0_0_0_0_var(--edge)]";
 
@@ -38,13 +39,14 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
-        // 营销页的大按钮：44px 高，够大的点击区，也撑得住 display 字体旁边的体量。
+        // Large marketing button: 44px tall, a generous tap target that also holds its own next
+        // to display type.
         marketing:
           "h-11 gap-2 px-5 text-base has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
       },
-      // tone 必须声明在 variant 之后：cva 按 variants 的键序输出 class，
-      // 排在前面的话 variant="outline" 的 border-border 会盖掉 tone 的描边。
-      // 不传 tone 时渲染结果和以前逐字节一致。
+      // tone must be declared after variant: cva emits classes in the key order of variants, and
+      // if tone came first, variant="outline"'s border-border would override tone's outline.
+      // Without tone, the rendered output is byte-for-byte what it was before tone existed.
       tone: {
         primary: `${STICKER} [--edge:var(--primary-edge)] ${STICKER_PRESS}`,
         success: `${STICKER} [--edge:var(--success-edge)] ${STICKER_PRESS}`,

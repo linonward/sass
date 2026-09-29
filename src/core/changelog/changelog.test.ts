@@ -19,13 +19,13 @@ import { buildChangelogFeed } from "./rss";
 
 const origin = `https://${siteConfig.domain}`;
 
-// 模拟多语言站点，覆盖带前缀的语言（默认语言的链接不带前缀）。
+// Simulates a multilingual site to cover prefixed locales (default-locale links have no prefix).
 vi.mock("@/core/i18n/routing", () => ({
   routing: { locales: ["en", "de"], defaultLocale: "en" },
 }));
 
-// 条目在真实构建里由 content-collections 从 MDX 解析出来（schema 见 frontmatter.ts）；
-// 这里直接喂解析后的形状，只测排序、分组、路径和 feed 的组装。
+// In a real build, content-collections parses entries from MDX (schema in frontmatter.ts); here we
+// feed the parsed shape directly and only test sorting, grouping, paths, and feed assembly.
 vi.mock("content-collections", () => {
   const entry = (
     slug: string,
@@ -54,7 +54,7 @@ vi.mock("content-collections", () => {
         title: "Dark mode <everywhere>",
       }),
       entry("faster-checkout", "2026-09-12", { category: "improvement" }),
-      // 和上一条同一天：同日按 slug 排，输出不随构建顺序变。
+      // Same day as the previous one: same-day entries sort by slug, so output doesn't depend on build order.
       entry("twin", "2026-09-12"),
       entry("annual-invoice-fix", "2026-08-28", { category: "fix" }),
     ],
@@ -62,7 +62,7 @@ vi.mock("content-collections", () => {
 });
 
 describe("frontmatter", () => {
-  test("卡片里的示例 frontmatter 通过校验，description 可以不写", () => {
+  test("the example frontmatter passes validation; description is optional", () => {
     const parsed = changelogFrontmatterSchema.parse({
       title: "API Keys are here",
       date: "2026-10-15",
@@ -73,7 +73,7 @@ describe("frontmatter", () => {
     expect(parsed.category).toBe("feature");
   });
 
-  test("三个类别都收，其他值拒绝", () => {
+  test("accepts all three categories and rejects other values", () => {
     for (const category of ["feature", "improvement", "fix"]) {
       expect(
         changelogFrontmatterSchema.safeParse({
@@ -94,7 +94,7 @@ describe("frontmatter", () => {
     ).toBe(false);
   });
 
-  test("date 必须是 YYYY-MM-DD，title 不能是空白", () => {
+  test("date must be YYYY-MM-DD and title cannot be blank", () => {
     const base = { title: "x", date: "2026-01-31", category: "fix" as const };
     expect(
       changelogFrontmatterSchema.safeParse({ ...base, date: "01/31/2026" })
@@ -108,7 +108,7 @@ describe("frontmatter", () => {
     ).toBe(true);
   });
 
-  test("没写 description 时从正文首段取一句", () => {
+  test("takes a sentence from the first body paragraph when description is missing", () => {
     expect(
       summarize(
         "# Heading\n\n```\ncode\n```\n\nUsers can now **rotate** keys.",
@@ -117,13 +117,15 @@ describe("frontmatter", () => {
     expect(summarize("- [Docs](/docs) cover it.\n\nMore text.")).toBe(
       "Docs cover it.",
     );
-    expect(summarize("<Callout>JSX 行跳过</Callout>\n\n正文在下一行。")).toBe(
-      "正文在下一行。",
-    );
+    expect(
+      summarize(
+        "<Callout>JSX line skipped</Callout>\n\nBody on the next line.",
+      ),
+    ).toBe("Body on the next line.");
     expect(summarize("")).toBe("");
   });
 
-  test("摘要过长时截断，尽量断在词边界", () => {
+  test("truncates long summaries, preferring a word boundary", () => {
     const summary = summarize(`${"word ".repeat(60)}end`);
     expect(summary.length).toBeLessThanOrEqual(201);
     expect(summary.endsWith("…")).toBe(true);
@@ -132,7 +134,7 @@ describe("frontmatter", () => {
 });
 
 describe("entries", () => {
-  test("按日期倒序，同一天按 slug 排，且不改动集合本身", () => {
+  test("sorts newest first, same day by slug, without mutating the collection", () => {
     expect(getEntries().map((entry) => entry.slug)).toEqual([
       "dark-mode",
       "faster-checkout",
@@ -141,7 +143,7 @@ describe("entries", () => {
     ]);
   });
 
-  test("按月份分组：月份倒序，组内保持倒序", () => {
+  test("groups by month: months newest first, newest first within each group", () => {
     const months = groupByMonth(getEntries());
     expect(months.map((group) => group.month)).toEqual(["2026-09", "2026-08"]);
     expect(months[0]!.entries.map((entry) => entry.slug)).toEqual([
@@ -155,10 +157,10 @@ describe("entries", () => {
     expect(groupByMonth([])).toEqual([]);
   });
 
-  test("路径与锚点", () => {
+  test("paths and anchors", () => {
     expect(changelogPath).toBe("/changelog");
     expect(feedPath).toBe("/changelog/rss.xml");
-    // 更新日志是单页，每条靠锚点才有自己的地址（RSS 的 guid 用它）。
+    // The changelog is a single page; each entry gets its own address only via its anchor (the RSS guid uses it).
     expect(entryAnchor("dark-mode")).toBe("/changelog#dark-mode");
   });
 });
@@ -172,14 +174,16 @@ describe("RSS", () => {
       entries: getEntries(),
     });
 
-  test("RSS 2.0：channel 和 item 的必填字段齐全", () => {
+  test("RSS 2.0: channel and item have every required field", () => {
     const xml = feed();
-    // 快照只锁结构和路径：域名换成占位，买家改 `domain` 时不用重跑 `-u`（同 blog.test.ts）。
+    // The snapshot only locks structure and paths: the domain is replaced with a placeholder so buyers
+    // don't have to rerun `-u` after changing `domain` (same as blog.test.ts).
     expect(withoutSiteDomain(xml)).toMatchSnapshot();
 
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
     expect(xml).toContain('<rss version="2.0"');
-    // channel：title / link / description 是 RSS 2.0 的必填三项，language 和 self 链接跟着走。
+    // channel: title / link / description are the three fields RSS 2.0 requires; language and the
+    // self link come along.
     expect(xml).toContain("<title>Acme Changelog</title>");
     expect(xml).toContain(`<link>${origin}/changelog</link>`);
     expect(xml).toContain(
@@ -189,21 +193,22 @@ describe("RSS", () => {
     expect(xml).toContain(
       `<atom:link href="${origin}/changelog/rss.xml" rel="self" type="application/rss+xml" />`,
     );
-    // 一条 item 至少有 title / link / guid / pubDate / description（RSS 要求 title 或 description）。
+    // Each item has at least title / link / guid / pubDate / description (RSS requires title or
+    // description).
     const first = xml.slice(xml.indexOf("<item>"), xml.indexOf("</item>"));
     for (const tag of ["title", "link", "guid", "pubDate", "description"]) {
       expect(first).toContain(`<${tag}`);
     }
   });
 
-  test("条目的 link 和 guid 是页面上的锚点，互不相同", () => {
+  test("item link and guid are page anchors and are unique", () => {
     const xml = feed();
     expect(xml).toContain(`<link>${origin}/changelog#dark-mode</link>`);
     expect(xml).toContain(
       `<guid isPermaLink="true">${origin}/changelog#dark-mode</guid>`,
     );
     expect(xml).toContain("<pubDate>Thu, 24 Sep 2026 00:00:00 GMT</pubDate>");
-    // 类别输出成 <category>。
+    // Categories are emitted as <category>.
     expect(xml).toContain("<category>improvement</category>");
     expect(xml).toContain("<category>fix</category>");
 
@@ -214,14 +219,14 @@ describe("RSS", () => {
     expect(new Set(guids).size).toBe(4);
   });
 
-  test("转义标题里的 XML 字符", () => {
+  test("escapes XML characters in titles", () => {
     expect(feed()).toContain("<title>Dark mode &lt;everywhere&gt;</title>");
     expect(feed()).toContain(
       "<description>About dark-mode &amp; more</description>",
     );
   });
 
-  test("其他语言的链接带语言前缀", () => {
+  test("links for other locales carry the locale prefix", () => {
     const xml = feed("de");
     expect(xml).toContain(`<link>${origin}/de/changelog</link>`);
     expect(xml).toContain(`<link>${origin}/de/changelog#twin</link>`);
@@ -230,8 +235,8 @@ describe("RSS", () => {
 });
 
 describe("sitemap", () => {
-  test("changelog 开启时 /changelog 进入 sitemap，带 hreflang", () => {
-    // 整个 sitemap 的快照在 src/core/seo/seo.test.ts；这里只看 changelog 这一条。
+  test("when changelog is on, /changelog is in the sitemap with hreflang", () => {
+    // The full sitemap snapshot is in src/core/seo/seo.test.ts; this only checks the changelog entry.
     const urls = sitemap().map((entry) => entry.url);
     expect(urls).toContain(`${origin}/changelog`);
     expect(urls).toContain(`${origin}/de/changelog`);
@@ -247,14 +252,14 @@ describe("sitemap", () => {
 });
 
 describe("footerNav", () => {
-  test("开关开启时页脚显示 changelog 入口", () => {
+  test("footer shows the changelog link when the flag is on", () => {
     const product = footerNav(siteConfig).find(
       (group) => group.key === "product",
     );
     expect(product?.links.map((link) => link.href)).toContain(changelogPath);
   });
 
-  test("开关关闭时入口消失，其余分组和链接原样保留", () => {
+  test("the link disappears when the flag is off; other groups and links are unchanged", () => {
     const disabled: SiteConfig = {
       ...siteConfig,
       changelog: { enabled: false },
@@ -267,7 +272,7 @@ describe("footerNav", () => {
     expect(
       groups.flatMap((group) => group.links.map((link) => link.href)),
     ).not.toContain(changelogPath);
-    // 同一组里的其他链接一个不少。
+    // Every other link in the same group is still there.
     expect(
       groups.find((group) => group.key === "product")?.links.map((l) => l.href),
     ).toEqual(["/#features", "/pricing", "/#faq", "/blog"]);

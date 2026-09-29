@@ -69,8 +69,8 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        // 表头走「大写小标题」那一套，和侧边栏的分组标题同一种语言。
-        // 大写只是 CSS 的 text-transform，可访问名不受影响。
+        // Headers use the "uppercase eyebrow" style, the same language as the sidebar group
+        // labels. Uppercase is only CSS text-transform; accessible names are unaffected.
         "text-muted-foreground h-9 px-3 text-left align-middle text-xs font-medium tracking-wide whitespace-nowrap uppercase [&:has([role=checkbox])]:pr-0",
         className,
       )}
@@ -84,8 +84,8 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        // py-2 配 px-3：行高约 34px，比 shadcn 默认的 p-2 略高，
-        // 但表头矮了 4px，整体反而更紧、更像数据表。
+        // py-2 with px-3: rows are about 34px tall, slightly taller than shadcn's default p-2,
+        // but the header is 4px shorter, so overall it reads tighter and more like a data table.
         "px-3 py-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
         className,
       )}

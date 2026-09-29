@@ -1,8 +1,9 @@
 /**
- * 更新日志的站内路径（不含语言前缀）。
+ * Site-relative changelog paths (without the locale prefix).
  *
- * 单独放一个文件、不 import 任何东西：页脚要按开关隐藏入口（`core/layout/footer-nav.ts`），
- * 而 `entries.ts` 会拖进 content-collections —— 渲染页脚的每个页面不该为此被牵连。
+ * Lives in its own file and imports nothing: the footer hides the link based on the flag
+ * (`core/layout/footer-nav.ts`), while `entries.ts` pulls in content-collections — every page that
+ * renders the footer shouldn't be dragged along for that.
  */
 
 export const changelogPath = "/changelog";
@@ -10,8 +11,8 @@ export const changelogPath = "/changelog";
 export const feedPath = `${changelogPath}/rss.xml`;
 
 /**
- * 条目在页面上的锚点（页面上每条都有 `id="<slug>"`）。
- * 更新日志是单页，没有每条一页的详情页，但 RSS 的每条都得有自己的地址 —— 否则所有
- * 条目的 guid 相同，阅读器会把它们当成同一条。
+ * An entry's anchor on the page (every entry on the page has `id="<slug>"`).
+ * The changelog is a single page with no per-entry detail page, but every RSS item needs its own
+ * address — otherwise all entries share a guid and readers treat them as one item.
  */
 export const entryAnchor = (slug: string) => `${changelogPath}#${slug}`;

@@ -2,11 +2,13 @@ import * as React from "react";
 import { cn } from "cn";
 
 /**
- * 图标片：粉彩底 + 1px 语义描边，零唇边。尺寸由这里定，传进来的图标不要再写
- * `size-*` —— 下面的 `[&_svg]:size-*` 是后代选择器，特异性更高，会把它盖掉。
- * 颜色可以写在图标上（`className="text-destructive"`），显式 class 会盖过继承。
+ * Icon chip: pastel background + 1px semantic outline, zero lip. Size is set here; don't put
+ * `size-*` on the icon you pass in — the `[&_svg]:size-*` below is a descendant selector with
+ * higher specificity and will override it. Color can go on the icon
+ * (`className="text-destructive"`); an explicit class beats inheritance.
  *
- * `tone`：空状态用品牌的暖色片，等待/失败这类状态用中性片，让图标本身去承载语义。
+ * `tone`: empty states use the warm brand chip; states like pending/failed use the neutral chip,
+ * letting the icon itself carry the meaning.
  */
 function EmptyStateIcon({
   size = "default",
@@ -34,16 +36,18 @@ function EmptyStateIcon({
 }
 
 /**
- * 空状态/状态页的固定形状：居中图标片 + 粗标题 + 弱描述 + 一个主操作。
+ * Fixed shape for empty states and status pages: centered icon chip + bold title + muted
+ * description + one primary action.
  *
- * 图标片是平面：1px 语义描边、零唇边，和 `.panel` 同属产品语域。
+ * The icon chip is flat: 1px semantic outline, zero lip, in the same product register as
+ * `.panel`.
  *
- * 两条别踩：
- * - **不要给它加 `role="status"`**。dashboard 的 e2e 用无作用域的
- *   `getByRole("status")` 断言保存提示，页面上多一个 status 就会撞车。
- * - **标题的标签由调用方用 `titleAs` 指定**，因为同一个形状在三个位置分别是
- *   页面的 h1（checkout 状态页）、区块的 h2（dashboard 空状态）和表格单元格里的
- *   一行文字（`EmptyRow`，那里不该多出一个标题）。
+ * Two traps to avoid:
+ * - **Don't add `role="status"` to it.** The dashboard e2e asserts the save notice with an
+ *   unscoped `getByRole("status")`; one more status on the page and they collide.
+ * - **The caller picks the title tag via `titleAs`**, because the same shape appears in three
+ *   places: as the page h1 (checkout status page), a section h2 (dashboard empty state), and a
+ *   line of text inside a table cell (`EmptyRow`, where an extra heading doesn't belong).
  */
 function EmptyState({
   icon,
@@ -60,7 +64,7 @@ function EmptyState({
   description?: React.ReactNode;
   size?: "default" | "sm";
   className?: string;
-  /** 主操作，一屏一个实心的。 */
+  /** Primary action — one solid button per screen. */
   children?: React.ReactNode;
 }) {
   const compact = size === "sm";

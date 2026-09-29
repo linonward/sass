@@ -4,17 +4,17 @@ import { describe, expect, test } from "vitest";
 import { Badge } from "./badge";
 
 /**
- * `flat` 是两个语域的开关（见 docs/design.md §4.5）：
- * 营销面的语义徽章是一张贴纸，产品面是只有描边的平面。
- * 这里锁住的是「不传 flat 时营销页一个字节都没变」这条承诺。
+ * `flat` switches between the two registers (see docs/design.md §4.5): a semantic badge on a
+ * marketing surface is a sticker; on a product surface it is flat, outline only. This locks the
+ * promise that "without flat, marketing pages don't change by a single byte".
  */
-describe("Badge 的 flat 轴", () => {
-  test("语义档默认带唇边（营销语域）", () => {
+describe("Badge flat axis", () => {
+  test("semantic tiers have a lip by default (marketing register)", () => {
     render(<Badge variant="success">Paid</Badge>);
     expect(screen.getByText("Paid").className).toContain("sticker");
   });
 
-  test("flat 去掉唇边，保留 1px 语义描边", () => {
+  test("flat removes the lip and keeps the 1px semantic outline", () => {
     render(
       <Badge variant="success" flat>
         Paid
@@ -26,7 +26,7 @@ describe("Badge 的 flat 轴", () => {
     expect(className).toContain("[--edge:var(--success-edge)]");
   });
 
-  test("destructive-band 是平描边的语义档，不是半透明档", () => {
+  test("destructive-band is a flat-outlined semantic tier, not the translucent tier", () => {
     render(
       <Badge variant="destructive-band" flat>
         Failed
@@ -37,7 +37,7 @@ describe("Badge 的 flat 轴", () => {
     expect(className).toContain("[--edge:var(--destructive-edge)]");
   });
 
-  test("flat 对中性档没有副作用", () => {
+  test("flat has no side effects on neutral tiers", () => {
     render(<Badge flat>Neutral</Badge>);
     expect(screen.getByText("Neutral").className).not.toContain("sticker");
   });

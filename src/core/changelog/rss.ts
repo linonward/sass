@@ -11,11 +11,11 @@ export type ChangelogFeedOptions = {
   locale: string;
   title: string;
   description: string;
-  /** 已按日期倒序的条目。 */
+  /** Entries sorted newest first. */
   entries: readonly ChangelogEntry[];
 };
 
-/** 更新日志的 RSS 2.0：条目的 link 是页面上的锚点，类别输出成 `<category>`。 */
+/** The changelog's RSS 2.0: each item's link is its page anchor, and the category is emitted as `<category>`. */
 export function buildChangelogFeed({
   locale,
   title,

@@ -1,6 +1,6 @@
 import type { useFormatter } from "next-intl";
 
-/** 营销页上的标价：整数不带小数位（$99），有零头时保留两位（$9.50）。 */
+/** Price shown on marketing pages: whole amounts have no decimals ($99); fractional amounts keep two ($9.50). */
 export function formatPrice(
   format: ReturnType<typeof useFormatter>,
   price: number,

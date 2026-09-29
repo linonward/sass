@@ -11,14 +11,14 @@ afterEach(() => {
 });
 
 describe("runAfterResponse", () => {
-  test("请求里交给 after，不在当下执行", async () => {
+  test("inside a request, hands the task to after instead of running it now", async () => {
     const task = vi.fn(async () => {});
     await runAfterResponse(task);
     expect(after).toHaveBeenCalledWith(task);
     expect(task).not.toHaveBeenCalled();
   });
 
-  test("不在请求作用域时直接执行并等待", async () => {
+  test("outside a request scope, runs the task directly and awaits it", async () => {
     after.mockImplementation(() => {
       throw new Error("`after` was called outside a request scope");
     });

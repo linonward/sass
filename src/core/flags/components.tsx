@@ -3,19 +3,21 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 /**
- * 客户端侧的 feature flag。值由服务端用 `resolveFlags()` 算好后经 `<FlagsProvider>` 传下来：
- * 判定用的配置在 `site.config.ts`，把它 import 进客户端组件会把 zod 拖进每个页面的 bundle
- * （见 `src/core/i18n/locales.ts` 里同样的取舍），所以客户端只拿到一个 boolean 快照。
+ * Client-side feature flags. The server computes the values with `resolveFlags()` and passes them
+ * down through `<FlagsProvider>`: the config used for evaluation lives in `site.config.ts`, and
+ * importing it into a client component would drag zod into every page's bundle (see the same
+ * tradeoff in `src/core/i18n/locales.ts`), so the client only receives a boolean snapshot.
  *
- * provider 挂在 `DashboardShell` 上，覆盖登录后的所有页面（产品面 + 后台）。
- * 公开页面要在服务端分支就用 `isEnabled()`；客户端组件要用 flag 就放在登录后的页面里。
+ * The provider is mounted on `DashboardShell`, covering every signed-in page (product + admin).
+ * Public pages that need to branch should use `isEnabled()` on the server; client components that
+ * use flags belong on signed-in pages.
  */
 
 const FlagsContext = createContext<Readonly<Record<string, boolean>> | null>(
   null,
 );
 
-/** 把这次请求算好的 flag 值交给客户端组件。服务端组件里用，值必须是纯数据。 */
+/** Hands this request's computed flag values to client components. Use it in a server component; values must be plain data. */
 export function FlagsProvider({
   values,
   children,
@@ -29,15 +31,16 @@ export function FlagsProvider({
 }
 
 /**
- * 读一个 flag。两个默认值都是 false：没有 provider（比如公开页面）或快照里没有这个
- * flag（总开关关着、或者名字写错了）时不报错、一律当作关闭 —— 开关只在显式打开时生效。
+ * Reads a flag. Both defaults are false: with no provider (e.g. a public page) or a flag missing from
+ * the snapshot (master switch off, or a misspelled name) it doesn't throw and treats the flag as
+ * off — flags only take effect when explicitly turned on.
  */
 export function useFlag(name: string): boolean {
   return useContext(FlagsContext)?.[name] ?? false;
 }
 
 /**
- * 按 flag 渲染。关着的时候渲染 `fallback`（默认什么都不渲染）。
+ * Renders based on a flag. When off, renders `fallback` (nothing by default).
  *
  * ```tsx
  * <FeatureFlag name="beta-dashboard" fallback={<OldDashboard />}>

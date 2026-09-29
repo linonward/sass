@@ -8,7 +8,7 @@ import {
 
 import siteConfig from "../../../site.config";
 
-/** 侧边栏顶部的品牌区；折叠时只显示 logo。 */
+/** Brand area at the top of the sidebar; shows only the logo when collapsed. */
 export function SidebarBrand() {
   return (
     <SidebarMenu>

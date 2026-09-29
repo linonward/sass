@@ -6,23 +6,24 @@ import siteConfig from "../../../site.config";
 import { ogImageSize } from "./og-image-size";
 
 export type OgCardProps = {
-  /** 标题上方的小字，例如 "Acme · Blog"。 */
+  /** Small text above the title, e.g. "Acme · Blog". */
   eyebrow?: string;
   title: string;
   description?: string;
-  /** 底部的小字，默认是站点域名。 */
+  /** Small text at the bottom; defaults to the site domain. */
   footer?: string;
 };
 
-/** 品牌色背景的分享图（1200×630）：站点默认图和博客文章图共用。 */
+/** Share image on a brand-color background (1200×630): shared by the site default image and blog post images. */
 export function ogCard({
   eyebrow,
   title,
   description,
   footer = siteConfig.domain,
 }: OgCardProps) {
-  // next/og 不支持 oklch，只能内联十六进制；但选色和 `--primary-foreground` 是同一个
-  // 决策、同一组值（暖墨 / 暖白），品牌色上放什么字全站一致。
+  // next/og doesn't support oklch, so hex has to be inlined; but the color choice is the same
+  // decision and the same values as `--primary-foreground` (warm ink / warm white), so text on the
+  // brand color is consistent across the whole site.
   const color = foregroundFor(siteConfig.brand.primaryColor);
 
   return new ImageResponse(

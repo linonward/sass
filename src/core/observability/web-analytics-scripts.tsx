@@ -4,8 +4,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { webAnalyticsFlags } from "./web-analytics";
 
 /**
- * 根布局里挂载的 Vercel Analytics 和 Speed Insights。关闭时什么都不渲染，页面不加载分析脚本。
- * 两者都不用 cookie；数据在 Vercel 项目的 Analytics / Speed Insights 页查看（需在项目里先开启）。
+ * Vercel Analytics and Speed Insights, mounted in the root layout. When off, nothing renders and
+ * the page loads no analytics scripts.
+ * Neither uses cookies. View the data on the Analytics / Speed Insights pages of the Vercel project
+ * (enable them in the project first).
  */
 export function WebAnalyticsScripts({
   flags = webAnalyticsFlags(),

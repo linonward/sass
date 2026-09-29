@@ -37,11 +37,11 @@ function fakeSentry() {
 afterEach(() => registerSentry(undefined));
 
 describe("reportToSentry", () => {
-  test("没注册 SDK 时什么也不做", () => {
+  test("does nothing when no SDK is registered", () => {
     expect(() => reportToSentry(new Error("x"), "x.failed", {})).not.toThrow();
   });
 
-  test("上报错误本身，事件名做 tag，userId 设为用户，其余字段放 extra", () => {
+  test("reports the error itself, with the event name as a tag, userId as the user, and other fields as extras", () => {
     const { api, scope } = fakeSentry();
     const error = new Error("boom");
     reportToSentry(error, "billing.webhook_failed", {
@@ -58,7 +58,7 @@ describe("reportToSentry", () => {
     expect(scope.setExtras).toHaveBeenCalledWith({ provider: "creem" });
   });
 
-  test("没有 Error 时用事件名造一个", () => {
+  test("creates an Error from the event name when there is none", () => {
     const { api, scope } = fakeSentry();
     reportToSentry(undefined, "ai.provider_down", { model: "fast" });
     const captured = api.captureException.mock.calls[0]?.[0];
@@ -67,7 +67,7 @@ describe("reportToSentry", () => {
     expect(scope.setUser).not.toHaveBeenCalled();
   });
 
-  test("接在 logger 上：logger.error 上报，字段已脱敏", () => {
+  test("wired into the logger: logger.error reports with redacted fields", () => {
     const { api, scope } = fakeSentry();
     const logger = createLogger({ level: "error", format: "json", write() {} });
     logger.setErrorReporter(reportToSentry);
@@ -81,14 +81,14 @@ describe("reportToSentry", () => {
 });
 
 describe("identifyUser / captureError", () => {
-  test("只发用户 ID；退出登录时清空", () => {
+  test("sends only the user ID and clears it on sign-out", () => {
     const { api } = fakeSentry();
     identifyUser("u_1");
     identifyUser(null);
     expect(api.setUser.mock.calls).toEqual([[{ id: "u_1" }], [null]]);
   });
 
-  test("captureError 转给 SDK；没注册时静默", () => {
+  test("captureError forwards to the SDK and is silent when none is registered", () => {
     expect(() => captureError(new Error("x"))).not.toThrow();
     const { api } = fakeSentry();
     const error = new Error("render");
@@ -96,7 +96,7 @@ describe("identifyUser / captureError", () => {
     expect(api.captureException).toHaveBeenCalledWith(error);
   });
 
-  test("初始化参数不收集 cookie、IP、query、请求体和局部变量", () => {
+  test("init options don't collect cookies, IP, query strings, request bodies, or local variables", () => {
     const options = sentryBaseOptions({
       dsn: "https://k@o1.ingest.sentry.io/1",
       environment: "production",
@@ -115,7 +115,7 @@ describe("identifyUser / captureError", () => {
     });
   });
 
-  test("浏览器里 SDK 加载前设置的用户，注册时补上", () => {
+  test("in the browser, a user set before the SDK loads is applied on registration", () => {
     vi.stubGlobal("window", {});
     try {
       identifyUser("u_early");
@@ -126,7 +126,7 @@ describe("identifyUser / captureError", () => {
     }
   });
 
-  test("服务端 SDK 未注册时不暂存用户（避免串到别的请求）", () => {
+  test("on the server, doesn't buffer the user before the SDK registers (would leak into other requests)", () => {
     identifyUser("u_server");
     const { api } = fakeSentry();
     expect(api.setUser).not.toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe("sessionUserId", () => {
   });
 });
 
-describe("Sentry 变量", () => {
+describe("Sentry variables", () => {
   const env = (sentry: boolean, runtimeEnv: Record<string, string>) =>
     createAppEnv({
       server: observabilityServerEnv(),
@@ -153,11 +153,11 @@ describe("Sentry 变量", () => {
       runtimeEnv,
     });
 
-  test("关闭时不要求任何变量", () => {
+  test("requires no variables when off", () => {
     expect(() => env(false, {})).not.toThrow();
   });
 
-  test("开启时必须填 DSN，source map 相关变量可选", () => {
+  test("when on, requires the DSN; source map variables are optional", () => {
     expect(() => env(true, {})).toThrow("- NEXT_PUBLIC_SENTRY_DSN: ");
     expect(() => env(true, { NEXT_PUBLIC_SENTRY_DSN: "not a url" })).toThrow(
       "- NEXT_PUBLIC_SENTRY_DSN: ",
@@ -168,7 +168,7 @@ describe("Sentry 变量", () => {
     ).toBe("https://k@o1.ingest.sentry.io/1");
   });
 
-  test("三项都填了才上传 source map", () => {
+  test("uploads source maps only when all three are set", () => {
     const all = {
       SENTRY_AUTH_TOKEN: "t",
       SENTRY_ORG: "o",
@@ -180,13 +180,14 @@ describe("Sentry 变量", () => {
   });
 });
 
-test("proxy 的 matcher 跳过 Sentry 转发路径", () => {
-  // matcher 只能写字面量，这里防止两边改漏。
+test("the proxy matcher skips the Sentry tunnel route", () => {
+  // The matcher must be a literal, so this guards against updating one side and not the other.
   const source = readFileSync(
     new URL("../../proxy.ts", import.meta.url),
     "utf8",
   );
-  // 值贴着 printWidth，加减一个路径就会被 prettier 折到下一行，所以不能只认单行写法。
+  // The value sits right at printWidth; adding or removing a path makes prettier wrap it onto the
+  // next line, so don't match only the single-line form.
   const matcher = /matcher:\s*"([^"]+)"/.exec(source)?.[1] ?? "";
   expect(matcher).toContain(`|${SENTRY_TUNNEL_ROUTE.slice(1)}|`);
 });

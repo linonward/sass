@@ -1,16 +1,20 @@
 import { isSpanContextValid, trace } from "@opentelemetry/api";
 
-// 会被 instrumentation.ts 加载（Node 和 Edge 两种 runtime），这里只用两边都有的 API。
+// Loaded by instrumentation.ts (in both the Node and Edge runtimes), so only use APIs available in
+// both.
 import siteConfig from "../../../site.config";
 import { reportToSentry } from "./sentry";
 
 export const logLevels = ["debug", "info", "warn", "error"] as const;
 export type LogLevel = (typeof logLevels)[number];
 export type LogFields = Record<string, unknown>;
-/** 可注入的日志函数（logger.error / logger.warn 的形状），测试里换成 vi.fn()。 */
+/** An injectable log function (shaped like logger.error / logger.warn); tests swap in vi.fn(). */
 export type LogFn = (event: string, fieldsOrError?: unknown) => void;
 
-/** 错误上报钩子。开了 Sentry 时由它上报；`error` 是字段里的第一个 Error，没有时为 undefined。 */
+/**
+ * Error reporting hook. When Sentry is on, it does the reporting. `error` is the first Error found
+ * in the fields, or undefined if there is none.
+ */
 export type ErrorReporter = (
   error: unknown,
   event: string,
@@ -19,10 +23,11 @@ export type ErrorReporter = (
 
 export type LoggerOptions = {
   level: LogLevel;
-  // json：单行 JSON，给日志平台检索；pretty：交给 console，开发时易读。
+  // json: single-line JSON for log platforms to search; pretty: passed to console, easy to read in
+  // development.
   format: "json" | "pretty";
   now?: () => Date;
-  // 默认输出到 console；测试注入。
+  // Writes to console by default; tests inject their own.
   write?: (level: LogLevel, ...args: unknown[]) => void;
   traceContext?: () => { traceId: string; spanId: string } | undefined;
 };
@@ -30,29 +35,35 @@ export type LoggerOptions = {
 const REDACTED = "[redacted]";
 const MAX_DEPTH = 5;
 
-// 字段名（忽略大小写和 _ -）命中下面任一条就脱敏：
-// 1. 等于 SENSITIVE_KEYS 里的词；
-// 2. 以 SENSITIVE_SUFFIXES 里的词结尾 —— userEmail、accessToken、userOtp……
-//    inputTokens 这类计数不受影响（以 tokens 结尾）；
-// 3. 以 code 结尾且前缀是凭据词（isVerificationCodeKey）—— verificationCode、otp_code、pinCode。
+// A field is redacted when its name (ignoring case, `_` and `-`) matches any of these rules:
+// 1. It equals a word in SENSITIVE_KEYS.
+// 2. It ends with a word in SENSITIVE_SUFFIXES — userEmail, accessToken, userOtp, and so on.
+//    Counters like inputTokens are unaffected (they end in "tokens").
+// 3. It ends in "code" and the prefix is a credential word (isVerificationCodeKey) —
+//    verificationCode, otp_code, pinCode.
 //
-// `code` 故意不进后缀表：以 code 结尾的名字里，statusCode / errorCode / countryCode / zipCode
-// 这类诊断字段远多于验证码，按后缀一刀切会把它们一起抹成 [redacted]，属于静默降低可观测性
-// —— 出故障时没人会立刻发现日志里少了这些值。所以验证码按「前缀是不是凭据词」判定，
-// 而裸 `code` 单独算（见 VERIFICATION_CODE_PREFIXES 里的空串）。
+// `code` is deliberately not a suffix: among names ending in "code", diagnostic fields such as
+// statusCode / errorCode / countryCode / zipCode far outnumber verification codes. A blanket
+// suffix rule would wipe them all to [redacted], silently degrading observability — during an
+// incident nobody notices right away that those values are missing from the logs. So verification
+// codes are identified by whether the prefix is a credential word, and a bare `code` is handled
+// separately (see the empty string in VERIFICATION_CODE_PREFIXES).
 const SENSITIVE_SUFFIXES = [
   "email",
   "token",
   "password",
   "secret",
   "apikey",
-  // 验证码类：otp（含 hotp / totp）和 pin 本身就是凭据，出现在字段名末尾都算敏感。
+  // Verification codes: otp (including hotp / totp) and pin are credentials themselves, so they
+  // are sensitive whenever they end a field name.
   "otp",
   "pin",
 ];
 const SENSITIVE_KEYS = new Set(["authorization", "cookie", "setcookie"]);
-// `*code` 的前缀为这些词时按验证码脱敏。空串表示裸 `code`：日志字段里的 `code` 基本都出现在
-// 登录 / 验证码场景，而错误码、状态码通常带前缀（errorCode、statusCode），不受影响。
+// `*code` fields with one of these prefixes are redacted as verification codes. The empty string
+// stands for a bare `code`: in log fields, `code` almost always shows up in sign-in / verification
+// code flows, while error and status codes usually carry a prefix (errorCode, statusCode) and are
+// unaffected.
 const VERIFICATION_CODE_PREFIXES = new Set([
   "",
   "verification",
@@ -99,7 +110,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-/** Error 转成可以 JSON 序列化的对象，带上 cause 和 Next.js 的 digest。 */
+/** Turns an Error into a JSON-serializable object, including its cause and the Next.js digest. */
 export function serializeError(error: Error, depth = 0): LogFields {
   const serialized: LogFields = {
     name: error.name,
@@ -118,7 +129,10 @@ export function serializeError(error: Error, depth = 0): LogFields {
   return serialized;
 }
 
-/** 递归替换敏感字段；Error 序列化，其他对象保持原样交给 JSON.stringify。 */
+/**
+ * Recursively replaces sensitive fields. Errors are serialized; other objects are left as-is for
+ * JSON.stringify.
+ */
 export function redact(value: unknown, depth = 0): unknown {
   if (value instanceof Error) return serializeError(value, depth);
   if (depth >= MAX_DEPTH) return value;
@@ -144,7 +158,10 @@ function activeTraceContext() {
   return { traceId: context.traceId, spanId: context.spanId };
 }
 
-/** 第二个参数可以是字段对象，也可以直接是错误：logger.error("x.failed", error)。 */
+/**
+ * The second argument can be a fields object or the error itself:
+ * logger.error("x.failed", error).
+ */
 function toFields(fieldsOrError: unknown): LogFields {
   if (fieldsOrError === undefined) return {};
   return isPlainObject(fieldsOrError)
@@ -182,7 +199,7 @@ export function createLogger({
           }),
         );
       } else {
-        // 错误对象原样交给 console，保留终端里的堆栈高亮。
+        // Pass the error object to console as-is to keep stack highlighting in the terminal.
         const error = firstError(raw);
         const rest = Object.fromEntries(
           Object.entries(fields).filter(
@@ -211,10 +228,15 @@ export function createLogger({
     info: (event: string, fields?: LogFields) => log("info", event, fields),
     warn: (event: string, fieldsOrError?: LogFields | unknown) =>
       log("warn", event, fieldsOrError),
-    /** 错误日志，也是错误上报的唯一入口。第二个参数可以是 Error 或字段对象（Error 放在任意字段里）。 */
+    /**
+     * Error log, and the only entry point for error reporting. The second argument can be an Error
+     * or a fields object (with the Error in any field).
+     */
     error: (event: string, fieldsOrError?: LogFields | unknown) =>
       log("error", event, fieldsOrError),
-    /** 注册错误上报（同时只有一个）；返回取消注册的函数。 */
+    /**
+     * Registers the error reporter (only one at a time); returns a function that unregisters it.
+     */
     setErrorReporter(next: ErrorReporter | undefined) {
       reporter = next;
       return () => {
@@ -227,10 +249,11 @@ export function createLogger({
 export type Logger = ReturnType<typeof createLogger>;
 
 /**
- * 按 site.config.ts 决定日志行为：
- * - 关闭 features.observability：与之前的 console 输出一致，只打 warn 和 error。
- * - 开启：级别取 observability.logLevel；生产环境输出单行 JSON（带 traceId）。
- * - 测试环境只打 warn 以上，避免刷屏。
+ * Derives logging behavior from site.config.ts:
+ * - features.observability off: plain console output as before, only warn and error.
+ * - On: the level comes from observability.logLevel; production writes single-line JSON (with
+ *   traceId).
+ * - Tests only log warn and above, to keep output quiet.
  */
 export function loggerOptionsFromConfig(
   config: Pick<typeof siteConfig, "features" | "observability">,
@@ -245,8 +268,9 @@ export function loggerOptionsFromConfig(
   };
 }
 
-/** src/core 统一使用的日志实例。 */
+/** The logger instance used throughout src/core. */
 export const logger = createLogger(loggerOptionsFromConfig(siteConfig));
 
-// logger.error 同时上报 Sentry。没开 Sentry 时没有注册 SDK，这里什么也不做。
+// logger.error also reports to Sentry. When Sentry is off, no SDK is registered and this does
+// nothing.
 logger.setErrorReporter(reportToSentry);

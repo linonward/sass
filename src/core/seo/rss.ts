@@ -14,19 +14,19 @@ export function escapeXml(value: string) {
   );
 }
 
-/** RSS 要求 RFC 822 日期；条目只有日期，按 UTC 零点计。 */
+/** RSS requires RFC 822 dates; entries only have a date, so it's taken as UTC midnight. */
 function rfc822(date: string) {
   return new Date(`${date}T00:00:00Z`).toUTCString();
 }
 
 export type RssItem = {
   title: string;
-  /** 条目的站内路径（不含语言前缀），例如 `/blog/hello-world`。同时用作 link 和 guid。 */
+  /** The item's site-relative path (without the locale prefix), e.g. `/blog/hello-world`. Used as both link and guid. */
   path: string;
-  /** 发布日期，例如 `2026-01-31`。 */
+  /** Publish date, e.g. `2026-01-31`. */
   date: string;
   description: string;
-  /** 可选分类，输出成多个 `<category>`（博客的标签、changelog 的类别）。 */
+  /** Optional categories, emitted as multiple `<category>` elements (blog tags, changelog categories). */
   categories?: readonly string[];
 };
 
@@ -34,15 +34,15 @@ export type RssFeedOptions = {
   locale: string;
   title: string;
   description: string;
-  /** 列表页的站内路径（不含语言前缀），作为频道的 link。 */
+  /** Site-relative path of the list page (without the locale prefix), used as the channel link. */
   pagePath: string;
-  /** feed 自己的站内路径（不含语言前缀），用于 `atom:link rel="self"`。 */
+  /** The feed's own site-relative path (without the locale prefix), for `atom:link rel="self"`. */
   feedPath: string;
-  /** 已按日期倒序的条目。 */
+  /** Items sorted newest first. */
   items: readonly RssItem[];
 };
 
-/** 生成 RSS 2.0。lastBuildDate 取最新条目的日期，内容不变时输出也不变。 */
+/** Generates RSS 2.0. lastBuildDate is the newest item's date, so unchanged content produces unchanged output. */
 export function buildRssFeed({
   locale,
   title,

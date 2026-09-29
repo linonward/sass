@@ -21,7 +21,7 @@ import { getStatusBoard } from "./store";
 
 const namespace = "Status";
 
-/** 确认 / 退订跳回来时的一次性提示的配色。 */
+/** Colors for the one-off notice shown after returning from confirm / unsubscribe. */
 const noticeTone: Record<string, string> = {
   subscribed: "bg-primary-band text-primary-text [--edge:var(--primary-edge)]",
   unsubscribed: "bg-muted text-muted-foreground [--edge:var(--border)]",
@@ -30,7 +30,10 @@ const noticeTone: Record<string, string> = {
 
 export type StatusNotice = "subscribed" | "unsubscribed" | "expired";
 
-/** 整体横幅和每行的颜色：operational 用品牌色，异常才上语义色（见 docs/design.md）。 */
+/**
+ * Colors for the overall banner and each row: operational uses the brand color; only problems get
+ * semantic colors (see docs/design.md).
+ */
 const bannerTone: Record<string, string> = {
   operational: "bg-primary-band text-primary-text [--edge:var(--primary-edge)]",
   degraded: "bg-warning-band text-warning [--edge:var(--warning-edge)]",
@@ -38,7 +41,10 @@ const bannerTone: Record<string, string> = {
     "bg-destructive-band text-destructive [--edge:var(--destructive-edge)]",
 };
 
-/** 徽章的语义档。营销面所以是贴纸（不传 flat），和博客卡片上的标签同一套语言。 */
+/**
+ * Badge semantic variants. This is a marketing surface, so badges are stickers (no `flat`) — the
+ * same visual language as the tags on blog cards.
+ */
 const badgeVariant: Record<
   StatusEventStatus,
   "band" | "warning" | "destructive-band"
@@ -68,11 +74,13 @@ export async function statusPageMetadata(locale: string) {
 }
 
 /**
- * `/status` 的页面主体。走营销面语域（`docs/design.md` §4.5）：浅色带的页头、波浪过渡到
- * 画布、内容是贴纸；但比营销页安静 —— 这一页是给人「一眼看完」的，不是说服人的。
+ * Body of the `/status` page. Uses the marketing-surface register (`docs/design.md` §4.5): a
+ * light-band header with a wave transition into the canvas, and stickers for content — but quieter
+ * than the marketing pages: this page is meant to be taken in at a glance, not to persuade.
  *
- * 它自己也负责触发 auto 模式的探测：v1 不引入 cron，页面渲染时同步跑一遍。
- * 探测失败不能让整页 500 —— 状态页在故障期间正好是最该打开的那个页面。
+ * It also triggers the auto-mode probes itself: v1 has no cron, so they run synchronously during
+ * render. A failed probe must not 500 the whole page — during an outage, the status page is
+ * exactly the page people most need to open.
  */
 export async function StatusPage({
   locale,
@@ -103,8 +111,9 @@ export async function StatusPage({
     format.dateTime(value, {
       dateStyle: "medium",
       timeStyle: "short",
-      // 库里存的是 UTC 墙钟，按 UTC 显示：访客的本地时区由浏览器决定，
-      // 服务端不能拿自己的时区当默认值（否则本地和 CI 渲染出的时间不一样）。
+      // The database stores UTC wall-clock time, so display it in UTC: the visitor's local time
+      // zone is up to the browser, and the server must not default to its own time zone
+      // (otherwise local and CI renders would show different times).
       timeZone: "UTC",
     });
 
@@ -121,8 +130,9 @@ export async function StatusPage({
                 {t("description")}
               </p>
             </div>
-            {/* 整页每次渲染都会重新读库（auto 模式下还会重跑探测），刷新就是重新请求。
-                用普通链接而不是客户端路由，确保拿到的是服务端重新渲染的结果。 */}
+            {/* The whole page re-reads the database on every render (and re-runs the probes in auto
+                mode), so refreshing is just a new request. Use a plain link rather than client-side
+                routing to make sure the result is a fresh server render. */}
             <a
               href={localizedPath(locale, "/status")}
               className={buttonVariants({
@@ -271,7 +281,8 @@ export async function StatusPage({
             )}
           </section>
 
-          {/* 订阅是可选功能：v1 只在 incident 变更时发通知，不发日报，也不引入 cron。 */}
+          {/* Subscriptions are optional: v1 notifies only on incident changes — no daily digest,
+              no cron. */}
           <section
             aria-labelledby="status-subscribe"
             className="bg-card sticker rounded-xl p-6 sm:p-8"

@@ -3,8 +3,10 @@ import { ArrowRightIcon, ArrowUpRightIcon } from "lucide-react";
 import { Link } from "@/core/i18n/navigation";
 
 /**
- * 首屏和结尾共用的按钮取向：有可买的套餐时，主按钮是「立即购买 · 价格」（跳到交付区块的
- * 购买卡片，先看条款再结账）；没有时退回站内演示。次按钮优先指向真实案例站点。
+ * Button logic shared by the hero and the closing section: with a purchasable plan, the primary
+ * button is "Buy now · price" (jumping to the delivery section's purchase card so terms are read
+ * before checkout); otherwise it falls back to the in-site demo. The secondary button prefers the
+ * real showcase site.
  */
 export type CtaTarget =
   | { kind: "buy"; label: string }
@@ -17,7 +19,7 @@ export function ctaTargets({
   showcaseUrl,
   labels,
 }: {
-  /** 购买卡片套餐的格式化标价；没有可买的套餐时为 undefined。 */
+  /** Formatted price of the purchase card's plan; undefined when no plan is purchasable. */
   price?: string;
   showcaseUrl?: string;
   labels: { buy: string; demo: string; delivery: string; showcase: string };

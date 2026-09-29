@@ -17,7 +17,7 @@ import {
   type StatusEvent,
 } from "./status";
 
-/** 时间线上的 incident 上限；窗口之外的旧记录不进首屏。 */
+/** Cap on incidents in the timeline; older records outside the window stay off the first screen. */
 const INCIDENT_LIMIT = 50;
 
 export type StatusBoardComponent = {
@@ -25,18 +25,18 @@ export type StatusBoardComponent = {
   label: string;
   description?: string;
   status: ComponentStatus;
-  /** 窗口内的 uptime 百分比。 */
+  /** Uptime percentage within the window. */
   uptime: number;
 };
 
 export type StatusBoard = {
   overall: OverallStatus;
   components: StatusBoardComponent[];
-  /** 窗口内的 incident，按时间倒序。 */
+  /** Incidents within the window, newest first. */
   incidents: StatusEvent[];
 };
 
-/** 和窗口有交集的 incident：窗口内开始的、窗口内才结束的，以及还在进行中的。 */
+/** Incidents that overlap the window: started in it, ended in it, or still ongoing. */
 function inWindow(since: Date) {
   return or(
     gte(statusEvents.createdAt, since),
@@ -45,7 +45,10 @@ function inWindow(since: Date) {
   );
 }
 
-/** 窗口内的全部 incident，以及仍在进行中的那几条（后者不受窗口和条数上限影响）。 */
+/**
+ * All incidents in the window, plus those still ongoing (the latter aren't subject to the window
+ * or the count cap).
+ */
 async function collectEvents(db: Database, since: Date) {
   const [open, recent] = await Promise.all([
     db.select().from(statusEvents).where(isNull(statusEvents.resolvedAt)),
@@ -59,7 +62,10 @@ async function collectEvents(db: Database, since: Date) {
   return { open, recent };
 }
 
-/** 状态页首屏需要的全部数据：整体状态、每个组件的当前状态和 uptime、近期 incident。 */
+/**
+ * Everything the status page's first screen needs: overall status, each component's current
+ * status and uptime, and recent incidents.
+ */
 export async function getStatusBoard(
   db: Database,
   config: StatusPageConfig,
@@ -91,7 +97,7 @@ export async function getStatusBoard(
   };
 }
 
-/** 取某个组件的当前状态（不进窗口过滤：进行中的 incident 永远算数）。 */
+/** Current status of one component (no window filter: an ongoing incident always counts). */
 export async function getComponentStatusFromDb(
   db: Database,
   component: string,
@@ -109,7 +115,7 @@ export async function getComponentStatusFromDb(
   return getComponentStatus(open);
 }
 
-/** 最近 N 天的 uptime 百分比。 */
+/** Uptime percentage over the last N days. */
 export async function getUptimeFromDb(
   db: Database,
   component: string,
@@ -146,7 +152,10 @@ export async function createIncident(
   return row!;
 }
 
-/** 更新进行中的 incident：改影响级别或改说明（管理员在原文后面追加也行）。 */
+/**
+ * Updates an ongoing incident: changes the impact level or the message (admins may also append to
+ * the original text).
+ */
 export async function updateIncident(
   db: Database,
   id: string,
@@ -160,7 +169,10 @@ export async function updateIncident(
   return row;
 }
 
-/** 解决：只填 resolvedAt，`status` 保留当时的影响级别（时间线要显示「当时是 outage」）。 */
+/**
+ * Resolves an incident: only sets resolvedAt; `status` keeps the impact level it had (the timeline
+ * needs to show "this was an outage").
+ */
 export async function resolveIncident(
   db: Database,
   id: string,
@@ -174,7 +186,10 @@ export async function resolveIncident(
   return row;
 }
 
-/** 记一次通知广播的时间，5 分钟内的后续更新不再重复发送（见 status.ts 的 shouldNotify）。 */
+/**
+ * Records when a notification was broadcast; follow-up changes within 5 minutes aren't sent again
+ * (see shouldNotify in status.ts).
+ */
 export async function markNotified(db: Database, id: string, now: Date) {
   await db
     .update(statusEvents)

@@ -7,12 +7,16 @@ import { logger } from "@/core/observability/logger";
 
 import { createIncident } from "./store";
 
-/** 单次探测的超时。status page 是自己站在故障现场的页面，不能吊死在一个坏端点上。 */
+/**
+ * Timeout for a single probe. The status page is itself the page people open during an outage; it
+ * must not hang on one broken endpoint.
+ */
 export const HEALTH_TIMEOUT_MS = 5_000;
 
 /**
- * 连续失败到几次才记为 degraded。一次失败可能只是网络抖动：探针跑在渲染路径上，
- * 上一秒的瞬时抖动不该被写成一条对外可见的 incident。
+ * How many consecutive failures before a component is marked degraded. A single failure may just
+ * be a network blip: the probe runs on the render path, and a momentary blip from a second ago
+ * shouldn't become a publicly visible incident.
  */
 export const FAILURE_THRESHOLD = 2;
 
@@ -20,10 +24,11 @@ export type ProbeResult =
   { ok: true; status: number } | { ok: false; error: string };
 
 /**
- * 探测一个 health URL：2xx–3xx 算健康，其余（以及超时、网络错误）都算失败。
+ * Probes a health URL: 2xx–3xx counts as healthy; everything else (including timeouts and network
+ * errors) counts as a failure.
  *
- * 超时用 `AbortSignal.timeout`，所以探测一定会在 `timeoutMs` 内返回 —— 调用方
- * （`/status` 的渲染）不会被某个不响应的地址拖住。
+ * The timeout uses `AbortSignal.timeout`, so the probe always returns within `timeoutMs` — the
+ * caller (rendering `/status`) is never held up by an unresponsive address.
  */
 export async function probeHealth(
   url: string,
@@ -40,7 +45,8 @@ export async function probeHealth(
       signal: AbortSignal.timeout(timeoutMs),
       headers: { accept: "*/*" },
     });
-    // 不读 body：健康检查只看状态码，留着不消费的响应会占住连接。
+    // Don't read the body: health checks only look at the status code, and an unconsumed response
+    // holds on to the connection.
     await response.body?.cancel().catch(() => {});
     if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
     return { ok: true, status: response.status };
@@ -57,7 +63,10 @@ export async function probeHealth(
 
 export type CheckTarget = { component: string; healthUrl: string };
 
-/** 配了 healthUrl 的组件。没配的组件在 auto 模式下仍由管理员手动控制。 */
+/**
+ * Components with a healthUrl configured. Components without one are still controlled manually by
+ * the admin in auto mode.
+ */
 export function checkTargets(
   components: Record<string, StatusComponent>,
 ): CheckTarget[] {
@@ -71,8 +80,9 @@ function autoIncidentMessage(result: Extract<ProbeResult, { ok: false }>) {
 }
 
 /**
- * 这次失败要不要开一条 incident：连续失败到阈值，且当前没有进行中的自动 incident。
- * 抽成纯函数是为了能单测 —— 真正的写入在 `runAutoChecks` 里。
+ * Whether this failure should open an incident: consecutive failures have reached the threshold
+ * and no automatic incident is currently ongoing. Extracted as a pure function so it can be unit
+ * tested — the actual write happens in `runAutoChecks`.
  */
 export function shouldOpenIncident(
   failures: number,
@@ -82,15 +92,17 @@ export function shouldOpenIncident(
 }
 
 /**
- * auto 模式的探测：页面渲染时同步跑一遍（v1 不引入 cron）。
+ * Probes for auto mode: run synchronously while the page renders (v1 has no cron).
  *
- * 每个组件的记账方式：
- * - 探测成功 → 失败计数清零，并把它**自己**开出来的 incident 解决掉
- *   （`source = "auto"`；管理员手动开的 incident 不会被自动恢复悄悄关掉）；
- * - 探测失败 → 计数 +1，达到 `FAILURE_THRESHOLD` 且当前没有进行中的自动 incident 时，
- *   开一条 degraded。
+ * Bookkeeping per component:
+ * - probe succeeds → reset the failure count, and resolve the incidents it opened **itself**
+ *   (`source = "auto"`; incidents an admin opened manually are never quietly closed by an
+ *   automatic recovery);
+ * - probe fails → count +1; once it reaches `FAILURE_THRESHOLD` and no automatic incident is
+ *   ongoing, open a degraded incident.
  *
- * 探测是并行的，写入是逐条串行的 —— 每个组件的两行写入各自独立，没必要为它们开事务。
+ * Probes run in parallel, writes run one at a time — each component's two row writes are
+ * independent, so there's no need for a transaction.
  */
 export async function runAutoChecks(
   db: Database,

@@ -7,9 +7,9 @@ import { files, type FileRecord } from "@/core/db/schema";
 import type { ObjectStorage } from "./storage";
 import { buildObjectKey, validateUpload } from "./validate";
 
-/** 预签名 PUT 地址的有效期（秒）。 */
+/** Lifetime of a presigned PUT URL (seconds). */
 export const PUT_URL_EXPIRES_IN = 10 * 60;
-/** 私有文件签名 GET 地址的有效期（秒）。 */
+/** Lifetime of a signed GET URL for private files (seconds). */
 export const GET_URL_EXPIRES_IN = 60 * 60;
 
 export type UploadError =
@@ -31,14 +31,14 @@ const fail = (error: UploadError, status: number): Fail => ({
 
 export type UploadDeps = {
   db: Database;
-  // 没有配置 R2 时为 null，接口返回 503。
+  // null when R2 isn't configured; the API returns 503.
   storage: ObjectStorage | null;
   config: UploadConfig;
-  // upload.public 为 true 时的公开域名，例如 https://files.example.com。
+  // Public origin when upload.public is true, e.g. https://files.example.com.
   publicUrl?: string;
 };
 
-/** 客户端拿到的文件信息。url 对私有文件是有时效的签名地址。 */
+/** File info returned to the client. For private files, url is a time-limited signed URL. */
 export type UploadedFile = {
   id: string;
   key: string;
@@ -48,8 +48,9 @@ export type UploadedFile = {
 };
 
 /**
- * 校验类型和大小，登记一条 pending 记录，返回预签名 PUT 地址。
- * 浏览器上传时必须带上 `headers` 里的 Content-Type；大小不同或类型不同，R2 会拒绝（签名覆盖了这两个头）。
+ * Validates type and size, records a pending row, and returns a presigned PUT URL.
+ * The browser must send the Content-Type from `headers` when uploading; if the size or type
+ * differs, R2 rejects it (the signature covers both headers).
  */
 export async function presignUpload(
   { db, storage, config }: UploadDeps,
@@ -86,7 +87,8 @@ export async function presignUpload(
 
   return {
     ok: true,
-    // insert … returning 必然带回刚插进去的那一行，这里的非空断言是这个意思。
+    // insert … returning always returns the row just inserted; that's what this non-null
+    // assertion means.
     fileId: file!.id,
     key,
     uploadUrl,
@@ -96,8 +98,9 @@ export async function presignUpload(
 }
 
 /**
- * 确认上传：对象必须存在，大小和类型与签发时一致，然后把记录改为 uploaded。
- * 重复确认返回同样的结果。大小或类型不一致时删除对象（记录保留为 pending），返回 422。
+ * Confirms an upload: the object must exist with the size and type that were signed, then the row
+ * is marked uploaded. Confirming again returns the same result. On a size or type mismatch the
+ * object is deleted (the row stays pending) and 422 is returned.
  */
 export async function completeUpload(
   deps: UploadDeps,
@@ -124,11 +127,14 @@ export async function completeUpload(
     .set({ status: "uploaded" })
     .where(eq(files.id, file.id))
     .returning();
-  // 上面刚查到这条记录、update … returning 也就必然带回它。
+  // The row was just found above, so update … returning is guaranteed to return it.
   return { ok: true, file: await toUploadedFile(deps, updated!) };
 }
 
-/** 用户自己已上传的文件的访问地址；不存在、不属于该用户或还没确认时返回 null。 */
+/**
+ * URL of a file the user has uploaded; null if it doesn't exist, belongs to someone else, or
+ * hasn't been confirmed yet.
+ */
 export async function getFileUrl(
   deps: UploadDeps,
   { userId, fileId }: { userId: string; fileId: unknown },
@@ -139,7 +145,7 @@ export async function getFileUrl(
   return fileUrl(deps, file.key);
 }
 
-/** 公开文件用公开域名，私有文件用有时效的签名 GET 地址。 */
+/** Public files use the public origin; private files use a time-limited signed GET URL. */
 export async function fileUrl(
   {
     storage,

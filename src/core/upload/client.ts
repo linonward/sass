@@ -1,6 +1,6 @@
 import type { UploadedFile, UploadError } from "./service";
 
-/** 上传失败的原因：接口返回的错误码，或浏览器直传 R2 失败（`put_failed`）。 */
+/** Why an upload failed: the error code returned by the API, or the browser's direct PUT to R2 failing (`put_failed`). */
 export class UploadFailedError extends Error {
   constructor(
     readonly code:
@@ -28,8 +28,9 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 /**
- * 浏览器端上传一个文件：申请预签名地址 → 直接 PUT 到 R2 → 确认。
- * 类型和大小由服务端按 `site.config.ts` 的 `upload` 校验；失败时抛出 UploadFailedError。
+ * Uploads one file from the browser: request a presigned URL → PUT directly to R2 → confirm.
+ * Type and size are validated server-side against `upload` in `site.config.ts`; throws
+ * UploadFailedError on failure.
  */
 export async function uploadFile(file: File): Promise<UploadedFile> {
   const presigned = await post<{

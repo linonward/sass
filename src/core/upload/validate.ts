@@ -10,8 +10,9 @@ export type UploadValidationError =
   "invalid_type" | "invalid_size" | "too_large";
 
 /**
- * 校验请求上传的类型和大小（字节）。类型必须在 `upload.allowedMimeTypes` 里，
- * 大小必须是正整数且不超过 `upload.maxFileSize`。
+ * Validates the type and size (bytes) of a requested upload. The type must be in
+ * `upload.allowedMimeTypes`; the size must be a positive integer no greater than
+ * `upload.maxFileSize`.
  */
 export function validateUpload(
   input: { mime?: unknown; size?: unknown },
@@ -33,7 +34,8 @@ export function validateUpload(
 }
 
 /**
- * 对象 key：`<userId>/<yyyy-mm>/<uuid>.<ext>`。月份按 UTC；扩展名由 MIME 类型决定，不取用户的文件名。
+ * Object key: `<userId>/<yyyy-mm>/<uuid>.<ext>`. The month is UTC; the extension comes from the
+ * MIME type, never from the user's file name.
  */
 export function buildObjectKey({
   userId,

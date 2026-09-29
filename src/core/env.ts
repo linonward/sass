@@ -18,14 +18,16 @@ import { uploadServerEnv } from "./upload/env";
 
 export { createAppEnv, requiredWhen } from "./create-env";
 
-// 各模块在自己的任务里往 server 中添加变量；只属于某个 feature 的变量用 requiredWhen 包一层。
-// 模块的变量定义放在模块自己的 env.ts，便于单测而不触发这里的全局校验。
+// Each module adds its variables to `server`; variables that belong to a single feature are wrapped
+// in requiredWhen. A module defines its variables in its own env.ts, so they can be unit-tested without
+// triggering the global validation here.
 const sentryEnabled =
   siteConfig.features.observability && siteConfig.observability.sentry;
 
 export const env = createAppEnv({
   server: {
-    // Postgres 连接地址。Neon 地址（*.neon.tech）走 WebSocket 驱动，其他走 node-postgres。
+    // Postgres connection string. Neon URLs (*.neon.tech) use the WebSocket driver; anything else uses
+    // node-postgres.
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     ...emailServerEnv(process.env),
     ...authServerEnv(process.env),
@@ -42,8 +44,9 @@ export const env = createAppEnv({
       ],
     }),
     ...rateLimitServerEnv(process.env, {
-      // 判断放在 src/core/ratelimit/features.ts：限流的接线和启动检查用同一个，
-      // 免得「变量按开了要」和「运行时按没开处理」两边漂移。
+      // The decision lives in src/core/ratelimit/features.ts: rate-limit wiring and the startup check use
+      // the same one, so "the variables are required as if it's on" and "the runtime treats it as off"
+      // can't drift apart.
       enabled: rateLimitingEnabled(),
     }),
     ...adminServerEnv(process.env, { enabled: siteConfig.features.admin }),

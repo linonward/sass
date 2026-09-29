@@ -6,8 +6,9 @@ import siteConfig from "../../../site.config";
 const { landing, billing } = siteConfig;
 const t = messages.Landing;
 
-// 配置里引用的文案 key 在类型上是任意字符串，这里保证它们都存在于 en.json。
-describe("落地页配置引用的文案 key 都在 en.json 中", () => {
+// Message keys referenced in config are typed as arbitrary strings; this ensures they all exist in
+// en.json.
+describe("message keys referenced by the landing config are all in en.json", () => {
   test("features", () => {
     expect(Object.keys(t.features.items)).toEqual(
       expect.arrayContaining(landing.features.map((f) => f.key)),
@@ -20,7 +21,7 @@ describe("落地页配置引用的文案 key 都在 en.json 中", () => {
     );
   });
 
-  test("pricing plans 与 plan features", () => {
+  test("pricing plans and plan features", () => {
     expect(Object.keys(t.pricing.plans)).toEqual(
       expect.arrayContaining(billing.plans.map((p) => p.id)),
     );

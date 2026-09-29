@@ -13,7 +13,10 @@ import type { Database } from "@/core/db/client";
 import { statusSubscribers } from "@/core/db/schema/status";
 import { env } from "@/core/env";
 
-/** 地址先归一化再存：大小写不同的同一个邮箱只能占一行（和 leads 一致）。 */
+/**
+ * Addresses are normalized before storing: the same email in different letter case gets only one
+ * row (consistent with leads).
+ */
 export const subscriberEmail = z
   .string()
   .trim()
@@ -21,13 +24,13 @@ export const subscriberEmail = z
   .max(254)
   .pipe(z.email());
 
-/** 邮件里的确认令牌：32 字节随机数的 base64url。 */
+/** Confirmation token in the email: 32 random bytes, base64url-encoded. */
 export const subscriberToken = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 
-/** 确认链接的有效期。过期后重新提交一次即可，不需要管理员介入。 */
+/** Lifetime of the confirmation link. After expiry, submitting again is enough; no admin needed. */
 export const CONFIRM_TTL_MS = 24 * 60 * 60 * 1000;
 
-/** 同一地址重复提交的冷却：这段时间内只发一封确认信。 */
+/** Cooldown for repeat submissions from one address: one confirmation email per window. */
 export const RESEND_COOLDOWN_MS = 60 * 1000;
 
 const tokenHash = (token: string) =>
@@ -40,11 +43,13 @@ export type PreparedSubscription = {
 };
 
 /**
- * 准备一次订阅：写入或刷新待确认的订阅者，返回要发出去的确认令牌。
+ * Prepares a subscription: inserts or refreshes the pending subscriber and returns the
+ * confirmation token to send.
  *
- * 返回 `null` 表示**不发信**，但调用方对外仍然是同一句「确认邮件已发出」：
- * 冷却期内重复提交、以及已经确认过的地址，都不该让提交者看出这个地址订没订过。
- * 返回的令牌是明文，库里只存哈希。
+ * Returning `null` means **don't send**, but the caller still shows the same "confirmation email
+ * sent" message: neither a repeat submission during the cooldown nor an already-confirmed address
+ * should let the submitter tell whether the address is subscribed.
+ * The returned token is plaintext; only its hash is stored.
  */
 export async function prepareSubscription(
   db: Database,
@@ -54,7 +59,8 @@ export async function prepareSubscription(
   const email = subscriberEmail.parse(input.email);
 
   return db.transaction(async (tx) => {
-    // 同一地址的并发提交串行化，否则两封确认信会互相覆盖各自的令牌哈希。
+    // Serialize concurrent submissions for the same address; otherwise two confirmation emails
+    // would overwrite each other's token hash.
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${`status:${email}`}))`,
     );
@@ -80,7 +86,8 @@ export async function prepareSubscription(
     };
 
     if (existing) {
-      // 未确认的旧行直接换成新令牌；`createdAt` 留在原地，冷却从第一次提交算起。
+      // An unconfirmed old row just gets a new token; `createdAt` stays put, so the cooldown counts
+      // from the first submission.
       await tx
         .update(statusSubscribers)
         .set(issued)
@@ -100,8 +107,8 @@ export async function prepareSubscription(
 }
 
 /**
- * 确认订阅。令牌用过之后仍然返回 true：邮件客户端会预取链接，
- * 人再点一次时给「确认失败」是错的。
+ * Confirms a subscription. Still returns true once the token has been used: email clients prefetch
+ * links, and showing "confirmation failed" when the person then clicks would be wrong.
  */
 export async function confirmSubscription(
   db: Database,
@@ -127,11 +134,13 @@ export async function confirmSubscription(
 }
 
 /**
- * 退订链接里的签名：`hmac(email)`，不落库。
+ * Signature in the unsubscribe link: `hmac(email)`, never stored.
  *
- * 通知邮件必须带一条永久有效的退订链接，而库里只有确认令牌的哈希 —— 退订令牌要是也存哈希，
- * 就得为每个订阅者多存一列「当前有效的退订哈希」，还得处理轮换。这里用签名代替：
- * 地址加上站点密钥的 HMAC，谁也伪造不了别人的退订链接，服务端也就不用记任何东西。
+ * Notification emails must carry an unsubscribe link that stays valid forever, but the database
+ * only holds the hash of the confirmation token — storing a hash for unsubscribe tokens too would
+ * mean an extra "currently valid unsubscribe hash" column per subscriber, plus handling rotation.
+ * A signature replaces all that: an HMAC of the address with the site secret, so nobody can forge
+ * someone else's unsubscribe link and the server doesn't have to remember anything.
  */
 export function withdrawSignature(
   email: string,
@@ -159,7 +168,10 @@ export function verifyWithdrawSignature(
   );
 }
 
-/** 退订：校验签名后直接删行。状态通知不是要留档的业务数据，退订后没理由继续留着地址。 */
+/**
+ * Unsubscribes: verifies the signature, then deletes the row. Status notifications aren't business
+ * records worth archiving, so there's no reason to keep the address after unsubscribing.
+ */
 export async function withdrawSubscription(
   db: Database,
   input: { email: string; signature: string },
@@ -179,7 +191,7 @@ export type SubscriberRow = {
   createdAt: Date;
 };
 
-/** 后台要看的订阅者列表：已确认的排在前面，其次是最近提交的。 */
+/** Subscriber list for the admin: confirmed first, then most recently submitted. */
 export async function listSubscribers(
   db: Database,
   limit = 100,
@@ -199,7 +211,7 @@ export async function listSubscribers(
     .limit(limit);
 }
 
-/** 已确认的订阅者，发通知时逐封发送。 */
+/** Confirmed subscribers; notifications are sent to them one email at a time. */
 export async function listConfirmedSubscribers(
   db: Database,
 ): Promise<{ email: string; locale: string | null }[]> {

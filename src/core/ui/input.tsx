@@ -3,9 +3,11 @@ import { Input as InputPrimitive } from "@base-ui/react/input";
 import { cn } from "cn";
 
 /**
- * 描边用 `--border` 而不是 `--input`：后者在亮色下是 0.995 的近白，铺在面板（0.983）
- * 上等于没有边 —— 表单会长成一片空白。产品语域里输入框和其他所有边用同一条发丝线，
- * 聚焦时再交给 focus-visible 的品牌环。`--input` 仍用于深色下的填充和禁用态。
+ * The outline uses `--border` rather than `--input`: in light mode the latter is a near-white
+ * 0.995, which on a panel (0.983) amounts to no border at all — forms turn into a blank sheet. In
+ * the product register, inputs use the same hairline as every other border, and on focus hand
+ * over to the focus-visible brand ring. `--input` is still used for the dark-mode fill and the
+ * disabled state.
  */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (

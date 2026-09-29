@@ -2,13 +2,14 @@ import * as React from "react";
 import { cn } from "cn";
 
 /**
- * 产品面/后台的页头。营销面不用它 —— 那边是 display 的大字号加色带。
+ * Page header for product/admin surfaces. Marketing surfaces don't use it — they use large display
+ * type plus a color band.
  *
- * 这里刻意不 import 任何东西：
- * - 不要 `@/core/i18n/navigation` 的 Link。那是客户端组件，会把 settings、billing、
- *   admin/* 这些服务端页面一起拖进客户端边界。返回链接和右侧操作由调用方以
- *   ReactNode 传进来。
- * - 不加 `"use client"`、不用 hook，服务端和客户端两边都能直接渲染。
+ * This file deliberately imports nothing else:
+ * - No Link from `@/core/i18n/navigation`. It is a client component and would drag server pages
+ *   like settings, billing and admin/* across the client boundary. The back link and the
+ *   right-hand actions are passed in by the caller as ReactNode.
+ * - No `"use client"` and no hooks, so it renders directly on both server and client.
  */
 function PageHeader({
   title,
@@ -17,10 +18,10 @@ function PageHeader({
   children,
 }: {
   title: string;
-  /** 允许传节点：dashboard 的描述行上挂着 `signed-in-as` 这个 e2e 用的 testid。 */
+  /** Accepts a node: the dashboard's description line carries the `signed-in-as` testid used by e2e. */
   description?: React.ReactNode;
   className?: string;
-  /** 右侧操作区（筛选器、主操作）。窄屏靠 flex-wrap 换到下一行。 */
+  /** Right-hand action area (filters, primary action). On narrow screens flex-wrap moves it to the next line. */
   children?: React.ReactNode;
 }) {
   return (
@@ -31,8 +32,8 @@ function PageHeader({
       )}
     >
       <div className="space-y-1">
-        {/* .heading-display 自带字重 600、行高 0.98、负字距，不要再叠
-            font-semibold / tracking-tight，两个会打架。 */}
+        {/* .heading-display already sets weight 600, line-height 0.98 and negative tracking;
+            don't stack font-semibold / tracking-tight on top, the two would fight. */}
         <h1 className="heading-display text-2xl sm:text-3xl">{title}</h1>
         {description && (
           <p className="text-muted-foreground text-sm text-pretty">

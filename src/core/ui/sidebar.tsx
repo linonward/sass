@@ -29,21 +29,21 @@ const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 /**
- * 屏幕阅读器能念到的文案的英文兜底值。原语不认识任何文案命名空间（套件代码，买家
- * 可能整文件复制走），所以默认值写在这里，调用方传本地化值覆盖：
- * `Sidebar` 的两个标签见 `AppSidebar`，`SidebarTrigger` / `SidebarRail` 的见
- * `DashboardShell`。
+ * English fallback values for text read out by screen readers. The primitive knows no message
+ * namespace (it is kit code, and a buyer may copy the whole file elsewhere), so the defaults live
+ * here and callers override them with localized values: see `AppSidebar` for the two `Sidebar`
+ * labels and `DashboardShell` for those of `SidebarTrigger` / `SidebarRail`.
  */
 const SIDEBAR_LABELS = {
-  /** 移动端抽屉（Sheet）的标题。 */
+  /** Title of the mobile sheet (Sheet). */
   title: "Sidebar",
-  /** 移动端抽屉（Sheet）的描述。 */
+  /** Description of the mobile sheet (Sheet). */
   description: "Displays the mobile sidebar.",
-  /** 展开/收起按钮的可访问名。 */
+  /** Accessible name of the expand/collapse button. */
   toggle: "Toggle sidebar",
 };
 
-/** `Sidebar` 的移动端抽屉标签，两个字段都可选，缺省用英文兜底。 */
+/** Mobile sheet labels for `Sidebar`; both fields are optional and fall back to English. */
 type SidebarLabels = {
   title?: string;
   description?: string;
@@ -179,7 +179,7 @@ function Sidebar({
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
-  /** 移动端抽屉的标题与描述（`sr-only`，只有读屏用户听得到）。 */
+  /** Title and description of the mobile sheet (`sr-only`, heard only by screen reader users). */
   labels?: SidebarLabels;
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
@@ -280,7 +280,7 @@ function SidebarTrigger({
   ...props
 }: React.ComponentProps<typeof Button> & {
   /**
-   * 按钮的可访问名。传了 `aria-label` 时以 `aria-label` 为准（它盖得住这里的文本）。
+   * Accessible name of the button. If `aria-label` is passed, it wins (it overrides this text).
    */
   label?: string;
 }) {
@@ -310,7 +310,7 @@ function SidebarRail({
   className,
   ...props
 }: React.ComponentProps<"button"> & {
-  /** `aria-label` 与悬停 `title` 的文案；单独传 `aria-label` / `title` 可各自覆盖。 */
+  /** Text for `aria-label` and the hover `title`; pass `aria-label` / `title` to override each separately. */
   label?: string;
 }) {
   const { toggleSidebar } = useSidebar();

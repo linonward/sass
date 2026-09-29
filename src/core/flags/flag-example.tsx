@@ -7,14 +7,16 @@ import { Badge } from "@/core/ui/badge";
 import { FeatureFlag, useFlag } from "./components";
 
 /**
- * Dashboard 上的 feature flag 示例：三个 flag 分别演示百分比灰度、adminOnly 和「定义在但关着」。
- * 和 upload 示例一样是活文档，接自己的业务时整段删掉。
+ * Feature flag example on the Dashboard: three flags demonstrate a percentage rollout, adminOnly,
+ * and "defined but off". Like the upload example it is living documentation; delete the whole thing
+ * when you wire up your own app.
  *
- * 每块都带 `data-testid="flag-<名字>"`，e2e 用它断言「谁看得见」。
+ * Each block carries `data-testid="flag-<name>"`, which e2e uses to assert who can see it.
  */
 export function FlagExample() {
   const t = useTranslations("Dashboard.flags");
-  // useFlag：想要自己控制渲染（不只是显示/隐藏）时用它；<FeatureFlag> 是它的声明式封装。
+  // useFlag: use it when you want to control rendering yourself (not just show/hide); <FeatureFlag>
+  // is its declarative wrapper.
   const soon = useFlag("beta-soon");
 
   return (
@@ -27,7 +29,7 @@ export function FlagExample() {
         <p className="text-muted-foreground text-sm">{t("description")}</p>
       </div>
       <div className="flex flex-col gap-2">
-        {/* 灰度 50%：在桶里的人和 admin 看到新布局，其他人看到 fallback（老布局）。 */}
+        {/* 50% rollout: users in the bucket and admins see the new layout; everyone else sees the fallback (old layout). */}
         <FeatureFlag
           name="beta-dashboard"
           fallback={
@@ -43,7 +45,7 @@ export function FlagExample() {
             tag={t("beta")}
           />
         </FeatureFlag>
-        {/* 只给 admin：rollout 0 + adminOnly，普通用户和未登录用户都看不到。 */}
+        {/* Admins only: rollout 0 + adminOnly; regular and signed-out users can't see it. */}
         <FeatureFlag name="beta-preview">
           <FlagRow
             testId="flag-beta-preview"
@@ -51,7 +53,7 @@ export function FlagExample() {
             tag={t("beta")}
           />
         </FeatureFlag>
-        {/* 定义在配置里但 enabled: false —— 对所有人都是 false，这里走的是「没开」的文案。 */}
+        {/* Defined in config but enabled: false — false for everyone, so this shows the "off" copy. */}
         <FlagRow
           testId="flag-beta-soon"
           dataState={soon ? "on" : "off"}
@@ -62,7 +64,7 @@ export function FlagExample() {
   );
 }
 
-/** 一行说明。`tag` 是平铺的品牌芯片（产品面不贴唇边）。 */
+/** One line of explanation. `tag` is a flat brand chip (the product surface has no lip edge). */
 function FlagRow({
   testId,
   dataState,

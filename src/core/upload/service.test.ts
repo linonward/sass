@@ -34,7 +34,7 @@ const config = uploadConfigSchema.parse({
   maxFileSize: 1000,
 });
 
-describe.skipIf(!url)("上传服务", () => {
+describe.skipIf(!url)("upload service", () => {
   let client: DbClient;
   let storage: MemoryStorage;
   let deps: UploadDeps;
@@ -85,7 +85,7 @@ describe.skipIf(!url)("上传服务", () => {
     await client.db.delete(user).where(eq(user.id, otherId));
   });
 
-  test("预签名：登记 pending 记录，返回 PUT 地址和必须带上的 Content-Type", async () => {
+  test("presign: records a pending row and returns the PUT URL plus the required Content-Type", async () => {
     const result = await presignOk();
     expect(result.key).toMatch(
       new RegExp(`^${userId}/2026-09/[0-9a-f-]{36}\\.png$`),
@@ -108,7 +108,7 @@ describe.skipIf(!url)("上传服务", () => {
     });
   });
 
-  test("类型或大小不合法时在预签名阶段拒绝，不写库", async () => {
+  test("rejects an invalid type or size at presign without writing to the database", async () => {
     await expect(presign("image/gif")).resolves.toEqual({
       ok: false,
       error: "invalid_type",
@@ -130,7 +130,7 @@ describe.skipIf(!url)("上传服务", () => {
     expect(rows).toEqual([]);
   });
 
-  test("没有配置 R2 时返回 503", async () => {
+  test("returns 503 when R2 isn't configured", async () => {
     deps = { ...deps, storage: null };
     await expect(presign()).resolves.toMatchObject({
       error: "upload_not_configured",
@@ -141,7 +141,7 @@ describe.skipIf(!url)("上传服务", () => {
     ).resolves.toMatchObject({ status: 503 });
   });
 
-  test("确认上传：对象存在且一致时改为 uploaded，私有文件返回签名 GET 地址；重复确认结果相同", async () => {
+  test("complete: marks uploaded when the object exists and matches, returns a signed GET URL for private files; confirming again gives the same result", async () => {
     const { fileId, key } = await presignOk();
     storage.put(key, { size: 100, mime: "image/png" });
 
@@ -167,7 +167,7 @@ describe.skipIf(!url)("上传服务", () => {
     );
   });
 
-  test("公开访问时返回公开域名下的地址", async () => {
+  test("returns a URL on the public origin for public access", async () => {
     deps = {
       ...deps,
       config: { ...config, public: true },
@@ -182,7 +182,7 @@ describe.skipIf(!url)("上传服务", () => {
     });
   });
 
-  test("对象还不存在时返回 409，记录保持 pending", async () => {
+  test("returns 409 when the object doesn't exist yet and keeps the row pending", async () => {
     const { fileId } = await presignOk();
     await expect(
       completeUpload(deps, { userId, fileId }),
@@ -195,18 +195,21 @@ describe.skipIf(!url)("上传服务", () => {
   });
 
   test.each([
-    ["大小", { size: 999, mime: "image/png" }],
-    ["类型", { size: 100, mime: "application/pdf" }],
-  ])("对象的%s与签发时不同：删除对象，返回 422", async (_, object) => {
-    const { fileId, key } = await presignOk();
-    storage.put(key, object);
-    await expect(
-      completeUpload(deps, { userId, fileId }),
-    ).resolves.toMatchObject({ error: "mismatch", status: 422 });
-    expect(storage.deleted).toEqual([key]);
-  });
+    ["size", { size: 999, mime: "image/png" }],
+    ["type", { size: 100, mime: "application/pdf" }],
+  ])(
+    "object %s differs from what was signed: deletes the object and returns 422",
+    async (_, object) => {
+      const { fileId, key } = await presignOk();
+      storage.put(key, object);
+      await expect(
+        completeUpload(deps, { userId, fileId }),
+      ).resolves.toMatchObject({ error: "mismatch", status: 422 });
+      expect(storage.deleted).toEqual([key]);
+    },
+  );
 
-  test("类型带参数时按主类型比较", async () => {
+  test("compares by the base type when the type has parameters", async () => {
     const { fileId, key } = await presignOk();
     storage.put(key, { size: 100, mime: "IMAGE/PNG; charset=binary" });
     await expect(
@@ -214,7 +217,7 @@ describe.skipIf(!url)("上传服务", () => {
     ).resolves.toMatchObject({ ok: true });
   });
 
-  test("不能确认或访问别人的文件", async () => {
+  test("cannot confirm or access someone else's file", async () => {
     const { fileId, key } = await presignOk();
     storage.put(key, { size: 100, mime: "image/png" });
     await expect(
@@ -229,7 +232,7 @@ describe.skipIf(!url)("上传服务", () => {
     );
   });
 
-  test("pending 文件没有访问地址；fileId 非法时视为不存在", async () => {
+  test("pending files have no URL; an invalid fileId is treated as nonexistent", async () => {
     const { fileId } = await presignOk();
     await expect(getFileUrl(deps, { userId, fileId })).resolves.toBeNull();
     await expect(
@@ -237,7 +240,7 @@ describe.skipIf(!url)("上传服务", () => {
     ).resolves.toMatchObject({ error: "not_found" });
   });
 
-  test("删除用户时文件记录一起删除", async () => {
+  test("deleting a user deletes their file rows too", async () => {
     const { fileId } = await presignOk();
     await client.db.delete(user).where(eq(user.id, userId));
     const rows = await client.db

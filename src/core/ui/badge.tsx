@@ -18,10 +18,11 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary-text underline-offset-4 hover:underline",
-        // 语义粉彩档。底色和文字色都取自同一族的 token，唇边由下面的 compoundVariants 补。
-        // `band` 指品牌色那条带（token 叫 --primary-band），其余按语义命名。
-        // `destructive-band` 的横线是不得已：`destructive` 已经被上面的半透明档占了，
-        // 那个档有十几处错误提示在用，不能改名。
+        // Semantic pastel tier. Background and text color both come from the same token family;
+        // the lip is added by the compoundVariants below. `band` means the brand-color band (the
+        // token is --primary-band); the rest are named by meaning. The hyphen in
+        // `destructive-band` is a compromise: `destructive` is already taken by the translucent
+        // tier above, which a dozen-plus error messages use, so it can't be renamed.
         band: "bg-primary-band text-primary-text border-[var(--edge)] [--edge:var(--primary-edge)]",
         success:
           "bg-success-band text-success border-[var(--edge)] [--edge:var(--success-edge)]",
@@ -31,8 +32,9 @@ const badgeVariants = cva(
         "destructive-band":
           "bg-destructive-band text-destructive border-[var(--edge)] [--edge:var(--destructive-edge)]",
       },
-      // 语域，不是风格偏好：营销面的徽章是一张贴纸（描边 + 零模糊唇边），
-      // 产品面/后台是平面，只有描边。默认 false，所以营销页一个字节都不用改。
+      // Register, not style preference: on marketing surfaces a badge is a sticker (outline +
+      // zero-blur lip); on product/admin surfaces it is flat, outline only. Defaults to false, so
+      // marketing pages don't change by a single byte.
       flat: {
         true: "",
         false: "",

@@ -1,5 +1,5 @@
 // @vitest-environment node
-// t3-env 只在服务端校验 server 变量，jsdom 下会被当成客户端。
+// t3-env validates server variables only on the server; under jsdom it would be treated as the client.
 import { describe, expect, test } from "vitest";
 
 import { createAppEnv } from "../create-env";
@@ -25,14 +25,14 @@ const r2 = {
 const production = { VERCEL_ENV: "production" };
 
 describe("uploadServerEnv", () => {
-  test("Vercel 生产环境开启上传时，缺少 R2 变量会报错", () => {
+  test("throws on missing R2 variables in Vercel production with upload enabled", () => {
     for (const name of Object.keys(r2)) {
       expect(check(production)).toThrow(`- ${name}: `);
     }
     expect(check({ ...production, ...r2 })).not.toThrow();
   });
 
-  test("公开访问时还要求 R2_PUBLIC_URL，且只能是 https 源地址", () => {
+  test("public access also requires R2_PUBLIC_URL, which must be an https origin", () => {
     const env = { ...production, ...r2 };
     expect(check(env, { isPublic: true })).toThrow("- R2_PUBLIC_URL: ");
     expect(
@@ -52,13 +52,13 @@ describe("uploadServerEnv", () => {
     ).toThrow("- R2_PUBLIC_URL: ");
   });
 
-  test("没开上传、或不在生产环境时都不要求", () => {
+  test("nothing is required when upload is off or outside production", () => {
     expect(check(production, { enabled: false })).not.toThrow();
     expect(check({})).not.toThrow();
     expect(check({ VERCEL_ENV: "preview" }, { isPublic: true })).not.toThrow();
   });
 
-  test("account ID 格式错误时报错", () => {
+  test("throws on a malformed account ID", () => {
     expect(check({ ...r2, R2_ACCOUNT_ID: "abc" })).toThrow("- R2_ACCOUNT_ID: ");
   });
 });

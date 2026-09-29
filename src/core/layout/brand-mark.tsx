@@ -3,33 +3,36 @@ import { cn } from "@/core/lib/utils";
 import siteConfig from "../../../site.config";
 
 /**
- * 内置标记的几何。顶栏的内联标记和 favicon（`src/app/icon.tsx` 用同一组值拼 SVG 字符串）
- * 共用：两处分开写，改一处就会让标签页图标和顶栏的标记长得不一样。
+ * Geometry of the built-in mark. Shared by the inline mark in the header and the favicon
+ * (`src/app/icon.tsx` builds an SVG string from the same values): write them separately and a
+ * change to one makes the tab icon and the header mark drift apart.
  */
 export const brandMarkGeometry = {
   viewBox: "0 0 24 24",
-  /** 圆角方底的圆角半径。 */
+  /** Corner radius of the rounded square background. */
   cornerRadius: 6,
-  /** 「Λ」形，居中。 */
+  /** A centered "Λ" shape. */
   chevron: "M7 16.5 12 7l5 9.5",
   strokeWidth: 2,
 } as const;
 
 /**
- * 站点标记。`site.config.ts` 里配了 `brand.logo` 就用那张图，没配就用内置的**内联**标记。
+ * Site mark. If `brand.logo` is set in `site.config.ts`, that image is used; otherwise the
+ * built-in **inline** mark.
  *
- * 为什么内置的必须内联：`<img src="…svg">` 里的 SVG 是独立文档，`currentColor`
- * 解析不到页面的颜色 —— 那样买家换了 `brand.primaryColor`，logo 还是出厂那个靛蓝，
- * 只能自己去改 SVG 文件。内联的 SVG 走 `text-primary`（也就是配置的主色），
- * 换品牌色时 logo 跟着变。
+ * Why the built-in one must be inline: an SVG inside `<img src="…svg">` is a separate document, so
+ * `currentColor` can't resolve the page's color — a buyer who changes `brand.primaryColor` would
+ * still get the stock indigo logo and have to edit the SVG file by hand. The inline SVG uses
+ * `text-primary` (the configured primary color), so the logo follows when the brand color
+ * changes.
  *
- * 结构化数据里的 `Organization.logo` 要的是一个真实图片 URL，用不了内联标记，
- * 那边统一指向 `DEFAULT_LOGO_PATH`（见 src/core/seo/json-ld.tsx 与 blog/json-ld.ts）。
+ * `Organization.logo` in structured data needs a real image URL and can't use the inline mark;
+ * it always points to `DEFAULT_LOGO_PATH` (see src/core/seo/json-ld.tsx and blog/json-ld.ts).
  */
 export function BrandMark({ className }: { className?: string }) {
   if (siteConfig.brand.logo) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- logo 可能是任意格式的 SVG，无需优化
+      // eslint-disable-next-line @next/next/no-img-element -- the logo may be an SVG of any format; no optimization needed
       <img src={siteConfig.brand.logo} alt="" className={className} />
     );
   }
@@ -46,8 +49,8 @@ export function BrandMark({ className }: { className?: string }) {
         rx={brandMarkGeometry.cornerRadius}
         fill="currentColor"
       />
-      {/* 字形用 --primary-foreground：它是按主色对比度推出来的，浅色品牌色上是深字，
-          深色品牌色上是浅字，永远看得清。 */}
+      {/* The glyph uses --primary-foreground: it is derived from the primary color's contrast,
+          dark on light brand colors and light on dark ones, so it is always legible. */}
       <path
         d={brandMarkGeometry.chevron}
         fill="none"

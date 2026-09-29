@@ -5,7 +5,10 @@ import { logger } from "./logger";
 import { webAnalyticsFlags } from "./web-analytics";
 
 export type TrackServerOptions = {
-  /** 访客请求的 headers（用于来源、设备、地区）；不传时用当前请求的。 */
+  /**
+   * Headers of the visitor's request (for referrer, device, and region); defaults to the current
+   * request's.
+   */
   headers?: Headers | Record<string, string | string[] | undefined>;
 };
 
@@ -21,7 +24,7 @@ type ServerTrackerDeps = {
   logWarn?: (event: string, fields: unknown) => void;
 };
 
-/** 可注入的服务端 track，测试里传 send。失败只记日志，不抛错。 */
+/** Injectable server-side track; tests pass `send`. Failures are only logged, never thrown. */
 export function createServerTracker({
   enabled,
   send = vercelTrack,
@@ -42,8 +45,9 @@ export function createServerTracker({
 }
 
 /**
- * 在服务端记一个转化事件（@vercel/analytics/server）。
- * observability.analytics 关闭时为空操作；失败只记 warn，不影响调用方（例如 webhook）。
+ * Records a conversion event on the server (@vercel/analytics/server).
+ * A no-op when observability.analytics is off. Failures are only logged as warn and don't affect
+ * the caller (for example, a webhook).
  */
 export const trackServer = createServerTracker({
   enabled: webAnalyticsFlags().analytics,

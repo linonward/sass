@@ -37,14 +37,17 @@ function NavGroup({
 
   return (
     <SidebarGroup>
-      {/* 可见的分组标题。aria-hidden 是有意的：分组的可访问名由下面 SidebarMenu 的
-          aria-label 提供（nav.test.tsx 和 e2e 都按它取 list），这里再暴露一次会让
-          读屏把同一个名字念两遍。也因此不要改成 aria-labelledby —— 可访问名会被
-          uppercase 的 text-transform 搅进来，浏览器算、jsdom 不算。
+      {/* Visible group heading. aria-hidden is intentional: the group's accessible name comes
+          from the aria-label on the SidebarMenu below (nav.test.tsx and e2e both find the list
+          by it), and exposing it here too would make screen readers announce the same name
+          twice. For the same reason, don't switch to aria-labelledby — the uppercase
+          text-transform would leak into the accessible name, which browsers apply and jsdom
+          doesn't.
 
-          `group-data-[collapsible=icon]:hidden` 覆盖 primitive 自带的
-          `-mt-8 opacity-0`：那个写法保留了一个 32px 高的透明盒子，折叠态下会变成
-          压在前一组最后一项上的隐形点击层。display:none 移出流，纵向占位一样。 */}
+          `group-data-[collapsible=icon]:hidden` overrides the primitive's built-in
+          `-mt-8 opacity-0`: that approach leaves a 32px-tall transparent box which, when
+          collapsed, becomes an invisible click layer over the last item of the previous group.
+          display:none takes it out of the flow with the same vertical footprint. */}
       <SidebarGroupLabel
         aria-hidden
         className="text-muted-foreground text-[0.7rem] tracking-wider uppercase group-data-[collapsible=icon]:hidden"
@@ -55,7 +58,7 @@ function NavGroup({
         <SidebarMenu aria-label={label}>
           {items.map((item) => {
             const Icon = dashboardIconComponents[item.icon];
-            // 业务项的 key 来自配置，由 messages 测试保证存在。
+            // App item keys come from config; the messages test guarantees they exist.
             const title = t(item.key as "home");
             const active = isActiveNav(pathname, item.href);
             return (
@@ -74,7 +77,7 @@ function NavGroup({
                   <Icon />
                   <span>{title}</span>
                 </SidebarMenuButton>
-                {/* 计数在链接外面：链接的可访问名保持菜单项本身（e2e 按它找）。 */}
+                {/* The count sits outside the link so the link's accessible name stays the menu item itself (e2e finds it by that). */}
                 {item.badge ? (
                   <SidebarMenuBadge
                     aria-label={tb("navBadge", { count: item.badge })}

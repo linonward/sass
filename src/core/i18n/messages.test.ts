@@ -18,7 +18,7 @@ function keys(value: unknown, prefix = ""): string[] {
 }
 
 describe("messages", () => {
-  test("site.config 里的导航 key 都在 en.json 的 Nav 中", () => {
+  test("every nav key in site.config is in en.json Nav", () => {
     const { header, footer } = siteConfig.nav;
     const used = [
       ...header.map((l) => l.key),
@@ -27,7 +27,7 @@ describe("messages", () => {
     expect(Object.keys(en.Nav)).toEqual(expect.arrayContaining(used));
   });
 
-  test("dashboard 菜单项的 key 都在 en.json 的 Dashboard.nav 中", () => {
+  test("every dashboard menu item key is in en.json Dashboard.nav", () => {
     const used = [
       ...suiteNav.map((item) => item.key),
       ...siteConfig.dashboard.nav.map((item) => item.key),
@@ -35,13 +35,13 @@ describe("messages", () => {
     expect(Object.keys(en.Dashboard.nav)).toEqual(expect.arrayContaining(used));
   });
 
-  test("每个启用的语言都有对应的 messages 文件", () => {
+  test("every enabled locale has a messages file", () => {
     const files = readdirSync(dir).map((f) => path.basename(f, ".json"));
     expect(files).toEqual(expect.arrayContaining(siteConfig.locales));
   });
 
   test.each(readdirSync(dir).filter((f) => f !== "en.json"))(
-    "%s 与 en.json 的 key 一致",
+    "%s has the same keys as en.json",
     (file) => {
       const other = JSON.parse(readFileSync(path.join(dir, file), "utf8"));
       expect(keys(other).sort()).toEqual(keys(en).sort());

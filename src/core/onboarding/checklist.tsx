@@ -20,7 +20,10 @@ import {
 import { completeOnboarding, type CompleteState } from "./actions";
 import type { OnboardingStep, OnboardingStepId } from "./steps";
 
-/** 能直接打开看结果的那几步，给一个链接。改配置的两步没有对应的页面，只有文件路径。 */
+/**
+ * Steps whose result can be opened directly get a link. The two config-editing steps have no
+ * matching page, only a file path.
+ */
 const stepLinks: Partial<
   Record<OnboardingStepId, { href: string; external?: boolean }>
 > = {
@@ -31,7 +34,7 @@ const stepLinks: Partial<
 
 const idle: CompleteState = { status: "idle" };
 
-/** 步骤前的圆片：产品面，1px 描边、零唇边，和对勾同色。 */
+/** The disc before each step: product surface, 1px outline, no lip, same color as the check. */
 function StepMark({ done }: { done: boolean }) {
   return (
     <span
@@ -49,10 +52,12 @@ function StepMark({ done }: { done: boolean }) {
 }
 
 /**
- * 首次运行清单。每一步的判定在服务端算好（steps.ts），这里只负责呈现：
- * 自动判定为完成的打勾，判定不了的给一个手动勾选，全部看完点一次「标记完成」。
+ * First-run checklist. Each step's status is computed on the server (steps.ts); this component
+ * only presents it: detected-as-done steps get a check, steps that can't be detected get a manual
+ * checkbox, and once everything has been reviewed the user clicks "Mark as done" once.
  *
- * 手动勾选不落库：持久化的只有用户记录上的那一个布尔值（见 actions.ts）。
+ * Manual checks are not persisted: the only stored state is the one boolean on the user record
+ * (see actions.ts).
  */
 export function OnboardingChecklist({
   locale,
@@ -62,9 +67,9 @@ export function OnboardingChecklist({
 }: {
   locale: string;
   steps: OnboardingStep[];
-  /** 标记完成之后去哪（含语言前缀）。 */
+  /** Where to go after marking done (with the locale prefix). */
   donePath: string;
-  /** 用户记录上是否已经标记过完成：已完成时不再显示按钮。 */
+  /** Whether the user record is already marked done; if so, the button is hidden. */
   completed: boolean;
 }) {
   const t = useTranslations("Onboarding");
@@ -74,7 +79,8 @@ export function OnboardingChecklist({
   );
   const [ticked, setTicked] = useState<readonly OnboardingStepId[]>([]);
 
-  // 标记成功后整页跳转：服务端重新读一次用户记录，别的地方（登录后的落点）才跟着变。
+  // After marking succeeds, do a full page navigation: the server re-reads the user record, which
+  // is what makes other places (the post-sign-in landing) pick up the change.
   useEffect(() => {
     if (state.status === "success") window.location.assign(donePath);
   }, [state.status, donePath]);
@@ -146,10 +152,12 @@ export function OnboardingChecklist({
                       {t("manual")}
                     </label>
                   )}
-                  {/* 这两个是链接不是按钮，用 buttonVariants 套样式、不走 Base UI 的
-                      Button：它的 nativeButton 默认 true，render 成 <a> 会在 dev
-                      控制台报警；声明 nativeButton={false} 能消警，但会往 <a> 上盖
-                      role="button"，把「点了会跳转」从无障碍树里抹掉。 */}
+                  {/* These two are links, not buttons: styled with buttonVariants
+                      instead of Base UI's Button. Its nativeButton defaults to true,
+                      and rendering it as <a> triggers a dev console warning; setting
+                      nativeButton={false} silences that but stamps role="button" on
+                      the <a>, which erases "clicking navigates" from the
+                      accessibility tree. */}
                   {link &&
                     (link.external ? (
                       <a
