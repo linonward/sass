@@ -7,7 +7,7 @@ import { createAlibabaImageModel } from "./alibaba-image";
 const IMAGE_URL = "https://dashscope-result.test/img.png";
 const bytes = new Uint8Array([1, 2, 3]);
 
-/** 第一次请求是生成接口，第二次是下载图片。 */
+/** The first request hits the generation endpoint; the second downloads the image. */
 function stubFetch(generate: Response) {
   return vi.fn(async (url: string | URL | Request, init?: RequestInit) =>
     String(url) === IMAGE_URL || !init ? new Response(bytes) : generate,
@@ -45,7 +45,7 @@ function call(
 }
 
 describe("createAlibabaImageModel", () => {
-  test("调原生接口，画幅换成百炼尺寸，下载图片返回字节", async () => {
+  test("calls the native endpoint, maps the aspect ratio to a Model Studio size, and returns the downloaded image bytes", async () => {
     const fetch = stubFetch(ok());
     const result = await call(fetch, { aspectRatio: "16:9" });
 
@@ -68,7 +68,7 @@ describe("createAlibabaImageModel", () => {
     expect(result.warnings).toEqual([]);
   });
 
-  test("ALIBABA_BASE_URL 是兼容模式地址，原生接口取同一个域名", async () => {
+  test("ALIBABA_BASE_URL is the compatible-mode URL; the native endpoint uses the same host", async () => {
     const fetch = stubFetch(ok());
     await call(fetch, {
       baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
@@ -78,7 +78,7 @@ describe("createAlibabaImageModel", () => {
     );
   });
 
-  test("不支持的画幅回退到 1:1 并给出 warning", async () => {
+  test("falls back to 1:1 with a warning for an unsupported aspect ratio", async () => {
     const fetch = stubFetch(ok());
     const result = await call(fetch, { aspectRatio: "21:9" });
     const body = JSON.parse(String(fetch.mock.calls[0]![1]!.body));
@@ -88,7 +88,7 @@ describe("createAlibabaImageModel", () => {
     ]);
   });
 
-  test("接口报错抛 APICallError，429 和 5xx 可重试", async () => {
+  test("throws APICallError on API errors; 429 and 5xx are retryable", async () => {
     const error = (status: number) =>
       call(
         stubFetch(
@@ -110,7 +110,7 @@ describe("createAlibabaImageModel", () => {
     expect(await error(500)).toMatchObject({ isRetryable: true });
   });
 
-  test("成功响应里没有图片地址也按失败处理", async () => {
+  test("treats a success response without an image URL as a failure", async () => {
     await expect(
       call(stubFetch(Response.json({ output: { choices: [] } }))),
     ).rejects.toThrow(APICallError);

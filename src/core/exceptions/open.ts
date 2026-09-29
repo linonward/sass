@@ -11,16 +11,19 @@ export type OpenExceptionInput = {
   detail: Record<string, unknown>;
   lastError?: string;
   /**
-   * 同一张单已经存在时：`false`（默认）什么都不动 —— webhook 重放开不出第二张，也不改已有内容；
-   * `true` 在单子仍是 open 时累加 `attempts` 并更新 `lastError` / `detail`（扫描反复查不到结论）。
-   * 已经处理掉（resolved / ignored）的单子两种情况下都不会被重新打开。
+   * When the same exception already exists: `false` (default) touches nothing — a webhook replay
+   * can't open a second one or change the existing one; `true` increments `attempts` and updates
+   * `lastError` / `detail` while the exception is still open (a sweep that keeps failing to reach a
+   * conclusion). An exception that has already been handled (resolved / ignored) is never reopened
+   * in either case.
    */
   bump?: boolean;
 };
 
 /**
- * 开一张异常单，或者按 `bump` 更新已有的那张。唯一键是 `(kind, source, source_id)`。
- * 传入事务时在事务内写：和触发它的那笔钱一起提交或一起回滚。
+ * Opens an exception, or updates the existing one according to `bump`. The unique key is
+ * `(kind, source, source_id)`. When given a transaction it writes inside it, so it commits or rolls
+ * back together with the money movement that triggered it.
  */
 export async function openException(
   executor: Database | DbTransaction,

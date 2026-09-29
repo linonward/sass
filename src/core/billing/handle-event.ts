@@ -22,16 +22,23 @@ import {
 } from "./on-billing-event";
 
 export type HandleBillingEventResult =
-  /** 首次处理。stale 为 true 表示是乱序到达的旧事件，没有改动订阅状态。 */
+  /**
+   * Handled for the first time. stale = true means an old event arrived out of order and didn't
+   * change the subscription status.
+   */
   | { status: "processed"; userId: string; stale: boolean }
-  /** 同一事件已经处理过，什么也没做。 */
+  /** The same event was already handled; nothing was done. */
   | { status: "duplicate" }
-  /** 事件指向的用户已不存在（例如账户已删除）。记录下来但不处理，也不再重试。 */
+  /**
+   * The user the event points to no longer exists (e.g. account deleted). Recorded but not handled,
+   * and not retried.
+   */
   | { status: "ignored"; reason: "unknown_user" };
 
 /**
- * 找不到事件属于哪个用户：没有 userId，客户 ID、订阅、订单也都还没有记录（通常是乱序，
- * 例如续费事件先于结账事件到达）。事务回滚、不记入 webhook_events，服务商重试时再处理。
+ * Can't tell which user the event belongs to: there's no userId, and no customer ID, subscription or
+ * order recorded yet (usually out-of-order delivery, e.g. a renewal arriving before checkout). The
+ * transaction rolls back without recording webhook_events, and it's handled when the provider retries.
  */
 export class UnresolvedBillingUserError extends Error {
   constructor(readonly event: Pick<BillingEvent, "provider" | "eventId">) {
@@ -43,12 +50,12 @@ export class UnresolvedBillingUserError extends Error {
 }
 
 /**
- * 处理一个账单事件，在一个事务里完成：
- * 1. 幂等：写入 webhook_events，(provider, event_id) 已存在就直接返回 duplicate；
- * 2. 更新订阅、订单和客户映射；
- * 3. 触发 onBillingEvent 钩子（接收同一个事务）。
- * 任何一步失败都会整体回滚，webhook_events 里也不会留下记录，重试时重新处理。
- * 钩子用 afterCommit 登记的回调（例如发邮件）在事务提交成功后才执行。
+ * Handle one billing event in a single transaction:
+ * 1. Idempotency: insert into webhook_events; if (provider, event_id) exists, return duplicate;
+ * 2. Update subscriptions, orders and the customer mapping;
+ * 3. Fire onBillingEvent hooks (which receive the same transaction).
+ * Any failing step rolls everything back, leaving no webhook_events record, so a retry reprocesses it.
+ * Callbacks that hooks register via afterCommit (e.g. sending email) run only after a successful commit.
  */
 export async function handleBillingEvent(
   event: BillingEvent,
@@ -56,7 +63,8 @@ export async function handleBillingEvent(
 ): Promise<HandleBillingEventResult> {
   const afterCommit: AfterCommitCallback[] = [];
   const result = await processInTransaction(db, event, afterCommit);
-  // 邮件等提交后的回调放到响应之后，不拖慢 webhook 的回复（服务商有超时和重试）。
+  // Run post-commit callbacks such as email after the response, so they don't slow the webhook
+  // reply (providers have timeouts and retries).
   await runAfterResponse(() => runAfterCommit(afterCommit));
   return result;
 }
@@ -110,7 +118,10 @@ function processInTransaction(
   });
 }
 
-/** 事件里的 userId 优先；否则按客户 ID、订阅、订单依次查找。用户已删除时返回 null。 */
+/**
+ * The event's userId wins; otherwise look up by customer ID, subscription, then order. Returns null
+ * if the user was deleted.
+ */
 async function resolveUserId(
   tx: DbTransaction,
   event: BillingEvent,
@@ -169,7 +180,10 @@ async function resolveUserId(
   throw new UnresolvedBillingUserError(event);
 }
 
-/** 记住用户在服务商那边的客户 ID，之后只带客户 ID 的事件也能找到用户。 */
+/**
+ * Remember the user's customer ID at the provider, so later events carrying only a customer ID can
+ * find the user.
+ */
 async function linkCustomer(
   tx: DbTransaction,
   event: BillingEvent,
@@ -189,7 +203,10 @@ async function linkCustomer(
     });
 }
 
-/** 按事件类型更新订阅和订单。返回 true 表示订阅状态被更新的事件覆盖（乱序的旧事件）。 */
+/**
+ * Update subscriptions and orders by event type. Returns true if the subscription status was
+ * superseded (an old out-of-order event).
+ */
 async function applyEvent(
   tx: DbTransaction,
   event: BillingEvent,
@@ -276,7 +293,10 @@ type SubscriptionPatch = {
   endedAt?: Date | null;
 };
 
-/** 去掉值为 undefined 的字段：事件没带的信息不覆盖已有的值。 */
+/**
+ * Drop fields whose value is undefined: information the event didn't carry doesn't overwrite
+ * existing values.
+ */
 function defined<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(value).filter(([, v]) => v !== undefined),
@@ -284,9 +304,10 @@ function defined<T extends object>(value: T): Partial<T> {
 }
 
 /**
- * 订阅按事件发生时间"后写入者胜"：比已记录的最新事件更早的事件不改变状态（返回 true），
- * 只补上仍为空的套餐和客户信息。这样 renewed 先于 active 到达、canceled 之后才到的
- * 旧 renewed，最终状态都和按顺序到达时一致。
+ * Subscriptions use "last writer wins" by event time: an event earlier than the latest recorded one
+ * doesn't change the status (returns true) and only fills in plan and customer info that is still
+ * empty. That way, renewed arriving before active, or an old renewed arriving after canceled, both end
+ * in the same state as in-order delivery.
  */
 async function applySubscription(
   tx: DbTransaction,
@@ -316,13 +337,14 @@ async function applySubscription(
     .returning({ id: subscriptions.id });
   if (inserted) return false;
 
-  // 行锁：同一订阅的并发事件串行处理。
+  // Row lock: concurrent events for the same subscription are processed serially.
   const [locked] = await tx
     .select()
     .from(subscriptions)
     .where(where)
     .for("update");
-  // 走到这里时这一行必然存在（上面刚插过或本来就在），for update 保证同一订阅的并发事件串行。
+  // The row must exist by now (just inserted above or already there); for update serializes
+  // concurrent events for the same subscription.
   const current = locked!;
 
   const fillMissing = defined({
@@ -356,9 +378,9 @@ async function applySubscription(
 }
 
 type OrderPatch = {
-  /** 这次付款的结果；退款事件不带。 */
+  /** Outcome of this payment; refund events don't carry it. */
   outcome?: "paid" | "failed";
-  /** 本次退款金额。 */
+  /** Amount refunded in this event. */
   refund?: number;
   amount?: number;
   currency?: string;
@@ -367,8 +389,9 @@ type OrderPatch = {
 };
 
 /**
- * 订单的合并与到达顺序无关：付款成功优先于失败，退款金额累加，缺失的金额、币种、
- * 套餐用后到的事件补上，最后由金额推导状态。所以订单不存在"旧事件"。
+ * Merging orders doesn't depend on arrival order: payment success beats failure, refund amounts add
+ * up, missing amount, currency and plan are filled in by later events, and the status is finally
+ * derived from the amounts. So orders have no "old events".
  */
 async function mergeOrder(
   tx: DbTransaction,
@@ -387,7 +410,7 @@ async function mergeOrder(
       userId,
       provider: event.provider,
       providerOrderId: orderId,
-      // 占位，下面按合并后的数据重新计算。
+      // Placeholder; recomputed below from the merged data.
       status: patch.outcome ?? "paid",
     })
     .onConflictDoNothing({
@@ -395,10 +418,11 @@ async function mergeOrder(
     });
 
   const [locked] = await tx.select().from(orders).where(where).for("update");
-  // 走到这里时这一行必然存在（上面刚插过或本来就在），for update 保证同一订单的并发事件串行。
+  // The row must exist by now (just inserted above or already there); for update serializes
+  // concurrent events for the same order.
   const current = locked!;
 
-  // 付款成功优先：只要有一次成功就是 paid（退款也意味着付过款）。
+  // Payment success wins: a single success means paid (a refund also implies it was paid).
   const base: OrderStatus =
     current.status !== "failed" || patch.outcome === "paid" ? "paid" : "failed";
   const merged = {

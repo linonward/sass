@@ -2,7 +2,8 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { Database } from "@/core/db";
 
-// 隐藏的套餐（SITE_HIDDEN_PLANS）不能新购：结账在碰数据库和服务商之前就拒绝。
+// Hidden plans (SITE_HIDDEN_PLANS) can't be bought: checkout rejects them before touching the
+// database or the provider.
 vi.mock("./plans", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./plans")>();
   return {
@@ -16,8 +17,8 @@ vi.mock("./plans", async (importOriginal) => {
 
 const { startCheckout } = await import("./checkout");
 
-describe("结账与隐藏的套餐", () => {
-  test("隐藏的套餐返回 invalid_plan，不调服务商、不限流", async () => {
+describe("checkout and hidden plans", () => {
+  test("a hidden plan returns invalid_plan without calling the provider or the rate limiter", async () => {
     const provider = { id: "fake", createCheckout: vi.fn() };
     const checkRateLimit = vi.fn();
     const result = await startCheckout({

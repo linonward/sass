@@ -17,7 +17,7 @@ function client(response: Response, baseURL?: string) {
 }
 
 describe("start", () => {
-  test("图生视频：异步提交，首帧放在 media，返回 taskId", async () => {
+  test("image-to-video: submits asynchronously with the first frame in media and returns taskId", async () => {
     const { fetch, video } = client(
       Response.json({ output: { task_id: "t1", task_status: "PENDING" } }),
       "https://dashscope.aliyuncs.com/compatible-mode/v1",
@@ -53,7 +53,7 @@ describe("start", () => {
     });
   });
 
-  test("文生视频：没有 media，带 ratio；默认国际站", async () => {
+  test("text-to-video: no media, sends ratio; defaults to the international site", async () => {
     const { fetch, video } = client(
       Response.json({ output: { task_id: "t2" } }),
     );
@@ -74,7 +74,7 @@ describe("start", () => {
     });
   });
 
-  test("接口报错抛 APICallError", async () => {
+  test("throws APICallError on API errors", async () => {
     const { video } = client(
       Response.json(
         { code: "InvalidParameter", message: "Model not exist." },

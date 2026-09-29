@@ -34,12 +34,14 @@ import { processWebhook } from "./webhook";
 
 const url = process.env.DATABASE_URL_TEST;
 
-// CI 必须提供测试库，不允许静默跳过。
+// CI must provide a test database; silently skipping is not allowed.
 if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过账单测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping billing tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
 const t = (minutes: number) => new Date(Date.UTC(2026, 0, 1, 0, minutes));
@@ -47,7 +49,7 @@ const t = (minutes: number) => new Date(Date.UTC(2026, 0, 1, 0, minutes));
 describe.skipIf(!url)("handleBillingEvent", () => {
   let client: DbClient;
   let db: DbClient["db"];
-  // 每个测试用独立的服务商 ID 和用户，互不干扰。
+  // Each test uses its own provider IDs and user, so they don't interfere.
   let fake: FakeProvider;
   let userId: string;
 
@@ -111,8 +113,8 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         ),
       );
 
-  describe("每种事件都会更新订阅或订单", () => {
-    test("checkout.completed：记录订单为已付款，并记住客户 ID", async () => {
+  describe("every event type updates a subscription or order", () => {
+    test("checkout.completed: records the order as paid and remembers the customer ID", async () => {
       await handle(
         fake.event("checkout.completed", {
           userId,
@@ -139,7 +141,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect(customer).toMatchObject({ userId, providerCustomerId: "cus_1" });
     });
 
-    test("subscription.active：创建生效中的订阅", async () => {
+    test("subscription.active: creates an active subscription", async () => {
       await handle(
         fake.event("subscription.active", {
           userId,
@@ -159,7 +161,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       });
     });
 
-    test("subscription.renewed：延长周期，并记录续费订单", async () => {
+    test("subscription.renewed: extends the period and records the renewal order", async () => {
       await handle(
         fake.event("subscription.active", {
           userId,
@@ -194,7 +196,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       });
     });
 
-    test("subscription.canceled：标记取消，保留到期时间", async () => {
+    test("subscription.canceled: marks canceled and keeps the end time", async () => {
       await handle(
         fake.event("subscription.active", {
           userId,
@@ -218,7 +220,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       });
     });
 
-    test("subscription.expired：订阅结束", async () => {
+    test("subscription.expired: the subscription ends", async () => {
       await handle(
         fake.event("subscription.active", {
           userId,
@@ -240,7 +242,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       });
     });
 
-    test("payment.failed：订阅变为逾期，订单记为失败", async () => {
+    test("payment.failed: the subscription becomes past due and the order is marked failed", async () => {
       await handle(
         fake.event("subscription.active", {
           userId,
@@ -263,7 +265,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect((await order("ord_fail"))!.status).toBe("failed");
     });
 
-    test("refund.created：部分退款和全额退款", async () => {
+    test("refund.created: partial and full refunds", async () => {
       await handle(
         fake.event("checkout.completed", {
           userId,
@@ -304,8 +306,8 @@ describe.skipIf(!url)("handleBillingEvent", () => {
     });
   });
 
-  describe("幂等", () => {
-    test("同一事件处理两次，结果与一次相同，钩子只触发一次", async () => {
+  describe("idempotency", () => {
+    test("handling the same event twice gives the same result as once, and hooks fire only once", async () => {
       const hook = vi.fn();
       registerOnBillingEvent("test", hook);
       const event = fake.event("refund.created", {
@@ -328,7 +330,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect(await recorded(event.eventId)).toHaveLength(1);
     });
 
-    test("同一事件并发到达，只处理一次", async () => {
+    test("the same event arriving concurrently is handled only once", async () => {
       const hook = vi.fn();
       registerOnBillingEvent("test", hook);
       const event = fake.event("refund.created", {
@@ -349,8 +351,8 @@ describe.skipIf(!url)("handleBillingEvent", () => {
     });
   });
 
-  describe("乱序", () => {
-    test("renewed 先于 active 到达：最终仍是生效中，周期取较新的事件", async () => {
+  describe("out of order", () => {
+    test("renewed arriving before active: still active in the end, with the period from the newer event", async () => {
       await handle(
         fake.event("subscription.renewed", {
           userId,
@@ -373,14 +375,14 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect(await subscription("sub_1"))!.toMatchObject({
         status: "active",
         currentPeriodEnd: t(200),
-        // 旧事件仍然补上缺失的套餐。
+        // The old event still fills in the missing plan.
         planId: "pro",
       });
       const [row] = await recorded(active.eventId);
       expect(row!.stale).toBe(true);
     });
 
-    test("canceled 之后才到的旧 renewed 不会让订阅恢复", async () => {
+    test("an old renewed arriving after canceled doesn't revive the subscription", async () => {
       await handle(
         fake.event("subscription.active", {
           userId,
@@ -409,14 +411,14 @@ describe.skipIf(!url)("handleBillingEvent", () => {
 
       expect(result).toMatchObject({ status: "processed", stale: true });
       expect((await subscription("sub_1"))!.status).toBe("canceled");
-      // 迟到的续费是真实发生过的，钩子照常触发并知道它是旧事件。
+      // The late renewal really happened, so hooks still fire and know it's an old event.
       expect(hook).toHaveBeenCalledWith(
         expect.objectContaining({ type: "subscription.renewed" }),
         expect.objectContaining({ stale: true, userId }),
       );
     });
 
-    test("expired 之后才到的旧 active 不会让订阅恢复", async () => {
+    test("an old active arriving after expired doesn't revive the subscription", async () => {
       await handle(
         fake.event("subscription.expired", {
           userId,
@@ -435,7 +437,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect((await subscription("sub_1"))!.status).toBe("expired");
     });
 
-    test("退款先于结账事件到达：订单金额补齐后得到正确的状态", async () => {
+    test("refund arriving before checkout: correct status once the order amount is filled in", async () => {
       await handle(
         fake.event("refund.created", {
           userId,
@@ -463,7 +465,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       });
     });
 
-    test("付款失败晚于成功到达，不会把已付款的订单改回失败", async () => {
+    test("a payment failure arriving after success doesn't turn a paid order back to failed", async () => {
       await handle(
         fake.event("checkout.completed", {
           userId,
@@ -477,8 +479,8 @@ describe.skipIf(!url)("handleBillingEvent", () => {
     });
   });
 
-  describe("找用户", () => {
-    test("只带客户 ID 的事件，按结账时记住的映射找到用户", async () => {
+  describe("finding the user", () => {
+    test("an event with only a customer ID finds the user via the mapping remembered at checkout", async () => {
       await handle(
         fake.event("checkout.completed", {
           userId,
@@ -497,7 +499,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect(result).toMatchObject({ status: "processed", userId });
     });
 
-    test("暂时找不到用户时抛错并回滚，映射建立后重试即可处理", async () => {
+    test("throws and rolls back when the user can't be found yet; a retry works once the mapping exists", async () => {
       const event = fake.event("subscription.active", {
         customerId: "cus_later",
         subscriptionId: "sub_1",
@@ -518,7 +520,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect(await handle(event)).toMatchObject({ status: "processed" });
     });
 
-    test("用户已删除时记录事件但不处理，也不再重试", async () => {
+    test("when the user was deleted, the event is recorded but not handled, and not retried", async () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       const hook = vi.fn();
       registerOnBillingEvent("test", hook);
@@ -536,8 +538,8 @@ describe.skipIf(!url)("handleBillingEvent", () => {
     });
   });
 
-  describe("钩子", () => {
-    test("钩子拿到同一个事务：后面的钩子失败时，前面钩子的写入也被回滚", async () => {
+  describe("hooks", () => {
+    test("hooks share the same transaction: when a later hook fails, earlier hooks' writes roll back too", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       registerOnBillingEvent("writes", async (_event, { tx }) => {
         await tx.insert(billingCustomers).values({
@@ -564,13 +566,13 @@ describe.skipIf(!url)("handleBillingEvent", () => {
         .where(eq(billingCustomers.provider, fake.id));
       expect(customers).toHaveLength(0);
 
-      // 修好钩子后，服务商重试同一事件即可正常处理。
+      // Once the hook is fixed, the provider retrying the same event is handled normally.
       resetOnBillingEvent();
       expect(await handle(event)).toMatchObject({ status: "processed" });
       expect((await subscription("sub_1"))!.status).toBe("active");
     });
 
-    test("按注册顺序执行", async () => {
+    test("runs in registration order", async () => {
       const calls: string[] = [];
       registerOnBillingEvent("a", () => void calls.push("a"));
       registerOnBillingEvent("b", () => void calls.push("b"));
@@ -584,7 +586,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
   });
 
   describe("processWebhook", () => {
-    test("签名正确：处理事件并返回 200", async () => {
+    test("valid signature: handles the event and returns 200", async () => {
       const event = fake.event("subscription.active", {
         userId,
         subscriptionId: "sub_1",
@@ -601,7 +603,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       });
     });
 
-    test("签名错误：返回 401，不写库", async () => {
+    test("bad signature: returns 401 and writes nothing", async () => {
       const event = fake.event("subscription.active", {
         userId,
         subscriptionId: "sub_1",
@@ -618,7 +620,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect(await subscription("sub_1"))!.toBeUndefined();
     });
 
-    test("不关心的事件类型：返回 200 并忽略", async () => {
+    test("event types we don't care about: return 200 and ignore", async () => {
       const body = JSON.stringify({ hello: "world" });
       const request = new Request("https://example.test/webhook", {
         method: "POST",
@@ -632,7 +634,7 @@ describe.skipIf(!url)("handleBillingEvent", () => {
       expect(await response.json()).toEqual({ status: "ignored" });
     });
 
-    test("处理失败：返回 500，让服务商重试", async () => {
+    test("handling failure: returns 500 so the provider retries", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       registerOnBillingEvent("fails", () => {
         throw new Error("boom");

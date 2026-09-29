@@ -1,5 +1,5 @@
 // @vitest-environment node
-// stripe-node 的 webhooks / errors 需要 node:crypto（jsdom 环境下没有）。
+// stripe-node's webhooks / errors need node:crypto (not available under jsdom).
 import Stripe from "stripe";
 import { describe, expect, test, vi } from "vitest";
 
@@ -18,8 +18,8 @@ const PAYLOAD = JSON.stringify(
 );
 
 /**
- * 用真实的 SDK 提供 webhooks / errors：签名校验和错误类型判定都是真跑（离线，不走网络），
- * 只有三个 API 调用换成假的。
+ * Use the real SDK for webhooks / errors: signature verification and error type checks really
+ * run (offline, no network); only the three API calls are faked.
  */
 const sdk = new Stripe("sk_test_unit");
 
@@ -27,7 +27,7 @@ function fakeClient() {
   const client = {
     checkout: {
       sessions: {
-        // 返回值放宽成 string | null，测试里能模拟服务商没给 URL 的情况。
+        // Return type widened to string | null so tests can simulate the provider returning no URL.
         create: vi.fn(
           async (): Promise<{ id: string; url: string | null }> => ({
             id: "cs_test_1",
@@ -63,8 +63,8 @@ const provider = (client = fakeClient()) =>
   });
 
 /**
- * 用 SDK 自带的签名工具签一个请求（等价于 Stripe 发过来的 Stripe-Signature 头），
- * 不需要 secret 之外的任何东西，测试离线可跑。
+ * Signs a request with the SDK's built-in signing helper (equivalent to the Stripe-Signature
+ * header Stripe sends). Needs nothing besides the secret, so tests run offline.
  */
 function signedRequest(
   body: string,
@@ -92,13 +92,13 @@ function apiError(status: number) {
 }
 
 describe("verifyWebhook", () => {
-  test("签名正确时返回解析后的请求体", async () => {
+  test("returns the parsed body when the signature is valid", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(PAYLOAD)),
     ).resolves.toEqual(JSON.parse(PAYLOAD));
   });
 
-  test("签名错误时拒绝", async () => {
+  test("rejects a wrong signature", async () => {
     await expect(
       provider().verifyWebhook(
         signedRequest(
@@ -112,13 +112,13 @@ describe("verifyWebhook", () => {
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("缺少签名 header 时拒绝", async () => {
+  test("rejects a missing signature header", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(PAYLOAD, "")),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("请求体被篡改时拒绝", async () => {
+  test("rejects a tampered body", async () => {
     const signature = sdk.webhooks.generateTestHeaderString({
       payload: PAYLOAD,
       secret: SECRET,
@@ -133,7 +133,7 @@ describe("verifyWebhook", () => {
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("签名过期时拒绝（容忍窗口 300 秒）", async () => {
+  test("rejects an expired signature (300-second tolerance window)", async () => {
     const old = Math.floor(Date.now() / 1000) - 3600;
     await expect(
       provider().verifyWebhook(
@@ -149,15 +149,15 @@ describe("verifyWebhook", () => {
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("签名对但请求体不是合法 JSON 时拒绝", async () => {
+  test("rejects a valid signature over a body that isn't valid JSON", async () => {
     await expect(
       provider().verifyWebhook(signedRequest("{not json")),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 });
 
-describe("parseStripeEvent：官方示例 payload 的映射", () => {
-  test("checkout.session.completed（一次性付款）：记订单，用 PaymentIntent 当订单号", () => {
+describe("parseStripeEvent: mapping of the official sample payloads", () => {
+  test("checkout.session.completed (one-time payment): records the order, using the PaymentIntent as the order number", () => {
     expect(
       parseStripeEvent(stripeSample("checkout.session.completed.payment")),
     ).toMatchObject({
@@ -177,7 +177,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("checkout.session.completed（订阅）：不记订单，钱的账由 invoice.paid 记", () => {
+  test("checkout.session.completed (subscription): no order, the money is recorded by invoice.paid", () => {
     expect(
       parseStripeEvent(stripeSample("checkout.session.completed.subscription")),
     ).toMatchObject({
@@ -190,7 +190,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("mode 缺失时按一次性付款处理（拿不到 PaymentIntent 就用结账会话 ID）", () => {
+  test("treats a missing mode as a one-time payment (falls back to the checkout session ID without a PaymentIntent)", () => {
     const sample = stripeSample("checkout.session.completed.payment");
     delete sample.data.object.mode;
     delete sample.data.object.payment_intent;
@@ -200,7 +200,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("invoice.paid → subscription.renewed，服务周期取发票行", () => {
+  test("invoice.paid → subscription.renewed, service period from the invoice line", () => {
     expect(parseStripeEvent(stripeSample("invoice.paid"))).toMatchObject({
       type: "subscription.renewed",
       provider: "stripe",
@@ -217,24 +217,25 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("服务周期优先用发票行：invoice.period_* 只当兜底", () => {
+  test("service period prefers the invoice line: invoice.period_* is only a fallback", () => {
     const sample = stripeSample("invoice.paid");
     const invoice = sample.data.object as {
       period_start: number;
       period_end: number;
       lines: { data: Array<{ period: { start: number; end: number } }> };
     };
-    // 发票级的 period 是「能关联发票项的时间范围」，和服务周期可以不同。
+    // The invoice-level period is "the time range in which invoice items can be associated", which
+    // can differ from the service period.
     invoice.period_start = 1;
     invoice.period_end = 2;
     const firstLine = invoice.lines.data[0];
-    if (!firstLine) throw new Error("fixture 至少要有一条发票行");
+    if (!firstLine) throw new Error("fixture needs at least one invoice line");
     firstLine.period = { start: 1679609767, end: 1682288167 };
     expect(parseStripeEvent(sample)).toMatchObject({
       currentPeriodStart: new Date(1679609767 * 1000),
       currentPeriodEnd: new Date(1682288167 * 1000),
     });
-    // 没有发票行时才退回发票的 period_*。
+    // Fall back to the invoice's period_* only when there are no invoice lines.
     invoice.lines.data = [];
     expect(parseStripeEvent(sample)).toMatchObject({
       currentPeriodStart: new Date(1000),
@@ -242,7 +243,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("没有 metadata 时按发票行的 Price ID 反查套餐", () => {
+  test("without metadata, looks up the plan by the invoice line's Price ID", () => {
     const sample = stripeSample("invoice.paid");
     const parent = (
       sample.data.object as {
@@ -258,11 +259,11 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
         };
       }
     ).lines.data[0];
-    if (!priceLine) throw new Error("fixture 至少要有一条发票行");
+    if (!priceLine) throw new Error("fixture needs at least one invoice line");
     priceLine.pricing.price_details.price =
       pro?.providerProductId ?? "price_unknown";
     expect(parseStripeEvent(sample)).toMatchObject({ planId: "pro" });
-    // metadata 也没有、Price ID 也不认识时只能为空。
+    // With no metadata and an unknown Price ID, it can only be empty.
     const unknown = stripeSample("invoice.paid");
     const unknownParent = (
       unknown.data.object as {
@@ -273,7 +274,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     expect(parseStripeEvent(unknown)).toMatchObject({ planId: undefined });
   });
 
-  test("invoice.payment_failed → payment.failed，订单号也用发票 ID（重试成功会合并成一单）", () => {
+  test("invoice.payment_failed → payment.failed, the order number is also the invoice ID (a successful retry merges into one order)", () => {
     expect(
       parseStripeEvent(stripeSample("invoice.payment_failed")),
     ).toMatchObject({
@@ -285,7 +286,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("parent 不是订阅（一次性发票）时忽略", () => {
+  test("ignores invoices whose parent is not a subscription (one-off invoices)", () => {
     for (const parent of [
       null,
       { type: "quote_details", quote_details: { quote: "qt_1" } },
@@ -313,7 +314,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     );
   });
 
-  test("active 时带上计费周期和套餐（周期在订阅项上，不在订阅上）", () => {
+  test("active carries the billing period and plan (the period is on the subscription item, not the subscription)", () => {
     expect(
       parseStripeEvent(stripeSample("customer.subscription.updated")),
     ).toMatchObject({
@@ -325,7 +326,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("预约期末取消时按已取消处理，带上还能用到的时间", () => {
+  test("scheduled cancel at period end is treated as canceled, with the time access lasts until", () => {
     const sample = stripeSample("customer.subscription.updated");
     (
       sample.data.object as { cancel_at_period_end: boolean }
@@ -336,7 +337,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("past_due 不带订单号：订单由 invoice.payment_failed 记", () => {
+  test("past_due carries no order number: the order is recorded by invoice.payment_failed", () => {
     const sample = stripeSample("customer.subscription.updated");
     (sample.data.object as { status: string }).status = "past_due";
     expect(parseStripeEvent(sample)).not.toHaveProperty("orderId");
@@ -353,7 +354,7 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
   });
 
   test.each(["incomplete", "incomplete_expired", "paused", "weird_status"])(
-    "customer.subscription.updated 的 %s 状态不处理",
+    "customer.subscription.updated with status %s is not handled",
     (status) => {
       const sample = stripeSample("customer.subscription.updated");
       (sample.data.object as { status: string }).status = status;
@@ -361,29 +362,30 @@ describe("parseStripeEvent：官方示例 payload 的映射", () => {
     },
   );
 
-  test("退款事件忽略（v1 不处理，见 stripe.ts 顶部说明）", () => {
+  test("ignores refund events (not handled in v1, see the notes at the top of stripe.ts)", () => {
     expect(parseStripeEvent(stripeSample("charge.refunded"))).toBeNull();
   });
 
-  test("结构不对的请求体返回 null", () => {
+  test("returns null for a malformed body", () => {
     expect(parseStripeEvent(null)).toBeNull();
     expect(parseStripeEvent({ type: "invoice.paid" })).toBeNull();
     expect(parseStripeEvent({ id: "evt_1", type: "invoice.paid" })).toBeNull();
     expect(parseStripeEvent({ id: "evt_1", data: { object: {} } })).toBeNull();
-    // 缺 id 的订阅事件也丢掉（(provider, eventId) 是幂等的键）。
+    // Subscription events without an id are dropped too ((provider, eventId) is the idempotency
+    // key).
     const noId = stripeSample("customer.subscription.deleted");
     delete noId.data.object.id;
     expect(parseStripeEvent(noId)).toBeNull();
   });
 
-  test("raw 保留原始请求体", () => {
+  test("raw keeps the original body", () => {
     const sample = stripeSample("invoice.paid");
     expect(parseStripeEvent(sample)?.raw).toEqual(sample);
   });
 });
 
 describe("createCheckout", () => {
-  test("一次性买断：mode=payment，不带 subscription_data", async () => {
+  test("one-time purchase: mode=payment, no subscription_data", async () => {
     const client = fakeClient();
     const checkout = await provider(client).createCheckout({
       userId: "user_1",
@@ -410,7 +412,7 @@ describe("createCheckout", () => {
     });
   });
 
-  test("订阅：mode=subscription，metadata 同时写到订阅上", async () => {
+  test("subscription: mode=subscription, metadata also written to the subscription", async () => {
     const client = fakeClient();
     await provider(client).createCheckout({
       userId: "user_1",
@@ -426,12 +428,13 @@ describe("createCheckout", () => {
       cancel_url: "https://example.com/#pricing",
       client_reference_id: "user_1",
       metadata: { userId: "user_1", planId: "pro" },
-      // Session 的 metadata 不会复制到订阅上，只有 subscription_data.metadata 会。
+      // The Session's metadata isn't copied to the subscription; only
+      // subscription_data.metadata is.
       subscription_data: { metadata: { userId: "user_1", planId: "pro" } },
     });
   });
 
-  test("套餐没有产品 ID 时抛错", async () => {
+  test("throws when the plan has no product ID", async () => {
     await expect(
       provider().createCheckout({
         userId: "user_1",
@@ -442,7 +445,7 @@ describe("createCheckout", () => {
     ).rejects.toThrow(/providerProductId/);
   });
 
-  test("服务商没给 URL 时抛错", async () => {
+  test("throws when the provider returns no URL", async () => {
     const client = fakeClient();
     client.checkout.sessions.create.mockResolvedValueOnce({
       id: "cs_test_2",
@@ -460,14 +463,14 @@ describe("createCheckout", () => {
 });
 
 describe("cancelSubscription", () => {
-  test("有效订阅：立即取消", async () => {
+  test("active subscription: cancels immediately", async () => {
     const client = fakeClient();
     await provider(client).cancelSubscription("sub_1");
     expect(client.subscriptions.cancel).toHaveBeenCalledWith("sub_1");
   });
 
   test.each(["canceled", "incomplete_expired"])(
-    "已经是 %s：不再取消，视为成功",
+    "already %s: skips canceling and counts as success",
     async (status) => {
       const client = fakeClient();
       client.subscriptions.retrieve.mockResolvedValueOnce({ status });
@@ -477,7 +480,7 @@ describe("cancelSubscription", () => {
   );
 
   test.each(["active", "trialing", "past_due", "unpaid", "paused"])(
-    "%s 还能取消，照常调 cancel",
+    "%s can still be canceled, so cancel is called as usual",
     async (status) => {
       const client = fakeClient();
       client.subscriptions.retrieve.mockResolvedValueOnce({ status });
@@ -486,7 +489,7 @@ describe("cancelSubscription", () => {
     },
   );
 
-  test("订阅不存在（404）：视为成功", async () => {
+  test("subscription not found (404): counts as success", async () => {
     const client = fakeClient();
     client.subscriptions.retrieve.mockRejectedValueOnce(apiError(404));
     await expect(
@@ -494,7 +497,7 @@ describe("cancelSubscription", () => {
     ).resolves.toBeUndefined();
   });
 
-  test("其他错误：向上抛出", async () => {
+  test("other errors: rethrown", async () => {
     const client = fakeClient();
     client.subscriptions.cancel.mockRejectedValueOnce(apiError(500));
     await expect(
@@ -502,7 +505,7 @@ describe("cancelSubscription", () => {
     ).rejects.toThrow();
   });
 
-  test("非 Stripe 的错误向上抛出", async () => {
+  test("rethrows non-Stripe errors", async () => {
     const client = fakeClient();
     client.subscriptions.retrieve.mockRejectedValueOnce(new Error("boom"));
     await expect(provider(client).cancelSubscription("sub_1")).rejects.toThrow(
@@ -511,19 +514,20 @@ describe("cancelSubscription", () => {
   });
 });
 
-test("getPortalUrl 带上回跳地址", async () => {
+test("getPortalUrl includes the return URL", async () => {
   const client = fakeClient();
   await expect(provider(client).getPortalUrl("cus_1")).resolves.toBe(
     "https://billing.stripe.com/p/session_1",
   );
   expect(client.billingPortal.sessions.create).toHaveBeenCalledWith({
     customer: "cus_1",
-    // 回跳地址来自站点自己的域名（site.config.ts，可用 SITE_DOMAIN 覆盖），
-    // 所以断言也跟着同一个来源，不能写死域名（CI 里是 ci.example.test）。
+    // The return URL comes from the site's own domain (site.config.ts, overridable with
+    // SITE_DOMAIN), so the assertion uses the same source instead of hard-coding a domain (CI uses
+    // ci.example.test).
     return_url: `https://${siteConfig.domain}/billing`,
   });
 });
 
-test("provider.id 是注册表用的 stripe", () => {
+test("provider.id is stripe, as used by the registry", () => {
   expect(provider().id).toBe("stripe");
 });

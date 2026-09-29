@@ -20,14 +20,14 @@ async function run(event: BillingEvent) {
     userId: "user_1",
     afterCommit: (fn) => callbacks.push(fn),
   });
-  // 事务提交之前不发送。
+  // Nothing is sent before the transaction commits.
   expect(track).not.toHaveBeenCalled();
   for (const fn of callbacks) await fn();
   return track;
 }
 
 describe("createPurchaseTrackingHandler", () => {
-  test("checkout.completed：提交后发 purchase，只带套餐 ID", async () => {
+  test("checkout.completed: sends purchase after commit, with only the plan ID", async () => {
     const track = await run({
       ...base,
       type: "checkout.completed",
@@ -40,12 +40,12 @@ describe("createPurchaseTrackingHandler", () => {
     expect(track).toHaveBeenCalledExactlyOnceWith(
       "purchase",
       { plan: "pro" },
-      // 没有访客上下文，不用 webhook 请求（服务商）的 headers。
+      // No visitor context; don't use the headers of the webhook request (from the provider).
       { headers: {} },
     );
   });
 
-  test("没有套餐 ID 时 plan 为 null", async () => {
+  test("plan is null when there is no plan ID", async () => {
     const track = await run({
       ...base,
       type: "checkout.completed",
@@ -59,7 +59,7 @@ describe("createPurchaseTrackingHandler", () => {
     );
   });
 
-  test("续费和其他事件不算转化", async () => {
+  test("renewals and other events don't count as conversions", async () => {
     const track = await run({
       ...base,
       type: "subscription.renewed",

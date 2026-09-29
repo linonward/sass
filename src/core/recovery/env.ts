@@ -1,10 +1,12 @@
 import { z } from "zod";
 
 /**
- * 恢复入口（`/api/cron/recovery`）的变量。
- * - `CRON_SECRET`：调用方必须带 `Authorization: Bearer <CRON_SECRET>`。Vercel 的 cron 会自动
- *   带上这个头；自托管的调度器 curl 时自己带。不设时入口一律 404 —— 明确拒绝，不静默放行。
- *   不设也不影响站点运行：恢复扫描仍会在用户使用 AI 功能时机会式地跑（见 ./index.ts）。
+ * Variables for the recovery endpoint (`/api/cron/recovery`).
+ * - `CRON_SECRET`: callers must send `Authorization: Bearer <CRON_SECRET>`. Vercel cron adds this
+ *   header automatically; a self-hosted scheduler adds it itself when it curls. When unset, the
+ *   endpoint always returns 404 — an explicit refusal, never a silent pass. Leaving it unset does
+ *   not break the site: the recovery sweep still runs opportunistically when users use AI features
+ *   (see ./index.ts).
  */
 export function recoveryServerEnv() {
   return {

@@ -13,8 +13,8 @@ const withPlans = (plans: unknown[]) =>
 
 const base = { features: ["a"] };
 
-describe("billing.plans 交易字段", () => {
-  test("按 interval 推导 type，credits 默认 0", () => {
+describe("billing.plans transaction fields", () => {
+  test("type is derived from interval, credits default to 0", () => {
     const { plans } = withPlans([
       { ...base, id: "free", price: 0, interval: "month" },
       {
@@ -43,7 +43,7 @@ describe("billing.plans 交易字段", () => {
 
   test.each([
     [
-      "type 与 interval 不一致",
+      "type and interval disagree",
       {
         ...base,
         id: "pro",
@@ -55,7 +55,7 @@ describe("billing.plans 交易字段", () => {
       "billing.plans.0.interval",
     ],
     [
-      "一次性套餐用了订阅周期",
+      "a one-time plan uses a subscription interval",
       {
         ...base,
         id: "pro",
@@ -67,12 +67,12 @@ describe("billing.plans 交易字段", () => {
       "billing.plans.0.interval",
     ],
     [
-      "付费套餐缺少产品 ID",
+      "a paid plan is missing its product ID",
       { ...base, id: "pro", price: 19, interval: "month" },
       "billing.plans.0.providerProductId",
     ],
     [
-      "免费套餐填了产品 ID",
+      "a free plan has a product ID",
       {
         ...base,
         id: "free",
@@ -83,7 +83,7 @@ describe("billing.plans 交易字段", () => {
       "billing.plans.0.providerProductId",
     ],
     [
-      "credits 不是非负整数",
+      "credits is not a non-negative integer",
       {
         ...base,
         id: "pro",
@@ -94,13 +94,13 @@ describe("billing.plans 交易字段", () => {
       },
       "billing.plans.0.credits",
     ],
-  ])("%s 时报错", (_name, plan, path) => {
+  ])("errors when %s", (_name, plan, path) => {
     expect(() => withPlans([plan])).toThrow(`- ${path}: `);
   });
 });
 
-describe("查找套餐", () => {
-  test("按 ID 和产品 ID 找到站点配置里的套餐", () => {
+describe("plan lookup", () => {
+  test("finds site-config plans by ID and by product ID", () => {
     const paid = siteConfig.billing.plans.find((p) => p.providerProductId);
     expect(paid).toBeDefined();
     expect(getPlan(paid!.id)).toBe(paid);

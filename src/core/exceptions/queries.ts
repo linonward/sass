@@ -25,7 +25,10 @@ export const parseExceptionKind = (value: unknown) =>
     ? (value as BillingExceptionKind)
     : undefined;
 
-/** 异常单列表：可按种类、状态筛选；open 的排在前面，其次新的在前。每行带上处理历史。 */
+/**
+ * Exception list: filterable by kind and status; open ones first, then newest first. Each row
+ * includes its handling history.
+ */
 export async function listExceptions(
   db: Database,
   {
@@ -85,7 +88,8 @@ export async function listExceptions(
           createdAt: adminActions.createdAt,
         })
         .from(adminActions)
-        // 管理员账号可能已经删了：审计照样显示，只是没有邮箱。
+        // The admin account may have been deleted: the audit entry still shows, just without an
+        // email.
         .leftJoin(user, eq(user.id, adminActions.actorId))
         .where(
           and(
@@ -115,7 +119,7 @@ export type ExceptionRow = Awaited<
   ReturnType<typeof listExceptions>
 >["rows"][number];
 
-/** 待处理的异常单数量（侧边栏上的计数）。 */
+/** Number of open exceptions (the count shown in the sidebar). */
 export async function countOpenExceptions(db: Database) {
   const [row] = await db
     .select({ total: count() })

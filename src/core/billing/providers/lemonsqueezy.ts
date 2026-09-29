@@ -19,30 +19,34 @@ import {
 export { LEMONSQUEEZY_PROVIDER_ID };
 
 /*
- * Lemon Squeezy webhook → BillingEvent 映射（事件与字段见
- * https://docs.lemonsqueezy.com/help/webhooks/event-types 与各资源对象页）：
+ * Lemon Squeezy webhook → BillingEvent mapping (events and fields: see
+ * https://docs.lemonsqueezy.com/help/webhooks/event-types and the per-resource object pages):
  *
- * | Lemon Squeezy 事件                    | BillingEvent            | 说明                                                        |
- * | ------------------------------------ | ----------------------- | ----------------------------------------------------------- |
- * | order_created（variant 映射到一次性） | checkout.completed      | orderId = 订单 ID，金额取 total                              |
- * | order_created（订阅套餐 / 映射不到）  | checkout.completed      | 不带 orderId：订阅首期由 invoice 事件记；映射不到按一次性记   |
- * | subscription_created/updated/resumed | subscription.active     | 按 attributes.status 分派（见下），renews_at → 账期结束       |
- * | subscription_cancelled               | subscription.canceled   | ends_at → 账期结束                                           |
- * | subscription_expired                 | subscription.expired    |                                                             |
- * | subscription_paused / unpaused       | 忽略 / subscription.active | 见 parseSubscriptionEvent 的注释                           |
- * | subscription_payment_success         | subscription.renewed    | orderId = invoice ID，金额取 total                           |
- * | subscription_payment_failed          | payment.failed          | 带 subscriptionId 和 invoice ID                              |
- * | subscription_payment_recovered       | 忽略                    | 官方说它总伴随一个 subscription_payment_success，两个都记会重复 |
- * | order_refunded / _payment_refunded   | refund.created          | 只在能证明是全额退款时映射，见 parseRefundEvent 的注释         |
- * | 其他（license key 等）                | 忽略                    |                                                             |
+ * | Lemon Squeezy event                         | BillingEvent              | Notes                                                  |
+ * | ------------------------------------------- | ------------------------- | ------------------------------------------------------ |
+ * | order_created (variant maps to one-time)    | checkout.completed        | orderId = order ID, amount from total                  |
+ * | order_created (subscription plan / unmapped) | checkout.completed       | No orderId: the first subscription period is recorded by the invoice event; unmapped is recorded as one-time |
+ * | subscription_created/updated/resumed        | subscription.active       | Dispatched by attributes.status (see below); renews_at → period end |
+ * | subscription_cancelled                      | subscription.canceled     | ends_at → period end                                   |
+ * | subscription_expired                        | subscription.expired      |                                                        |
+ * | subscription_paused / unpaused              | Ignored / subscription.active | See the comment on parseSubscriptionEvent          |
+ * | subscription_payment_success                | subscription.renewed      | orderId = invoice ID, amount from total                |
+ * | subscription_payment_failed                 | payment.failed            | Carries subscriptionId and the invoice ID              |
+ * | subscription_payment_recovered              | Ignored                   | Per the docs it always comes with a subscription_payment_success; recording both would double count |
+ * | order_refunded / _payment_refunded          | refund.created            | Mapped only when provably a full refund; see the comment on parseRefundEvent |
+ * | Others (license keys, etc.)                 | Ignored                   |                                                        |
  *
- * 订单 ID 的约定：一次性购买与订阅的每次付款都用「产生这笔钱的资源 ID」（订单 ID / invoice ID）。
- * 金额以最小货币单位（分）计，和 events.ts 的约定一致。
+ * Order ID convention: one-time purchases and every subscription payment use "the ID of the
+ * resource that produced the money" (order ID / invoice ID).
+ * Amounts are in the smallest currency unit (cents), consistent with events.ts.
  */
 
 type Loose = Record<string, unknown>;
 
-/** Lemon Squeezy webhook 的顶层：meta 描述事件，data 是事件发生时该资源的快照。 */
+/**
+ * Top level of a Lemon Squeezy webhook: meta describes the event, data is a snapshot of the
+ * resource when the event happened.
+ */
 type LemonSqueezyWebhook = {
   meta: Loose;
   data: Loose;
@@ -58,18 +62,22 @@ const asDate = (value: unknown): Date | undefined => {
   return Number.isNaN(date.getTime()) ? undefined : date;
 };
 
-/** ID：JSON:API 的 data.id 是字符串，attributes 里的 customer_id / variant_id 是数字。 */
+/**
+ * IDs: JSON:API's data.id is a string, while customer_id / variant_id in attributes are numbers.
+ */
 const asId = (value: unknown): string | undefined =>
   (typeof value === "number" && Number.isFinite(value)
     ? String(value)
     : undefined) ?? asString(value);
 
 /**
- * 金额换算成分。
+ * Converts an amount to cents.
  *
- * 文档说这些字段是「整数分」，但官方示例里出现过小数（`order_created` 的 total 给的是
- * 1859.76，同一份示例的 total_formatted 又写着 $18.59 —— 两者对不上，见 PR 的说明）。
- * 小数按四舍五入兜底，整数原样返回，两种形状都不会把金额写错数量级。
+ * The docs say these fields are "integer cents", but the official examples include decimals
+ * (`order_created` gives total as 1859.76, while total_formatted in the same example says
+ * $18.59 — the two don't match; see the `$comment` in `__fixtures__/lemonsqueezy-webhooks.json`).
+ * Decimals are rounded as a fallback and integers are returned as is, so neither shape gets the
+ * amount's order of magnitude wrong.
  */
 function toMinorUnits(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -82,7 +90,10 @@ function toMinorUnits(value: unknown): number | undefined {
   return undefined;
 }
 
-/** 结账时通过 `checkout_data.custom` 传的 { userId, planId }，事件里在 meta.custom_data 原样带回。 */
+/**
+ * The { userId, planId } passed via `checkout_data.custom` at checkout, echoed back unchanged in
+ * the event's meta.custom_data.
+ */
 function customDataOf(meta: Loose) {
   const custom = asObject(meta.custom_data);
   return {
@@ -91,7 +102,10 @@ function customDataOf(meta: Loose) {
   };
 }
 
-/** metadata 里的 planId 优先；否则用服务商一侧的产品 ID 反查（variant 在前，product 兜底）。 */
+/**
+ * The planId in metadata wins; otherwise look it up by the provider-side product ID (variant
+ * first, product as a fallback).
+ */
 function planIdOf(metaPlanId: string | undefined, ...productIds: unknown[]) {
   if (metaPlanId) return metaPlanId;
   for (const productId of productIds) {
@@ -103,16 +117,20 @@ function planIdOf(metaPlanId: string | undefined, ...productIds: unknown[]) {
 }
 
 /**
- * 把已校验的 Lemon Squeezy webhook 请求体转换成 BillingEvent；不关心的事件返回 null。
+ * Converts a verified Lemon Squeezy webhook body into a BillingEvent; returns null for events we
+ * don't care about.
  *
- * 两个和官方文档不完全一致的地方：
- * 1. **没有事件 ID**。meta 里只有 event_name / webhook_id（那是 webhook 端点 ID，不是这次
- *    投递的 ID）/ custom_data。所以用「事件名 + 资源 ID + updated_at」合成一个：重复投递
- *    （Lemon Squeezy 重试、后台手动重发）得到同一个值，被 webhook_events 的
- *    (provider, event_id) 挡住；资源状态真的变了 updated_at 也会变，不会误挡。
- * 2. **invoice 事件不承诺带 custom_data**。官方只说它对 Order / Subscription / license key
- *    事件有效，所以 subscription_payment_* 的 planId 常常是 undefined —— handle-event 的
- *    applySubscription 只在订阅行还没有套餐时才用 planId，拿不到不影响续费。
+ * Two places where this doesn't fully match what the official docs suggest:
+ * 1. **There is no event ID.** meta only has event_name / webhook_id (that's the webhook endpoint
+ *    ID, not the ID of this delivery) / custom_data. So we synthesize one from "event name +
+ *    resource ID + updated_at": duplicate deliveries (Lemon Squeezy retries, manual resends from
+ *    the dashboard) produce the same value and are blocked by (provider, event_id) in
+ *    webhook_events; when the resource state really changes, updated_at changes too, so nothing
+ *    is blocked by mistake.
+ * 2. **Invoice events aren't guaranteed to carry custom_data.** The docs only say it works for
+ *    Order / Subscription / license key events, so planId on subscription_payment_* is often
+ *    undefined — applySubscription in handle-event only uses planId when the subscription row has
+ *    no plan yet, so a missing one doesn't affect renewals.
  */
 export function parseLemonSqueezyEvent(payload: unknown): BillingEvent | null {
   const root = asObject(payload) as LemonSqueezyWebhook | undefined;
@@ -123,8 +141,8 @@ export function parseLemonSqueezyEvent(payload: unknown): BillingEvent | null {
   const resourceId = asId(data?.id);
   const occurredAt =
     asDate(attributes?.updated_at) ?? asDate(attributes?.created_at);
-  // 缺时间戳说明这不是我们认识的 payload 形状：宁可丢掉，也不要给它编一个随机事件 ID
-  // （那会让重推绕过幂等检查）。
+  // A missing timestamp means this isn't a payload shape we recognize: better to drop it than to
+  // make up a random event ID for it (which would let redeliveries bypass the idempotency check).
   if (
     !meta ||
     !data ||
@@ -194,8 +212,9 @@ export function parseLemonSqueezyEvent(payload: unknown): BillingEvent | null {
       });
 
     default:
-      // subscription_payment_recovered：官方说它总伴随一个 subscription_payment_success，
-      // 两个都记会重复计收入，所以只认后者。
+      // subscription_payment_recovered: per the docs it always comes with a
+      // subscription_payment_success, and recording both would double count revenue, so only the
+      // latter counts.
       return null;
   }
 }
@@ -216,17 +235,20 @@ function parseOrderCreated({
   const item = asObject(attributes.first_order_item);
   const planId = planIdOf(metaPlanId, item?.variant_id, item?.product_id);
   const plan = planId ? getPlan(planId) : undefined;
-  // Lemon Squeezy 对订阅也会发 order_created（官方：subscription_created 总伴随一个
-  // order_created），订阅首期的钱由 subscription_payment_success 记 —— 两边都记会让同一笔钱
-  // 在收入口径里算两次（见 src/core/admin/metrics.ts），所以订阅套餐不记订单。
-  // 反查不到套餐时按一次性记：宁可多记一笔收入，也不要漏账。
+  // Lemon Squeezy also sends order_created for subscriptions (per the docs, subscription_created
+  // always comes with an order_created), and the first period's money is recorded by
+  // subscription_payment_success — recording both would count the same money twice in revenue
+  // (see src/core/admin/metrics.ts), so subscription plans record no order.
+  // When no plan can be found, record it as one-time: better to over-record revenue once than to
+  // miss a payment.
   const oneTime = plan?.type === "one_time" || !plan;
   return {
     ...base,
     type: "checkout.completed",
     userId,
     customerId: asId(attributes.customer_id),
-    // 订单事件不带结账会话 ID，用订单 ID 占位（下游只用得到 orderId）。
+    // Order events carry no checkout session ID, so use the order ID as a placeholder (downstream
+    // only needs orderId).
     checkoutId: resourceId,
     planId,
     orderId: oneTime ? resourceId : undefined,
@@ -236,19 +258,23 @@ function parseOrderCreated({
 }
 
 /**
- * 订阅事件按 `attributes.status` 分派，而不是按事件名 —— 两者可能不一致（subscription_updated
- * 是官方的 catch-all，取消之后也可能推一条它是 cancelled 的更新）。按事件名一律映射成 active
- * 会把已取消的订阅"复活"。
+ * Subscription events are dispatched by `attributes.status`, not by event name — the two can
+ * disagree (subscription_updated is the official catch-all, and after a cancellation it may still
+ * push an update saying the subscription is cancelled). Mapping by event name to active across the
+ * board would "revive" canceled subscriptions.
  *
- * - active / on_trial → subscription.active（renews_at 作为账期结束）
+ * - active / on_trial → subscription.active (renews_at as the period end)
  * - past_due / unpaid → payment.failed
- * - cancelled → subscription.canceled（ends_at 作为还能用到的时间：取消后仍有宽限期）
+ * - cancelled → subscription.canceled (ends_at as the time access lasts until: there is a grace
+ *   period after canceling)
  * - expired → subscription.expired
- * - **paused / pause → 忽略**。订阅状态表里没有 paused（只有 active / past_due / canceled /
- *   expired），映射成 past_due 会触发一封"付款失败"邮件（emails.ts 的 payment.failed 分支），
- *   而暂停期间并没有付款失败这回事；映射成 canceled 又会错误地收回访问权。所以保持订阅行
- *   上一次的状态，等 subscription_unpaused（status 回到 active）或 subscription_expired 修正。
- * - 其他未知状态 → null（不猜）
+ * - **paused / pause → ignored.** The subscription status table has no paused (only active /
+ *   past_due / canceled / expired). Mapping it to past_due would trigger a "payment failed" email
+ *   (the payment.failed branch in emails.ts) even though no payment failed during the pause;
+ *   mapping it to canceled would wrongly revoke access. So keep the subscription row's previous
+ *   status and wait for subscription_unpaused (status back to active) or subscription_expired to
+ *   correct it.
+ * - Any other unknown status → null (no guessing)
  */
 function parseSubscriptionEvent({
   base,
@@ -292,7 +318,8 @@ function parseSubscriptionEvent({
       return {
         ...common,
         type: "subscription.canceled",
-        // 取消后到 ends_at 之前还能用（宽限期），renews_at 此时通常为 null。
+        // After canceling it stays usable until ends_at (grace period); renews_at is usually null
+        // at this point.
         currentPeriodEnd: asDate(attributes.ends_at) ?? period.currentPeriodEnd,
       };
     case "expired":
@@ -303,9 +330,10 @@ function parseSubscriptionEvent({
 }
 
 /**
- * subscription_payment_success / _failed：data 是 invoice 对象（type `subscription-invoices`）。
- * invoice 里没有 product_id / variant_id，planId 只能来自 meta.custom_data（官方没承诺 invoice
- * 事件带它）—— 拿不到就留 undefined，让 applySubscription 保留订阅行上已有的套餐。
+ * subscription_payment_success / _failed: data is an invoice object (type
+ * `subscription-invoices`). Invoices have no product_id / variant_id, so planId can only come from
+ * meta.custom_data (which the docs don't promise on invoice events) — if it's missing, leave it
+ * undefined so applySubscription keeps the plan already on the subscription row.
  */
 function parseInvoiceEvent({
   base,
@@ -330,7 +358,8 @@ function parseInvoiceEvent({
     ...base,
     userId,
     customerId,
-    // orderId 用 invoice ID：订阅的每一笔付款（含首期）在 orders 里一行。
+    // orderId is the invoice ID: each subscription payment (including the first) gets one row in
+    // orders.
     orderId: resourceId,
     subscriptionId,
     planId: metaPlanId,
@@ -341,29 +370,35 @@ function parseInvoiceEvent({
     return {
       ...common,
       type: "subscription.renewed",
-      // invoice 的 created_at 就是这次账期的开始：积分按「订阅 + 账期」发放，
-      // 键要稳定（见 grant-credits.ts 的 billingGrantSourceId）。
+      // The invoice's created_at is the start of this billing period: credits are granted per
+      // "subscription + period", so the key must be stable (see billingGrantSourceId in
+      // grant-credits.ts).
       currentPeriodStart: asDate(attributes.created_at),
     };
   }
-  // 失败的 invoice 也记一行订单（status = failed）：收入口径只认 paid / refunded 那几个状态
-  // （见 metrics.ts 的 collectedStatuses），不影响收入统计；之后这笔钱收上来时
-  // subscription_payment_success 会把同一行改成 paid（mergeOrder 里付款成功优先）。
+  // A failed invoice also records an order row (status = failed): revenue only counts the paid /
+  // refunded statuses (see collectedStatuses in metrics.ts), so revenue stats are unaffected; when
+  // the money is collected later, subscription_payment_success turns the same row into paid
+  // (a successful payment wins in mergeOrder).
   return { ...common, type: "payment.failed" };
 }
 
 /**
- * 退款。**只在能证明是全额退款时才映射**：
+ * Refunds. **Mapped only when it can be proven to be a full refund**:
  *
- * - `refunded_amount` 是订单/invoice 的**累计**已退金额，而下游的 `refund.created` 契约是
- *   **这一次退款的新增金额**（handle-event 的 mergeOrder 把 refund 累加）。把累计值当新增值
- *   发出去，同一张订单第二次部分退款就会重复计数、多回收积分。
- * - 两个对象的 `status` 都有 `refunded` 这一档，文档写的是「已付款但**此后被全额退款**」
- *   （invoice）/ 订单状态表里的 refunded；这是唯一能区分全额与部分退款的字段，所以要求它。
- *   再加上 `refunded_amount >= total` 兜底 —— 全额退款只发生一次，这样发出去的 `amount`
- *   既不重复也不会算错。
- * - **已知缺口：部分退款不映射**（status 还是 paid / 累计金额没到总额）。这类订单的积分不会
- *   被自动回收，需要人工处理。宁可不回收，也不要把钱算错 —— 不猜金额、不发半笔退款。
+ * - `refunded_amount` is the **cumulative** refunded amount on the order/invoice, while the
+ *   downstream `refund.created` contract is **the amount added by this refund** (mergeOrder in
+ *   handle-event accumulates refunds). Emitting the cumulative value as the increment would double
+ *   count the second partial refund on the same order and reclaim too many credits.
+ * - Both objects have a `refunded` value for `status`; the docs describe it as "paid but
+ *   **subsequently fully refunded**" (invoice) / refunded in the order status table. It is the
+ *   only field that distinguishes full from partial refunds, so it is required, with
+ *   `refunded_amount >= total` as a backstop — a full refund happens only once, so the emitted
+ *   `amount` is neither duplicated nor miscalculated.
+ * - **Known gap: partial refunds are not mapped** (status is still paid / the cumulative amount
+ *   hasn't reached the total). Credits for such orders are not reclaimed automatically and need
+ *   manual handling. Better not to reclaim than to get the money wrong — no guessing amounts, no
+ *   emitting half a refund.
  */
 function parseRefundEvent({
   base,
@@ -399,8 +434,9 @@ function parseRefundEvent({
     userId,
     customerId,
     orderId: resourceId,
-    // 全额退款一个订单只发生一次；refunded_at 稳定，重复投递时回收流水的
-    // (source, sourceId) 也认得出是同一笔（见 reclaim-credits.ts）。
+    // A full refund happens only once per order; refunded_at is stable, so on redelivery the
+    // reclaim ledger entry's (source, sourceId) also recognizes it as the same refund (see
+    // reclaim-credits.ts).
     refundId: (refundedAt ?? base.occurredAt).toISOString(),
     amount,
     currency,
@@ -415,11 +451,11 @@ type EventBase = Pick<
 export type LemonSqueezyProviderOptions = {
   apiKey: string;
   webhookSecret: string;
-  /** 店铺 ID（`LEMONSQUEEZY_STORE_ID`）：创建结账会话必填。 */
+  /** Store ID (`LEMONSQUEEZY_STORE_ID`): required to create checkout sessions. */
   storeId: string;
-  /** 测试注入；默认按 apiKey 创建手写的 HTTP 客户端。 */
+  /** Injected by tests; defaults to the hand-written HTTP client built from apiKey. */
   client?: LemonSqueezyClient;
-  /** 测试注入假 fetch（只有没传 client 时生效）。 */
+  /** Fake fetch injected by tests (only used when no client is passed). */
   fetch?: LemonSqueezyFetch;
 };
 
@@ -442,11 +478,13 @@ export function createLemonSqueezyProvider({
         data: {
           type: "checkouts",
           attributes: {
-            // 回跳地址在 product_options 里，**不在** checkout_data 里（常见错误）。
+            // The redirect URL goes in product_options, **not** in checkout_data (a common
+            // mistake).
             product_options: { redirect_url: input.successUrl },
             checkout_data: {
               ...(input.customerEmail && { email: input.customerEmail }),
-              // 原样回到 webhook 的 meta.custom_data；invoice 事件除外（见上面的注释）。
+              // Echoed back unchanged in the webhook's meta.custom_data, except on invoice events
+              // (see the comment above).
               custom: { userId: input.userId, planId: input.planId },
             },
           },
@@ -462,15 +500,18 @@ export function createLemonSqueezyProvider({
       if (!url || !checkoutId) {
         throw new Error("Lemon Squeezy checkout has no url");
       }
-      // Lemon Squeezy 的结账页没有取消地址参数，用户关掉页面即可（input.cancelUrl 不使用）。
+      // Lemon Squeezy checkout has no cancel URL parameter; the user just closes the page
+      // (input.cancelUrl is unused).
       return { checkoutId, url };
     },
 
     /**
-     * 客户门户地址：`GET /v1/customers/:id` → `data.attributes.urls.customer_portal`。
-     * 这是预签名链接（24 小时有效），客户**没有任何订阅时该字段是 null** —— 调用方 openPortal
-     * 按「这个用户还没有客户记录」返回 no_customer，那是另一条边界（客户记录存在但订阅已全部
-     * 结束），这里只能明确报错，让用户在服务商后台或重新下单解决。
+     * Customer portal URL: `GET /v1/customers/:id` → `data.attributes.urls.customer_portal`.
+     * It is a pre-signed link (valid for 24 hours), and **the field is null when the customer has
+     * no subscriptions** — the caller openPortal returns no_customer for "this user has no
+     * customer record yet", which is a different edge case (here the customer record exists but
+     * all subscriptions have ended), so all we can do is throw a clear error and let the user
+     * sort it out in the provider's portal or by ordering again.
      */
     async getPortalUrl(customerId: string): Promise<string> {
       const document = await lemonSqueezy.request(
@@ -491,9 +532,12 @@ export function createLemonSqueezyProvider({
     },
 
     /**
-     * 取消订阅：`DELETE /v1/subscriptions/:id` 取消**后续扣款**，用户可以用到 `ends_at`。
-     * 对「删号前停掉续费」这是正确语义（立即取消会把用户已付的当期也收走）。
-     * 已经是 cancelled / expired、或订阅不存在（404）都视为成功，和 creem.ts 对齐，便于重试。
+     * Cancels a subscription: `DELETE /v1/subscriptions/:id` cancels **future charges**, and the
+     * user keeps access until `ends_at`. That's the right semantics for "stop renewals before
+     * deleting the account" (canceling immediately would also take away the period the user
+     * already paid for).
+     * Already cancelled / expired, or subscription not found (404), all count as success, matching
+     * creem.ts, so retries are safe.
      */
     async cancelSubscription(subscriptionId: string): Promise<void> {
       try {
@@ -517,9 +561,10 @@ export function createLemonSqueezyProvider({
     },
 
     /**
-     * Lemon Squeezy 没有官方的验签 helper，按官方 Node 示例手写：`X-Signature` 头是
-     * HMAC-SHA256（webhook 的 signing secret 做密钥）的 **hex** 摘要，必须对**原始 body**
-     * 校验（`await request.text()`，不能先 JSON.parse 再序列化）。
+     * Lemon Squeezy has no official signature verification helper, so this is hand-written
+     * following the official Node example: the `X-Signature` header is the **hex** digest of an
+     * HMAC-SHA256 (keyed with the webhook's signing secret), and it must be verified against the
+     * **raw body** (`await request.text()`; never JSON.parse and re-serialize first).
      */
     async verifyWebhook(request: Request): Promise<unknown> {
       const body = await request.text();
@@ -531,7 +576,8 @@ export function createLemonSqueezyProvider({
         createHmac("sha256", webhookSecret).update(body).digest("hex"),
       );
       const actual = Buffer.from(signature);
-      // timingSafeEqual 对长度不等的 buffer 会抛异常，先比长度（长度不同必然不匹配）。
+      // timingSafeEqual throws on buffers of different lengths, so compare lengths first (different
+      // lengths can never match).
       if (
         actual.length !== expected.length ||
         !timingSafeEqual(actual, expected)
@@ -549,7 +595,7 @@ export function createLemonSqueezyProvider({
   };
 }
 
-/** 签名字段名，见 Lemon Squeezy 的 webhook 文档。 */
+/** Signature header name; see the Lemon Squeezy webhook docs. */
 const WEBHOOK_SIGNATURE_HEADER = "X-Signature";
 
 function planVariantId(planId: string) {
@@ -557,7 +603,7 @@ function planVariantId(planId: string) {
   if (!plan?.providerProductId) {
     throw new Error(`Plan "${planId}" has no providerProductId`);
   }
-  // Lemon Squeezy 结账用 variant（变体）ID，不是 product ID：site.config.ts 的
-  // providerProductId 在 lemonsqueezy 下填的是 LEMONSQUEEZY_VARIANT_ID_*。
+  // Lemon Squeezy checkout uses the variant ID, not the product ID: under lemonsqueezy, the
+  // providerProductId in site.config.ts holds LEMONSQUEEZY_VARIANT_ID_*.
   return plan.providerProductId;
 }

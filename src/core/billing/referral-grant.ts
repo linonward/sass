@@ -54,10 +54,11 @@ async function inviterRewardsInPeriod(
 }
 
 /**
- * 发放推荐奖励的 onBillingEvent 钩子。
+ * onBillingEvent hook that grants referral rewards.
  *
- * 在事件事务内原子执行：查关系 → 校验规则 → 发放双方积分 → 推进状态 → 偿还旧债。
- * 重复由 credit_transactions 的 (source, sourceId) 唯一约束挡住。
+ * Runs atomically inside the event transaction: look up the relationship → validate rules → grant
+ * credits to both sides → advance the status → pay off old debt.
+ * Duplicates are blocked by the unique (source, sourceId) constraint on credit_transactions.
  */
 export function createReferralGrantHandler({
   enabled,
@@ -84,7 +85,7 @@ export function createReferralGrantHandler({
     )
       return;
 
-    // 查找邀请关系
+    // Find the referral relationship
     const [rel] = await tx
       .select({
         inviteeUserId: referralRelationships.inviteeUserId,
@@ -102,11 +103,11 @@ export function createReferralGrantHandler({
 
     if (!rel) return;
 
-    // 冻结规则：优先用关系创建时的快照
+    // Frozen rules: prefer the snapshot taken when the relationship was created
     const frozenRule = (rel.ruleSnapshot as typeof rule | null) ?? rule;
     if (!isRewardActive(frozenRule)) return;
 
-    // 校验邀请人未封禁
+    // Check that the referrer isn't banned
     const [inviter] = await tx
       .select({ id: user.id, banned: user.banned, banExpires: user.banExpires })
       .from(user)
@@ -115,7 +116,7 @@ export function createReferralGrantHandler({
 
     const now = new Date();
 
-    // 日/月上限检查
+    // Daily/monthly cap check
     if (frozenRule.dailyCapPerInviter) {
       const dayStart = new Date(now);
       dayStart.setUTCHours(0, 0, 0, 0);
@@ -155,7 +156,7 @@ export function createReferralGrantHandler({
       }
     }
 
-    // 校验计划和最低支付金额（可从 event 上拿到）
+    // Check the plan and the minimum payment amount (available on the event)
     const planId =
       "planId" in event ? (event as { planId?: string }).planId : undefined;
     const orderAmount =
@@ -182,7 +183,7 @@ export function createReferralGrantHandler({
     const provider = event.provider;
     const rewardId = randomUUID();
 
-    // 发放双方积分（事务内，任一失败回滚全部）
+    // Grant credits to both sides (inside the transaction; any failure rolls everything back)
     if (frozenRule.inviterCredits > 0) {
       await grantCredits(
         {
@@ -209,7 +210,7 @@ export function createReferralGrantHandler({
       );
     }
 
-    // 写奖励记录
+    // Write the reward records
     await tx.insert(referralRewards).values({
       id: rewardId,
       inviteeUserId: userId,
@@ -228,7 +229,7 @@ export function createReferralGrantHandler({
           : null,
     });
 
-    // 推进状态
+    // Advance the status
     await tx
       .update(referralRelationships)
       .set({
@@ -237,7 +238,7 @@ export function createReferralGrantHandler({
       })
       .where(eq(referralRelationships.inviteeUserId, userId));
 
-    // 偿还原有债务
+    // Pay off existing debt
     await repayReferralDebts(tx, userId);
     if (frozenRule.inviterCredits > 0) {
       await repayReferralDebts(tx, rel.inviterUserId);

@@ -11,18 +11,23 @@ import { createWaffoProvider } from "./waffo";
 let cached: PaymentProvider | null | undefined;
 
 /**
- * 是否启用了测试用的 fake 服务商。env 校验已经拒绝在生产运行时、Vercel 或 live 模式下设为 fake，
- * 这里按运行时环境再判断一次，fake 相关路由据此决定是否返回 404。
+ * Whether the test-only fake provider is active. Env validation already rejects `fake` in the
+ * production runtime, on Vercel, or in live mode; this checks the runtime environment once more,
+ * and the fake routes use the result to decide whether to return 404.
  */
 export function fakeBillingActive() {
   return env.BILLING_PROVIDER === "fake" && fakeBillingAllowed(process.env);
 }
 
 /**
- * 当前配置的支付服务商，按 `BILLING_PROVIDER` 分派（默认值来自 site.config.ts 的 billing.provider）。
- * 没配 key 时返回 null：结账和 webhook 接口返回 503，其他功能照常。
- * 生产环境有付费套餐时 env 校验会要求**生效**服务商的 key，不会走到 null。
- * 加服务商时改这里和 env.ts 的 billingProviderNames，其他代码不用动。
+ * The configured payment provider, dispatched on `BILLING_PROVIDER` (the default comes from
+ * billing.provider in site.config.ts).
+ * Returns null when keys are missing: the checkout and webhook endpoints return 503 and everything
+ * else keeps working.
+ * In production with paid plans, env validation requires the keys of the **active** provider, so
+ * this never reaches null there.
+ * To add a provider, change this function and billingProviderNames in env.ts; no other code needs
+ * to change.
  */
 export function getBillingProvider(): PaymentProvider | null {
   if (cached !== undefined) return cached;

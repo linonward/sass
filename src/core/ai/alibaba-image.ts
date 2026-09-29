@@ -4,11 +4,12 @@ import {
   type SharedV4Warning,
 } from "@ai-sdk/provider";
 
-/** AI SDK 百炼 provider 的默认地址（国际站）。 */
+/** Default base URL of the AI SDK Alibaba Model Studio (Bailian) provider (international site). */
 const DEFAULT_BASE_URL =
   "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 
-// 画幅到百炼尺寸（宽*高）。取 qwen-image 推荐的几档，wan 图片模型也支持。
+// Aspect ratio to Model Studio size (width*height). These are the sizes qwen-image recommends; the
+// wan image models support them too.
 const SIZES: Record<string, string> = {
   "1:1": "1328*1328",
   "16:9": "1664*928",
@@ -26,10 +27,11 @@ type ResponseBody = {
 };
 
 /**
- * 百炼图片模型（qwen-image-*、wan*-image*）的 ImageModelV4 实现。
- * `@ai-sdk/alibaba` 没有图片模型，这里直接调百炼原生的同步接口：
- * POST {origin}/api/v1/services/aigc/multimodal-generation/generation。
- * 接口返回有效期 24 小时的图片地址，这里下载成字节交给调用方存储。
+ * ImageModelV4 implementation for Model Studio image models (qwen-image-*, wan*-image*).
+ * `@ai-sdk/alibaba` has no image model, so this calls Model Studio's native synchronous endpoint
+ * directly: POST {origin}/api/v1/services/aigc/multimodal-generation/generation.
+ * The endpoint returns an image URL that is valid for 24 hours; we download it as bytes and hand
+ * them to the caller to store.
  */
 export function createAlibabaImageModel(
   modelId: string,
@@ -39,7 +41,7 @@ export function createAlibabaImageModel(
     fetch = globalThis.fetch,
   }: { apiKey: string; baseURL?: string; fetch?: typeof globalThis.fetch },
 ): ImageModelV4 {
-  // ALIBABA_BASE_URL 是 OpenAI 兼容地址，原生接口在同一个域名下。
+  // ALIBABA_BASE_URL is the OpenAI-compatible URL; the native endpoint lives on the same host.
   const url = `${new URL(baseURL).origin}/api/v1/services/aigc/multimodal-generation/generation`;
 
   return {
@@ -107,7 +109,7 @@ export function createAlibabaImageModel(
       try {
         body = JSON.parse(text) as ResponseBody;
       } catch {
-        // 非 JSON 的错误页，下面按状态码报错。
+        // Non-JSON error page; the error is reported by status code below.
       }
       const imageUrl = body.output?.choices?.[0]?.message?.content?.find(
         (part) => part.image,

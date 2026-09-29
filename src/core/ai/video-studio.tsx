@@ -25,8 +25,9 @@ type VideoModelOption = {
 type FirstFrame = { fileId: string; url: string };
 
 /**
- * 示例视频生成：文生视频或图生视频（首帧选最近生成的图片，或上传一张）。
- * 提交后由 GenerationsProvider 轮询任务状态；刷新页面后会继续轮询还没完成的任务。
+ * Example video generation: text-to-video or image-to-video (the first frame is a recently
+ * generated image or an upload). After submitting, GenerationsProvider polls the job status; after
+ * a page reload it keeps polling jobs that haven't finished.
  */
 export function VideoStudio({
   models,
@@ -53,7 +54,7 @@ export function VideoStudio({
     clearVideoFailed,
   } = useGenerations();
   const images = generations.filter((g) => g.kind === "image");
-  // 本页的错误优先；否则显示轮询发现的失败任务（已退款）。
+  // This page's own error wins; otherwise show a failed job found by polling (already refunded).
   const shownError = error ?? (videoFailed ? "video_failed" : null);
   const videos = generations.filter((g) => g.kind === "video");
   const fileInput = useRef<HTMLInputElement>(null);

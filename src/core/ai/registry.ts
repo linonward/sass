@@ -33,7 +33,7 @@ const factories = {
     createAlibaba({ apiKey, baseURL: keys.ALIBABA_BASE_URL }),
 } satisfies Record<AiProvider, (apiKey: string, keys: ProviderKeys) => unknown>;
 
-/** env 里配置了 key 的服务商。 */
+/** Providers that have a key configured in env. */
 export function enabledProviders(keys: ProviderKeys): AiProvider[] {
   return (Object.keys(aiProviderKeys) as AiProvider[]).filter((provider) =>
     Boolean(keys[aiProviderKeys[provider]]),
@@ -41,8 +41,8 @@ export function enabledProviders(keys: ProviderKeys): AiProvider[] {
 }
 
 /**
- * 按 env 里的 key 创建 provider registry（模型 ID 形如 "openai:gpt-5-mini"），
- * 返回 getModel：服务商没有 key 时返回 null，由 runAI 转成 503。
+ * Builds the provider registry from the keys in env (model IDs look like "openai:gpt-5-mini") and
+ * returns getModel: it returns null when the provider has no key, which runAI turns into a 503.
  */
 export function createModelResolver(keys: ProviderKeys) {
   const providers = enabledProviders(keys);
@@ -72,7 +72,7 @@ const imageFactories = {
   (model: string, apiKey: string, keys: ProviderKeys) => ImageModelV4
 >;
 
-/** 图片模型：服务商没有 key 时返回 null，由 runImage 转成 503。 */
+/** Image model: returns null when the provider has no key, which runImage turns into a 503. */
 export function createImageModelResolver(keys: ProviderKeys) {
   const providers = enabledProviders(keys);
   return (model: AiImageModel): ImageModelV4 | null =>
@@ -85,7 +85,10 @@ export function createImageModelResolver(keys: ProviderKeys) {
       : null;
 }
 
-/** 视频客户端：服务商没有 key 时返回 null，由视频接口转成 503。 */
+/**
+ * Video client: returns null when the provider has no key, which the video endpoint turns into a
+ * 503.
+ */
 export function createVideoClientResolver(keys: ProviderKeys) {
   const providers = enabledProviders(keys);
   return (model: AiVideoModel): VideoClient | null =>

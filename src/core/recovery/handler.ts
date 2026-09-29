@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
-/** 常量时间比较：别让逐字节比较的耗时差泄露密钥。 */
+/** Constant-time comparison: don't let timing differences in a byte-by-byte compare leak the secret. */
 function sameSecret(given: string, expected: string) {
   const a = Buffer.from(given);
   const b = Buffer.from(expected);
@@ -8,12 +8,13 @@ function sameSecret(given: string, expected: string) {
 }
 
 /**
- * `GET /api/cron/recovery`：校验 `Authorization: Bearer <CRON_SECRET>` 后跑一次恢复。
+ * `GET /api/cron/recovery`: checks `Authorization: Bearer <CRON_SECRET>`, then runs recovery once.
  *
- * - 没设 `CRON_SECRET`：404，入口等于不存在；
- * - 头不对：401；
- * - 头对：跑 `run()`，返回它的汇总。另一个实例正在跑时 `run()` 自己会跳过（租约），
- *   所以平台重复投递、调度器重叠触发都是安全的。
+ * - `CRON_SECRET` not set: 404, as if the endpoint did not exist;
+ * - wrong header: 401;
+ * - correct header: runs `run()` and returns its summary. If another instance is already running,
+ *   `run()` skips on its own (lease), so duplicate platform deliveries and overlapping scheduler
+ *   triggers are both safe.
  */
 export async function handleCronRecovery<T>(
   request: Request,

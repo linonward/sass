@@ -29,7 +29,7 @@ import {
 import { FakeProvider } from "./testing/fake-provider";
 import { processWebhook } from "./webhook";
 
-// 模拟多语言站点，第二门语言的文案由 en.json 伪翻译而来。
+// Simulate a multilingual site; the second language's copy is pseudo-translated from en.json.
 vi.mock("@/core/i18n/routing", () => ({
   routing: { locales: ["en", "de"], defaultLocale: "en" },
 }));
@@ -55,17 +55,18 @@ const url = process.env.DATABASE_URL_TEST;
 if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
-if (!url) console.warn("跳过账单邮件测试：未设置 DATABASE_URL_TEST");
+if (!url)
+  console.warn("Skipping billing email tests: DATABASE_URL_TEST is not set");
 
 type Sent = SendEmailOptions<
   "payment-succeeded" | "payment-failed" | "subscription-canceled"
 >;
 
-describe("billingEmailFor 触发映射", () => {
+describe("billingEmailFor trigger mapping", () => {
   const fake = new FakeProvider();
   test.each([
     [
-      "一次性购买",
+      "one-time purchase",
       fake.event("checkout.completed", {
         checkoutId: "c",
         orderId: "ord_1",
@@ -74,7 +75,7 @@ describe("billingEmailFor 触发映射", () => {
       "payment-succeeded",
     ],
     [
-      "订阅结账（由续费事件负责）",
+      "subscription checkout (handled by the renewal event)",
       fake.event("checkout.completed", {
         checkoutId: "c",
         orderId: "ord_1",
@@ -83,32 +84,32 @@ describe("billingEmailFor 触发映射", () => {
       null,
     ],
     [
-      "订阅续费",
+      "subscription renewal",
       fake.event("subscription.renewed", { subscriptionId: "sub_1" }),
       "payment-succeeded",
     ],
     [
-      "付款失败",
+      "payment failed",
       fake.event("payment.failed", { subscriptionId: "sub_1" }),
       "payment-failed",
     ],
     [
-      "订阅取消",
+      "subscription canceled",
       fake.event("subscription.canceled", { subscriptionId: "sub_1" }),
       "subscription-canceled",
     ],
     [
-      "订阅激活",
+      "subscription activated",
       fake.event("subscription.active", { subscriptionId: "sub_1" }),
       null,
     ],
     [
-      "订阅过期",
+      "subscription expired",
       fake.event("subscription.expired", { subscriptionId: "sub_1" }),
       null,
     ],
     [
-      "退款",
+      "refund",
       fake.event("refund.created", {
         orderId: "ord_1",
         refundId: "ref_1",
@@ -123,7 +124,7 @@ describe("billingEmailFor 触发映射", () => {
     );
   });
 
-  test("旧事件：付款成功照发，付款失败和取消不发", () => {
+  test("old events: payment-succeeded is still sent, payment-failed and cancellation are not", () => {
     expect(
       billingEmailFor(
         fake.event("subscription.renewed", { subscriptionId: "s" }),
@@ -144,7 +145,7 @@ describe("billingEmailFor 触发映射", () => {
   });
 });
 
-describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
+describe.skipIf(!url)("billing emails (real Postgres)", () => {
   let client: DbClient;
   let db: DbClient["db"];
   let userId: string;
@@ -174,7 +175,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     );
   }
 
-  /** 这个用户的去重名额（每个用例用新用户，所以不会串）。 */
+  /** This user's dedup slots (each case uses a new user, so they don't mix). */
   const claims = () =>
     db.select().from(notificationLog).where(eq(notificationLog.userId, userId));
   const outboxRows = () =>
@@ -218,7 +219,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     useHandler();
   });
 
-  test("一次性购买：发一封 payment-succeeded，按用户语言、带金额和积分", async () => {
+  test("one-time purchase: sends one payment-succeeded in the user's locale, with amount and credits", async () => {
     await handle(
       fake.event("checkout.completed", {
         userId,
@@ -245,7 +246,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     });
   });
 
-  test("订阅首期：结账完成和首期付款两个事件只发一封", async () => {
+  test("first subscription period: checkout completed and first payment send only one email", async () => {
     const sub = `sub_${randomUUID()}`;
     await handle(
       fake.event("checkout.completed", {
@@ -269,14 +270,14 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     expect(sent[0]!.props).toMatchObject({
       kind: "subscription",
       planName: "[de] Pro",
-      // 事件没带金额时用套餐标价。
+      // When the event carries no amount, the plan's list price is used.
       amount: 1900,
       currency: "USD",
       renewsAt: "2026-10-25T00:00:00.000Z",
     });
   });
 
-  test("同一笔付款换了事件 ID 再推一次，不重复发信", async () => {
+  test("the same payment pushed again with a new event ID doesn't send twice", async () => {
     const sub = `sub_${randomUUID()}`;
     const fields = {
       userId,
@@ -289,7 +290,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("同一事件重复投递：第二次是 duplicate，不再发信", async () => {
+  test("repeated delivery of the same event: the second is a duplicate and sends nothing", async () => {
     const event = fake.event("payment.failed", {
       userId,
       subscriptionId: `sub_${randomUUID()}`,
@@ -301,7 +302,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     expect(sent.map((m) => m.template)).toEqual(["payment-failed"]);
   });
 
-  test("下一个账期的续费会再发一封", async () => {
+  test("a renewal for the next billing period sends another email", async () => {
     const sub = `sub_${randomUUID()}`;
     await handle(
       fake.event("subscription.renewed", {
@@ -323,7 +324,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     expect(sent).toHaveLength(2);
   });
 
-  test("订阅取消：带到期日；同一订阅只通知一次", async () => {
+  test("subscription canceled: includes the end date; only one notice per subscription", async () => {
     const sub = `sub_${randomUUID()}`;
     const renewed = period("2026-09-25T00:00:00.000Z");
     await handle(
@@ -344,7 +345,8 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
         occurredAt: new Date(occurredAt),
       });
     await handle(cancel("2026-09-26T00:00:00.000Z"));
-    // 例如 Creem 先推 scheduled_cancel、到期时再推 canceled，都映射为 subscription.canceled。
+    // e.g. Creem pushes scheduled_cancel first and canceled at expiry; both map to
+    // subscription.canceled.
     await handle(cancel("2026-10-25T00:00:00.000Z"));
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
@@ -356,7 +358,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     });
   });
 
-  test("乱序的旧取消事件不发信", async () => {
+  test("an old out-of-order cancel event sends nothing", async () => {
     const sub = `sub_${randomUUID()}`;
     await handle(
       fake.event("subscription.renewed", {
@@ -379,7 +381,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     expect(sent).toHaveLength(0);
   });
 
-  test("事务回滚时不发信，去重名额也一起回滚", async () => {
+  test("no email on transaction rollback, and the dedup slot rolls back too", async () => {
     registerOnBillingEvent("test:boom", () => {
       throw new Error("later hook failed");
     });
@@ -397,13 +399,13 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
       .where(eq(notificationLog.userId, userId));
     expect(claims).toHaveLength(0);
 
-    // 服务商重试同一事件：这次成功，邮件正常发出。
+    // The provider retries the same event: this time it succeeds and the email goes out normally.
     useHandler();
     expect((await handle(event)).status).toBe("processed");
     expect(sent).toHaveLength(1);
   });
 
-  test("发信失败：webhook 仍返回 200，订单照常更新", async () => {
+  test("send failure: webhook still returns 200 and the order still updates", async () => {
     failSend = true;
     const orderId = `ord_${randomUUID()}`;
     const response = await processWebhook(
@@ -424,7 +426,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     expect(await response.json()).toMatchObject({ status: "processed" });
   });
 
-  test("发送失败会重试：瞬时故障之后照样发出，名额保留", async () => {
+  test("failed sends are retried: sent after a transient failure, slot kept", async () => {
     let calls = 0;
     useHandler(
       async (message: Sent) => {
@@ -445,13 +447,13 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
 
     expect(calls).toBe(2);
     expect(sent.map((m) => m.template)).toEqual(["payment-succeeded"]);
-    // 发成功的那次留着名额：同一笔付款再推一次不会重复发。
+    // The successful send keeps its slot: pushing the same payment again doesn't send twice.
     expect(await claims()).toHaveLength(1);
     await handle(fake.event("subscription.renewed", fields));
     expect(sent).toHaveLength(1);
   });
 
-  test("立即发送失败：邮件留在 outbox、名额保留；重放不多排一封，服务恢复后补发扫描只发一封", async () => {
+  test("immediate send fails: email stays in the outbox and the slot is kept; a replay doesn't queue another, and after recovery the resend sweep sends exactly one", async () => {
     useHandler(capture, { attempts: 2, delayMs: 1 });
 
     const sub = `sub_${randomUUID()}`;
@@ -462,7 +464,8 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
       ...period("2026-09-25T00:00:00.000Z"),
     };
 
-    // 发不出去（服务商宕机、SMTP 拒绝）：事件照常处理，邮件留在库里。
+    // Can't send (provider down, SMTP rejected): the event is still handled and the email stays in
+    // the database.
     failSend = true;
     expect(
       (await handle(fake.event("subscription.renewed", fields))).status,
@@ -478,11 +481,12 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
       }),
     ]);
 
-    // 同一笔付款换事件 ID 重推：名额还占着，不会再排一封。
+    // Same payment re-pushed with a new event ID: the slot is still held, so no second email is queued.
     await handle(fake.event("subscription.renewed", fields));
     expect(await outboxRows()).toHaveLength(1);
 
-    // 服务恢复：补发扫描（新实例，相当于应用重启后）发出去，扫两遍也只有一封。
+    // Service recovers: the resend sweep (a new instance, as after an app restart) sends it; two
+    // sweeps still send only one.
     failSend = false;
     const later = createOutbox({
       db,
@@ -496,7 +500,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     expect(await claims()).toHaveLength(1);
   });
 
-  test("EMAIL_TRANSPORT=file：真实渲染并写入发件箱", async () => {
+  test("EMAIL_TRANSPORT=file: really renders and writes to the outbox folder", async () => {
     const previous = process.env.EMAIL_TRANSPORT;
     process.env.EMAIL_TRANSPORT = "file";
     try {
@@ -523,7 +527,7 @@ describe.skipIf(!url)("账单邮件（真实 Postgres）", () => {
     }
   });
 
-  test("用户删除后去重记录随之删除", async () => {
+  test("dedup records are deleted along with the user", async () => {
     await handle(
       fake.event("payment.failed", {
         userId,

@@ -25,7 +25,9 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过视频测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping video tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
 const config = aiConfigSchema.parse({
@@ -54,7 +56,7 @@ const allowed: RateLimitResult = { ok: true, retryAfter: 0 };
 const VIDEO_URL = "https://dashscope-result.test/v.mp4";
 const mp4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70]);
 
-/** 可控的视频客户端：status 返回 next 的当前值。 */
+/** Controllable video client: status returns the current value of next. */
 function mockClient() {
   const state: { next: VideoTaskStatus } = { next: { status: "pending" } };
   const client = {
@@ -154,7 +156,7 @@ describe.skipIf(!url)("videoService", () => {
       );
   }
 
-  test("文生视频：提交扣积分、记下 taskId；完成后转存 R2，重复查询不重复下载", async () => {
+  test("text-to-video: submitting deducts credits and records taskId; on completion copies to R2, and repeated queries don't download again", async () => {
     const userId = await newUser(50);
     const s = setup();
     const started = await s.startVideo({
@@ -220,7 +222,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(await credits.getBalance(userId)).toBe(30);
   });
 
-  test("并发查询同一个完成的任务：只写一条 files，状态为 succeeded", async () => {
+  test("concurrent queries of the same finished job: only one files row is written and the status is succeeded", async () => {
     const userId = await newUser(50);
     const s = setup();
     const started = await s.startVideo({ userId, prompt: "hi" });
@@ -239,7 +241,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(rows).toHaveLength(1);
   });
 
-  test("图生视频：首帧用自己的图片文件地址，时长和分辨率取配置", async () => {
+  test("image-to-video: the first frame uses the user's own image file URL; duration and resolution come from config", async () => {
     const userId = await newUser(50);
     const image = await imageFile(userId);
     const s = setup();
@@ -262,7 +264,7 @@ describe.skipIf(!url)("videoService", () => {
     );
   });
 
-  test("图生视频的首帧不是自己的图片时 400，不扣积分", async () => {
+  test("image-to-video returns 400 when the first frame isn't the user's own image, deducting no credits", async () => {
     const userId = await newUser(50);
     const other = await newUser(0);
     const s = setup();
@@ -286,7 +288,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(await credits.getBalance(userId)).toBe(50);
   });
 
-  test("提交失败：502，积分退回", async () => {
+  test("submission fails: 502, credits refunded", async () => {
     const userId = await newUser(50);
     const s = setup();
     s.client.start.mockRejectedValueOnce(new Error("provider down"));
@@ -297,7 +299,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(await refunds(userId)).toHaveLength(1);
   });
 
-  test("任务失败：退款一次，并发查询也只退一次", async () => {
+  test("job fails: refunded once, and only once even under concurrent queries", async () => {
     const userId = await newUser(50);
     const s = setup();
     const started = await s.startVideo({ userId, prompt: "hi" });
@@ -313,8 +315,9 @@ describe.skipIf(!url)("videoService", () => {
       status: "failed",
       error: "FAILED: DataInspectionFailed",
     });
-    // 并发的查询里，先结束的那次已经把任务记为 failed 时，后面的直接读库、不再查服务商，
-    // 所以调用次数是 1 到 3 次；要保证的是只退一次款（上面已检查）。已结束的任务不再查询。
+    // Among concurrent queries, once the first to finish has marked the job failed, later ones read
+    // the database directly without asking the provider, so the call count is 1 to 3; what matters
+    // is a single refund (checked above). Finished jobs are no longer queried.
     const calls = s.client.status.mock.calls.length;
     expect(calls).toBeGreaterThanOrEqual(1);
     expect(calls).toBeLessThanOrEqual(3);
@@ -323,7 +326,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(s.client.status).toHaveBeenCalledTimes(calls);
   });
 
-  test("超时仍未完成：退款，记为 failed", async () => {
+  test("still unfinished at timeout: refunded and recorded as failed", async () => {
     const userId = await newUser(50);
     const s = setup();
     const started = await s.startVideo({ userId, prompt: "hi" });
@@ -337,7 +340,7 @@ describe.skipIf(!url)("videoService", () => {
     );
   });
 
-  test("查询出错和下载失败在超时前都当作暂时性错误", async () => {
+  test("query errors and download failures before the timeout are both treated as transient", async () => {
     const userId = await newUser(50);
     const s = setup();
     const started = await s.startVideo({ userId, prompt: "hi" });
@@ -354,7 +357,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(await refunds(userId)).toHaveLength(0);
   });
 
-  test("没配置存储时：失败的任务照常退款，完成的任务等存储配好", async () => {
+  test("without storage configured: failed jobs are refunded as usual, finished jobs wait for storage", async () => {
     const userId = await newUser(50);
     const storage = new MemoryStorage();
     const s = setup({ storage });
@@ -380,7 +383,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(await credits.getBalance(userId)).toBe(30);
   });
 
-  test("别人的任务、不存在的 id 返回 404；未登录 401", async () => {
+  test("404 for another user's job or a nonexistent id; 401 when signed out", async () => {
     const userId = await newUser(50);
     const other = await newUser(0);
     const s = setup();
@@ -397,7 +400,7 @@ describe.skipIf(!url)("videoService", () => {
     }
   });
 
-  test("提交前的校验：余额不足 402、超限 429、未配置存储 503、参数 400", async () => {
+  test("pre-submission checks: 402 insufficient balance, 429 over the limit, 503 no storage configured, 400 bad params", async () => {
     const userId = await newUser(10);
     const cases = [
       [setup(), { prompt: "hi" }, 402, "insufficient_credits"],
@@ -424,7 +427,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(await credits.getBalance(userId)).toBe(10);
   });
 
-  test("转存与超时结算竞态：不产生「视频 + 退款」双拿，也不留孤儿对象", async () => {
+  test("race between the copy and timeout settlement: no double win of video plus refund and no orphaned object", async () => {
     const userId = await newUser(50);
     const storage = new MemoryStorage();
     const s = setup({ storage });
@@ -433,8 +436,9 @@ describe.skipIf(!url)("videoService", () => {
     const { id } = started.job;
     s.state.next = { status: "succeeded", videoUrl: VIDEO_URL };
 
-    // 在「下载完成、开始落库」的窗口里插一次并发查询：它看到任务仍在跑、但已超过超时
-    // 阈值，于是退款并置 failed —— 用户双开标签页时就是这个交错。
+    // Inject a concurrent query in the window between "download finished" and "writing to the
+    // database": it sees the job still running but past the timeout threshold, so it refunds and
+    // sets failed — exactly the interleaving you get when the user has two tabs open.
     const put = storage.putObject.bind(storage);
     vi.spyOn(storage, "putObject").mockImplementationOnce(async (input) => {
       await put(input);
@@ -447,12 +451,13 @@ describe.skipIf(!url)("videoService", () => {
 
     const raced = await s.pollVideo({ userId, id });
 
-    // 后到的这次不能报成功 —— 否则用户既拿到视频又拿到退款。
+    // The later call must not report success — otherwise the user gets both the video and the
+    // refund.
     expect(raced.ok && raced.job.status).toBe("failed");
     expect(await refunds(userId)).toHaveLength(1);
     expect(await credits.getBalance(userId)).toBe(50);
     expect((await usageRow(id)).status).toBe("failed");
-    // 没有孤儿：文件行被删掉，对象也从存储里删掉。
+    // No orphans: the files row is deleted and the object is removed from storage too.
     const rows = await dbClient.db
       .select()
       .from(files)
@@ -462,7 +467,7 @@ describe.skipIf(!url)("videoService", () => {
     expect(storage.deleted).toHaveLength(1);
   });
 
-  test("退款失败不会锁死终态：事务回滚，下一次查询重试并退成功", async () => {
+  test("a failed refund doesn't lock in the terminal state: the transaction rolls back and the next query retries and refunds", async () => {
     const userId = await newUser(50);
     const s = setup();
     const started = await s.startVideo({ userId, prompt: "hi" });
@@ -476,7 +481,8 @@ describe.skipIf(!url)("videoService", () => {
     try {
       const first = await s.pollVideo({ userId, id });
       expect(first.ok && first.job.status).toBe("failed");
-      // 状态和退款在同一事务里：退款失败 → 状态一起回滚，还是 pending，下次还能重试。
+      // Status and refund share a transaction: refund fails → the status rolls back with it, stays
+      // pending, and can be retried next time.
       expect((await usageRow(id)).status).toBe("pending");
       expect(await refunds(userId)).toHaveLength(0);
       expect(await credits.getBalance(userId)).toBe(30);

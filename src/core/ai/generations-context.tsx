@@ -14,7 +14,7 @@ import {
 import type { Generation } from "./image";
 import type { VideoJob } from "./video";
 
-// 视频通常 1–5 分钟完成。
+// Videos usually finish in 1–5 minutes.
 export const POLL_INTERVAL_MS = 5000;
 
 export type PendingVideo = { id: string; prompt: string };
@@ -22,7 +22,7 @@ export type PendingVideo = { id: string; prompt: string };
 type GenerationsContextValue = {
   generations: Generation[];
   pendingVideos: PendingVideo[];
-  // 有视频生成失败（已退款）时为 true，视频页据此提示。
+  // True when a video generation failed (and was refunded); the video page shows a notice for it.
   videoFailed: boolean;
   addGeneration: (generation: Generation) => void;
   addPendingVideo: (video: PendingVideo) => void;
@@ -32,11 +32,14 @@ type GenerationsContextValue = {
 const GenerationsContext = createContext<GenerationsContextValue | null>(null);
 
 /**
- * 图片页和视频页共用的生成记录。初始数据由服务端页面查好传入（只查一次），
- * 新生成的图片马上能在视频页选作首帧。
+ * Generation records shared by the image and video pages. The initial data is queried by the server
+ * page and passed in (queried only once), so a newly generated image can immediately be picked as a
+ * first frame on the video page.
  *
- * 还在生成的视频在这里轮询：每轮等所有请求返回后再排下一轮，同一个任务不会同时查两次
- * （完成时服务端要下载视频并写 R2，可能超过轮询间隔）。每次查询都会在服务端推进状态。
+ * Videos still being generated are polled here: each round waits for all requests to return before
+ * scheduling the next, so the same job is never queried twice at once (on completion the server
+ * downloads the video and writes it to R2, which can take longer than the poll interval). Every
+ * query advances state on the server.
  */
 export function GenerationsProvider({
   initialGenerations,
@@ -86,13 +89,14 @@ export function GenerationsProvider({
       try {
         const response = await fetch(`/api/ai/video/${id}`, {
           signal: controller.signal,
-          // 每轮都会推进服务端状态，不能落任何缓存（路由也设了 no-store）。
+          // Every round advances server state, so nothing may be cached (the route also sets
+          // no-store).
           cache: "no-store",
         });
         if (response.ok)
           settle(((await response.json()) as { job: VideoJob }).job);
       } catch {
-        // 网络错误下一轮再查；离开页面时 abort 走的也是这里。
+        // On a network error, retry next round; an abort on leaving the page also lands here.
       } finally {
         inFlight.current.delete(id);
       }

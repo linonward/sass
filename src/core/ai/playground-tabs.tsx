@@ -7,14 +7,18 @@ import { useId, useState, type ComponentProps } from "react";
 import { cn } from "@/core/lib/utils";
 import { Skeleton } from "@/core/ui/skeleton";
 
-// 只取类型：编译后不剩 import，真正的加载在下面 dynamic() 的 import() 里。
+// Types only: no import survives compilation; the real loading happens in the import() inside
+// dynamic() below.
 import type { ImageStudio } from "./image-studio";
 import type { Playground } from "./playground";
 import type { VideoStudio } from "./video-studio";
 
 export type PlaygroundTabId = "chat" | "image" | "video";
 
-/** 每个标签的 props 就是它内容组件的 props：从组件自己推导，组件加了 prop 这里跟着走。 */
+/**
+ * Each tab's props are its content component's props: derived from the component itself, so a new
+ * prop on the component flows through here.
+ */
 type TabProps = {
   chat: ComponentProps<typeof Playground>;
   image: ComponentProps<typeof ImageStudio>;
@@ -22,23 +26,27 @@ type TabProps = {
 };
 
 /**
- * 一个标签 = 它的 id + 内容组件的 props。
+ * A tab = its id + its content component's props.
  *
- * 以前这里是 `content: ReactNode`，元素由服务端页面构造。改成传数据是因为内容要按需加载：
- * `dynamic()` 只能写在客户端模块的顶层 —— 服务端组件里对客户端组件的动态 import 不做代码
- * 分割，`ssr: false` 在服务端组件里更是直接报错
- * （node_modules/next/dist/docs/01-app/02-guides/lazy-loading.md）。
- * 而且能过 RSC 边界的本来就只有可序列化的数据，元素也得在客户端用数据现造。
+ * This used to be `content: ReactNode`, with the element built by the server page. It passes data
+ * now because content has to load on demand: `dynamic()` can only live at the top level of a
+ * client module — a dynamic import of a client component inside a server component is not
+ * code-split, and `ssr: false` in a server component throws outright
+ * (node_modules/next/dist/docs/01-app/02-guides/lazy-loading.md).
+ * Besides, only serializable data can cross the RSC boundary anyway, so the element has to be built
+ * from data on the client.
  */
 export type PlaygroundTab = {
   [Id in PlaygroundTabId]: { id: Id } & TabProps[Id];
 }[PlaygroundTabId];
 
 /**
- * 内容组件，标签激活时才拉对应的 chunk（没打开过的标签不下载它的 JS）。
+ * Content components; a tab's chunk is fetched only when the tab is activated (tabs never opened
+ * don't download their JS).
  *
- * 三个都传了 `loading`：next/dynamic 只有在非 SSR 或有 loading 时才会自己套一层 Suspense，
- * 切标签时 chunk 还没到，不至于把整个标签栏一起挂起。
+ * All three pass `loading`: next/dynamic only wraps itself in a Suspense boundary when not SSR or
+ * when loading is set, so a chunk that hasn't arrived yet on tab switch doesn't suspend the whole
+ * tab bar with it.
  */
 const ChatTab = dynamic(
   () => import("./playground").then((mod) => mod.Playground),
@@ -53,14 +61,18 @@ const VideoTab = dynamic(
   { loading: TabLoading },
 );
 
-/** chunk 到达前的占位，和列表页的骨架同一套（bg-muted + pulse）。 */
+/**
+ * Placeholder until the chunk arrives, using the same skeleton as the list pages (bg-muted +
+ * pulse).
+ */
 function TabLoading() {
   return <Skeleton className="h-64 w-full" />;
 }
 
 /**
- * 按 id 分发。上面的映射类型已经保证「id 和 props 配对」，但 TS 推不出这层关系
- * （展开联合类型时对不上号），所以按 id 分支显式传：新增一个标签忘了传 prop 这里会报错。
+ * Dispatches by id. The mapped type above already guarantees that id and props pair up, but TS
+ * can't infer that relationship (it loses the pairing when expanding the union), so each id branch
+ * passes props explicitly: a new tab that forgets a prop fails to compile here.
  */
 function TabContent({ tab }: { tab: PlaygroundTab }) {
   switch (tab.id) {
@@ -74,8 +86,9 @@ function TabContent({ tab }: { tab: PlaygroundTab }) {
 }
 
 /**
- * Playground 的标签页。只有一个标签时不显示标签栏。
- * 标签第一次打开时才挂载，之后切走只隐藏（保留对话和表单状态）；没打开过的标签不加载视频等资源。
+ * Playground tabs. The tab bar is hidden when there is only one tab.
+ * A tab mounts the first time it's opened and is only hidden when switched away (keeping chat and
+ * form state); tabs never opened don't load video or other resources.
  */
 export function PlaygroundTabs({ tabs }: { tabs: PlaygroundTab[] }) {
   const t = useTranslations("Playground.tabs");
@@ -103,7 +116,8 @@ export function PlaygroundTabs({ tabs }: { tabs: PlaygroundTab[] }) {
             }}
             className={cn(
               "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-              // 激活态靠描边分，不加投影（产品语域没有模糊投影）。
+              // The active state is marked by a border, not a shadow (the product surface has no
+              // blurred shadows).
               active === tab.id
                 ? "bg-background border-border border"
                 : "text-muted-foreground hover:text-foreground",

@@ -5,7 +5,7 @@ import type { BillingEvent } from "./events";
 import type { OnBillingEventHandler } from "./on-billing-event";
 import { getPlan } from "./plans";
 
-/** 积分流水的来源；(source, sourceId) 保证同一笔付款只发一次。 */
+/** Source of a credit transaction; (source, sourceId) ensures a payment is granted only once. */
 export const BILLING_CREDITS_SOURCE = "billing";
 
 /** Stable ledger identity, independent of whether the plan still exists. */
@@ -24,12 +24,14 @@ export function billingGrantSourceId(event: BillingEvent): string | null {
 }
 
 /**
- * 这个事件应该发放多少积分、用什么幂等键；不发放时返回 null。
- * - 一次性购买：checkout.completed 且有订单时发放，键为订单 ID。
- * - 订阅：每个已付款的账期发放一次（subscription.renewed，含首期），键为订阅 ID + 账期开始时间；
- *   没有账期信息时退回用这次付款的订单 ID。订阅的 checkout.completed、subscription.active
- *   不发放，所以同一账期的多个事件不会重复发。
- * - 退款与迟到付款的回收由后续 reclaim-credits 钩子处理。
+ * How many credits this event should grant and with which idempotency key; returns null when nothing
+ * is granted.
+ * - One-time purchase: granted on checkout.completed when there is an order; the key is the order ID.
+ * - Subscription: granted once per paid billing period (subscription.renewed, including the first
+ *   period); the key is subscription ID + period start. Without billing period info it falls back to
+ *   this payment's order ID. A subscription's checkout.completed and subscription.active grant nothing,
+ *   so multiple events for the same period never grant twice.
+ * - Reclaiming on refunds and late payments is handled by the later reclaim-credits hook.
  */
 export function creditsForBillingEvent(
   event: BillingEvent,
@@ -65,8 +67,9 @@ function planOf(event: BillingEvent): Plan | undefined {
 }
 
 /**
- * 发放积分的 onBillingEvent 钩子。用事件的事务调用 grantCredits，和事件处理一起提交或回滚；
- * 乱序到达的旧事件（stale）照样发放，重复由 (source, sourceId) 挡住。
+ * onBillingEvent hook that grants credits. Calls grantCredits with the event's transaction, so it
+ * commits or rolls back together with event handling. Old events arriving out of order (stale) are
+ * still granted; duplicates are blocked by (source, sourceId).
  */
 export function createGrantCreditsHandler({
   enabled,

@@ -17,7 +17,10 @@ import {
   InsufficientCreditsError,
 } from "./errors";
 
-/** db 本身或其中的事务；传入事务时，积分操作作为它的一部分提交或回滚。 */
+/**
+ * The db itself or a transaction on it; when a transaction is passed, the credits operation commits
+ * or rolls back as part of it.
+ */
 export type Executor =
   Parameters<Parameters<Database["transaction"]>[0]>[0] | Database;
 
@@ -26,17 +29,20 @@ export type AfterCommitCallback = () => Promise<void> | void;
 export type WriteOptions = {
   tx?: Executor;
   /**
-   * 传入外部事务时，由调用方提供：登记在调用方事务提交之后执行的回调（例如余额偏低提醒邮件）。
-   * 没传 tx 时积分服务自己提交事务，不需要这个参数。
-   * 传了 tx 却没传 afterCommit，余额偏低提醒会被跳过（无法得知事务何时提交）。
+   * Provided by the caller when passing an outer transaction: registers callbacks to run after the
+   * caller's transaction commits (e.g. the low-balance reminder email). Without tx, the credits
+   * service commits its own transaction and this is not needed. If tx is passed without
+   * afterCommit, the low-balance reminder is skipped (there is no way to know when the transaction
+   * commits).
    */
   afterCommit?: (fn: AfterCommitCallback) => void;
 };
 
 /**
- * 一次扣减让余额从 >= threshold 降到 < threshold 时调用 onCross。
- * onCross 在扣减的事务里执行（可以用 executor 写去重记录），要发邮件等副作用用 schedule
- * 登记到事务提交之后。
+ * onCross is called when a deduction takes the balance from >= threshold to < threshold. onCross
+ * runs inside the deduction's transaction (it can use executor to write a dedupe record); side
+ * effects such as sending email should be registered with schedule to run after the transaction
+ * commits.
  */
 export type LowBalanceHook = {
   threshold: number;
@@ -51,8 +57,8 @@ export type LowBalanceHook = {
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 
 /**
- * 写操作的结果。`duplicate` 表示同一 (source, sourceId) 已经处理过：
- * 本次没有任何改动，返回的是已有的那条流水和当前余额。
+ * The result of a write. `duplicate` means the same (source, sourceId) was already processed: nothing
+ * changed this time, and the existing transaction and the current balance are returned.
  */
 export type WriteResult = {
   status: "applied" | "duplicate";
@@ -60,7 +66,8 @@ export type WriteResult = {
   balance: number;
 };
 
-// 退款流水的来源固定为 refund，sourceId 是被退款的扣减流水 id，保证每笔扣减只能退一次。
+// Refund transactions always have source refund and sourceId set to the refunded deduction's id,
+// which guarantees each deduction can be refunded only once.
 const REFUND_SOURCE = "refund";
 
 const positiveInt = z.number().int().positive().max(2_147_483_647);
@@ -78,7 +85,7 @@ const grantInput = z.object({ ...sourceFields, amount: positiveInt });
 const deductInput = grantInput;
 const adjustInput = z.object({
   ...sourceFields,
-  /** 操作者（通常是后台的管理员），记录在流水的 actor_id 上。 */
+  /** The actor (usually an admin), recorded in the transaction's actor_id. */
   actorId: z.string().min(1).optional(),
   amount: z
     .number()
@@ -89,10 +96,10 @@ const adjustInput = z.object({
 });
 const refundInput = z.object({
   userId: z.string().min(1),
-  /** 被退款的那笔扣减的来源。 */
+  /** The source of the deduction being refunded. */
   source: z.string().min(1),
   sourceId: z.string().min(1),
-  /** 默认全额退还；不能超过原扣减金额。 */
+  /** Defaults to a full refund; cannot exceed the original deduction. */
   amount: positiveInt.optional(),
   reason: z.string().optional(),
 });
@@ -105,10 +112,13 @@ export type RefundInput = z.input<typeof refundInput>;
 export type ReclaimInput = z.input<typeof reclaimInput>;
 
 /**
- * 回收集分的结果。
- * - `applied`：按余额截断后实际扣了 `reclaimed`，差额在 `shortfall` 里（余额不够）。
- * - `duplicate`：同一 (source, sourceId) 已经扣过，本次什么都没做，`reclaimed` 是上次扣掉的额度。
- * - `uncollectible`：余额为 0，一分都扣不动；积分流水的 `amount <> 0` 约束决定这种事件不写流水。
+ * The result of reclaiming credits.
+ * - `applied`: after capping at the balance, `reclaimed` was actually deducted; the shortfall is in
+ *   `shortfall` (balance was not enough).
+ * - `duplicate`: the same (source, sourceId) was already deducted; nothing was done this time, and
+ *   `reclaimed` is the amount deducted last time.
+ * - `uncollectible`: the balance is 0 and nothing can be deducted; the credit transactions table's
+ *   `amount <> 0` constraint means no transaction is written for this event.
  */
 export type ReclaimResult = {
   status: "applied" | "duplicate" | "uncollectible";
@@ -129,11 +139,14 @@ type Entry = {
 };
 
 /**
- * 创建积分服务。默认实例见 `./index.ts`；测试可以注入自己的数据库和开关。
+ * Creates the credits service. The default instance is in `./index.ts`; tests can inject their own
+ * database and flag.
  *
- * 写操作的顺序：先写流水（`(source, source_id)` 冲突则判定为重复，直接返回），再改余额。
- * 每个写操作都包在 `transaction()` 里：没传 tx 时开新事务，传了 tx 时是它的 savepoint，
- * 余额不足等错误只回滚这一步，不会在调用方的事务里留下半截流水。
+ * Write order: insert the transaction first (a `(source, source_id)` conflict means a duplicate,
+ * returned right away), then update the balance. Every write is wrapped in `transaction()`: without
+ * tx it opens a new transaction, with tx it is a savepoint of it, so errors such as insufficient
+ * balance roll back only this step and never leave a half-written entry in the caller's
+ * transaction.
  */
 export function createCredits(options: {
   db: Database | (() => Database);
@@ -155,7 +168,10 @@ export function createCredits(options: {
     return row?.balance ?? 0;
   }
 
-  /** 写入流水；来源重复时返回 undefined，并读出已有的那条。 */
+  /**
+   * Inserts the transaction; on a duplicate source, returns undefined for the insert and reads the
+   * existing one.
+   */
   async function insertEntry(executor: Executor, entry: Entry) {
     const [inserted] = await executor
       .insert(creditTransactions)
@@ -177,7 +193,7 @@ export function createCredits(options: {
     return { existing: existing! };
   }
 
-  /** 增加余额（用户还没有余额记录时创建）。 */
+  /** Increases the balance (creating the balance row if the user has none yet). */
   async function increase(executor: Executor, userId: string, amount: number) {
     const [row] = await executor
       .insert(userCredits)
@@ -193,7 +209,10 @@ export function createCredits(options: {
     return row!.balance;
   }
 
-  /** 原子扣减：余额不足时一行都不更新，抛出 InsufficientCreditsError。 */
+  /**
+   * Atomic deduction: if the balance is insufficient, no row is updated and InsufficientCreditsError
+   * is thrown.
+   */
   async function decrease(executor: Executor, userId: string, amount: number) {
     const [row] = await executor
       .update(userCredits)
@@ -218,7 +237,8 @@ export function createCredits(options: {
     apply: (executor: Executor) => Promise<number>,
   ): Promise<WriteResult> {
     assertEnabled();
-    // 发放、扣减、退款、调整都经过这里：一个 span 加一条日志，记录金额、来源和结果。
+    // Grants, deductions, refunds, and adjustments all pass through here: one span plus one log
+    // line recording the amount, source, and result.
     const fields = {
       userId: entry.userId,
       type: entry.type,
@@ -261,13 +281,13 @@ export function createCredits(options: {
   }
 
   return {
-    /** 当前余额；从未发放过积分的用户为 0。 */
+    /** Current balance; 0 for a user who has never been granted credits. */
     async getBalance(userId: string, { tx }: WriteOptions = {}) {
       assertEnabled();
       return balanceOf(tx ?? getDb(), userId);
     },
 
-    /** 发放积分（购买、订阅续费、赠送）。 */
+    /** Grants credits (purchase, subscription renewal, gift). */
     async grantCredits(input: GrantInput, { tx }: WriteOptions = {}) {
       const { amount, ...rest } = grantInput.parse(input);
       return write({ ...rest, type: "grant", amount }, tx, (executor) =>
@@ -275,14 +295,18 @@ export function createCredits(options: {
       );
     },
 
-    /** 扣减积分。余额不足时抛出 InsufficientCreditsError，余额和流水都不变。 */
+    /**
+     * Deducts credits. Throws InsufficientCreditsError when the balance is insufficient; neither the
+     * balance nor the ledger changes.
+     */
     async deductCredits(
       input: DeductInput,
       { tx, afterCommit }: WriteOptions = {},
     ) {
       const { amount, ...rest } = deductInput.parse(input);
       const hook = options.lowBalance;
-      // 自己提交事务时，回调攒到提交之后执行；用调用方的事务时交给调用方的 afterCommit。
+      // When we commit our own transaction, callbacks are collected and run after commit; with the
+      // caller's transaction they are handed to the caller's afterCommit.
       const pending: AfterCommitCallback[] = [];
       const schedule = tx
         ? afterCommit
@@ -309,7 +333,8 @@ export function createCredits(options: {
           return balance;
         },
       );
-      // 余额不足提醒等回调放到响应之后，不拖慢扣费的调用方。
+      // Callbacks such as the low-balance reminder run after the response so they don't slow down
+      // the caller being charged.
       await runAfterResponse(async () => {
         for (const fn of pending) {
           try {
@@ -323,10 +348,12 @@ export function createCredits(options: {
     },
 
     /**
-     * 回收集分（退款回收等）：最多扣到余额为 0，余额不够时把差额原样返回，不抛
-     * InsufficientCreditsError —— 自动回收算不对不该让调用方的事务整体失败。
-     * 一分都扣不动（余额为 0）时不写流水：流水的 amount 有非零约束，没有额度可记，
-     * 差额只能由调用方记在别处（退款回收记在服务端日志里，见 billing/reclaim-credits.ts）。
+     * Reclaims credits (e.g. reclaim on refund): deducts down to a balance of 0 at most and returns
+     * any shortfall as is instead of throwing InsufficientCreditsError — an automatic reclaim that
+     * doesn't add up shouldn't fail the caller's whole transaction. When nothing can be deducted
+     * (balance is 0), no transaction is written: the amount column has a non-zero constraint and
+     * there is nothing to record, so the caller has to record the shortfall elsewhere (the refund
+     * reclaim logs it on the server; see billing/reclaim-credits.ts).
      */
     async reclaimCredits(
       input: ReclaimInput,
@@ -335,8 +362,9 @@ export function createCredits(options: {
       assertEnabled();
       const { amount, ...rest } = reclaimInput.parse(input);
       return (tx ?? getDb()).transaction(async (executor) => {
-        // 行锁：下面按读到的余额截断，锁住这一行才能保证截断后余额不会变成负数
-        // （并发扣减会等这把锁，看到的是扣完之后的值）。
+        // Row lock: the amount below is capped at the balance we read, and only locking this row
+        // guarantees the balance can't go negative after capping (concurrent deductions wait on
+        // this lock and see the value after our deduction).
         const [row] = await executor
           .select({ balance: userCredits.balance })
           .from(userCredits)
@@ -346,8 +374,9 @@ export function createCredits(options: {
         const reclaimed = Math.min(amount, balance);
         const shortfall = amount - reclaimed;
         if (reclaimed <= 0) {
-          // 扣不动有两种可能：真的没余额，或者这一笔本来就已经扣过了（重复提交）。
-          // 后者按 duplicate 返回，调用方不会把它当成"欠账"。
+          // Nothing to deduct has two possible causes: there really is no balance, or this one was
+          // already deducted (a duplicate submit). The latter returns duplicate so the caller
+          // doesn't treat it as an unpaid debt.
           const [existing] = await executor
             .select()
             .from(creditTransactions)
@@ -388,7 +417,8 @@ export function createCredits(options: {
         const duplicate = written.status === "duplicate";
         return {
           status: written.status,
-          // 重复提交时不重复上报额度：以上次真正扣掉的为准，差额归零。
+          // On a duplicate submit, don't report the amount again: use what was actually deducted
+          // last time, and the shortfall is zero.
           reclaimed: duplicate ? -written.transaction.amount : reclaimed,
           shortfall: duplicate ? 0 : shortfall,
           balance: written.balance,
@@ -398,8 +428,9 @@ export function createCredits(options: {
     },
 
     /**
-     * 退还一笔扣减（比如 AI 调用失败）。按扣减时的 (source, sourceId) 定位原流水；
-     * 每笔扣减只能退一次，重复调用返回 duplicate。
+     * Refunds a deduction (e.g. a failed AI call). Finds the original transaction by the
+     * deduction's (source, sourceId); each deduction can be refunded only once, and repeated calls
+     * return duplicate.
      */
     async refundCredits(input: RefundInput, { tx }: WriteOptions = {}) {
       assertEnabled();
@@ -444,7 +475,10 @@ export function createCredits(options: {
       });
     },
 
-    /** 管理员手动调整，可正可负；负向调整不能让余额变成负数。 */
+    /**
+     * Manual adjustment by an admin, positive or negative; a negative adjustment can't take the
+     * balance below zero.
+     */
     async adjustCredits(input: AdjustInput, { tx }: WriteOptions = {}) {
       const { amount, ...rest } = adjustInput.parse(input);
       return write({ ...rest, type: "adjust", amount }, tx, (executor) =>
@@ -454,7 +488,7 @@ export function createCredits(options: {
       );
     },
 
-    /** 最近的流水，按时间倒序。 */
+    /** Recent transactions, newest first. */
     async listTransactions(
       userId: string,
       {

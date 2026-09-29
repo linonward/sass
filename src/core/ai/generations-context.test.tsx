@@ -54,17 +54,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("GenerationsProvider 轮询", () => {
-  test("上一次查询没返回时不重复查询；完成后只加一次", async () => {
+describe("GenerationsProvider polling", () => {
+  test("does not re-query while the previous query is outstanding; adds the result only once when done", async () => {
     let resolve!: (response: Response) => void;
     const fetch = vi.fn(() => new Promise<Response>((r) => (resolve = r)));
     vi.stubGlobal("fetch", fetch);
     renderWithPending();
 
-    // 第一次查询一直不返回（服务端在转存视频），过几个轮询间隔也不会再发。
+    // The first query never returns (the server is copying the video to storage), and no new one is
+    // sent even after several poll intervals.
     await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 4));
     expect(fetch).toHaveBeenCalledTimes(1);
-    // 每一轮都会推进服务端状态，所以两侧都不许缓存（对照 /api/billing/status）。
+    // Every round advances server state, so neither side may cache (compare /api/billing/status).
     expect(fetch).toHaveBeenCalledWith(
       "/api/ai/video/v1",
       expect.objectContaining({ cache: "no-store" }),
@@ -84,12 +85,12 @@ describe("GenerationsProvider 轮询", () => {
       videoFailed: false,
     });
 
-    // 没有待完成的任务后不再轮询。
+    // Polling stops once no jobs are pending.
     await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3));
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  test("还在生成时按间隔继续查；失败时标记 videoFailed", async () => {
+  test("keeps polling on the interval while generating; sets videoFailed on failure", async () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce(
@@ -112,7 +113,7 @@ describe("GenerationsProvider 轮询", () => {
     });
   });
 
-  test("网络错误下一轮再查", async () => {
+  test("retries on the next round after a network error", async () => {
     const fetch = vi
       .fn()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
@@ -127,11 +128,11 @@ describe("GenerationsProvider 轮询", () => {
     expect(state().generations).toEqual(["v1"]);
   });
 
-  test("卸载时中止 in-flight 请求，也不再排下一轮", async () => {
+  test("aborts the in-flight request on unmount and schedules no further round", async () => {
     let signal: AbortSignal | undefined;
     const fetch = vi.fn((_url: string, init?: RequestInit) => {
       signal = init?.signal ?? undefined;
-      // 服务端正在转存视频：这一轮不会返回。
+      // The server is copying the video to storage: this round never returns.
       return new Promise<Response>(() => {});
     });
     vi.stubGlobal("fetch", fetch);

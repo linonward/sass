@@ -11,7 +11,7 @@ function request(authorization?: string) {
 }
 
 describe("handleCronRecovery", () => {
-  test("没设 CRON_SECRET：404，不跑", async () => {
+  test("CRON_SECRET not set: 404, does not run", async () => {
     const run = vi.fn(async () => ({ ran: true }));
     const response = await handleCronRecovery(request(`Bearer ${SECRET}`), {
       secret: undefined,
@@ -22,11 +22,11 @@ describe("handleCronRecovery", () => {
   });
 
   test.each([
-    ["没有 Authorization 头", undefined],
-    ["密钥不对", "Bearer wrong-secret-of-some-length"],
-    ["少了 Bearer 前缀", SECRET],
-    ["多了后缀", `Bearer ${SECRET}x`],
-  ])("%s：401，不跑", async (_, header) => {
+    ["no Authorization header", undefined],
+    ["wrong secret", "Bearer wrong-secret-of-some-length"],
+    ["missing Bearer prefix", SECRET],
+    ["extra suffix", `Bearer ${SECRET}x`],
+  ])("%s: 401, does not run", async (_, header) => {
     const run = vi.fn(async () => ({ ran: true }));
     const response = await handleCronRecovery(request(header), {
       secret: SECRET,
@@ -36,7 +36,7 @@ describe("handleCronRecovery", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  test("密钥正确：跑一次并返回汇总，不缓存", async () => {
+  test("correct secret: runs once and returns the summary, uncached", async () => {
     const run = vi.fn(async () => ({
       ran: true,
       results: { ai: { scanned: 2 } },

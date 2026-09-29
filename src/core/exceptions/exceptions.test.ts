@@ -46,8 +46,9 @@ import { MemoryStorage } from "@/core/upload/testing";
 import { listExceptions } from "./queries";
 import { createExceptionService, EXCEPTION_TARGET } from "./service";
 
-// 计费异常台的真库测试。结算类改动对照三处状态：订单（orders）、积分流水
-// （credit_transactions，含余额）、异常单（billing_exceptions）；AI 那一侧是 ai_usage。
+// Real-database tests for the billing exceptions page. Settlement changes are checked against three
+// pieces of state: the order (orders), credit transactions (credit_transactions, including the
+// balance), and the exception (billing_exceptions); on the AI side it is ai_usage.
 
 const url = process.env.DATABASE_URL_TEST;
 
@@ -55,14 +56,16 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过异常台测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping exceptions page tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
-// site.config.ts 的 lifetime 套餐一次发放 2000 积分。
+// The lifetime plan in site.config.ts grants 2000 credits at once.
 const GRANTED = 2000;
 const ORDER_AMOUNT = 3000;
 
-describe.skipIf(!url)("计费异常台", () => {
+describe.skipIf(!url)("billing exceptions page", () => {
   let client: DbClient;
   let db: DbClient["db"];
   let credits: Credits;
@@ -89,7 +92,7 @@ describe.skipIf(!url)("计费异常台", () => {
     );
   }
 
-  /** 一个服务：视频服务按测试给的状态回答。 */
+  /** A service whose video service answers with the status the test provides. */
   function service(
     provider = { next: { status: "pending" } as VideoTaskStatus },
   ) {
@@ -145,7 +148,7 @@ describe.skipIf(!url)("计费异常台", () => {
       ...(eventId ? { eventId } : {}),
     });
 
-  /** 花掉积分，让之后的退款回收不够扣。 */
+  /** Spends credits so a later refund reclaim falls short. */
   const spend = (amount: number) =>
     credits.deductCredits({
       userId,
@@ -154,7 +157,7 @@ describe.skipIf(!url)("计费异常台", () => {
       sourceId: `call_${randomUUID()}`,
     });
 
-  /** 三处状态：订单、回收流水与余额、异常单。 */
+  /** The three pieces of state: order, reclaim transactions and balance, exception. */
   async function state(orderId: string) {
     const [order] = await db
       .select({
@@ -222,7 +225,7 @@ describe.skipIf(!url)("计费异常台", () => {
     useCredits();
   });
 
-  test("余额不够时回收产生差额单，和回收在同一事务里；后台列表能看到差额", async () => {
+  test("a short balance makes the reclaim open a shortfall exception in the same transaction; the admin list shows the shortfall", async () => {
     const orderId = await purchase();
     await spend(1500);
 
@@ -256,12 +259,13 @@ describe.skipIf(!url)("计费异常台", () => {
     });
   });
 
-  test("场景 4：回收事务遇到短暂的数据库故障 —— 重放后只回收一次、只退一次、只开一张单", async () => {
+  test("scenario 4: the reclaim transaction hits a transient database failure — after replay it reclaims once, refunds once, and opens one exception", async () => {
     const orderId = await purchase();
     await spend(1500);
     const event = refund(orderId);
 
-    // 第一次处理时回收那一步抛错：整个 webhook 事务回滚，什么都不留下。
+    // On the first attempt the reclaim step throws: the whole webhook transaction rolls back and
+    // leaves nothing behind.
     useCredits(async () => {
       throw new Error("connection reset");
     });
@@ -271,10 +275,10 @@ describe.skipIf(!url)("计费异常台", () => {
     expect(s.reclaims).toHaveLength(0);
     expect(s.exceptions).toHaveLength(0);
 
-    // 服务商重推（同一个事件）：这次成功。
+    // The provider redelivers (same event): this time it succeeds.
     useCredits();
     expect(await handle(event)).toMatchObject({ status: "processed" });
-    // 再推一次同一个事件：webhook_events 挡住，三处状态都不变。
+    // Deliver the same event once more: webhook_events blocks it, and all three states are unchanged.
     expect(await handle(event)).toEqual({ status: "duplicate" });
     s = await state(orderId);
     expect(s.order.refundedAmount).toBe(ORDER_AMOUNT);
@@ -282,9 +286,11 @@ describe.skipIf(!url)("计费异常台", () => {
     expect(s.reclaimed).toBe(500);
     expect(s.exceptions).toHaveLength(1);
 
-    // 同一笔退款换事件 ID 重推：回收流水与异常单都由各自的唯一键挡住。
-    // （订单上的 refundedAmount 这时会被重复累加 —— 那是订单合并按事件而不是按 refundId
-    // 去重的既有问题，不在异常台的范围里；回收按订单金额封顶，积分不受影响。）
+    // The same refund redelivered with a new event ID: the reclaim transaction and the exception
+    // are each blocked by their own unique key. (The order's refundedAmount gets added twice here —
+    // that's an existing issue with order merging deduping by event rather than by refundId, outside
+    // the exceptions page's scope; the reclaim is capped at the order amount, so credits are not
+    // affected.)
     await handle({ ...event, eventId: `evt_${randomUUID()}` });
     s = await state(orderId);
     expect(s.reclaims).toHaveLength(1);
@@ -292,7 +298,7 @@ describe.skipIf(!url)("计费异常台", () => {
     expect(s.exceptions).toHaveLength(1);
   });
 
-  test("场景 1：同一退款重复推送、换事件 ID 重推 —— 不产生第二张单", async () => {
+  test("scenario 1: the same refund delivered repeatedly and redelivered with a new event ID — no second exception", async () => {
     const orderId = await purchase();
     await spend(GRANTED);
     const refundId = `ref_${randomUUID()}`;
@@ -302,19 +308,20 @@ describe.skipIf(!url)("计费异常台", () => {
     await handle(refund(orderId, { refundId, eventId: `evt_${randomUUID()}` }));
 
     const s = await state(orderId);
-    // 余额为 0：一分都扣不动，没有回收流水，但差额单只有一张。
+    // Balance is 0: nothing can be deducted and there is no reclaim transaction, but there is
+    // exactly one shortfall exception.
     expect(s.reclaims).toHaveLength(0);
     expect(s.exceptions).toHaveLength(1);
     expect(s.exceptions[0]!.detail).toMatchObject({ shortfall: GRANTED });
   });
 
-  test("重试回收：余额后来够了，扣掉差额并关单，写审计", async () => {
+  test("retry reclaim: once the balance is enough, deducts the shortfall, closes the exception, and writes the audit", async () => {
     const orderId = await purchase();
     await spend(1500);
     await handle(refund(orderId));
     const [exception] = (await state(orderId)).exceptions;
 
-    // 用户又买了积分（这里直接发放），余额够还差额了。
+    // The user bought more credits (granted directly here), so the balance now covers the shortfall.
     await credits.grantCredits({
       userId,
       amount: 5000,
@@ -351,7 +358,7 @@ describe.skipIf(!url)("计费异常台", () => {
       }),
     ]);
 
-    // 关单之后再点：不做任何事。
+    // Clicking again after closing does nothing.
     expect(
       await s.retryReclaim({
         actorId: adminId,
@@ -362,7 +369,7 @@ describe.skipIf(!url)("计费异常台", () => {
     expect((await state(orderId)).reclaimed).toBe(GRANTED);
   });
 
-  test("重复点击「重试回收」：只扣一次（流水条数与余额）", async () => {
+  test('clicking "retry reclaim" repeatedly deducts only once (transaction count and balance)', async () => {
     const orderId = await purchase();
     await spend(1500);
     await handle(refund(orderId));
@@ -391,14 +398,14 @@ describe.skipIf(!url)("计费异常台", () => {
     ]);
 
     const after = await state(orderId);
-    // 原回收 1 条 + 重试 1 条。
+    // 1 original reclaim + 1 retry.
     expect(after.reclaims).toHaveLength(2);
     expect(after.reclaimed).toBe(GRANTED);
     expect(after.balance).toBe(5000 - 1500);
     expect(await history(exception!.id)).toHaveLength(1);
   });
 
-  test("重试时余额仍不够：扣能扣的，单子留着，次数和错误累加", async () => {
+  test("retry with the balance still short: deducts what it can, keeps the exception open, and accumulates attempts and errors", async () => {
     const orderId = await purchase();
     await spend(1500);
     await handle(refund(orderId));
@@ -427,7 +434,7 @@ describe.skipIf(!url)("计费异常台", () => {
       detail: expect.objectContaining({ shortfall: 1100 }),
     });
 
-    // 余额为 0 时再试：一分都扣不动，不写流水。
+    // Retry with a balance of 0: nothing can be deducted, so no transaction is written.
     expect(
       await s.retryReclaim({
         actorId: adminId,
@@ -441,7 +448,7 @@ describe.skipIf(!url)("计费异常台", () => {
     expect(await history(exception!.id)).toHaveLength(2);
   });
 
-  test("账上已经不欠了（后来的退款回收已补齐）：重试直接关单，不扣", async () => {
+  test("nothing owed anymore (a later refund reclaim made it up): retry just closes the exception without deducting", async () => {
     const orderId = await purchase();
     await spend(1500);
     await handle(refund(orderId, { amount: ORDER_AMOUNT / 2 }));
@@ -454,7 +461,8 @@ describe.skipIf(!url)("计费异常台", () => {
       source: "test",
       sourceId: randomUUID(),
     });
-    // 第二笔退款到达：累计口径下这次把前一次的差额一起收回。
+    // A second refund arrives: since the amount owed is cumulative, this one also collects the
+    // previous shortfall.
     await handle(refund(orderId, { amount: ORDER_AMOUNT / 2 }));
     expect((await state(orderId)).reclaimed).toBe(GRANTED);
 
@@ -467,7 +475,7 @@ describe.skipIf(!url)("计费异常台", () => {
     expect((await state(orderId)).reclaimed).toBe(GRANTED);
   });
 
-  test("标记已处理 / 忽略：必须有理由（由 Server Action 校验），写审计，已关的单不能再处理", async () => {
+  test("mark resolved / ignore: requires a reason (checked by the Server Action), writes the audit, and a closed exception cannot be handled again", async () => {
     const orderId = await purchase();
     await spend(GRANTED);
     await handle(refund(orderId));
@@ -497,7 +505,7 @@ describe.skipIf(!url)("计费异常台", () => {
     expect(await history(exception!.id)).toEqual([
       expect.objectContaining({ action: "ignore", reason: "written off" }),
     ]);
-    // 种类不对的动作被拒。
+    // An action for the wrong kind is rejected.
     expect(
       await s.recheck({
         actorId: adminId,
@@ -507,7 +515,7 @@ describe.skipIf(!url)("计费异常台", () => {
     ).toEqual({ ok: false, error: "wrong_kind" });
   });
 
-  test("邮件没发出的单：补发又失败时单子留着并记次数；补发成功才关单；都写审计", async () => {
+  test("undelivered email exception: a failed resend keeps it open and counts the attempt; only a successful resend closes it; both write the audit", async () => {
     const notificationId = randomUUID();
     const [exception] = await db
       .insert(billingExceptions)
@@ -576,7 +584,7 @@ describe.skipIf(!url)("计费异常台", () => {
     });
   });
 
-  describe("AI 任务", () => {
+  describe("AI tasks", () => {
     const config = aiConfigSchema.parse({
       videoModels: [
         {
@@ -634,7 +642,7 @@ describe.skipIf(!url)("计费异常台", () => {
           ),
         );
 
-    test("按「服务商没有结果」退款时开单，和退款同一事务；并发结算也只开一张", async () => {
+    test('a refund for "provider has no result" opens an exception in the same transaction as the refund; concurrent settlement opens only one', async () => {
       const v = videoSetup();
       const id = await startVideo(v);
       v.clock.now += VIDEO_TIMEOUT_MS + 1000;
@@ -660,7 +668,7 @@ describe.skipIf(!url)("计费异常台", () => {
       });
     });
 
-    test("服务商明确失败的退款不开单", async () => {
+    test("a refund for an explicit provider failure opens no exception", async () => {
       const v = videoSetup();
       const id = await startVideo(v);
       v.provider.next = { status: "failed", error: "FAILED" };
@@ -668,11 +676,11 @@ describe.skipIf(!url)("计费异常台", () => {
       expect(await aiExceptions()).toHaveLength(0);
     });
 
-    test("过了出结果时间还查不到服务商状态：开单并累加次数，任务不动", async () => {
+    test("provider status still unavailable past the result deadline: opens an exception and counts attempts, task untouched", async () => {
       const v = videoSetup();
       const id = await startVideo(v);
       v.client.status.mockRejectedValue(new Error("dashscope 500"));
-      // 30 分钟内查不到：暂时性错误，不开单。
+      // Unavailable within 30 minutes: a transient error, no exception.
       await v.video.recoverVideo(id);
       expect(await aiExceptions()).toHaveLength(0);
 
@@ -692,7 +700,7 @@ describe.skipIf(!url)("计费异常台", () => {
       expect(usage!.status).toBe("pending");
     });
 
-    test("重新核对：任务已退款时只记下服务商现在的状态，不动钱，单子留给人判断", async () => {
+    test("reconcile again: when the task was refunded, only records the provider's current status, touches no money, and leaves the exception for a human", async () => {
       const v = videoSetup();
       const id = await startVideo(v);
       v.clock.now += VIDEO_TIMEOUT_MS + 1000;
@@ -730,7 +738,7 @@ describe.skipIf(!url)("计费异常台", () => {
       ]);
     });
 
-    test("重新核对：任务还是 pending 时走恢复路径，推进到终态就关单", async () => {
+    test("reconcile again: when the task is still pending, uses the recovery path and closes the exception once it reaches a terminal state", async () => {
       const v = videoSetup();
       const id = await startVideo(v);
       v.client.status.mockRejectedValue(new Error("dashscope 500"));

@@ -22,7 +22,10 @@ import { exceptionAction, type ExceptionActionState } from "../actions";
 
 const idle: ExceptionActionState = { status: "idle" };
 
-/** 每种单子能做的动作：先是这类单子专属的那个，再是两个关单动作。 */
+/**
+ * Actions available per exception kind: first the one specific to that kind, then the two closing
+ * actions.
+ */
 const actionsFor = {
   refund_reclaim_shortfall: ["retry_reclaim", "resolve", "ignore"],
   ai_job_needs_review: ["recheck", "resolve", "ignore"],
@@ -30,11 +33,13 @@ const actionsFor = {
 } as const satisfies Record<BillingExceptionKind, readonly string[]>;
 
 /**
- * 处理一张异常单的弹层：填理由（必填），选一个动作。
+ * Dialog for handling one exception: enter a reason (required) and pick an action.
  *
- * 结果留在弹层里给人看（重试没扣够、核对拿到的服务商状态都要看得见），关掉再看列表。
- * 提交自己接（startTransition + setState），同 src/core/api-keys/dialogs.tsx。
- * 提交中所有按钮禁用；即便绕过去连点，服务端也只处理一次（锁 + 只处理 open 的单）。
+ * The result stays in the dialog for the admin to read (a retry that still fell short, or the
+ * provider status a reconcile got back, must be visible); the list is shown again after closing.
+ * Submission is handled by hand (startTransition + setState), as in src/core/api-keys/dialogs.tsx.
+ * All buttons are disabled while submitting; even if someone gets around that and double-clicks,
+ * the server handles it only once (lock + only open exceptions are handled).
  */
 export function HandleExceptionDialog({
   exceptionId,
@@ -63,7 +68,8 @@ export function HandleExceptionDialog({
       onOpenChange={(next) => {
         setOpen(next);
         if (next) return;
-        // 做过动作才刷新列表和侧边栏计数：结果先留在弹层里给人看，关掉再换成新的列表。
+        // Refresh the list and sidebar count only if an action ran: the result stays in the dialog
+        // first, and the fresh list replaces it after closing.
         if (state.status === "success") router.refresh();
         setState(idle);
       }}
@@ -108,7 +114,8 @@ export function HandleExceptionDialog({
               })}
             </p>
           )}
-          {/* 不另放「取消」：右上角的关闭按钮就是它，两个同名按钮只会让读屏和 e2e 都分不清。 */}
+          {/* No separate "Cancel": the close button in the top-right corner is it; two buttons with
+              the same name would only confuse screen readers and e2e alike. */}
           <DialogFooter className="flex-wrap">
             {actionsFor[kind].map((action, index) => (
               <Button
@@ -116,7 +123,8 @@ export function HandleExceptionDialog({
                 type="submit"
                 name="action"
                 value={action}
-                // 每屏一个实心主操作：这类单子专属的动作；关单动作是次要的。
+                // One solid primary action per screen: the action specific to this kind; the
+                // closing actions are secondary.
                 variant={index === 0 ? "default" : "outline"}
                 disabled={pending}
                 data-testid={`exception-action-${action}`}

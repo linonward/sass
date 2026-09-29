@@ -14,7 +14,10 @@ import type { Generation } from "./image";
 
 const aspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4"] as const;
 
-/** 示例图片生成：选模型和画幅、输入提示词，同步出图；下方列出最近生成。 */
+/**
+ * Example image generation: pick a model and aspect ratio, enter a prompt, and get an image
+ * synchronously; recent generations are listed below.
+ */
 export function ImageStudio({
   models,
   defaultModel,
@@ -32,7 +35,7 @@ export function ImageStudio({
   const [error, setError] = useState<ImageErrorCode | null>(null);
   const { generations: all, addGeneration } = useGenerations();
   const generations = all.filter((g) => g.kind === "image");
-  // 本次页面里刚生成的那张，在列表里高亮。
+  // The image just generated on this page visit, highlighted in the list.
   const [latestId, setLatestId] = useState<string | null>(null);
   const modelSelectId = useId();
   const ratioSelectId = useId();
@@ -176,7 +179,7 @@ export function ImageStudio({
                   rel="noreferrer"
                   className="bg-muted block overflow-hidden rounded-lg border"
                 >
-                  {/* 生成的图片在 R2 上，尺寸不定；不走 next/image 的优化。 */}
+                  {/* Generated images live on R2 at arbitrary sizes; skip next/image optimization. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={generation.url}

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-// Server Action 可以绕过页面直接调用：这里验证它自己拦住非管理员、缺理由和不合法的输入，
-// 而且被拦时根本不碰服务层。
+// A Server Action can be called directly, bypassing the page: verify that it rejects non-admins,
+// missing reasons, and invalid input on its own, and that a rejected call never touches the
+// service layer.
 const session = vi.hoisted(() => ({
   current: null as null | { user: { id: string } },
 }));
@@ -32,7 +33,7 @@ describe("exceptionAction", () => {
     vi.clearAllMocks();
   });
 
-  test("非管理员（含未登录）直接调用：forbidden，不碰服务层", async () => {
+  test("direct call by a non-admin (including signed out): forbidden, service layer untouched", async () => {
     const result = await exceptionAction(
       { status: "idle" },
       form({ exceptionId: EXCEPTION_ID, action: "retry_reclaim", reason: "x" }),
@@ -52,7 +53,7 @@ describe("exceptionAction", () => {
       { exceptionId: EXCEPTION_ID, action: "refund_all", reason: "ok" },
       "invalid",
     ],
-  ])("输入 %j → %s", async (fields, error) => {
+  ])("input %j → %s", async (fields, error) => {
     session.current = { user: { id: "admin-1" } };
     expect(await exceptionAction({ status: "idle" }, form(fields))).toEqual({
       status: "error",
@@ -61,7 +62,7 @@ describe("exceptionAction", () => {
     expect(service.resolve).not.toHaveBeenCalled();
   });
 
-  test("管理员：动作带上操作者和去掉首尾空白的理由；已处理的单子报 notOpen", async () => {
+  test("admin: the action carries the actor and the trimmed reason; an already handled exception reports notOpen", async () => {
     session.current = { user: { id: "admin-1" } };
     service.resolve.mockResolvedValueOnce({
       ok: true,

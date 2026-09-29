@@ -22,9 +22,10 @@ const FIRST_DELAY = 1000;
 const MAX_DELAY = 5000;
 
 /**
- * 成功页：轮询 /api/billing/status，直到 webhook 把付款写进数据库。
- * 间隔从 1 秒起按 1.5 倍退避，最长 5 秒；超过 timeoutMs 显示联系支持，但仍在后台继续轮询，
- * webhook 晚到时页面会自动变成成功。离开页面时停止。
+ * Success page: polls /api/billing/status until the webhook has written the payment to the database.
+ * The interval starts at 1s and backs off by 1.5x up to 5s. After timeoutMs it shows a contact-support
+ * message but keeps polling in the background, so the page turns into success on its own if the
+ * webhook arrives late. Polling stops when the page is left.
  */
 export function CheckoutStatus({
   reference,
@@ -33,7 +34,7 @@ export function CheckoutStatus({
   planNames,
   nextSteps = {},
 }: {
-  /** 服务商回跳附带的订阅或订单 ID。 */
+  /** Subscription or order ID the provider appends when redirecting back. */
   reference: {
     subscriptionId?: string;
     orderId?: string;
@@ -44,8 +45,9 @@ export function CheckoutStatus({
   supportEmail: string;
   planNames: Record<string, string>;
   /**
-   * 按套餐给成功页换一个下一步（例如买了可下载文件的套餐 → 「前往下载页」）：
-   * 一句说明，加上替换「查看账单」的主按钮。没有的套餐照常显示账单和仪表盘。
+   * Per-plan replacement next step for the success page (e.g. a plan that sells downloadable files →
+   * "Go to downloads"): one line of description plus a primary button that replaces "View billing".
+   * Plans without one show billing and the dashboard as usual.
    */
   nextSteps?: Record<string, NextStep>;
 }) {
@@ -81,7 +83,7 @@ export function CheckoutStatus({
         }
       } catch {
         if (controller.signal.aborted) return;
-        // 网络抖动：继续下一轮。
+        // Network blip: try again on the next round.
       }
       timer = setTimeout(poll, delay);
       delay = Math.min(delay * 1.5, MAX_DELAY);
@@ -168,13 +170,16 @@ function State({
   children,
 }: {
   icon: React.ReactNode;
-  /** 只有「完成了」用品牌片，等待和失败用中性片，语义交给图标自己。 */
+  /**
+   * Only "done" uses the brand chip; waiting and failure use the neutral chip and let the icon
+   * carry the meaning.
+   */
   tone?: "brand" | "neutral";
   busy?: boolean;
   children: React.ReactNode;
 }) {
-  // role=status 必须留在最外层：dashboard 的 e2e 用无作用域的 getByRole("status")
-  // 断言保存提示，这里再套一层会撞车。
+  // role=status must stay on the outermost element: the dashboard e2e uses an unscoped
+  // getByRole("status") to assert the save notice, and another nested one here would collide.
   return (
     <div
       role="status"

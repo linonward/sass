@@ -10,7 +10,7 @@ import {
 
 const SIGNATURE_HEADER = "x-fake-signature";
 
-/** FakeProvider 的 webhook 请求体：一个 BillingEvent，时间以 ISO 字符串传输。 */
+/** FakeProvider webhook body: one BillingEvent, with times sent as ISO strings. */
 type FakePayload = Omit<BillingEvent, "provider" | "raw" | "occurredAt"> & {
   occurredAt: string;
   currentPeriodStart?: string;
@@ -20,8 +20,9 @@ type FakePayload = Omit<BillingEvent, "provider" | "raw" | "occurredAt"> & {
 let sequence = 0;
 
 /**
- * 测试用的支付服务商：签名是请求体的 HMAC-SHA256，事件结构和 BillingEvent 一一对应。
- * 用 `event()` 构造事件，`request()` 生成带签名的 webhook 请求，也记录下游调用供断言。
+ * Payment provider for tests: the signature is an HMAC-SHA256 of the body and the event shape maps
+ * one-to-one to BillingEvent. Build events with `event()` and signed webhook requests with
+ * `request()`; it also records downstream calls for assertions.
  */
 export class FakeProvider implements PaymentProvider {
   readonly id: string;
@@ -85,7 +86,10 @@ export class FakeProvider implements PaymentProvider {
     } as BillingEvent;
   }
 
-  /** 构造一个事件（provider 固定为本实例，eventId 默认唯一，occurredAt 默认现在）。 */
+  /**
+   * Build an event (provider is fixed to this instance, eventId is unique by default, occurredAt
+   * defaults to now).
+   */
   event<T extends BillingEventType>(
     type: T,
     fields: Omit<
@@ -104,9 +108,9 @@ export class FakeProvider implements PaymentProvider {
     } as unknown as Extract<BillingEvent, { type: T }>;
   }
 
-  /** 把事件编码成带签名的 webhook 请求；`signature` 可以传入错误的签名做负面测试。 */
+  /** Encode an event as a signed webhook request; pass a wrong `signature` for negative tests. */
   request(event: BillingEvent, { signature }: { signature?: string } = {}) {
-    // provider 和 raw 由接收方补上，不在请求体里。
+    // provider and raw are filled in by the receiver; they aren't in the body.
     const body = JSON.stringify({
       ...event,
       provider: undefined,

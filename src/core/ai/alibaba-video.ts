@@ -1,6 +1,6 @@
 import { APICallError } from "@ai-sdk/provider";
 
-/** AI SDK 百炼 provider 的默认地址（国际站）。 */
+/** Default base URL of the AI SDK Alibaba Model Studio (Bailian) provider (international site). */
 const DEFAULT_BASE_URL =
   "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
 
@@ -9,16 +9,16 @@ export type VideoTaskStatus =
   | { status: "succeeded"; videoUrl: string }
   | { status: "failed"; error: string };
 
-/** 异步视频任务：提交后拿到 taskId，之后按 taskId 查询状态。 */
+/** Async video jobs: submitting returns a taskId, which is then used to poll the status. */
 export type VideoClient = {
   start(input: {
     model: string;
     prompt: string;
-    // 图生视频的首帧，服务商能访问的地址（公开地址或签名地址）。
+    // First frame for image-to-video, as a URL the provider can reach (public or signed).
     firstFrameUrl?: string;
     duration: number;
     resolution: "720P" | "1080P";
-    // 文生视频的画幅，例如 "16:9"；图生视频跟随首帧。
+    // Aspect ratio for text-to-video, e.g. "16:9"; image-to-video follows the first frame.
     ratio?: string;
   }): Promise<{ taskId: string }>;
   status(taskId: string): Promise<VideoTaskStatus>;
@@ -37,9 +37,9 @@ type TaskBody = {
 };
 
 /**
- * 百炼通义万相视频（wan2.7 及以后的 `media` 协议）的原生异步接口。
- * 没有用 `@ai-sdk/alibaba` 的视频模型：它给 wan2.7-i2v 发的是 `img_url`（base64），
- * 接口要求 `media`，而且 base64 超过长度上限会被拒绝。
+ * Native async API for Model Studio Wan video (the `media` protocol of wan2.7 and later).
+ * We don't use the `@ai-sdk/alibaba` video model: it sends `img_url` (base64) to wan2.7-i2v, but
+ * the API requires `media`, and base64 over the length limit is rejected.
  */
 export function createAlibabaVideoClient({
   apiKey,
@@ -50,7 +50,7 @@ export function createAlibabaVideoClient({
   baseURL?: string;
   fetch?: typeof globalThis.fetch;
 }): VideoClient {
-  // ALIBABA_BASE_URL 是 OpenAI 兼容地址，原生接口在同一个域名下。
+  // ALIBABA_BASE_URL is the OpenAI-compatible URL; the native endpoint lives on the same host.
   const origin = new URL(baseURL).origin;
   const auth = { Authorization: `Bearer ${apiKey}` };
 
@@ -61,7 +61,7 @@ export function createAlibabaVideoClient({
     try {
       body = JSON.parse(text) as TaskBody;
     } catch {
-      // 非 JSON 的错误页，下面按状态码报错。
+      // Non-JSON error page; the error is reported by status code below.
     }
     if (!response.ok) {
       throw new APICallError({
@@ -130,7 +130,7 @@ export function createAlibabaVideoClient({
             ? { status: "succeeded", videoUrl: output.video_url }
             : { status: "failed", error: "No video_url in response" };
         default:
-          // FAILED、CANCELED、UNKNOWN（任务过期或不存在）。
+          // FAILED, CANCELED, UNKNOWN (the task expired or does not exist).
           return {
             status: "failed",
             error:

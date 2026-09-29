@@ -6,9 +6,10 @@ import { describe, expect, test, vi } from "vitest";
 import messages from "../../../messages/en.json";
 import { PlaygroundTabs, type PlaygroundTab } from "./playground-tabs";
 
-// 三个内容组件换成替身：这一组用例测的是标签栏「按需加载 + 保留挂载」的逻辑本身，
-// 真组件（useChat、GenerationsProvider）由 playground.test.tsx 和 e2e 覆盖。
-// vi.mock 对 dynamic() 里的 import() 一样生效，替身仍走真实的加载路径。
+// The three content components are swapped for stand-ins: these cases test the tab bar's own
+// "load on demand + stay mounted" logic; the real components (useChat, GenerationsProvider) are
+// covered by playground.test.tsx and e2e. vi.mock applies to the import() inside dynamic() too, so
+// the stand-ins still go through the real loading path.
 vi.mock("./playground", () => ({
   Playground: ({ defaultModel }: { defaultModel: string }) => {
     const [value, setValue] = useState("");
@@ -57,12 +58,13 @@ const panel = (text: string) =>
   screen.getByText(text).closest<HTMLElement>("[role=tabpanel]")!;
 
 describe("PlaygroundTabs", () => {
-  test("标签第一次打开时才加载内容，切走后保留挂载", async () => {
+  test("loads a tab's content only when first opened and keeps it mounted after switching away", async () => {
     renderTabs();
-    // 第一个标签的内容要等它自己那个 chunk 到（真实环境里是网络，这里是一次动态 import）。
+    // The first tab's content waits for its own chunk (a network fetch in real life, a dynamic
+    // import here).
     await screen.findByText("chat panel chat-model");
     expect(panel("chat panel chat-model").hidden).toBe(false);
-    // 没打开过的标签连内容组件都不加载。
+    // Tabs that were never opened don't even load their content component.
     expect(screen.queryByText("image panel")).toBeNull();
     expect(screen.queryByText("video panel")).toBeNull();
 
@@ -70,16 +72,16 @@ describe("PlaygroundTabs", () => {
     await screen.findByText("video panel");
     expect(panel("video panel").hidden).toBe(false);
     expect(panel("chat panel chat-model").hidden).toBe(true);
-    // 中间那个标签还是没被打开过。
+    // The middle tab still hasn't been opened.
     expect(screen.queryByText("image panel")).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "Chat" }));
-    // 切回对话后视频页仍挂载（只是隐藏），状态不丢。
+    // After switching back to chat the video tab stays mounted (just hidden), so no state is lost.
     expect(panel("video panel").hidden).toBe(true);
     expect(panel("chat panel chat-model").hidden).toBe(false);
   });
 
-  test("切走再切回，标签里的表单内容还在", async () => {
+  test("form contents in a tab survive switching away and back", async () => {
     renderTabs();
     const input = (await screen.findByLabelText(
       "chat input",
@@ -93,11 +95,11 @@ describe("PlaygroundTabs", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Chat" }));
     const back = screen.getByLabelText("chat input") as HTMLInputElement;
     expect(back.value).toBe("hello");
-    // 同一个 DOM 节点：隐藏而不是卸载，所以状态才留得住。
+    // Same DOM node: hidden rather than unmounted, which is why the state survives.
     expect(back).toBe(input);
   });
 
-  test("只有一个标签时不显示标签栏", async () => {
+  test("hides the tab bar when there is only one tab", async () => {
     renderTabs(tabs.slice(0, 1));
     expect(await screen.findByText("chat panel chat-model")).toBeDefined();
     expect(screen.queryByRole("tablist")).toBeNull();

@@ -27,12 +27,13 @@ const url = process.env.DATABASE_URL_TEST;
 if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
-if (!url) console.warn("跳过 credits-low 测试：未设置 DATABASE_URL_TEST");
+if (!url)
+  console.warn("Skipping credits-low tests: DATABASE_URL_TEST is not set");
 
 const HOUR = 3600 * 1000;
 const THRESHOLD = 100;
 
-describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
+describe.skipIf(!url)("credits-low reminder (real Postgres)", () => {
   let client: DbClient;
   let db: DbClient["db"];
   let userId: string;
@@ -57,13 +58,14 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
         threshold: THRESHOLD,
         send: options.send ?? capture,
         db,
-        // 用例里不关心立即发送的快速重试，失败一次就留给补发扫描。
+        // These cases don't care about the quick retries of the immediate send; one failure is
+        // left to the resend sweep.
         retry: { attempts: 1, delayMs: 0 },
         now: () => clock,
       }),
     });
 
-  /** 这个用户的去重名额（每个用例用新用户，所以不会串）。 */
+  /** This user's dedupe slots (each case uses a new user, so they don't leak across cases). */
   const claims = () =>
     db.select().from(notificationLog).where(eq(notificationLog.userId, userId));
   const outboxRows = () =>
@@ -106,11 +108,11 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
       .values({ id: userId, name: "Ada", email, emailVerified: true });
   });
 
-  test("跨过阈值时发一封；阈值以下继续扣减不再发", async () => {
+  test("sends one when crossing the threshold; further deductions below it send no more", async () => {
     await grant(150);
     await deduct(30); // 150 → 120
     expect(sent).toHaveLength(0);
-    await deduct(30); // 120 → 90，跨过 100
+    await deduct(30); // 120 → 90, crosses 100
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
       to: email,
@@ -127,7 +129,7 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("正好扣到阈值不提醒，低于阈值才提醒", async () => {
+  test("no reminder when landing exactly on the threshold, only when going below it", async () => {
     await grant(150);
     await deduct(50); // → 100
     expect(sent).toHaveLength(0);
@@ -135,23 +137,23 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("24 小时内再次跨过阈值不发，超过 24 小时会再发", async () => {
+  test("crossing again within 24 hours sends nothing; after 24 hours it sends again", async () => {
     await grant(150);
-    await deduct(60); // → 90，发第一封
+    await deduct(60); // → 90, sends the first one
     expect(sent).toHaveLength(1);
 
     clock = new Date(clock.getTime() + 23 * HOUR);
     await grant(100); // → 190
-    await deduct(100); // → 90，23 小时后再次跨过
+    await deduct(100); // → 90, crosses again 23 hours later
     expect(sent).toHaveLength(1);
 
-    clock = new Date(clock.getTime() + 2 * HOUR); // 距第一封 25 小时
+    clock = new Date(clock.getTime() + 2 * HOUR); // 25 hours after the first one
     await grant(100); // → 190
     await deduct(100); // → 90
     expect(sent).toHaveLength(2);
   });
 
-  test("50 个并发扣减只发一封，余额和流水一致", async () => {
+  test("50 concurrent deductions send only one; balance and ledger agree", async () => {
     await grant(1040);
     const results = await Promise.allSettled(
       Array.from({ length: 50 }, () => deduct(20)),
@@ -162,7 +164,7 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     expect(sent[0]!.props.balance).toBeLessThan(THRESHOLD);
   });
 
-  test("去重名额并发抢占时只有一个成功", async () => {
+  test("only one concurrent claim of the dedupe slot succeeds", async () => {
     const claims = await Promise.all(
       Array.from({ length: 20 }, () =>
         claimNotification(db, {
@@ -177,24 +179,24 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     expect(claims.filter(Boolean)).toHaveLength(1);
   });
 
-  test("features.credits 关闭时扣减报错，不发信", async () => {
+  test("with features.credits off, deduction throws and no email is sent", async () => {
     await expect(deduct(10, credits({ enabled: false }))).rejects.toThrow(
       CreditsDisabledError,
     );
     expect(sent).toHaveLength(0);
   });
 
-  test("发信失败不影响扣减", async () => {
+  test("a failed email send does not affect the deduction", async () => {
     await grant(150);
     failSend = true;
     const result = await deduct(60);
     expect(result).toMatchObject({ status: "applied", balance: 90 });
   });
 
-  test("立即发送失败：提醒留在 outbox、名额保留；补发扫描发出一封，不会因重跨阈值多发", async () => {
+  test("immediate send fails: the reminder stays in the outbox and the slot is kept; the resend sweep sends one, and crossing again does not add another", async () => {
     await grant(150);
     failSend = true;
-    await deduct(60); // 150 → 90，跨过阈值；立即发送失败 → 留在 outbox 等补发
+    await deduct(60); // 150 → 90, crosses; immediate send fails → waits in the outbox
     expect(sent).toHaveLength(0);
     expect(await claims()).toHaveLength(1);
     const [queued] = await outboxRows();
@@ -203,13 +205,14 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
       template: "credits-low",
     });
 
-    // 名额还占着：1 小时后再次跨过阈值不会再排一封。
+    // The slot is still held: crossing the threshold again an hour later doesn't queue another.
     clock = new Date(clock.getTime() + HOUR);
     await grant(100);
     await deduct(100);
     expect(await outboxRows()).toHaveLength(1);
 
-    // 服务恢复，补发扫描（相当于重启后的新实例）把它发出去。
+    // The service recovers, and the resend sweep (as a fresh instance after a restart would) sends
+    // it.
     failSend = false;
     await createOutbox({ db, send: capture as never, now: () => clock }).scan({
       userIds: [userId],
@@ -219,11 +222,11 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     expect((await outboxRows())[0]).toMatchObject({ status: "sent" });
   });
 
-  test("外部事务：提交后由调用方的 afterCommit 发送；回滚时不发且名额回滚", async () => {
+  test("outer transaction: sent via the caller's afterCommit after commit; on rollback nothing is sent and the slot rolls back", async () => {
     await grant(150);
     const c = credits();
 
-    // 回滚
+    // Roll back
     const rolledBack: AfterCommitCallback[] = [];
     await expect(
       db.transaction(async (tx) => {
@@ -247,7 +250,7 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
         .where(eq(notificationLog.userId, userId)),
     ).toHaveLength(0);
 
-    // 提交：回调由调用方在提交后执行
+    // Commit: the caller runs the callbacks after commit
     const committed: AfterCommitCallback[] = [];
     await db.transaction(async (tx) => {
       await c.deductCredits(
@@ -260,7 +263,7 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("外部事务但没传 afterCommit：跳过提醒，也不占用名额", async () => {
+  test("outer transaction without afterCommit: skips the reminder and does not claim a slot", async () => {
     await grant(150);
     await db.transaction(async (tx) => {
       await credits().deductCredits(
@@ -277,7 +280,7 @@ describe.skipIf(!url)("credits-low 提醒（真实 Postgres）", () => {
     ).toHaveLength(0);
   });
 
-  test("EMAIL_TRANSPORT=file：真实渲染并写入发件箱", async () => {
+  test("EMAIL_TRANSPORT=file: renders for real and writes to the file outbox", async () => {
     const previous = process.env.EMAIL_TRANSPORT;
     process.env.EMAIL_TRANSPORT = "file";
     try {

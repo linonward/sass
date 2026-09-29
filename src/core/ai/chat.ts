@@ -4,7 +4,8 @@ import { getClientIp } from "@/core/ratelimit/limiter";
 
 import type { RunAIInput, RunAIResult } from "./run";
 
-// 请求体上限。按次固定扣费，太长的上下文会让单次成本失控；需要更长时在业务路由里调大。
+// Request body limit. Each call deducts a fixed charge, so an overly long context would let the
+// cost of a single call run away; raise it in your own route if you need longer.
 export const MAX_CHAT_BODY_BYTES = 64 * 1024;
 
 const INSTRUCTIONS = "You are a helpful assistant. Answer concisely.";
@@ -13,13 +14,14 @@ export type ChatDeps = {
   enabled: boolean;
   getUserId: (request: Request) => Promise<string | null>;
   runAI: (input: RunAIInput) => Promise<RunAIResult>;
-  // 登记响应结束后仍要完成的工作（next/server 的 after）。
+  // Registers work that must still finish after the response ends (next/server's after).
   after: (task: () => Promise<unknown>) => void;
 };
 
 /**
- * `POST /api/ai/chat` 的处理：body 为 useChat 发来的 `{ messages, modelId? }`，
- * 返回 UI message 流。错误响应是 JSON `{ error }`，前端按 error 显示文案。
+ * Handler for `POST /api/ai/chat`: the body is the `{ messages, modelId? }` sent by useChat, and it
+ * returns a UI message stream. Error responses are JSON `{ error }`; the frontend picks the copy
+ * to show based on error.
  */
 export async function handleChat(
   request: Request,
@@ -58,7 +60,7 @@ export async function handleChat(
 
   after(() => run.settled);
   return run.result.toUIMessageStreamResponse({
-    // 不把服务商的原始报错透给前端。
+    // Don't leak the provider's raw error to the frontend.
     onError: () => "model_error",
   });
 }

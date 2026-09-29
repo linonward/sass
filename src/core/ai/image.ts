@@ -22,17 +22,21 @@ import { buildObjectKey } from "@/core/upload/validate";
 
 import { reserveUsage, settleUsage, type UsageDeps } from "./usage";
 
-/** 前端可选的画幅；服务商不支持的画幅由适配器回退并给出 warning。 */
+/**
+ * Aspect ratios the frontend can pick; for ratios the provider doesn't support, the adapter falls
+ * back and emits a warning.
+ */
 export const imageAspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4"] as const;
 export type ImageAspectRatio = (typeof imageAspectRatios)[number];
 
-// 提示词上限。按次固定扣费，太长的提示词服务商也会拒绝。
+// Prompt length limit. Each call deducts a fixed charge, and providers reject overly long prompts
+// anyway.
 export const MAX_IMAGE_PROMPT_LENGTH = 2000;
 
 export type RunImageInput = {
   userId: string | null | undefined;
   ip?: string | null;
-  // site.config.ts 中 ai.imageModels 的 id；不填用 ai.defaultImageModel。
+  // An id from ai.imageModels in site.config.ts; defaults to ai.defaultImageModel.
   modelId?: unknown;
   prompt: unknown;
   aspectRatio?: unknown;
@@ -40,11 +44,11 @@ export type RunImageInput = {
   maxRetries?: number;
 };
 
-/** 一次生成的结果，也是生成记录列表里的一项。 */
+/** The result of one generation, which is also one item in the generations list. */
 export type Generation = {
   id: string;
   kind: "image" | "video";
-  // files.id，可以作为图生视频的首帧。
+  // files.id; can be used as the first frame for image-to-video.
   fileId: string;
   modelId: string;
   prompt: string;
@@ -69,11 +73,11 @@ export type RunImageDeps = {
     policy: string,
     identifiers: RateLimitIdentifiers,
   ) => Promise<RateLimitResult>;
-  // 按配置取模型；该服务商没有配置 key 时返回 null。
+  // Resolves the model from config; returns null when that provider has no key configured.
   getModel: (model: AiImageModel) => ImageModelV4 | null;
-  // 没有配置 R2 时返回 null。
+  // Returns null when R2 is not configured.
   getStorage: () => ObjectStorage | null;
-  // 对象的访问地址（公开域名或签名地址），见 upload 模块的 fileUrl。
+  // URL for the object (public domain or signed URL); see fileUrl in the upload module.
   fileUrl: (key: string) => Promise<string>;
   now?: () => number;
   logError?: LogFn;
@@ -94,10 +98,12 @@ function imageMime(mediaType: string): UploadMimeType {
 }
 
 /**
- * 创建 runImage。默认实例见 `./index.ts`；测试注入 mock 模型、数据库、存储和限流。
+ * Creates runImage. The default instance is in `./index.ts`; tests inject mock models, database,
+ * storage, and rate limiting.
  *
- * 顺序：检查登录 → 校验提示词和模型 → 检查存储 → 限流（ai 策略）→ 预扣积分并写 ai_usage
- * → generateImage → 写入 R2 和 files。生成或存储失败时退回积分。
+ * Order: check sign-in → validate prompt and model → check storage → rate limit (ai policy) →
+ * pre-deduct credits and write ai_usage → generateImage → write to R2 and files. Credits are
+ * refunded if generation or storage fails.
  */
 export function createRunImage({
   db,
@@ -113,7 +119,8 @@ export function createRunImage({
   const getDb = () => (typeof db === "function" ? db() : db);
   const usageDeps: UsageDeps = { db: getDb, credits, logError };
 
-  // 整个调用放在一个 span 里，结束时由 settleUsage 补充模型、积分和结果。
+  // The whole call runs in one span; at the end settleUsage fills in the model, credits, and
+  // outcome.
   return function runImage(input: RunImageInput): Promise<RunImageResult> {
     return withSpan("ai.image", {}, () => generate(input));
   };

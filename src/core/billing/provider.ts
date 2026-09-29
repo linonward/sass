@@ -5,35 +5,42 @@ export type CreateCheckoutInput = {
   planId: string;
   successUrl: string;
   cancelUrl: string;
-  /** 预填到结账页的邮箱。 */
+  /** Email prefilled on the checkout page. */
   customerEmail?: string;
 };
 
 export type Checkout = { checkoutId: string; url: string };
 
 /**
- * 支付服务商的统一接口。实现见 ./providers/（creem、stripe，以及测试用的 fake），
- * 由 `BILLING_PROVIDER` 分派（见 ./providers/index.ts）。
- * 账单表、事件处理和积分都不需要改，加服务商只要实现这个接口并在注册表里加一条。
+ * Common interface for payment providers. Implementations live in ./providers/ (creem, stripe, plus
+ * fake for tests) and are dispatched by `BILLING_PROVIDER` (see ./providers/index.ts). Billing tables,
+ * event handling and credits need no changes: adding a provider only means implementing this interface
+ * and adding an entry to the registry.
  */
 export interface PaymentProvider {
-  /** 服务商 ID，写入各张账单表的 provider 列。 */
+  /** Provider ID, written to the provider column of every billing table. */
   readonly id: string;
-  /** 创建结账会话，返回要跳转的地址。userId 须作为 metadata 传给服务商，webhook 里带回来。 */
+  /**
+   * Create a checkout session and return the URL to redirect to. userId must be passed to the provider
+   * as metadata so it comes back in the webhook.
+   */
   createCheckout(input: CreateCheckoutInput): Promise<Checkout>;
-  /** 客户自助管理订阅和账单的页面地址。 */
+  /** URL of the page where customers manage their subscription and billing themselves. */
   getPortalUrl(customerId: string): Promise<string>;
   cancelSubscription(subscriptionId: string): Promise<void>;
   /**
-   * 校验 webhook 签名并返回解析后的请求体。签名缺失或不正确时抛出 WebhookVerificationError。
-   * 会读取 request 的 body，调用后不要再读。
+   * Verify the webhook signature and return the parsed body. Throws WebhookVerificationError when the
+   * signature is missing or wrong. Reads the request body, so don't read it again afterwards.
    */
   verifyWebhook(request: Request): Promise<unknown>;
-  /** 把已校验的请求体转换成 BillingEvent；不关心的事件类型返回 null。 */
+  /** Turn a verified body into a BillingEvent; returns null for event types we don't care about. */
   parseEvent(payload: unknown): BillingEvent | null;
 }
 
-/** webhook 签名校验失败。processWebhook 对它返回 401，不写库、不重试。 */
+/**
+ * Webhook signature verification failed. processWebhook returns 401 for it: nothing written, no
+ * retry.
+ */
 export class WebhookVerificationError extends Error {
   constructor(message = "Invalid webhook signature") {
     super(message);

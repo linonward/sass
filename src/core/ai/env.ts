@@ -1,12 +1,16 @@
 import { z } from "zod";
 
-// 会被 next.config.ts 间接加载，那里不解析 `@/` 别名，只能用相对路径。
+// Loaded indirectly by next.config.ts, which doesn't resolve the `@/` alias, so relative paths
+// only.
 import type { AiProvider } from "../config/schema";
 import { requiredWhen } from "../create-env";
 
 type RuntimeEnv = Record<string, string | undefined>;
 
-/** 各服务商的 API key 变量名，与 AI SDK 各 provider 默认读取的变量一致。 */
+/**
+ * API key variable names per provider, matching the variables each AI SDK provider reads by
+ * default.
+ */
 export const aiProviderKeys = {
   openai: "OPENAI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
@@ -15,9 +19,9 @@ export const aiProviderKeys = {
 } as const satisfies Record<AiProvider, string>;
 
 /**
- * AI 模块的变量：每家服务商一个 key，填了哪家就启用哪家。
- * `features.ai` 开启时，Vercel 生产环境必须填上 `ai.models` 用到的每家服务商的 key；
- * 其他环境可以不填，此时这些模型的调用返回 503。
+ * Variables for the AI module: one key per provider; each provider with a key set is enabled. When
+ * `features.ai` is on, Vercel production must set a key for every provider used by `ai.models`;
+ * other environments may leave them out, in which case calls to those models return 503.
  */
 export function aiServerEnv(
   runtimeEnv: RuntimeEnv,
@@ -31,8 +35,9 @@ export function aiServerEnv(
     ANTHROPIC_API_KEY: key("anthropic"),
     GOOGLE_GENERATIVE_AI_API_KEY: key("google"),
     ALIBABA_API_KEY: key("alibaba"),
-    // 百炼的 OpenAI 兼容地址，key 所在地域决定用哪个。不填用 AI SDK 默认的国际站（新加坡）；
-    // 北京地域填 https://dashscope.aliyuncs.com/compatible-mode/v1。
+    // Model Studio's OpenAI-compatible URL; the key's region decides which one to use. Leave it
+    // unset for the AI SDK default, the international site (Singapore); for the Beijing region set
+    // https://dashscope.aliyuncs.com/compatible-mode/v1.
     ALIBABA_BASE_URL: z.url().optional(),
   };
 }

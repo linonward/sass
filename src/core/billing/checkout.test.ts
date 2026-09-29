@@ -33,11 +33,11 @@ import {
 } from "./checkout";
 import { FakeProvider } from "./testing/fake-provider";
 
-// 多语言站点，覆盖带前缀的回跳地址。
+// Multilingual site, to cover redirect URLs with a locale prefix.
 vi.mock("@/core/i18n/routing", () => ({
   routing: { locales: ["en", "de"], defaultLocale: "en" },
 }));
-// 用配置了真实产品 ID 的套餐（site.config.ts 里是占位值，不允许结账）。
+// Use plans configured with real product IDs (site.config.ts has placeholders, which can't check out).
 vi.mock("./plans", () => {
   const plans = [
     { id: "free", price: 0, type: "subscription", credits: 0 },
@@ -128,7 +128,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     await client.db.delete(user).where(eq(user.id, userId));
   });
 
-  test("创建结账：带上用户、套餐和默认语言的成功页", async () => {
+  test("creates checkout with the user, the plan and a default-locale success page", async () => {
     await expect(checkout("pro")).resolves.toEqual({
       ok: true,
       url: expect.stringContaining("https://fake.test/checkout/"),
@@ -138,7 +138,8 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
         userId,
         planId: "pro",
         customerEmail: "buyer@example.com",
-        // 带上套餐和下单时间：服务商回跳不带订单 ID 时成功页靠它定位（见 status.ts）。
+        // Include the plan and checkout time: when the provider's redirect carries no order ID, the
+        // success page uses them to locate it (see status.ts).
         successUrl: expect.stringMatching(
           /^https:\/\/sass\.test\/billing\/success\?plan=pro&since=\d+$/,
         ),
@@ -147,7 +148,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     ]);
   });
 
-  test("非默认语言的回跳地址带语言前缀；不支持的语言回退到默认语言", async () => {
+  test("non-default locales get a prefixed redirect URL; unsupported locales fall back to the default", async () => {
     await checkout("pro", { locale: "de" });
     await checkout("lifetime", { locale: "xx" });
     expect(fake.checkouts.map((c) => c.successUrl.split("?")[0])).toEqual([
@@ -158,11 +159,11 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
   });
 
   test.each([
-    ["没配置服务商", "pro", null, "billing_not_configured", 503],
-    ["未知套餐", "nope", undefined, "invalid_plan", 400],
-    ["非字符串", 42, undefined, "invalid_plan", 400],
-    ["免费套餐", "free", undefined, "free_plan", 400],
-    ["占位产品 ID", "draft", undefined, "plan_not_configured", 503],
+    ["no provider configured", "pro", null, "billing_not_configured", 503],
+    ["unknown plan", "nope", undefined, "invalid_plan", 400],
+    ["not a string", 42, undefined, "invalid_plan", 400],
+    ["free plan", "free", undefined, "free_plan", 400],
+    ["placeholder product ID", "draft", undefined, "plan_not_configured", 503],
   ] as const)("%s → %s", async (_, planId, provider, error, status) => {
     await expect(
       checkout(planId, {
@@ -186,7 +187,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     });
   }
 
-  test("已有有效订阅时拒绝再订阅", async () => {
+  test("rejects subscribing again when there is already an active subscription", async () => {
     await addSubscription("active");
     await expect(checkout("pro")).resolves.toMatchObject({
       ok: false,
@@ -195,7 +196,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     });
   });
 
-  test("已取消但未到期的订阅仍算有效；已到期的不算", async () => {
+  test("a canceled but not yet expired subscription still counts as active; an expired one doesn't", async () => {
     await addSubscription("canceled", new Date("2026-07-01T00:00:00Z"));
     await expect(checkout("pro")).resolves.toMatchObject({
       error: "already_subscribed",
@@ -209,7 +210,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     await expect(checkout("pro")).resolves.toMatchObject({ ok: true });
   });
 
-  test("一次性套餐买过就不能再买", async () => {
+  test("a one-time plan can't be bought again once purchased", async () => {
     await client.db.insert(orders).values({
       userId,
       provider: fake.id,
@@ -223,7 +224,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     });
   });
 
-  test("限流：超过阈值返回 429 + retryAfter，不再建结账会话", async () => {
+  test("rate limiting: over the threshold returns 429 + retryAfter and creates no checkout session", async () => {
     const limitAfter = 2;
     let calls = 0;
     const checkRateLimit = async (): Promise<RateLimitResult> =>
@@ -234,11 +235,12 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     const first = await checkout("pro", { checkRateLimit });
     const second = await checkout("pro", { checkRateLimit });
     expect(first).toMatchObject({ ok: true });
-    // 窗口内复用同一个会话：第二次请求不会再向服务商建单。
+    // Within the window the same session is reused: the second request doesn't create another order
+    // at the provider.
     expect(second).toEqual(first);
     expect(fake.checkouts).toHaveLength(1);
 
-    // 第 N+1 次：拒绝，且不落到服务商。
+    // Request N+1: rejected, and never reaches the provider.
     await expect(checkout("pro", { checkRateLimit })).resolves.toEqual({
       ok: false,
       error: "rate_limited",
@@ -247,7 +249,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     });
     expect(fake.checkouts).toHaveLength(1);
 
-    // Redis 不可用（failMode: closed）时是 503，同样带 retryAfter。
+    // When Redis is unavailable (failMode: closed) it's 503, also with retryAfter.
     const unavailable = await checkout("pro", {
       checkRateLimit: async () => ({
         ok: false,
@@ -263,9 +265,10 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     });
   });
 
-  test("并发双击只建一个会话：两个请求拿到同一个 URL", async () => {
-    // 建单慢一点，逼出真正的交错：两个请求都在「还没提交」时进入创建流程。
-    // 没有行锁的话两边都会查不到会话、各建一单 —— 用户就可能两个页面都付款。
+  test("a concurrent double-click creates only one session: both requests get the same URL", async () => {
+    // Make order creation a bit slow to force a real interleaving: both requests enter the create path
+    // while nothing is committed yet. Without the row lock, neither would find a session and each
+    // would create an order — and the user could end up paying on both pages.
     class SlowProvider extends FakeProvider {
       override async createCheckout(
         input: Parameters<FakeProvider["createCheckout"]>[0],
@@ -285,7 +288,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     expect(slow.checkouts).toHaveLength(1);
   });
 
-  test("会话过期后重新建单", async () => {
+  test("creates a new order after the session expires", async () => {
     const first = await checkout("pro");
     expect(first).toMatchObject({ ok: true });
 
@@ -297,7 +300,7 @@ describe.skipIf(!url)("startCheckout / openPortal", () => {
     expect(fake.checkouts).toHaveLength(2);
   });
 
-  test("客户门户：没有客户记录时 404，有则返回链接", async () => {
+  test("customer portal: 404 without a customer record, otherwise returns the link", async () => {
     const portal = () => openPortal({ db: client.db, provider: fake, userId });
     await expect(portal()).resolves.toEqual({
       ok: false,
@@ -325,13 +328,13 @@ describe("billingOrigin", () => {
     "https://preview-abc.vercel.app/api/billing/checkout",
   );
 
-  test("生产环境固定用配置的域名，不信任请求的 Host", () => {
+  test("production always uses the configured domain and doesn't trust the request Host", () => {
     expect(
       billingOrigin(request, { VERCEL_ENV: "production" }, "example.com"),
     ).toBe("https://example.com");
   });
 
-  test("本地和预览用请求自身的地址", () => {
+  test("local and preview use the request's own origin", () => {
     expect(
       billingOrigin(request, { VERCEL_ENV: "preview" }, "example.com"),
     ).toBe("https://preview-abc.vercel.app");

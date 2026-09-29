@@ -73,25 +73,25 @@ function apiError(status: number) {
 describe("verifyWebhook", () => {
   const body = JSON.stringify(creemSample("checkout.completed"));
 
-  test("签名正确时返回解析后的请求体", async () => {
+  test("returns the parsed body when the signature is valid", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(body)),
     ).resolves.toEqual(JSON.parse(body));
   });
 
-  test("签名错误时拒绝", async () => {
+  test("rejects a wrong signature", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(body, "0".repeat(64))),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("缺少签名 header 时拒绝", async () => {
+  test("rejects a missing signature header", async () => {
     await expect(
       provider().verifyWebhook(signedRequest(body, "")),
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("请求体被篡改时拒绝", async () => {
+  test("rejects a tampered body", async () => {
     const signature = createHmac("sha256", SECRET).update(body).digest("hex");
     const tampered = body.replace('"amount":1000', '"amount":1');
     expect(tampered).not.toBe(body);
@@ -100,7 +100,7 @@ describe("verifyWebhook", () => {
     ).rejects.toBeInstanceOf(WebhookVerificationError);
   });
 
-  test("用别的 secret 签名时拒绝", async () => {
+  test("rejects a body signed with a different secret", async () => {
     const signature = createHmac("sha256", "other").update(body).digest("hex");
     await expect(
       provider().verifyWebhook(signedRequest(body, signature)),
@@ -108,8 +108,8 @@ describe("verifyWebhook", () => {
   });
 });
 
-describe("parseCreemEvent：官方示例 payload 的映射", () => {
-  test("checkout.completed（订阅结账）：不记订单，带订阅和客户", () => {
+describe("parseCreemEvent: mapping of the official sample payloads", () => {
+  test("checkout.completed (subscription checkout): no order, carries subscription and customer", () => {
     const sample = creemSample("checkout.completed");
     sample.object.metadata = { userId: "user_1", planId: "pro" };
     expect(parseCreemEvent(sample)).toMatchObject({
@@ -128,7 +128,7 @@ describe("parseCreemEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("checkout.completed（一次性购买）：记订单", () => {
+  test("checkout.completed (one-time purchase): records the order", () => {
     const sample = creemSample("checkout.completed");
     delete sample.object.subscription;
     expect(parseCreemEvent(sample)).toMatchObject({
@@ -138,7 +138,7 @@ describe("parseCreemEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("没有 metadata.planId 时按产品 ID 找套餐，找不到则为空", () => {
+  test("without metadata.planId, looks up the plan by product ID and leaves it empty if not found", () => {
     const sample = creemSample("checkout.completed");
     expect(parseCreemEvent(sample)).toMatchObject({
       userId: undefined,
@@ -146,7 +146,7 @@ describe("parseCreemEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("subscription.paid → subscription.renewed，带账期和交易 ID", () => {
+  test("subscription.paid → subscription.renewed, with billing period and transaction ID", () => {
     expect(parseCreemEvent(creemSample("subscription.paid"))).toMatchObject({
       type: "subscription.renewed",
       subscriptionId: "sub_6pC2lNB6joCRQIZ1aMrTpi",
@@ -173,7 +173,7 @@ describe("parseCreemEvent：官方示例 payload 的映射", () => {
     expect(event).toHaveProperty("subscriptionId");
   });
 
-  test("scheduled_cancel 带上可用到的时间", () => {
+  test("scheduled_cancel carries the time access lasts until", () => {
     expect(
       parseCreemEvent(creemSample("subscription.scheduled_cancel")),
     ).toMatchObject({
@@ -182,13 +182,13 @@ describe("parseCreemEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("subscription.update 不是 active 时忽略", () => {
+  test("ignores subscription.update when not active", () => {
     const sample = creemSample("subscription.update");
     sample.object.status = "paused";
     expect(parseCreemEvent(sample)).toBeNull();
   });
 
-  test("refund.created（订阅付款）：按交易 ID 对应订单", () => {
+  test("refund.created (subscription payment): maps to the order by transaction ID", () => {
     expect(parseCreemEvent(creemSample("refund.created"))).toMatchObject({
       type: "refund.created",
       refundId: "ref_3DB9NQFvk18TJwSqd0N6bd",
@@ -199,7 +199,7 @@ describe("parseCreemEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("refund.created（一次性购买）：按订单 ID", () => {
+  test("refund.created (one-time purchase): uses the order ID", () => {
     const sample = creemSample("refund.created");
     const transaction = sample.object.transaction as Record<string, unknown>;
     delete transaction.subscription;
@@ -209,7 +209,7 @@ describe("parseCreemEvent：官方示例 payload 的映射", () => {
     });
   });
 
-  test("refund 的 userId 从结账 metadata 读取", () => {
+  test("refund reads userId from the checkout metadata", () => {
     const sample = creemSample("refund.created");
     (sample.object.checkout as Record<string, unknown>).metadata = {
       userId: "user_9",
@@ -218,20 +218,20 @@ describe("parseCreemEvent：官方示例 payload 的映射", () => {
   });
 
   test.each<CreemSampleEvent>(["dispute.created", "subscription.trialing"])(
-    "不关心的事件 %s 返回 null",
+    "returns null for the ignored event %s",
     (sample) => {
       expect(parseCreemEvent(creemSample(sample))).toBeNull();
     },
   );
 
-  test("结构不对的请求体返回 null", () => {
+  test("returns null for a malformed body", () => {
     expect(parseCreemEvent(null)).toBeNull();
     expect(parseCreemEvent({ eventType: "checkout.completed" })).toBeNull();
   });
 });
 
 describe("createCheckout", () => {
-  test("传入产品 ID、回跳地址、邮箱和 metadata", async () => {
+  test("passes the product ID, return URL, email, and metadata", async () => {
     const client = fakeClient();
     const checkout = await provider(client).createCheckout({
       userId: "user_1",
@@ -254,7 +254,7 @@ describe("createCheckout", () => {
     });
   });
 
-  test("套餐没有产品 ID 时抛错", async () => {
+  test("throws when the plan has no product ID", async () => {
     await expect(
       provider().createCheckout({
         userId: "user_1",
@@ -267,7 +267,7 @@ describe("createCheckout", () => {
 });
 
 describe("cancelSubscription", () => {
-  test("有效订阅：立即取消", async () => {
+  test("active subscription: cancels immediately", async () => {
     const client = fakeClient();
     await provider(client).cancelSubscription("sub_1");
     expect(client.subscriptions.cancel).toHaveBeenCalledWith("sub_1", {
@@ -276,7 +276,7 @@ describe("cancelSubscription", () => {
   });
 
   test.each(["canceled", "scheduled_cancel"])(
-    "已经是 %s：不再取消，视为成功",
+    "already %s: skips canceling and counts as success",
     async (status) => {
       const client = fakeClient();
       client.subscriptions.get.mockResolvedValueOnce({ status });
@@ -285,7 +285,7 @@ describe("cancelSubscription", () => {
     },
   );
 
-  test("订阅不存在（404）：视为成功", async () => {
+  test("subscription not found (404): counts as success", async () => {
     const client = fakeClient();
     client.subscriptions.get.mockRejectedValueOnce(apiError(404));
     await expect(
@@ -293,7 +293,7 @@ describe("cancelSubscription", () => {
     ).resolves.toBeUndefined();
   });
 
-  test("其他错误：向上抛出", async () => {
+  test("other errors: rethrown", async () => {
     const client = fakeClient();
     client.subscriptions.cancel.mockRejectedValueOnce(apiError(500));
     await expect(
@@ -302,7 +302,7 @@ describe("cancelSubscription", () => {
   });
 });
 
-test("getPortalUrl 返回客户门户链接", async () => {
+test("getPortalUrl returns the customer portal link", async () => {
   const client = fakeClient();
   await expect(provider(client).getPortalUrl("cust_1")).resolves.toBe(
     "https://creem.io/portal/cust_1",

@@ -20,19 +20,20 @@ const referralsEnabled =
 const referralRewardsEnabled =
   referralsEnabled && isRewardActive(getRewardRule(siteConfig));
 
-// 套件自带的 onBillingEvent 钩子：套餐配置了 credits 且 features.credits 开启时发放积分。
+// The kit's built-in onBillingEvent hook: grants credits when the plan configures credits and
+// features.credits is on.
 registerOnBillingEvent(
   "billing:grant-credits",
   createGrantCreditsHandler({ enabled: creditsEnabled, grantCredits }),
 );
 
-// 退款按未退比例回收集分（同样受 features.credits 控制）。
+// Refunds reclaim credits in proportion to the unrefunded share (also gated by features.credits).
 registerOnBillingEvent(
   "billing:reclaim-credits",
   createReclaimCreditsHandler({ enabled: creditsEnabled, reclaimCredits }),
 );
 
-// 邀请奖励发放：checkout.completed / subscription.renewed 时发放双方奖励。
+// Referral reward grant: on checkout.completed / subscription.renewed, grant both sides their reward.
 registerOnBillingEvent(
   "referrals:grant-reward",
   createReferralGrantHandler({
@@ -42,7 +43,7 @@ registerOnBillingEvent(
   }),
 );
 
-// 邀请奖励回收：refund.created 时回收双方奖励。
+// Referral reward reclaim: on refund.created, reclaim both sides' rewards.
 registerOnBillingEvent(
   "referrals:reclaim-reward",
   createReferralReclaimHandler({
@@ -52,13 +53,15 @@ registerOnBillingEvent(
   }),
 );
 
-// 付款成功、付款失败、订阅取消的通知邮件；在事务提交后发送。
+// Notification emails for payment succeeded, payment failed and subscription canceled; sent after
+// the transaction commits.
 registerOnBillingEvent(
   "billing:emails",
   createBillingEmailHandler({ send: sendEmail, creditsEnabled }),
 );
 
-// 付款成功的转化事件（observability.analytics 开启时）；在事务提交、响应返回之后发送。
+// Conversion event for successful payments (when observability.analytics is on); sent after commit
+// and after the response.
 registerOnBillingEvent(
   "billing:track-purchase",
   createPurchaseTrackingHandler({ track: trackServer }),

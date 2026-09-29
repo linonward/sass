@@ -1,5 +1,5 @@
 // @vitest-environment node
-// t3-env 只在服务端校验 server 变量，jsdom 下会被当成客户端。
+// t3-env only validates server variables on the server, and jsdom is treated as the client.
 import { describe, expect, test } from "vitest";
 
 import type { AiProvider } from "../config/schema";
@@ -19,7 +19,7 @@ function check(
 }
 
 describe("aiServerEnv", () => {
-  test("Vercel 生产环境开启 AI 时，模型用到的每家服务商都要有 key", () => {
+  test("with AI on in Vercel production, every provider used by the models needs a key", () => {
     const production = { VERCEL_ENV: "production" };
     expect(check(production)).toThrow("- OPENAI_API_KEY: ");
     expect(check(production)).toThrow("- ANTHROPIC_API_KEY: ");
@@ -28,7 +28,7 @@ describe("aiServerEnv", () => {
     ).not.toThrow();
   });
 
-  test("用到百炼时要求 ALIBABA_API_KEY，ALIBABA_BASE_URL 可选但必须是 URL", () => {
+  test("requires ALIBABA_API_KEY when Model Studio is used; ALIBABA_BASE_URL is optional but must be a URL", () => {
     const production = { VERCEL_ENV: "production" };
     expect(check(production, ["alibaba"])).toThrow("- ALIBABA_API_KEY: ");
     expect(
@@ -39,19 +39,19 @@ describe("aiServerEnv", () => {
     );
   });
 
-  test("没用到的服务商不要求", () => {
+  test("does not require unused providers", () => {
     expect(
       check({ VERCEL_ENV: "production", OPENAI_API_KEY: "sk-x" }, ["openai"]),
     ).not.toThrow();
   });
 
-  test("没开 AI 时生产环境也不要求", () => {
+  test("does not require keys in production when AI is off", () => {
     expect(
       check({ VERCEL_ENV: "production" }, ["openai"], false),
     ).not.toThrow();
   });
 
-  test("本地、CI 和预览不要求", () => {
+  test("does not require keys locally, in CI, or in preview", () => {
     expect(check({})).not.toThrow();
     expect(check({ VERCEL_ENV: "preview" })).not.toThrow();
   });

@@ -23,10 +23,10 @@ export { AI_CREDIT_SOURCE, type RunAIInput, type RunAIResult } from "./run";
 export { imageAspectRatios, type Generation } from "./image";
 export { videoAspectRatios, type VideoJob } from "./video";
 
-/** `features.ai` 是否开启。关闭时 AI 路由返回 404，侧边栏不显示 Playground。 */
+/** Whether `features.ai` is on. When off, AI routes return 404 and the sidebar hides Playground. */
 export const aiEnabled = siteConfig.features.ai;
 
-/** 可选的模型（给前端展示）：只含 id 和积分成本。 */
+/** Selectable models (shown in the frontend): only the id and credit cost. */
 export const aiModels = siteConfig.ai.models.map(({ id, creditCost }) => ({
   id,
   creditCost,
@@ -34,7 +34,7 @@ export const aiModels = siteConfig.ai.models.map(({ id, creditCost }) => ({
 
 export const defaultAiModel = siteConfig.ai.defaultModel;
 
-/** 绑定全局数据库、积分、限流和 env 里的服务商 key 的 runAI。 */
+/** runAI bound to the global database, credits, rate limiting, and provider keys from env. */
 export const runAI = createRunAI({
   db: getDb,
   config: siteConfig.ai,
@@ -43,7 +43,10 @@ export const runAI = createRunAI({
   getModel: createModelResolver(env),
 });
 
-/** 图片生成是否可用：开启 AI 和上传（结果存 R2），且配置了图片模型。 */
+/**
+ * Whether image generation is available: AI and uploads are on (results are stored in R2) and image
+ * models are configured.
+ */
 export const aiImageEnabled =
   aiEnabled && uploadEnabled && siteConfig.ai.imageModels.length > 0;
 
@@ -63,7 +66,9 @@ const storedFileUrl = (key: string) =>
     key,
   );
 
-/** 绑定全局数据库、积分、限流、R2 和 env 里的服务商 key 的 runImage。 */
+/**
+ * runImage bound to the global database, credits, rate limiting, R2, and provider keys from env.
+ */
 export const runImage = createRunImage({
   db: getDb,
   config: siteConfig.ai,
@@ -74,7 +79,7 @@ export const runImage = createRunImage({
   fileUrl: storedFileUrl,
 });
 
-/** 当前用户最近的图片、视频生成。 */
+/** The current user's recent image and video generations. */
 export function listGenerations(userId: string) {
   return listGenerationsFor(
     { db: getDb(), fileUrl: storedFileUrl },
@@ -82,7 +87,10 @@ export function listGenerations(userId: string) {
   );
 }
 
-/** 视频生成是否可用：开启 AI 和上传（结果存 R2），且配置了视频模型。 */
+/**
+ * Whether video generation is available: AI and uploads are on (results are stored in R2) and video
+ * models are configured.
+ */
 export const aiVideoEnabled =
   aiEnabled && uploadEnabled && siteConfig.ai.videoModels.length > 0;
 
@@ -97,7 +105,10 @@ export const aiVideoModels = siteConfig.ai.videoModels.map(
 
 export const defaultAiVideoModel = siteConfig.ai.defaultVideoModel;
 
-/** 绑定全局数据库、积分、限流、R2 和 env 里的服务商 key 的视频服务。 */
+/**
+ * Video service bound to the global database, credits, rate limiting, R2, and provider keys from
+ * env.
+ */
 export const videoService = createVideoService({
   db: getDb,
   config: siteConfig.ai,
@@ -108,14 +119,15 @@ export const videoService = createVideoService({
   fileUrl: storedFileUrl,
 });
 
-/** 当前用户还在生成中的视频。 */
+/** The current user's videos that are still generating. */
 export function listPendingVideos(userId: string) {
   return listPendingVideosFor(getDb(), userId);
 }
 
 /**
- * 恢复扫描：推进没人轮询的 pending 任务（关掉页面、换设备、函数被回收之后）。
- * 由 src/core/recovery 按 cron 或机会式触发，见那里的说明。
+ * Recovery sweep: advances pending jobs nobody is polling (after the page is closed, the user
+ * switches devices, or the function is reclaimed). Triggered by src/core/recovery on a cron or
+ * opportunistically; see the notes there.
  */
 export const aiRecovery = createAiRecovery({
   db: getDb,

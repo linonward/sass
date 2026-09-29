@@ -7,7 +7,10 @@ import type { Generation } from "./image";
 
 export const GENERATIONS_LIMIT = 24;
 
-/** 用户最近成功的图片、视频生成，新的在前。文件被删除的记录不返回。 */
+/**
+ * The user's recent successful image and video generations, newest first. Records whose files were
+ * deleted are not returned.
+ */
 export async function listGenerations(
   { db, fileUrl }: { db: Database; fileUrl: (key: string) => Promise<string> },
   { userId, limit = GENERATIONS_LIMIT }: { userId: string; limit?: number },
@@ -49,7 +52,7 @@ export async function listGenerations(
   );
 }
 
-/** 用户还在生成中的视频（新的在前），前端据此继续轮询。 */
+/** The user's videos still being generated (newest first), which the frontend keeps polling. */
 export async function listPendingVideos(
   db: Database,
   userId: string,

@@ -1,4 +1,7 @@
-/** 余额不足：扣减或负向调整没有生效，余额和流水都未改变。 */
+/**
+ * Insufficient balance: the deduction or negative adjustment did not take effect; neither the balance
+ * nor the ledger changed.
+ */
 export class InsufficientCreditsError extends Error {
   constructor(
     readonly userId: string,
@@ -9,7 +12,7 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
-/** `features.credits` 未开启时调用积分 API。 */
+/** A credits API was called while `features.credits` is off. */
 export class CreditsDisabledError extends Error {
   constructor() {
     super("Credits are disabled (features.credits is false)");
@@ -17,7 +20,7 @@ export class CreditsDisabledError extends Error {
   }
 }
 
-/** 退款时找不到对应的扣减流水。 */
+/** A refund could not find the matching deduction transaction. */
 export class CreditTransactionNotFoundError extends Error {
   constructor(
     readonly source: string,

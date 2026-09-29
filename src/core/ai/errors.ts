@@ -1,4 +1,5 @@
-// 图片、视频接口的错误码。接口的错误响应是 JSON `{ error }`，前端按错误码显示 Playground.errors 里的文案。
+// Error codes for the image and video endpoints. Error responses are JSON `{ error }`; the frontend
+// shows the copy from Playground.errors for each code.
 
 const knownErrors = [
   "insufficient_credits",
@@ -16,7 +17,9 @@ const knownErrors = [
 type KnownError = (typeof knownErrors)[number];
 export type ImageErrorCode = KnownError | "generic";
 
-/** 接口的错误响应是 JSON `{ error }`；限流返回 429（响应体不一定带 error）。 */
+/**
+ * Error responses are JSON `{ error }`; rate limiting returns 429 (the body may not include error).
+ */
 export async function imageErrorCode(
   response: Response,
 ): Promise<KnownError | "generic"> {

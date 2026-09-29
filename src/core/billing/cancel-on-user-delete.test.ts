@@ -24,12 +24,12 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 
-test("删除账户时的取消订阅钩子已注册", async () => {
+test("the cancel-subscription hook for account deletion is registered", async () => {
   await import("@/core/account/hooks");
   expect(onUserDeleteHandlers()).toContain("billing:cancel-subscriptions");
 });
 
-describe.skipIf(!url)("onUserDelete：取消仍在计费的订阅", () => {
+describe.skipIf(!url)("onUserDelete: cancels billable subscriptions", () => {
   let client: DbClient;
   let userId: string;
   let fake: FakeProvider;
@@ -78,7 +78,7 @@ describe.skipIf(!url)("onUserDelete：取消仍在计费的订阅", () => {
     await client.db.delete(user).where(eq(user.id, userId));
   });
 
-  test("只取消 active 和 past_due 的订阅", async () => {
+  test("only cancels active and past_due subscriptions", async () => {
     const active = await addSubscription("active");
     const pastDue = await addSubscription("past_due");
     await addSubscription("canceled");
@@ -88,17 +88,17 @@ describe.skipIf(!url)("onUserDelete：取消仍在计费的订阅", () => {
     expect(fake.canceled.sort()).toEqual([active, pastDue].sort());
   });
 
-  test("没有需要取消的订阅时，没配置服务商也能通过", async () => {
+  test("passes without a configured provider when there is nothing to cancel", async () => {
     await addSubscription("expired");
     await expect(run(null)).resolves.toBeUndefined();
   });
 
-  test("有待取消的订阅但没配置服务商时抛错，删除随之中止", async () => {
+  test("throws when there are subscriptions to cancel but no provider is configured, aborting deletion", async () => {
     await addSubscription("active");
     await expect(run(null)).rejects.toThrow(/provider not configured/);
   });
 
-  test("服务商取消失败时抛错", async () => {
+  test("throws when the provider fails to cancel", async () => {
     await addSubscription("active");
     const failing = new FakeProvider("secret", fake.id);
     failing.cancelSubscription = async () => {
@@ -107,7 +107,7 @@ describe.skipIf(!url)("onUserDelete：取消仍在计费的订阅", () => {
     await expect(run(failing)).rejects.toThrow("creem down");
   });
 
-  test("钩子可以重复执行（已取消订阅的幂等由 Creem 实现保证，见 creem.test.ts）", async () => {
+  test("the hook can run repeatedly (idempotency for already-canceled subscriptions is guaranteed by the Creem implementation, see creem.test.ts)", async () => {
     await addSubscription("active");
     await run(fake);
     await run(fake);

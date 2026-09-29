@@ -11,13 +11,18 @@ export type CheckoutStatus =
 const PAID = ["paid", "partially_refunded", "refunded"] as const;
 
 /**
- * 结账回跳后查询付款是否已经入账（webhook 可能还没到）。只查这个用户自己的记录，
- * 所以回跳参数被篡改也拿不到别人的数据。
- * - 订阅：该订阅已有一笔付款成功的订单才算完成（积分和订单在同一个事务里写入），扣款失败算 failed。
- * - 一次性购买：订单已付款算完成，失败算 failed。
- * - 都还没有记录：pending。
+ * After the checkout redirect, check whether the payment has been recorded yet (the webhook may not
+ * have arrived). Only this user's own records are queried, so tampered redirect params can't reveal
+ * anyone else's data.
+ * - Subscription: complete once the subscription has a successfully paid order (credits and the order
+ *   are written in the same transaction); a failed charge counts as failed.
+ * - One-time purchase: complete once the order is paid; failure counts as failed.
+ * - No record of either yet: pending.
  */
-/** 兜底定位的时间回拨：下单时间取自服务器，订单写入时间取自数据库，留一点余量。 */
+/**
+ * Clock skew allowance for the fallback lookup: the checkout time comes from the server and the order's
+ * write time from the database, so leave some margin.
+ */
 const SINCE_SLACK_MS = 60 * 1000;
 
 export async function getCheckoutStatus({
@@ -33,16 +38,17 @@ export async function getCheckoutStatus({
   subscriptionId?: string | null;
   orderId?: string | null;
   /**
-   * 兜底定位（服务商回跳不带 ID 时）：这个套餐、这个时间之后这个用户的最新订单。
-   * 一次性购买和订阅每一期都会写一张订单，所以两种套餐都能判断。
+   * Fallback lookup (when the provider's redirect carries no ID): this user's latest order for this
+   * plan after this time. One-time purchases and every subscription period each write an order, so this
+   * works for both kinds of plan.
    */
   planId?: string | null;
   since?: Date | null;
 }): Promise<CheckoutStatus> {
   if (subscriptionId) {
-    // 两个查询都以 (userId, providerSubscriptionId) 为键、互不依赖，并行发出：
-    // 成功页轮询会反复调用这里，串行会让每次轮询多等一跳。
-    // 优先级仍是「已付款订单 > 订阅欠费」。
+    // Both queries are keyed by (userId, providerSubscriptionId) and independent, so send them in
+    // parallel: the success page polls this repeatedly, and running them serially would add a round
+    // trip to every poll. Priority is still "paid order > subscription past due".
     const [[paid], [subscription]] = await Promise.all([
       db
         .select({ planId: orders.planId })

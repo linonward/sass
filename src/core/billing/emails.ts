@@ -27,28 +27,29 @@ type BillingTemplate = Extract<
 
 type EmailSpec = {
   template: BillingTemplate;
-  /** 去重键：同一笔付款、同一个订阅的取消只通知一次。 */
+  /** Dedup key: the same payment, or the same subscription's cancellation, is notified only once. */
   key: string;
-  /** null 表示只发一次；否则窗口内最多一次。 */
+  /** null means send only once; otherwise at most once per window. */
   windowMs: number | null;
 };
 
 const DAY = 24 * 60 * 60 * 1000;
 
 /**
- * 账单事件 → 邮件：
+ * Billing events → emails:
  *
- * | BillingEvent                               | 邮件                   | 去重                         |
- * | ------------------------------------------ | ---------------------- | ---------------------------- |
- * | checkout.completed（一次性购买，带订单）   | payment-succeeded      | 订单，只发一次               |
- * | checkout.completed（订阅结账）             | 不发                   | 由 subscription.renewed 负责 |
- * | subscription.renewed（含首期）             | payment-succeeded      | 订阅 + 账期，只发一次        |
- * | payment.failed                             | payment-failed         | 订阅或订单，24 小时一次      |
- * | subscription.canceled                      | subscription-canceled  | 订阅，只发一次               |
- * | subscription.active / expired、refund      | 不发                   |                              |
+ * | BillingEvent                                 | Email                 | Dedup                           |
+ * | -------------------------------------------- | --------------------- | ------------------------------- |
+ * | checkout.completed (one-time, with an order) | payment-succeeded     | order, once                     |
+ * | checkout.completed (subscription checkout)   | none                  | handled by subscription.renewed |
+ * | subscription.renewed (incl. first period)    | payment-succeeded     | subscription + period, once     |
+ * | payment.failed                               | payment-failed        | subscription/order, 1 per 24h   |
+ * | subscription.canceled                        | subscription-canceled | subscription, once              |
+ * | subscription.active / expired, refund        | none                  |                                 |
  *
- * 乱序到达的旧事件（stale）：付款成功照发（钱确实收到了）；付款失败和取消已被更新的状态
- * 覆盖（例如之后又续费成功、重新激活），不再打扰用户。
+ * Old events arriving out of order (stale): payment-succeeded is still sent (the money really came
+ * in); payment-failed and cancellations have been superseded by a newer state (e.g. a later successful
+ * renewal or reactivation), so we don't bother the user.
  */
 export function billingEmailFor(
   event: BillingEvent,
@@ -95,14 +96,18 @@ type Send = <T extends EmailTemplateName>(
 ) => Promise<unknown>;
 
 /**
- * 发送账单邮件的 onBillingEvent 钩子。
- * 在事件的事务里读取收件人、占用去重名额；邮件本身用 afterCommit 在事务提交后发送，
- * 所以事务回滚（Creem 会重试）时不会发出邮件，重复投递也因 webhook_events 幂等不会再触发。
+ * onBillingEvent hook that sends billing emails.
+ * Inside the event transaction it reads the recipient and claims the dedup slot; the email itself is
+ * sent via afterCommit once the transaction commits. So a rolled-back transaction (Creem will retry)
+ * sends no email, and repeated deliveries don't fire again thanks to idempotent webhook_events.
  *
- * 邮件先在同一个事务里写进 outbox（`pending_notifications`），提交后立即发一次；发不出去
- * 就留在库里由恢复扫描补发，重试用完才记终态失败、释放名额（见 `@/core/email/outbox`）。
- * 付款成功这类关键邮件因此不会因为进程重启或一次故障就永远发不出去。
- * `db` 用于提交后的发送与记账（事务已经提交，不能再用它）。
+ * The email is first written to the outbox (`pending_notifications`) in the same transaction and sent
+ * once right after commit; if that fails it stays in the database for the recovery sweep to resend,
+ * and only after retries run out is it marked as a terminal failure and the slot released (see
+ * `@/core/email/outbox`). So critical emails like payment-succeeded are never lost for good because
+ * of a process restart or a single outage.
+ * `db` is used for sending and bookkeeping after commit (the transaction has committed by then and
+ * can't be used anymore).
  */
 export function createBillingEmailHandler({
   send,
@@ -113,9 +118,12 @@ export function createBillingEmailHandler({
 }: {
   send: Send;
   creditsEnabled: boolean;
-  /** 提交后发送与记账用的数据库；默认全局连接。 */
+  /** Database for sending and bookkeeping after commit; defaults to the global connection. */
   db?: DatabaseSource;
-  /** 提交后立即发送时的快速重试；默认 3 次、500ms 起指数退避。 */
+  /**
+   * Fast retries for the immediate post-commit send; defaults to 3 attempts, exponential backoff
+   * from 500ms.
+   */
   retry?: DeliveryRetry;
   now?: () => Date;
 }): OnBillingEventHandler {
@@ -204,7 +212,8 @@ export function createBillingEmailHandler({
       }
     })();
 
-    // 名额、outbox 记录和事件处理一起提交（回滚时一起消失）；邮件在提交之后才发。
+    // The slot, outbox row and event handling commit together (and vanish together on rollback);
+    // the email is sent only after commit.
     const claimedAt = now();
     const claimed = await claimNotification(tx, {
       kind: spec.template,
@@ -230,7 +239,10 @@ export function createBillingEmailHandler({
   };
 }
 
-/** 事件带的金额优先；没有时用套餐标价（最小货币单位）和站点币种。 */
+/**
+ * Prefer the amount on the event; otherwise use the plan's list price (smallest currency unit) and
+ * the site currency.
+ */
 function moneyOf(
   event: BillingEvent,
   plan: ReturnType<typeof getPlan>,

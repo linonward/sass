@@ -1,10 +1,10 @@
 {
   "$comment": [
-    "Lemon Squeezy webhook 请求体样本。抓取日期 2026-09-28。",
-    "order_created / subscription_created / subscription_cancelled / subscription_paused 四个逐字来自官方示例页 https://docs.lemonsqueezy.com/help/webhooks/example-payloads （meta 里只有 event_name，官方示例就是如此；真实投递还会带 test_mode / webhook_id / custom_data，测试里按需注入）。",
-    "其余事件官方没有示例页，按对象页的字段表构造，只改与本仓库映射相关的字段（status / refunded / refunded_at / refunded_amount / renews_at / ends_at）：https://docs.lemonsqueezy.com/api/subscriptions 、https://docs.lemonsqueezy.com/api/subscription-invoices 、https://docs.lemonsqueezy.com/api/orders 。",
-    "注意 order_created 官方样本的 total 是小数 1859.76，而字段文档写的是「整数分」——两者矛盾，见 providers/lemonsqueezy.ts 的 toMinorUnits。",
-    "测试不应依赖其中的具体 ID；文档更新后可以重新抓取。"
+    "Lemon Squeezy webhook request body samples. Fetched 2026-09-28.",
+    "order_created / subscription_created / subscription_cancelled / subscription_paused are copied verbatim from the official example page https://docs.lemonsqueezy.com/help/webhooks/example-payloads (meta only contains event_name because that is how the official examples look; real deliveries also carry test_mode / webhook_id / custom_data, which tests inject as needed).",
+    "The other events have no official example page. They are built from the field tables on the object pages, changing only the fields this repo maps (status / refunded / refunded_at / refunded_amount / renews_at / ends_at): https://docs.lemonsqueezy.com/api/subscriptions, https://docs.lemonsqueezy.com/api/subscription-invoices, https://docs.lemonsqueezy.com/api/orders.",
+    "Note that total in the official order_created sample is the decimal 1859.76, while the field docs say \"integer cents\" — the two contradict each other; see toMinorUnits in providers/lemonsqueezy.ts.",
+    "Tests must not depend on the specific IDs in these samples; re-fetch them when the docs change."
   ],
   "order_created": {
     "meta": {

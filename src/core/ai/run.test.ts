@@ -24,7 +24,9 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过 AI 测试：未设置 DATABASE_URL_TEST（见 .env.example）");
+  console.warn(
+    "Skipping AI tests: DATABASE_URL_TEST is not set (see .env.example)",
+  );
 }
 
 const usage = {
@@ -37,7 +39,7 @@ const usage = {
   outputTokens: { total: 10, text: 10, reasoning: undefined },
 };
 
-/** 流式返回 "Hello, world!" 的 mock 模型。 */
+/** Mock model that streams "Hello, world!". */
 function okModel() {
   return new MockLanguageModelV4({
     doStream: async () => ({
@@ -58,7 +60,7 @@ function okModel() {
   });
 }
 
-/** 调用即报错（比如 key 失效、服务商 5xx）。 */
+/** Fails as soon as it's called (e.g. an invalid key or a provider 5xx). */
 function throwingModel() {
   return new MockLanguageModelV4({
     doStream: async () => {
@@ -67,7 +69,7 @@ function throwingModel() {
   });
 }
 
-/** 输出一部分后在流中报错。 */
+/** Fails mid-stream after emitting some output. */
 function midStreamErrorModel() {
   return new MockLanguageModelV4({
     doStream: async () => ({
@@ -153,7 +155,7 @@ describe.skipIf(!url)("runAI", () => {
       config,
       credits,
       checkRateLimit,
-      // 只有 openai 配了 key。
+      // Only openai has a key configured.
       getModel: (m: AiModel) => (m.provider === "openai" ? model : null),
       logError,
     });
@@ -175,7 +177,7 @@ describe.skipIf(!url)("runAI", () => {
       .where(eq(creditTransactions.userId, userId));
   }
 
-  test("成功：扣除配置的积分，ai_usage 记录 token、积分、状态和耗时", async () => {
+  test("success: deducts the configured credits and ai_usage records tokens, credits, status, and duration", async () => {
     const userId = await newUser(10);
     const { runAI, checkRateLimit } = setup();
 
@@ -214,7 +216,7 @@ describe.skipIf(!url)("runAI", () => {
     });
   });
 
-  test("toUIMessageStreamResponse 流式返回，服务端 consumeStream 不影响客户端读取", async () => {
+  test("toUIMessageStreamResponse streams, and the server-side consumeStream doesn't affect client reads", async () => {
     const userId = await newUser(10);
     const { runAI } = setup();
     const run = await runAI({ userId, prompt: "Hi" });
@@ -225,7 +227,7 @@ describe.skipIf(!url)("runAI", () => {
     expect(await run.settled).toBe("succeeded");
   });
 
-  test("余额不足返回 402，不写 ai_usage，余额不变", async () => {
+  test("returns 402 on insufficient balance, writes no ai_usage, and leaves the balance unchanged", async () => {
     const userId = await newUser(2);
     const { runAI, model } = setup();
     const run = await runAI({ userId, prompt: "Hi" });
@@ -243,32 +245,35 @@ describe.skipIf(!url)("runAI", () => {
   });
 
   test.each([
-    ["调用即报错", throwingModel],
-    ["流中报错", midStreamErrorModel],
-  ])("模型失败（%s）：积分退回，流水里有对应的 refund", async (_, model) => {
-    const userId = await newUser(10);
-    const { runAI, logError } = setup({ model: model() });
-    const run = await runAI({ userId, prompt: "Hi", maxRetries: 0 });
-    if (!run.ok) throw new Error(`unexpected ${run.status}`);
-    expect(await run.settled).toBe("failed");
+    ["fails on call", throwingModel],
+    ["fails mid-stream", midStreamErrorModel],
+  ])(
+    "model failure (%s): credits are refunded and the transactions include a matching refund",
+    async (_, model) => {
+      const userId = await newUser(10);
+      const { runAI, logError } = setup({ model: model() });
+      const run = await runAI({ userId, prompt: "Hi", maxRetries: 0 });
+      if (!run.ok) throw new Error(`unexpected ${run.status}`);
+      expect(await run.settled).toBe("failed");
 
-    expect(await credits.getBalance(userId)).toBe(10);
-    const row = await usageRow(run.usageId);
-    expect(row.status).toBe("failed");
-    expect(row.error).toBeTruthy();
-    expect(logError).toHaveBeenCalled();
+      expect(await credits.getBalance(userId)).toBe(10);
+      const row = await usageRow(run.usageId);
+      expect(row.status).toBe("failed");
+      expect(row.error).toBeTruthy();
+      expect(logError).toHaveBeenCalled();
 
-    const txs = await transactions(userId);
-    const deduct = txs.find((tx) => tx.type === "deduct")!;
-    expect(deduct.sourceId).toBe(run.usageId);
-    expect(txs.find((tx) => tx.type === "refund")).toMatchObject({
-      amount: 3,
-      source: "refund",
-      sourceId: deduct.id,
-    });
-  });
+      const txs = await transactions(userId);
+      const deduct = txs.find((tx) => tx.type === "deduct")!;
+      expect(deduct.sourceId).toBe(run.usageId);
+      expect(txs.find((tx) => tx.type === "refund")).toMatchObject({
+        amount: 3,
+        source: "refund",
+        sourceId: deduct.id,
+      });
+    },
+  );
 
-  test("超限返回 429 和 Retry-After，不扣积分、不调用模型", async () => {
+  test("returns 429 with Retry-After over the limit, deducting no credits and not calling the model", async () => {
     const userId = await newUser(10);
     const { runAI, model } = setup({
       rateLimit: { ok: false, reason: "limited", retryAfter: 17 },
@@ -281,7 +286,7 @@ describe.skipIf(!url)("runAI", () => {
     expect(await credits.getBalance(userId)).toBe(10);
   });
 
-  test("Redis 不可用且 failMode 为 closed 时返回 503", async () => {
+  test("returns 503 when Redis is unavailable and failMode is closed", async () => {
     const userId = await newUser(10);
     const { runAI } = setup({
       rateLimit: { ok: false, reason: "unavailable", retryAfter: 30 },
@@ -290,7 +295,7 @@ describe.skipIf(!url)("runAI", () => {
     expect(run.ok ? 200 : run.status).toBe(503);
   });
 
-  test("未登录 401，未知模型 400，服务商没配 key 503，都不扣积分", async () => {
+  test("401 when signed out, 400 for an unknown model, 503 when the provider has no key, deducting no credits in any case", async () => {
     const userId = await newUser(10);
     const { runAI, checkRateLimit } = setup();
     const status = async (input: Parameters<typeof runAI>[0]) => {
@@ -304,7 +309,7 @@ describe.skipIf(!url)("runAI", () => {
     expect(await credits.getBalance(userId)).toBe(10);
   });
 
-  test("免费模型不扣积分，也记录用量", async () => {
+  test("free models deduct no credits but still record usage", async () => {
     const userId = await newUser(0);
     const { runAI } = setup();
     const run = await runAI({ userId, modelId: "free", prompt: "Hi" });
@@ -317,7 +322,7 @@ describe.skipIf(!url)("runAI", () => {
     expect(await transactions(userId)).toHaveLength(0);
   });
 
-  test("模型配置的 reasoning 传给模型，调用方传入的优先", async () => {
+  test("passes the model's configured reasoning to the model, with the caller's value taking precedence", async () => {
     const userId = await newUser(0);
     const { runAI, model } = setup();
     for (const reasoning of [undefined, "high"] as const) {
@@ -336,7 +341,7 @@ describe.skipIf(!url)("runAI", () => {
     ]);
   });
 
-  test("调用方中止：记为 aborted，积分不退", async () => {
+  test("caller aborts: recorded as aborted, credits not refunded", async () => {
     const userId = await newUser(10);
     const controller = new AbortController();
     const model = new MockLanguageModelV4({
@@ -368,7 +373,7 @@ describe.skipIf(!url)("runAI", () => {
     ).toHaveLength(0);
   });
 
-  test("参数非法（同时传 prompt 和 messages）时也退回积分", async () => {
+  test("refunds credits for invalid arguments too (both prompt and messages passed)", async () => {
     const userId = await newUser(10);
     const { runAI } = setup();
     const run = await runAI({
@@ -382,13 +387,13 @@ describe.skipIf(!url)("runAI", () => {
     expect((await usageRow(run.usageId)).error).toContain("prompt");
   });
 
-  test("同一次调用的退款只发生一次", async () => {
+  test("refunds a given call only once", async () => {
     const userId = await newUser(10);
     const { runAI } = setup({ model: midStreamErrorModel() });
     const run = await runAI({ userId, prompt: "Hi", maxRetries: 0 });
     if (!run.ok) throw new Error(`unexpected ${run.status}`);
     await run.settled;
-    // 等可能的第二次回调（onEnd）跑完。
+    // Wait for a possible second callback (onEnd) to run.
     await new Promise((r) => setTimeout(r, 50));
     const refunds = await client.db
       .select()

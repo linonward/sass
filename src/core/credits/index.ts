@@ -21,10 +21,13 @@ export type {
   WriteResult,
 } from "./service";
 
-/** `features.credits` 是否开启。关闭时下面的 API 都会抛出 CreditsDisabledError，调用方应先判断。 */
+/**
+ * Whether `features.credits` is on. When it is off, every API below throws CreditsDisabledError, so
+ * callers should check this first.
+ */
 export const creditsEnabled = siteConfig.features.credits;
 
-/** 绑定全局数据库和站点配置的积分服务。 */
+/** The credits service bound to the global database and the site config. */
 export const {
   getBalance,
   grantCredits,
@@ -36,7 +39,8 @@ export const {
 } = createCredits({
   db: getDb,
   enabled: creditsEnabled,
-  // 余额跌破 credits.lowBalanceThreshold 时发 credits-low 邮件（24 小时内最多一封）。
+  // When the balance drops below credits.lowBalanceThreshold, send the credits-low email (at most
+  // one per 24 hours).
   lowBalance: createLowBalanceHook({
     threshold: siteConfig.credits.lowBalanceThreshold,
     send: sendEmail,

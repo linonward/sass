@@ -6,14 +6,18 @@ import { subscriptions } from "@/core/db/schema";
 
 import type { PaymentProvider } from "./provider";
 
-/** 还会继续扣款的订阅状态。canceled 已停止续费，expired 已结束，都不用再取消。 */
+/**
+ * Subscription statuses that will still be charged. canceled won't renew and expired has ended, so
+ * neither needs canceling.
+ */
 const BILLABLE_STATUSES = ["active", "past_due"] as const;
 
 /**
- * 删除账户前取消该用户在服务商那边仍会续费的订阅。
- * provider.cancelSubscription 对已取消或不存在的订阅视为成功，所以钩子可以安全重试；
- * 真实错误向上抛出，删除账户的流程会中止，避免账户删了还在扣费。
- * 没配置服务商（本地、CI）但用户有待取消的订阅时同样抛错，不能静默跳过。
+ * Before an account is deleted, cancel that user's subscriptions that would still renew at the provider.
+ * provider.cancelSubscription treats already-canceled or missing subscriptions as success, so the hook
+ * is safe to retry. Real errors are thrown, which aborts account deletion — better than deleting the
+ * account while it keeps getting charged. If no provider is configured (local, CI) but the user has
+ * subscriptions to cancel, it also throws; it must not silently skip them.
  */
 export function createCancelSubscriptionsHandler({
   db,

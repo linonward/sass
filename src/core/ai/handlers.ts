@@ -3,7 +3,7 @@ import { getClientIp } from "@/core/ratelimit/limiter";
 import type { Generation, RunImageInput, RunImageResult } from "./image";
 import type { StartVideoInput, VideoService } from "./video";
 
-// 请求体上限：只有提示词和几个选项。
+// Request body limit: it only holds the prompt and a few options.
 export const MAX_IMAGE_BODY_BYTES = 16 * 1024;
 
 type BaseDeps = {
@@ -22,7 +22,7 @@ async function readJson(request: Request, maxBytes: number) {
       return { body: body as Record<string, unknown> };
     }
   } catch {
-    // 下面统一返回 400。
+    // Falls through to the 400 below.
   }
   return {
     error: Response.json({ error: "invalid_request" }, { status: 400 }),
@@ -30,8 +30,8 @@ async function readJson(request: Request, maxBytes: number) {
 }
 
 /**
- * `POST /api/ai/image`：body 为 `{ prompt, modelId?, aspectRatio? }`，
- * 同步生成一张图，返回 `{ generation }`。错误响应是 JSON `{ error }`。
+ * `POST /api/ai/image`: the body is `{ prompt, modelId?, aspectRatio? }`. Generates one image
+ * synchronously and returns `{ generation }`. Error responses are JSON `{ error }`.
  */
 export async function handleImage(
   request: Request,
@@ -61,7 +61,10 @@ export async function handleImage(
   return Response.json({ generation: run.generation });
 }
 
-/** `GET /api/ai/generations`：当前用户最近的图片、视频生成，返回 `{ generations }`。 */
+/**
+ * `GET /api/ai/generations`: the current user's recent image and video generations, returned as `{
+ * generations }`.
+ */
 export async function handleGenerations(
   request: Request,
   {
@@ -87,8 +90,9 @@ export async function handleGenerations(
 }
 
 /**
- * `POST /api/ai/video`：body 为 `{ prompt, modelId?, aspectRatio?, imageFileId? }`，
- * 提交异步任务，返回 `{ job: { id, status: "pending" } }`，之后用 GET /api/ai/video/:id 查询。
+ * `POST /api/ai/video`: the body is `{ prompt, modelId?, aspectRatio?, imageFileId? }`. Submits an
+ * async job and returns `{ job: { id, status: "pending" } }`; poll it afterwards with
+ * GET /api/ai/video/:id.
  */
 export async function handleVideoStart(
   request: Request,
@@ -122,9 +126,9 @@ export async function handleVideoStart(
 }
 
 /**
- * `GET /api/ai/video/:id`：查询并推进任务，返回 `{ job }`（pending / failed / succeeded）。
- * 每次调用都可能改服务端状态（转存、结算、退款），响应按用户区分，因此不许缓存
- * （和 `/api/billing/status` 一致）。
+ * `GET /api/ai/video/:id`: queries and advances the job, returning `{ job }` (pending / failed /
+ * succeeded). Every call may change server state (copying to storage, settling, refunding) and the
+ * response is per user, so it must not be cached (same as `/api/billing/status`).
  */
 export async function handleVideoStatus(
   request: Request,

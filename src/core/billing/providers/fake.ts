@@ -9,10 +9,14 @@ import type { Checkout, CreateCheckoutInput } from "../provider";
 import { FakeProvider } from "../testing/fake-provider";
 
 /**
- * e2e 用的站内支付服务商（BILLING_PROVIDER=fake，只在本地和 CI 可用，见 fakeBillingAllowed）。
- * - 结账地址指向站内的模拟付款页 /api/billing/fake/checkout，页面上可以设置 webhook 延迟或不发送。
- * - "付款"后回跳成功页，并按延迟把签名过的事件 POST 到 /api/webhooks/fake，走和 Creem 相同的处理链路。
- * 签名密钥是公开的常量：fake 模式本身就不允许出现在任何部署环境里。
+ * In-app payment provider for e2e (BILLING_PROVIDER=fake, only available locally and in CI; see
+ * fakeBillingAllowed).
+ * - The checkout URL points at the in-app simulated payment page /api/billing/fake/checkout, where
+ *   you can set a webhook delay or skip sending the webhook.
+ * - After "paying", it redirects to the success page and, after the delay, POSTs signed events to
+ *   /api/webhooks/fake, which go through the same handling pipeline as Creem.
+ * The signing secret is a public constant: fake mode is never allowed in any deployed environment
+ * anyway.
  */
 export const FAKE_PROVIDER_ID = "fake";
 const FAKE_SECRET = "fake-billing-secret-for-local-and-ci-only";
@@ -21,7 +25,10 @@ export const FAKE_CHECKOUT_PATH = "/api/billing/fake/checkout";
 export const FAKE_PORTAL_PATH = "/api/billing/fake/portal";
 export const FAKE_WEBHOOK_PATH = "/api/webhooks/fake";
 
-/** 模拟结账会话，编码在结账地址的 token 里，所以不依赖进程内存。 */
+/**
+ * Simulated checkout session, encoded in the checkout URL's token so it doesn't rely on process
+ * memory.
+ */
 export type FakeCheckoutSession = {
   checkoutId: string;
   userId: string;
@@ -38,7 +45,7 @@ export function signFakeSession(session: FakeCheckoutSession) {
   return `${body}.${hmac(body)}`;
 }
 
-/** 校验 token 并取出会话；签名不对或结构不对时返回 null。 */
+/** Verifies the token and extracts the session; returns null on a bad signature or shape. */
 export function verifyFakeSession(
   token: string | null,
 ): FakeCheckoutSession | null {
@@ -67,7 +74,8 @@ class AppFakeProvider extends FakeProvider {
     super(FAKE_SECRET, FAKE_PROVIDER_ID);
   }
 
-  // 返回站内相对地址：前端直接跳转，客户门户路由会补全成绝对地址。
+  // Returns an in-app relative URL: the frontend redirects to it directly, and the customer
+  // portal route expands it to an absolute URL.
   override async createCheckout(input: CreateCheckoutInput): Promise<Checkout> {
     const checkoutId = `chk_fake_${crypto.randomUUID()}`;
     const token = signFakeSession({
@@ -99,9 +107,10 @@ function addInterval(start: Date, plan: Plan) {
 }
 
 /**
- * 一次模拟付款产生的事件和回跳参数，顺序和 Creem 一致：
- * 订阅是 subscription.active → subscription.renewed（首期扣款，发积分）→ checkout.completed；
- * 一次性购买只有带订单的 checkout.completed。回跳参数的名字也和 Creem 相同。
+ * The events and return parameters produced by one simulated payment, in the same order as Creem:
+ * a subscription is subscription.active → subscription.renewed (first-period charge, grants
+ * credits) → checkout.completed; a one-time purchase is just a checkout.completed with an order.
+ * The return parameter names also match Creem.
  */
 export function fakePayment(
   provider: FakeProvider,
@@ -176,7 +185,7 @@ export function fakePayment(
   };
 }
 
-/** 按顺序把事件签名后 POST 给站内 webhook。 */
+/** Signs the events and POSTs them, in order, to the in-app webhook. */
 export async function deliverFakeWebhooks(
   provider: FakeProvider,
   origin: string,

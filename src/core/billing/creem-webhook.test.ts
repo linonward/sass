@@ -38,10 +38,10 @@ if (!url && process.env.CI) {
   throw new Error("DATABASE_URL_TEST must be set in CI");
 }
 if (!url) {
-  console.warn("跳过 Creem webhook 测试：未设置 DATABASE_URL_TEST");
+  console.warn("Skipping Creem webhook tests: DATABASE_URL_TEST is not set");
 }
 
-// 测试里要逐层修改官方示例 payload 的字段，用宽松类型。
+// Tests modify fields of the official sample payload level by level, so use a loose type.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Payload = Record<string, any>;
 
@@ -65,11 +65,12 @@ function request(payload: unknown, signature?: string) {
   });
 }
 
-describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
+describe.skipIf(!url)("Creem webhook → billing tables and credits", () => {
   let client: DbClient;
   let db: DbClient["db"];
   let userId: string;
-  // 每个测试独立的 ID，避免 (provider, event_id) 等唯一约束互相影响。
+  // Unique IDs per test, so unique constraints like (provider, event_id) don't interfere with each
+  // other.
   let ids: {
     sub: string;
     cust: string;
@@ -188,7 +189,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     await db.delete(user).where(eq(user.id, userId));
   });
 
-  test("一次性购买：订单为 paid，积分到账一次；重复推送没有副作用", async () => {
+  test("one-time purchase: order is paid, credits arrive once; repeated deliveries have no side effects", async () => {
     const payload = checkoutCompleted("one_time");
 
     const first = await send(payload);
@@ -224,7 +225,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     });
   });
 
-  test("订阅：结账、激活、首期付款只发一次积分；下个账期再发一次", async () => {
+  test("subscription: checkout, activation and first payment grant credits once; the next billing period grants again", async () => {
     const period1 = "2026-01-01T00:00:00.000Z";
     const period2 = "2026-01-31T00:00:00.000Z";
 
@@ -250,7 +251,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
       providerCustomerId: ids.cust,
       currentPeriodStart: new Date(period1),
     });
-    // 订阅结账不记订单；首期付款按交易记一笔。
+    // Subscription checkout records no order; the first payment records one per transaction.
     const paid = await db
       .select({ id: orders.providerOrderId, status: orders.status })
       .from(orders)
@@ -258,7 +259,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     expect(paid).toEqual([{ id: ids.tran1, status: "paid" }]);
     expect(await balance()).toBe(2000);
 
-    // 同一账期的付款事件再推一次（新的事件 ID）：积分不重复。
+    // Push a payment event for the same period again (new event ID): no duplicate credits.
     const replay = subscriptionEvent("subscription.paid", {
       periodStart: period1,
       transaction: ids.tran1,
@@ -266,7 +267,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     expect((await send(replay)).status).toBe(200);
     expect(await balance()).toBe(2000);
 
-    // 续费：新账期、新交易。
+    // Renewal: new billing period, new transaction.
     const renewal = subscriptionEvent("subscription.paid", {
       periodStart: period2,
       transaction: ids.tran2,
@@ -276,18 +277,18 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     expect(await balance()).toBe(4000);
   });
 
-  test("乱序：续费先于结账到达时照样发积分", async () => {
+  test("out of order: credits are still granted when the renewal arrives before checkout", async () => {
     const paid = subscriptionEvent("subscription.paid", {
       periodStart: "2026-02-01T00:00:00.000Z",
       transaction: ids.tran1,
     });
-    // metadata 里有 userId，不依赖结账事件先到。
+    // userId is in the metadata, so we don't depend on the checkout event arriving first.
     expect((await send(paid)).status).toBe(200);
     expect((await send(checkoutCompleted("subscription"))).status).toBe(200);
     expect(await balance()).toBe(2000);
   });
 
-  test("签名错误返回 401，不写库", async () => {
+  test("a bad signature returns 401 and writes nothing", async () => {
     const payload = checkoutCompleted("one_time");
     const response = await send(payload, "0".repeat(64));
     expect(response.status).toBe(401);
@@ -300,7 +301,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     expect(await balance()).toBe(0);
   });
 
-  test("features.credits 关闭时不发积分，订单照常更新", async () => {
+  test("with features.credits off, no credits are granted and orders still update", async () => {
     useCredits(false);
     expect((await send(checkoutCompleted("one_time"))).status).toBe(200);
     const [order] = await db
@@ -311,13 +312,13 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     expect(await balance()).toBe(0);
   });
 
-  test("退款：订单变为 partially_refunded，积分按已退比例回收", async () => {
+  test("refund: order becomes partially_refunded and credits are reclaimed by the refunded share", async () => {
     await send(checkoutCompleted("one_time"));
     const refund = creemSample("refund.created");
     refund.id = eventId();
     const object = refund.object as Payload;
     object.id = `ref_${randomUUID()}`;
-    // 订单是 1000（EUR，一次性购买发放 2000 积分），退一半 → 回收一半。
+    // The order is 1000 (EUR, a one-time purchase granting 2000 credits); refunding half → reclaim half.
     object.refund_amount = 500;
     delete object.transaction.subscription;
     delete object.subscription;
@@ -335,7 +336,7 @@ describe.skipIf(!url)("Creem webhook → 账单表和积分", () => {
     expect(await balance()).toBe(1000);
   });
 
-  test("取消订阅：状态为 canceled，保留可用到的时间", async () => {
+  test("cancel subscription: status is canceled and the paid-through time is kept", async () => {
     await send(checkoutCompleted("subscription"));
     await send(
       subscriptionEvent("subscription.paid", {
