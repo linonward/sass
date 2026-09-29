@@ -1,4 +1,8 @@
-# sass
+# OnwardKit
+
+**AI 产品出海启动套件 · The starter kit for your AI business.**
+
+把你的 AI 产品，做成可以收费的生意。登录、支付、积分与 AI 已接好，把时间留给你的产品。
 
 可复用的出海 SaaS 模板：改配置即可得到登录、支付（Creem / Stripe / Lemon Squeezy）、积分、AI、多语言、SEO 等基础设施，只需编写业务功能。
 

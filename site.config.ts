@@ -65,7 +65,7 @@ const config = defineConfig({
   name: envOverride("SITE_NAME") ?? "Acme",
   // 占位域名，改成自己的（不带协议）。演示站用 SITE_DOMAIN 覆盖。
   domain: envOverride("SITE_DOMAIN") ?? "example.com",
-  description: "Ship your SaaS in a day.",
+  description: "The starter kit for your AI business.",
   brand: {
     primaryColor: "#0f766e",
   },

@@ -64,3 +64,19 @@ T2401 换了首页叙事，但首页的 title 和 description 还停在旧模板
 - [x] `og:locale` 输出 `en_US` / `zh_CN`（映射在 `src/core/i18n/locales.ts`，没登记的语言原样输出）。
 - [x] 不加 FAQPage 结构化数据（Google 自 2023 年起只对政府和健康类站点展示）；首页不展示价格，所以也不加 Offer / SoftwareApplication。
 - [x] `pnpm test`（1492 passed）、`pnpm typecheck`、`pnpm lint` 通过；`seo`、`ui-shell`、`landing`、`locale` 回归 53 passed、1 项按设计跳过。
+
+## T2403 onwardkit-brand
+
+- 分支：`feat/onwardkit-brand`
+- Worktree：`../sass-onwardkit-brand`
+- 依赖：T2402，已合入 `main`；起点 `23b5aaf`。
+
+对外产品名统一为 OnwardKit。README 使用产品定位与中英标语；分享卡默认描述和页脚标语同步。推广策略文档补充中英社交简介、首次介绍草稿和官方演示配置步骤。模板仍允许买家通过 SITE_NAME 换名，默认 Acme 哨兵值及升级标识不变。域名、法律主体与发信地址须使用实际部署信息。
+
+- [x] `pnpm test`：128 个文件、1492 项通过。
+- [x] `pnpm lint`、`pnpm typecheck` 通过。
+- [x] `E2E_PORT=3220 npx playwright test e2e/ui-shell.spec.ts e2e/landing.spec.ts`：39 passed、1 项预期跳过。首次运行与文件改动重叠，两个桌面跳转断言超时；停止改动后完整重跑通过。
+- [x] 内置浏览器核对桌面与 375px：OnwardKit 名称完整显示，语言、主题、品牌色预览保留。
+- [x] 本地 `/opengraph-image` 为 1200×630，展示 OnwardKit 和新英文标语，无裁切。
+
+预览通过忽略的 `.env.local` 设置 SITE_NAME，本地测试域名仅用于验收。线上环境未修改；上线时按推广文档设置实际站点身份并重新构建。
