@@ -15,6 +15,7 @@ export type Band = "canvas" | "tint" | "primary" | "success" | "dark";
 export const bands: Record<LandingSectionId, Band> = {
   hero: "canvas",
   features: "canvas",
+  testimonials: "primary",
   pricing: "tint",
   delivery: "canvas",
   faq: "canvas",

@@ -80,3 +80,20 @@ T2401 换了首页叙事，但首页的 title 和 description 还停在旧模板
 - [x] 本地 `/opengraph-image` 为 1200×630，展示 OnwardKit 和新英文标语，无裁切。
 
 预览通过忽略的 `.env.local` 设置 SITE_NAME，本地测试域名仅用于验收。线上环境未修改；上线时按推广文档设置实际站点身份并重新构建。
+
+## T2404 landing-testimonials
+
+- 分支：`feat/landing-testimonials`
+- Worktree：`../sass-landing-testimonials`
+- 依赖：T2403，已合入 `main`（2278751）；起点 c692f09。
+
+在功能区与交付区之间增加配置驱动的用户故事墙。默认 6 条中英文示例评价，逐条标注，产品图片复用已有摄影；没有编造人数、评分、收益或访谈素材。
+
+- [x] 支持 quote / image / video，作者头像、HTTPS 原始出处可选；视频需封面、尺寸和字幕，本地素材无需放宽 CSP。
+- [x] `landing.sections` 控制顺序和开关；items 为空时，在计算波浪前过滤。
+- [x] 3 / 2 / 1 列，品牌色高亮、硬唇边，亮暗主题；原生视频控件，preload=none，无自动播放。
+- [x] `pnpm test`：133 个文件、1556 项通过；`pnpm typecheck` 与 `pnpm lint` 通过。
+- [x] `E2E_PORT=3240 npx playwright test e2e/ui-shell.spec.ts e2e/landing.spec.ts`：43 passed、1 项按设计跳过。
+- [x] 实际浏览器核对：1440px 桌面、375px 手机亮暗模式，图片加载与品牌色切换正常；页面无 console error / pageerror。
+
+配置说明见 [用户故事配置](../testimonials.md)。没有新增依赖或环境变量。

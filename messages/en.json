@@ -228,6 +228,44 @@
           "description": "Build your own features on working implementations"
         }
       }
+    },
+    "testimonials": {
+      "eyebrow": "Maker stories",
+      "title": "From idea to launch. In their words.",
+      "subtitle": "See how developers take the next step, from AI tools to subscription products.",
+      "exampleNotice": "Layout preview · These are sample quotes, not customer testimonials.",
+      "exampleLabel": "Sample quote",
+      "source": "Read the original",
+      "videoLabel": "Watch the story from {name}",
+      "videoFallback": "Download the video",
+      "items": {
+        "focus": {
+          "quote": "“With the basics in place, <highlight>I can finally focus on the product itself.</highlight>”",
+          "role": "Independent developer · AI tools"
+        },
+        "validate": {
+          "quote": "“With a starting point for sign-in and payments, <highlight>I can test whether people want the feature</highlight> before investing more.”",
+          "role": "Subscription product founder",
+          "imageAlt": "Illustrative product photo: a perfume bottle. Not a customer result."
+        },
+        "flow": {
+          "quote": "“From payment to credits to an AI request, <highlight>I can follow one complete flow</highlight> instead of stitching separate examples together.”",
+          "role": "AI product developer"
+        },
+        "brand": {
+          "quote": "“With my own color and copy, <highlight>the product feels like mine.</highlight> I don’t have to restyle every page.”",
+          "role": "Independent developer"
+        },
+        "operate": {
+          "quote": "“After launch, I can look up orders and usage. <highlight>I have more context when responding to users.</highlight>”",
+          "role": "Small SaaS team",
+          "imageAlt": "Illustrative product photo: skincare bottles. Not a customer result."
+        },
+        "build": {
+          "quote": "“The core flows are connected, so <highlight>I can concentrate on the one feature that matters most.</highlight>”",
+          "role": "AI app creator"
+        }
+      }
     }
   },
   "Email": {
