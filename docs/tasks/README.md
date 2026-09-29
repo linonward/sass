@@ -160,6 +160,7 @@
 | T2308                       | sell-gate               | `docs/sell-gate`               | T2307                         | todo |
 | T2309                       | waffo-billing           | `feat/waffo-billing`           | T2305                         | done |
 | T2310                       | delivery-gate           | `docs/delivery-gate`           | T2407                         | done |
+| T2311                       | merge-hygiene           | `docs/merge-hygiene`           | —                             | done |
 | **阶段 24：Landing 重设计** |                         |                                |                               |      |
 | T2401                       | landing-redesign        | `feat/landing-redesign`        | T105、T605、T1803             | done |
 | T2402                       | landing-seo             | `fix/landing-seo`              | T2401                         | done |
@@ -282,7 +283,7 @@
 阶段 22  T2201（独立；时限是 2026-10-19，见 phase-22-ubuntu-26.md）
 
 阶段 23  T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308（严格串行：
-         批次 A 不通过就不承诺「支持持续升级」，批次 C 不通过不交付第一份发行包；T2310 独立，只改文档）
+         批次 A 不通过就不承诺「支持持续升级」，批次 C 不通过不交付第一份发行包；T2310、T2311 独立，只改文档）
 
 阶段 25  T2500 → T2501 → T2502 T2503（T2501 之后可并行）；T2503 → T2505；T2501, T2306 → T2504
 阶段 26  T2600 → T2601 → T2602 → T2603 → T2604 → T2605 → T2606 → T2306（插在阶段 23 的 T2305 与 T2306 之间）

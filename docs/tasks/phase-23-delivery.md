@@ -496,3 +496,25 @@ T2407 让首页可以直接下单，但阶段 23 仍按「T2308 外部试用 →
 - [x] 仓库文档里不再有外部试用 / 试用用户作为待办或放行条件（已完成任务卡里的历史表述不改）
 - [x] 五条放行条件在 phase-23、go-to-market 两处一致
 - [x] `pnpm format:check` 绿
+
+---
+
+## T2311 merge-hygiene
+
+- 分支 / worktree：`docs/merge-hygiene` → `../sass-merge-hygiene`
+- 依赖：—
+
+**问题**
+
+多个 worktree 并行时，PR 基于旧 `main` 开出、合入时不重跑 CI，冲突与语义冲突都靠运气；squash 合并没写 `--subject`，`main` 上的提交丢了任务 ID（#169、#171）；`docs/workflow.md` 写着要开分支保护，实际 `main` 没有保护。
+
+**做**
+
+- `docs/workflow.md`：开 PR 前与合入前 rebase 到 `origin/main` 及原因；合并命令固定 `--subject "<PR 标题>"`；清理用 `git branch -D`（squash 后 `-d` 会拒绝）；「GitHub 仓库设置」按实际生效的保护规则重写，附核对命令。
+- 仓库设置（作者在网页上操作）：`main` 要求 PR、必需检查 `ci`、要求分支与 `main` 同步、禁止 force push 与删除。
+
+**验收**
+
+- [x] `gh api …/branches/main/protection/required_status_checks` 返回 `checks: [ci]`、`strict: true`
+- [x] `docs/workflow.md` 与实际设置一致
+- [x] `pnpm format:check` 绿
