@@ -82,11 +82,22 @@ T2306 ─────────┴→ T2504
 
 **验收**
 
-- [ ] 仓库里 `grep -rn "<select" src` 零命中；三个本地 `Status` / `FormError` 已删除
-- [ ] 单测：`FormField` 在有 / 无说明、有 / 无错误时输出正确的 `id` / `htmlFor` / `aria-describedby` / `aria-invalid`
-- [ ] Select 实测：server action 的 `FormData` 拿到值；报表筛选（GET 表单）提交后 URL 带参数；只用键盘能打开、选择、关闭；375px 弹层不横向溢出
-- [ ] 亮 / 暗主题下 Select、Checkbox、Switch 的描边和焦点环跟品牌色走，不出现写死的颜色
-- [ ] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`ui-shell` + `landing` 与上面四个受影响 e2e 通过
+- [x] 仓库里 `grep -rn "<select" src` 零命中；本地的 `Status` / `FormError` 已删除（实际是四份，见下）
+- [x] 单测：`FormField` 在有 / 无说明、有 / 无错误时输出正确的 `htmlFor` / `aria-describedby` / `aria-invalid`（`src/core/ui/form-field.test.tsx`，id 由 Base UI 生成，断言按关联关系而不是按 id 字面量）
+- [x] Select 实测：server action 的 `FormData` 拿到值；报表筛选（GET 表单）提交后 URL 带参数；只用键盘能打开、选择、关闭；375px 弹层不横向溢出
+- [x] 亮 / 暗主题下 Select、Checkbox 的描边和焦点环跟品牌色走，不出现写死的颜色（Switch 没做，见下）
+- [x] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`ui-shell` + `landing` 与上面四个受影响 e2e 通过
+
+**实施记录（与上面「做」的出入）**
+
+- **`FormField` 建在 Base UI 的 `Field` 上，不拉 shadcn `field`。** shadcn base-nova 的 `field` 只是布局组件，不做关联；Base UI 的 `Field` 自己就会给 Base UI 控件（`Input`、`Select`、`Checkbox`，以及改成走 `Field.Control` 的 `Textarea`）接好 label、`aria-describedby`、`aria-invalid`，所以也不需要 `useId` 手拼 id。Select 这类按钮型控件用 `labelFor="button"`：label 渲染成 `<div>` 走 `aria-labelledby`，点它不会打开弹层。
+- **Switch 没加。** 仓库里没有能迁移的开关，按本阶段「只新增、不迁移的不合入」不引入；`spinner` 也没用上（`SubmitButton` 换文案就够）。
+- **结果提示合并的是四份**：写卡时漏了 `status/admin-forms.tsx` 的 `Feedback`，一并换成 `FormMessage`。
+- **`DeleteAccount` 只换了结果提示**，弹层与确认逻辑留给 T2503。
+- **修了发票弹层一个 `main` 上就有的缺陷**：`<form action={fn}>` 在 action 结束后会被 React 自动 reset，服务端拒绝时用户填的内容被清空。单测在 jsdom 里一直是绿的（jsdom 下没触发这次 reset），真实浏览器里 `main` 同样会清空。新建 / 编辑改走 `onSubmit`，并在 `e2e/invoices.spec.ts` 加了浏览器用例锁住。账户设置、后台、状态页的表单用的是 `useActionState`，出错后同样会被 reset —— 这是原有行为，本卡没改。
+- **Select 弹层默认对齐触发器**（shadcn / Base UI 的 `alignItemWithTrigger`，和 macOS 原生下拉一样），会盖住上方的 label；保留默认。
+- **本地跑 acquisition 套件要带 `CI=1`**（再补 `ci.yml` 里的三条 `ALLOW_*`）：报表的筛选选项有进程内 TTL 缓存，只在 `CI` / `NODE_ENV=test` 下绕过；本地 dev 模式下「填筛选 → Apply」那条用例会选不到刚注册的 medium，`main` 上用原生 `selectOption` 也一样失败。
+- 新增 `src/core/ui/testing.ts`（jsdom 里操作 Select）和 `e2e/select-helpers.ts`（浏览器里按可访问名点选），后面的卡迁移时直接用。
 
 ---
 
