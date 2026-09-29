@@ -25,6 +25,7 @@ function FormField({
   description,
   error,
   labelFor = "input",
+  labelClassName: labelClass,
   className,
   children,
   ...props
@@ -33,6 +34,8 @@ function FormField({
   description?: React.ReactNode;
   error?: React.ReactNode;
   labelFor?: "input" | "button";
+  /** For labels that aren't one line of text (e.g. rich text with a bold value). */
+  labelClassName?: string;
 }) {
   const invalid = Boolean(error);
   return (
@@ -46,9 +49,9 @@ function FormField({
         nativeLabel={labelFor === "input"}
         render={
           labelFor === "input" ? (
-            <Label />
+            <Label className={labelClass} />
           ) : (
-            <div data-slot="label" className={labelClassName} />
+            <div data-slot="label" className={cn(labelClassName, labelClass)} />
           )
         }
       >

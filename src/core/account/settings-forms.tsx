@@ -1,24 +1,14 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 
 import { nativeName } from "@/core/i18n/locale-switcher";
 import { Button } from "@/core/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/core/ui/dialog";
+import { ConfirmActionDialog } from "@/core/ui/confirm-action-dialog";
 import { Input } from "@/core/ui/input";
 import { FormField } from "@/core/ui/form-field";
 import { FormMessage } from "@/core/ui/form-message";
-import { Label } from "@/core/ui/label";
 import {
   Select,
   SelectContent,
@@ -122,58 +112,28 @@ export function LocaleForm({
 
 export function DeleteAccount({ email }: { email: string }) {
   const t = useTranslations("Account.delete");
-  const tc = useTranslations("Common");
+  const ts = useTranslations("Account.status");
   const locale = useLocale();
-  const [confirm, setConfirm] = useState("");
-  const [state, action, pending] = useActionState(
-    deleteAccount.bind(null, locale),
-    idle,
-  );
-  const message = useStatusMessage(state);
-  const matches = confirm.trim().toLowerCase() === email.toLowerCase();
 
+  // Success never comes back: the action clears the session and redirects home.
   return (
-    <Dialog onOpenChange={(open) => !open && setConfirm("")}>
-      <DialogTrigger render={<Button variant="destructive" />}>
-        {t("open")}
-      </DialogTrigger>
-      <DialogContent closeLabel={tc("close")}>
-        <form action={action} className="flex flex-col gap-4">
-          <DialogHeader>
-            <DialogTitle>{t("title")}</DialogTitle>
-            <DialogDescription>{t("description")}</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="delete-confirm" className="block leading-relaxed">
-              {t.rich("confirmLabel", {
-                email: () => <strong className="break-all">{email}</strong>,
-              })}
-            </Label>
-            <Input
-              id="delete-confirm"
-              name="confirm"
-              value={confirm}
-              onChange={(event) => setConfirm(event.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              inputMode="email"
-            />
-          </div>
-          <FormMessage {...message} />
-          <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>
-              {t("cancel")}
-            </DialogClose>
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={!matches || pending}
-            >
-              {pending ? t("deleting") : t("confirm")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <ConfirmActionDialog
+      trigger={<Button variant="destructive">{t("open")}</Button>}
+      title={t("title")}
+      description={t("description")}
+      tone="destructive"
+      confirmText={{
+        label: t.rich("confirmLabel", {
+          email: () => <strong className="break-all">{email}</strong>,
+        }),
+        expected: email,
+        inputMode: "email",
+      }}
+      confirmLabel={t("confirm")}
+      pendingLabel={t("deleting")}
+      cancelLabel={t("cancel")}
+      action={(form) => deleteAccount(locale, idle, form)}
+      errorMessage={(error) => ts(error)}
+    />
   );
 }

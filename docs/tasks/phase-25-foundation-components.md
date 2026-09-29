@@ -161,10 +161,19 @@ T2306 ─────────┴→ T2504
 
 **验收**
 
-- [ ] 三处迁移后，本地的 `Dialog` + `useTransition` 确认逻辑已删除
-- [ ] 单测：输入不匹配时确认按钮禁用；action 失败时弹层保持打开、错误可见、输入保留；成功后关闭；再次打开是干净状态
-- [ ] 键盘：打开后焦点在弹层内，Esc 关闭，焦点回到触发按钮
-- [ ] `pnpm test`、`ui-shell` + `landing`、删除账户 / API Key / 发票相关 e2e 通过
+- [x] 三处迁移后，本地的 `Dialog` + `useTransition` 确认逻辑已删除
+- [x] 单测：输入不匹配时确认按钮禁用；action 失败时弹层保持打开、错误可见、输入保留；成功后关闭；再次打开是干净状态（`src/core/ui/confirm-action-dialog.test.tsx`，另加处理中与 tone 两条）
+- [x] 键盘：打开后焦点在弹层内，Esc 关闭，焦点回到触发按钮（真实浏览器实测）
+- [x] `pnpm test`、`ui-shell` + `landing`、删除账户 / API Key / 发票相关 e2e 通过
+
+**实施记录（与上面「做」的出入）**
+
+- **alert-dialog 没走 `shadcn add`**：CLI 要覆盖已按设计系统改过的 `button.tsx`，所以用 `shadcn view` 取源码手工落地，import 改指 `@/core/ui/button`。样式对齐 `dialog.tsx`：遮罩只有暗色、不加 backdrop-blur，弹层用 `.sticker` 代替 `ring-1`；没用上的 `Media` / `Action` 没带进来。
+- **弹层的角色从 `dialog` 变成 `alertdialog`**，也没有右上角的关闭按钮（只能「取消」、Esc 或操作成功后关闭，点遮罩不关）。三个 e2e 和发票单测里按 `dialog` / 关闭按钮找弹层的地方跟着改了。
+- **提交走 `onSubmit`**（不是 `<form action={fn}>`），关闭发生在拿到结果之后的提交回调里，不用 effect 观察状态。删除账户原来用 `useActionState` + `<form action>`，失败时 React 会重置表单；现在改成同一套写法，输入的邮箱在失败后保留。
+- **要操作的 id 用 `fields` 传成隐藏字段**，和输入确认（字段名 `confirm`）在同一个 `FormData` 里交给 action。
+- 给 `FormField` 加了 `labelClassName`：删除账户的 label 是带加粗邮箱的富文本，默认的 flex label 会把它拆成几块。
+- 「失败保留输入」在浏览器里没法稳定造出删除账户的服务端失败，所以这一条由单测覆盖；「失败时弹层留着、错误可见」在浏览器里用另一个标签页先删掉同一张发票（`not_found`）实测过。375px 亮 / 暗主题截图核对：弹层 16–359px，无横向溢出。
 
 ---
 

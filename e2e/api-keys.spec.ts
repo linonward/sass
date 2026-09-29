@@ -113,7 +113,7 @@ test("建 key → 用 key 调接口 → 撤销 → 同一把 key 立刻 401", as
 
   // 撤销：确认对话框点名是哪把 key，确认后列表状态变「已撤销」。
   await row.getByTestId("api-key-revoke").click();
-  const confirm = page.getByRole("dialog", {
+  const confirm = page.getByRole("alertdialog", {
     name: ak.revoke.title.replace("{name}", name),
   });
   await confirm.getByTestId("api-key-revoke-confirm").click();

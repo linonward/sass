@@ -244,8 +244,10 @@ describe("DeleteInvoiceDialog", () => {
     fireEvent.click(screen.getByTestId("invoice-delete-confirm"));
     await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
 
-    // 角落那个关闭按钮：可访问名是 sr-only 文本（DialogContent 的 closeLabel）。
-    fireEvent.click(screen.getByRole("button", { name: en.Common.close }));
+    // An alert dialog has no corner close button: Cancel is the way out.
+    fireEvent.click(
+      screen.getByRole("button", { name: en.Invoices.delete.cancel }),
+    );
     await waitFor(() =>
       expect(screen.queryByTestId("invoice-delete-confirm")).toBeNull(),
     );

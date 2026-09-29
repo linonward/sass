@@ -1,9 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/core/ui/button";
+import { ConfirmActionDialog } from "@/core/ui/confirm-action-dialog";
 import {
   Dialog,
   DialogClose,
@@ -177,64 +178,24 @@ export function RevokeKeyDialog({
   name: string;
 }) {
   const t = useTranslations("ApiKeys.revoke");
-  const tc = useTranslations("Common");
-  const [open, setOpen] = useState(false);
-  const [state, setState] = useState<RevokeKeyState>(idleRevoke);
-  const [pending, startTransition] = useTransition();
-
-  // 提交自己接：成功才关弹层，失败把错误留在用户眼前。
-  // 不用 useEffect 观察 state 去关（那会在渲染提交里同步 setState，造成级联渲染）。
-  function submit(form: FormData) {
-    startTransition(async () => {
-      const next = await revokeApiKey(locale, idleRevoke, form);
-      setState(next);
-      if (next.status === "success") setOpen(false);
-    });
-  }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        // 关掉就清掉上一次的结果：重新打开是干净状态。
-        if (!next) setState(idleRevoke);
-      }}
-    >
-      <DialogTrigger
-        render={
-          <Button variant="outline" size="sm" data-testid="api-key-revoke" />
-        }
-      >
-        {t("open")}
-      </DialogTrigger>
-      <DialogContent closeLabel={tc("close")}>
-        <form action={submit} className="flex flex-col gap-4">
-          <input type="hidden" name="keyId" value={keyId} />
-          <DialogHeader>
-            <DialogTitle>{t("title", { name })}</DialogTitle>
-            <DialogDescription>{t("description")}</DialogDescription>
-          </DialogHeader>
-          {state.status === "error" && (
-            <p role="alert" className="text-destructive text-sm">
-              {t(`errors.${state.error}`)}
-            </p>
-          )}
-          <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>
-              {t("cancel")}
-            </DialogClose>
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={pending}
-              data-testid="api-key-revoke-confirm"
-            >
-              {pending ? t("revoking") : t("confirm")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <ConfirmActionDialog
+      trigger={
+        <Button variant="outline" size="sm" data-testid="api-key-revoke">
+          {t("open")}
+        </Button>
+      }
+      title={t("title", { name })}
+      description={t("description")}
+      tone="destructive"
+      fields={{ keyId }}
+      confirmLabel={t("confirm")}
+      pendingLabel={t("revoking")}
+      cancelLabel={t("cancel")}
+      confirmTestId="api-key-revoke-confirm"
+      action={(form) => revokeApiKey(locale, idleRevoke, form)}
+      errorMessage={(error) => t(`errors.${error}`)}
+    />
   );
 }

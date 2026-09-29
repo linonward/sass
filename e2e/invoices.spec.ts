@@ -148,7 +148,7 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
   const initech = row.filter({ hasText: "Initech" });
   const confirm = await openDialog(
     initech.getByTestId("invoice-delete"),
-    page.getByRole("dialog", {
+    page.getByRole("alertdialog", {
       name: inv.delete.title.replace("{name}", "Initech"),
     }),
   );
@@ -159,7 +159,7 @@ test("从侧边栏进入：新建、编辑、搜索、删除", async ({ page, is
   const last = row.getByTestId("invoice-delete");
   await openDialog(
     last,
-    page.getByRole("dialog", {
+    page.getByRole("alertdialog", {
       name: inv.delete.title.replace("{name}", "Globex"),
     }),
   );
