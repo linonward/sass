@@ -5,6 +5,26 @@
 export const isVercelSystemVar = (name) =>
   /^(VERCEL|TURBO|NX)_/.test(name) || name === "VERCEL";
 
+/**
+ * The plain text of a table cell. Feishu auto-links emails, URLs and domain-like values when they
+ * are typed or pasted, and the API then returns them as markdown (`[a@b.com](mailto:a@b.com)`).
+ * A whole-cell link whose href is just the text (as-is, or with mailto: / http(s)://) is unwrapped
+ * to the text; anything else is kept verbatim rather than guessed at.
+ */
+export function cellText(value) {
+  const raw = Array.isArray(value)
+    ? value.map((part) => part.text ?? part).join("")
+    : value;
+  if (typeof raw !== "string") return undefined;
+  const m = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(raw.trim());
+  if (!m) return raw;
+  const [, text, href] = m;
+  const autoLinked = ["", "mailto:", "http://", "https://"].some(
+    (prefix) => href === prefix + text,
+  );
+  return autoLinked ? text : raw;
+}
+
 const unquote = (value) => {
   const v = value.trim();
   if (v.length >= 2 && v[0] === v.at(-1) && (v[0] === '"' || v[0] === "'")) {

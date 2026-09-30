@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  cellText,
   diffColumn,
   missingKeys,
   parseDotenv,
@@ -108,4 +109,20 @@ test("missingKeys: only .env.example keys without a table row", () => {
     }),
     ["NEW"],
   );
+});
+
+test("cellText unwraps Feishu auto-links and keeps everything else", () => {
+  assert.equal(cellText("[a@b.com](mailto:a@b.com)"), "a@b.com");
+  assert.equal(cellText("[example.com](http://example.com)"), "example.com");
+  assert.equal(
+    cellText("[https://x.test/v1](https://x.test/v1)"),
+    "https://x.test/v1",
+  );
+  assert.equal(cellText([{ text: "[a@b.com](mailto:a@b.com)" }]), "a@b.com");
+  // A link whose text and href disagree is not an auto-link: keep it verbatim.
+  assert.equal(cellText("[docs](https://x.test)"), "[docs](https://x.test)");
+  assert.equal(cellText("plain"), "plain");
+  assert.equal(cellText([{ text: "a" }, "b"]), "ab");
+  assert.equal(cellText(null), undefined);
+  assert.equal(cellText(true), undefined);
 });
