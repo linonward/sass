@@ -3,6 +3,8 @@ import { getRequestConfig } from "next-intl/server";
 import { notFound } from "next/navigation";
 import * as rootParams from "next/root-params";
 
+import { withOverlayMessages } from "@/core/config/overlay";
+
 import { routing } from "./routing";
 
 export default getRequestConfig(async ({ locale: requested }) => {
@@ -13,6 +15,10 @@ export default getRequestConfig(async ({ locale: requested }) => {
 
   return {
     locale,
-    messages: (await import(`../../../messages/${locale}.json`)).default,
+    // A deployment can swap in its own home page copy via SITE_OVERLAY_DIR (see core/config/overlay.ts).
+    messages: withOverlayMessages(
+      locale,
+      (await import(`../../../messages/${locale}.json`)).default,
+    ),
   };
 });

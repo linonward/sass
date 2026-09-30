@@ -21,12 +21,19 @@ test("unknown paths return the 404 page", async ({ page }) => {
   await expect(page).toHaveURL("/");
 });
 
-// The hero's primary button: with a purchasable plan it's "Buy now · price" (the CI config sells
-// lifetime).
+// The hero's primary button: "Buy now · price" when the config sells a plan, otherwise the demo
+// (landing.demo) or "get started".
+const { landing, billing } = siteConfig;
+const heroCta = messages.Landing.hero;
+const heroPrimaryName = billing.plans.some(
+  (p) => p.id === landing.purchasePlan && !p.hidden,
+)
+  ? new RegExp(`^${heroCta.buyCta.split(" ·")[0]}`)
+  : landing.demo
+    ? heroCta.demoCta
+    : heroCta.startCta;
 const heroPrimary = (page: Page) =>
-  page.locator("#hero").getByRole("link", {
-    name: new RegExp(`^${messages.Landing.hero.buyCta.split(" ·")[0]}`),
-  });
+  page.locator("#hero").getByRole("link", { name: heroPrimaryName });
 
 test("primary button uses the configured brand color", async ({ page }) => {
   await page.goto("/");
@@ -57,6 +64,10 @@ test("dark mode toggles and persists after reload", async ({ page }) => {
 test("brand color preview works with light, dark, and system themes, and reverts to config after leaving the home page", async ({
   page,
 }) => {
+  test.skip(
+    !landing.hero.colorSwitcher,
+    "landing.hero.colorSwitcher is off; the switcher is covered by unit tests",
+  );
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
   const colors = page.getByRole("radiogroup", {
@@ -85,13 +96,8 @@ test("brand color preview works with light, dark, and system themes, and reverts
     "true",
   );
   await indigo.click();
-  // Leave the home page: the primary button stays on this page (jumps to the delivery section),
-  // so use the hero's demo link.
-  await page
-    .locator("#hero")
-    .getByRole("link", { name: messages.Landing.hero.primaryCta, exact: true })
-    .click();
-  await expect(page).toHaveURL("/demo");
+  // Leave the home page through the footer's pricing link (the hero buttons may stay on this page).
+  await page.goto("/pricing");
   await expect
     .poll(() =>
       page

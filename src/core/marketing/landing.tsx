@@ -31,6 +31,8 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
   hero: (config, waveFrom) => (
     <Hero
       {...config.landing.hero}
+      demo={config.landing.demo}
+      sections={config.landing.sections}
       waveFrom={waveFrom}
       primaryColor={config.brand.primaryColor}
       plan={purchasePlan(config)}
@@ -59,6 +61,8 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
   ),
   delivery: (config, waveFrom) => (
     <Delivery
+      items={config.landing.deliverables}
+      demo={config.landing.demo}
       waveFrom={waveFrom}
       plan={purchasePlan(config)}
       currency={config.billing.currency}
@@ -69,6 +73,8 @@ const sections: Record<LandingSectionId, SectionRenderer> = {
   ),
   cta: (config, waveFrom) => (
     <Cta
+      demo={config.landing.demo}
+      sections={config.landing.sections}
       waveFrom={waveFrom}
       plan={purchasePlan(config)}
       currency={config.billing.currency}

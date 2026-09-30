@@ -13,10 +13,17 @@ import { securityHeaders } from "./src/core/security/headers";
 
 const withNextIntl = createNextIntlPlugin("./src/core/i18n/request.ts");
 
+// src/core/config/overlay.ts reads the overlay directory with fs at runtime; the tracer can't see a
+// path that comes from an environment variable, so list it for every route's server bundle.
+const overlayDir = process.env.SITE_OVERLAY_DIR?.trim();
+
 const sentryEnabled =
   siteConfig.features.observability && siteConfig.observability.sentry;
 
 const nextConfig: NextConfig = {
+  ...(overlayDir && {
+    outputFileTracingIncludes: { "/**": [`./${overlayDir}/**/*.json`] },
+  }),
   env: {
     ACQUISITION_LEADS: String(siteConfig.acquisition.leads.enabled),
     // Build-time constants, so acquisition widgets that are off by default are tree-shaken along

@@ -1,6 +1,6 @@
 import { useFormatter, useTranslations } from "next-intl";
 
-import type { Plan } from "@/core/config/schema";
+import type { LandingConfig, Plan } from "@/core/config/schema";
 import { buttonVariants } from "@/core/ui/button";
 import { bands, type Band } from "./band";
 import { CtaLink, ctaTargets } from "./cta-buttons";
@@ -12,11 +12,15 @@ export function Cta({
   plan,
   currency,
   showcaseUrl,
+  demo,
+  sections,
 }: {
   waveFrom?: Band;
   plan?: Plan;
   currency: string;
   showcaseUrl?: string;
+  demo: boolean;
+  sections: LandingConfig["sections"];
 }) {
   const t = useTranslations("Landing.cta");
   const format = useFormatter();
@@ -24,10 +28,14 @@ export function Cta({
   const { primary, secondary } = ctaTargets({
     price,
     showcaseUrl,
+    demo,
+    sections,
     labels: {
       buy: t("buyCta", { price: price ?? "" }),
-      demo: t("button"),
-      delivery: t("secondaryCta"),
+      demo: t("demoCta"),
+      delivery: t("deliveryCta"),
+      start: t("startCta"),
+      pricing: t("pricingCta"),
       showcase: t("showcaseCta"),
     },
   });

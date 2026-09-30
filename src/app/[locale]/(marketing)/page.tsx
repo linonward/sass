@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { withOverlay } from "@/core/config/overlay";
 import { Landing } from "@/core/marketing/landing";
 import { buildMetadata } from "@/core/seo/metadata";
 
@@ -19,5 +20,5 @@ export async function generateMetadata({ params }: PageProps<"/[locale]">) {
 }
 
 export default function Home() {
-  return <Landing config={siteConfig} />;
+  return <Landing config={withOverlay(siteConfig)} />;
 }

@@ -1,0 +1,203 @@
+{
+  "landing": {
+    "sections": [
+      "hero",
+      "timesaved",
+      "features",
+      "testimonials",
+      "delivery",
+      "faq",
+      "cta"
+    ],
+    "demo": true,
+    "purchasePlan": "lifetime",
+    "deliverables": ["source", "brand", "docs", "examples"],
+    "hero": {
+      "colorSwitcher": true,
+      "stepIcons": ["wallet", "database", "notebook"]
+    },
+    "timeSaved": [
+      {
+        "key": "payments",
+        "hours": 6
+      },
+      {
+        "key": "credits",
+        "hours": 8
+      },
+      {
+        "key": "email",
+        "hours": 3
+      },
+      {
+        "key": "auth",
+        "hours": 4
+      },
+      {
+        "key": "seo",
+        "hours": 3
+      },
+      {
+        "key": "i18n",
+        "hours": 3
+      },
+      {
+        "key": "admin",
+        "hours": 6
+      }
+    ],
+    "features": [
+      {
+        "key": "billing",
+        "icon": "creditCard",
+        "preview": "billing"
+      },
+      {
+        "key": "ai",
+        "icon": "sparkles",
+        "preview": "ai"
+      },
+      {
+        "key": "operations",
+        "icon": "chart",
+        "preview": "usage"
+      }
+    ],
+    "testimonials": {
+      "items": [
+        {
+          "key": "focus",
+          "type": "quote",
+          "example": true,
+          "author": {
+            "name": "Maker A"
+          }
+        },
+        {
+          "key": "validate",
+          "type": "image",
+          "example": true,
+          "author": {
+            "name": "Maker B"
+          },
+          "media": {
+            "src": "/landing/perfume.webp",
+            "width": 1536,
+            "height": 1024
+          }
+        },
+        {
+          "key": "flow",
+          "type": "quote",
+          "example": true,
+          "author": {
+            "name": "Maker C"
+          }
+        },
+        {
+          "key": "brand",
+          "type": "quote",
+          "example": true,
+          "author": {
+            "name": "Maker D"
+          }
+        },
+        {
+          "key": "operate",
+          "type": "image",
+          "example": true,
+          "author": {
+            "name": "Maker E"
+          },
+          "media": {
+            "src": "/landing/skincare.webp",
+            "width": 1122,
+            "height": 1402
+          }
+        },
+        {
+          "key": "build",
+          "type": "quote",
+          "example": true,
+          "author": {
+            "name": "Maker F"
+          }
+        }
+      ]
+    },
+    "faq": [
+      "deliverables",
+      "fit",
+      "services",
+      "costs",
+      "payments",
+      "customize",
+      "updates",
+      "refund"
+    ]
+  },
+  "nav": {
+    "header": [
+      {
+        "key": "features",
+        "href": "/#features"
+      },
+      {
+        "key": "delivery",
+        "href": "/#delivery"
+      },
+      {
+        "key": "faq",
+        "href": "/#faq"
+      },
+      {
+        "key": "blog",
+        "href": "/blog"
+      }
+    ],
+    "footer": [
+      {
+        "key": "product",
+        "links": [
+          {
+            "key": "features",
+            "href": "/#features"
+          },
+          {
+            "key": "pricing",
+            "href": "/pricing"
+          },
+          {
+            "key": "faq",
+            "href": "/#faq"
+          },
+          {
+            "key": "blog",
+            "href": "/blog"
+          },
+          {
+            "key": "changelog",
+            "href": "/changelog"
+          }
+        ]
+      },
+      {
+        "key": "legal",
+        "links": [
+          {
+            "key": "privacy",
+            "href": "/privacy"
+          },
+          {
+            "key": "terms",
+            "href": "/terms"
+          },
+          {
+            "key": "refund",
+            "href": "/refund"
+          }
+        ]
+      }
+    ]
+  }
+}

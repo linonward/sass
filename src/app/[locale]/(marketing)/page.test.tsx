@@ -19,7 +19,7 @@ test("home page renders the hero title and primary CTA", () => {
   ).toBeDefined();
   expect(
     within(document.querySelector("#hero") as HTMLElement).getByRole("link", {
-      name: messages.Landing.hero.primaryCta,
+      name: messages.Landing.hero.startCta,
     }),
   ).toBeDefined();
 });

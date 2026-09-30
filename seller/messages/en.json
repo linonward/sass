@@ -1,0 +1,215 @@
+{
+  "Metadata": {
+    "homeTitle": "Turn your AI product into a business",
+    "description": "Next.js SaaS starter with auth, payments, credits and AI already connected. Launch your AI product and start charging, then spend your time on the product."
+  },
+  "Footer": {
+    "tagline": "The starter kit for your AI business."
+  },
+  "Landing": {
+    "hero": {
+      "title": "Turn your AI product into a business.",
+      "titleAccent": "a business.",
+      "subtitle": "Auth, payments, credits and AI, already connected.\nMake time for your product.",
+      "demoCta": "Explore demo",
+      "deliveryCta": "See what’s included",
+      "buyCta": "Buy now · {price}",
+      "showcaseCta": "See a live product",
+      "offerNote": "One-time payment · 1 year of updates · Download link emailed right after payment",
+      "imageAlt": "Product dashboard preview",
+      "stack": "Next.js · TypeScript · Built for independent makers",
+      "steps": {
+        "step1": "Accept payments",
+        "step2": "Charge in credits",
+        "step3": "Track every request",
+        "detail1": "Connect your provider and start accepting payments.",
+        "detail2": "Set credit rules and control usage costs.",
+        "detail3": "Keep credit activity and usage in view."
+      }
+    },
+    "timesaved": {
+      "title": "Work you won’t have to do again.",
+      "subtitle": "Each of these is already built and tested in the template. Hours are estimates for building it from scratch.",
+      "hours": "{hours, plural, one {# hour} other {# hours}}",
+      "total": "Total",
+      "result": "Launch today",
+      "items": {
+        "payments": {
+          "title": "Payment webhooks & idempotency",
+          "detail": "Four providers, with replays, out-of-order events and refunds handled"
+        },
+        "credits": {
+          "title": "Credit ledger & refunds on failure",
+          "detail": "Charge per use; credits return automatically when an AI call fails"
+        },
+        "email": {
+          "title": "Transactional email & retries",
+          "detail": "Queued in an outbox and resent automatically on failure"
+        },
+        "auth": {
+          "title": "Sign-in & roles",
+          "detail": "Google sign-in, email codes and admin roles"
+        },
+        "seo": {
+          "title": "SEO & social images",
+          "detail": "Sitemap, hreflang, structured data and Open Graph images"
+        },
+        "i18n": {
+          "title": "Internationalization",
+          "detail": "Localized routes and copy; add a language in config"
+        },
+        "admin": {
+          "title": "Admin & billing exceptions",
+          "detail": "Orders, users, discrepancies and an audit trail"
+        }
+      }
+    },
+    "features": {
+      "title": "From the first payment to every request.",
+      "subtitle": "The essential flows are connected. The product is yours to define.",
+      "items": {
+        "billing": {
+          "title": "Payment received. Credits ready.",
+          "description": "Subscriptions and one-time purchases, connected to a single credit ledger.",
+          "detail": "Creem / Stripe / Lemon Squeezy"
+        },
+        "ai": {
+          "title": "Make AI your product.",
+          "description": "Text, image and video generation, connected to credit billing and usage records.",
+          "detail": "Credits are returned when a model call fails."
+        },
+        "operations": {
+          "title": "Know what happens after launch.",
+          "description": "See orders, users and usage. Enable attribution, lead capture and referral rewards when you need them.",
+          "detail": "Understand product usage from one admin dashboard."
+        }
+      }
+    },
+    "testimonials": {
+      "eyebrow": "Maker stories",
+      "title": "From idea to launch. In their words.",
+      "subtitle": "See how developers take the next step, from AI tools to subscription products.",
+      "exampleNotice": "Layout preview · These are sample quotes, not customer testimonials.",
+      "exampleLabel": "Sample quote",
+      "source": "Read the original",
+      "videoLabel": "Watch the story from {name}",
+      "videoFallback": "Download the video",
+      "items": {
+        "focus": {
+          "quote": "“With the basics in place, <highlight>I can finally focus on the product itself.</highlight>”",
+          "role": "Independent developer · AI tools"
+        },
+        "validate": {
+          "quote": "“With a starting point for sign-in and payments, <highlight>I can test whether people want the feature</highlight> before investing more.”",
+          "role": "Subscription product founder",
+          "imageAlt": "Illustrative product photo: a perfume bottle. Not a customer result."
+        },
+        "flow": {
+          "quote": "“From payment to credits to an AI request, <highlight>I can follow one complete flow</highlight> instead of stitching separate examples together.”",
+          "role": "AI product developer"
+        },
+        "brand": {
+          "quote": "“With my own color and copy, <highlight>the product feels like mine.</highlight> I don’t have to restyle every page.”",
+          "role": "Independent developer"
+        },
+        "operate": {
+          "quote": "“After launch, I can look up orders and usage. <highlight>I have more context when responding to users.</highlight>”",
+          "role": "Small SaaS team",
+          "imageAlt": "Illustrative product photo: skincare bottles. Not a customer result."
+        },
+        "build": {
+          "quote": "“The core flows are connected, so <highlight>I can concentrate on the one feature that matters most.</highlight>”",
+          "role": "AI app creator"
+        }
+      }
+    },
+    "delivery": {
+      "title": "A complete starting point.",
+      "description": "Source code, configuration, documentation and examples, together in one project.",
+      "offer": "OnwardKit template",
+      "pending": "Coming soon",
+      "terms": "One-time payment, including all updates for one year and email support. Your download link is emailed right after payment. Digital product — no refunds once delivered.",
+      "termsPending": "Pricing, update period and support scope are to be confirmed.",
+      "buy": "Buy now",
+      "demo": "Explore the demo first",
+      "items": {
+        "source": {
+          "title": "Complete source",
+          "description": "Auth, payments, credits, AI and administration"
+        },
+        "brand": {
+          "title": "Configuration & branding",
+          "description": "Make it yours with your own copy and primary color"
+        },
+        "docs": {
+          "title": "Getting started guide",
+          "description": "Instructions from local setup to deployment"
+        },
+        "examples": {
+          "title": "Business examples",
+          "description": "Build your own features on working implementations"
+        }
+      }
+    },
+    "faq": {
+      "title": "A few things before you start.",
+      "items": {
+        "stack": {
+          "question": "What is it built with?",
+          "answer": "Next.js, TypeScript, Tailwind CSS and shadcn/ui, with Postgres for data."
+        },
+        "payments": {
+          "question": "Can I switch payment providers?",
+          "answer": "Choose Creem, Stripe, Lemon Squeezy or Waffo Pancake through configuration. Set up the matching products and webhooks when switching; existing subscriptions are not migrated automatically."
+        },
+        "customize": {
+          "question": "How do I build my own features?",
+          "answer": "Configure branding, pages and plans, then write features in the business directory using the shared auth, credits and AI interfaces. The starter guide includes examples."
+        },
+        "license": {
+          "question": "Can I use it for commercial projects?",
+          "answer": "Yes. Personal and commercial use are both covered."
+        },
+        "fit": {
+          "question": "Which projects is this for?",
+          "answer": "AI tools that need authentication, payments and credit billing. Team collaboration and multi-tenancy require additional development."
+        },
+        "services": {
+          "question": "Which external services do I need?",
+          "answer": "Deployment needs a database and email service. Configure payments, AI models, object storage and rate limiting for the features you enable. Local development supports substitutes."
+        },
+        "deliverables": {
+          "question": "What exactly do I get?",
+          "answer": "The complete source (auth, payments, credits, AI and admin), the starter guide and business examples. Your download link is emailed right after payment, and you can sign in to your downloads page any time."
+        },
+        "costs": {
+          "question": "Are there any other costs?",
+          "answer": "The template is a one-time purchase. Neon, Resend and Vercel all have free tiers that usually cover the early days; AI models are billed per use by your model provider."
+        },
+        "updates": {
+          "question": "How long do I get updates?",
+          "answer": "Every release within one year of purchase is included and appears on your downloads page, with email support during that time. After that, the releases you already have stay downloadable and keep working."
+        },
+        "refund": {
+          "question": "Can I get a refund?",
+          "answer": "No. The template is a digital product that can’t be returned once delivered, so all sales are final. Try the demo and read the docs before buying; contact us about duplicate or unauthorized charges."
+        }
+      }
+    },
+    "cta": {
+      "title": "The foundation is ready.\nYour product comes next.",
+      "subtitle": "Go from idea to paying customers in a day.",
+      "demoCta": "Explore demo",
+      "deliveryCta": "See what’s included",
+      "buyCta": "Buy now · {price}",
+      "showcaseCta": "See a live product"
+    }
+  },
+  "Downloads": {
+    "products": {
+      "template": {
+        "name": "OnwardKit template"
+      }
+    }
+  }
+}

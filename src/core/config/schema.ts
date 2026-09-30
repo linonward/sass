@@ -93,6 +93,18 @@ export const featureIcons = [
   "chart",
 ] as const;
 
+// Icons for the three steps in the band under the hero, in order (see core/marketing/sections/hero.tsx).
+export const heroStepIcons = [
+  "upload",
+  "sparkles",
+  "download",
+  "wallet",
+  "database",
+  "notebook",
+  "image",
+  "chart",
+] as const;
+
 // Testimonial assets are local public/ files; no third-party embeds or remote image allowlist.
 const testimonialAsset = z
   .string()
@@ -140,8 +152,23 @@ export const landingSchema = z.strictObject({
     .array(z.enum(landingSectionIds))
     .refine(unique, { message: "must not contain duplicates" })
     .default([...landingSectionIds]),
+  // Whether the home page and header point visitors at the in-site /demo (the template's own
+  // showcase of the signed-in app). Off by default: a product site sends visitors to sign in and
+  // pricing instead.
+  demo: z.boolean().default(false),
   hero: z
     .strictObject({
+      // "Try a color" swatches under the hero buttons, previewing the site in other brand colors.
+      // Useful for showing off a template; off by default.
+      colorSwitcher: z.boolean().default(false),
+      // Icons of the three steps under the hero; their copy is in Landing.hero.steps.
+      stepIcons: z
+        .tuple([
+          z.enum(heroStepIcons),
+          z.enum(heroStepIcons),
+          z.enum(heroStepIcons),
+        ])
+        .default(["upload", "sparkles", "download"]),
       // An image under public/; the copy (including alt) is in Landing.hero in messages.
       image: z
         .strictObject({
@@ -165,7 +192,7 @@ export const landingSchema = z.strictObject({
         })
         .optional(),
     })
-    .default({}),
+    .prefault({}),
   // A real site (https) built with this codebase. When set, the secondary button in the hero and
   // the closing CTA becomes "see a real example" and opens in a new tab; when unset, the secondary
   // button links to the in-site /demo.
@@ -212,6 +239,12 @@ export const landingSchema = z.strictObject({
   // in billing.plans). When omitted, not found, or hidden, the card shows "coming soon" with no buy
   // button — not an error, so the site still boots if the buyer deletes that plan.
   purchasePlan: messageKeySchema.optional(),
+  // What the "delivery" section lists next to the purchase card; each item's title and description
+  // are in Landing.delivery.items.<key>.
+  deliverables: z
+    .array(messageKeySchema)
+    .refine(unique, { message: "must not contain duplicates" })
+    .default([]),
   // Each item's question and answer are in Landing.faq.items.<key>.
   faq: z
     .array(messageKeySchema)

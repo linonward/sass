@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 
-import { ArrowUpRightIcon } from "lucide-react";
+import { ArrowRightIcon, ArrowUpRightIcon } from "lucide-react";
+import { withOverlay } from "@/core/config/overlay";
 import { LocaleSwitcher } from "@/core/i18n/locale-switcher";
 import { Link } from "@/core/i18n/navigation";
 import { routing } from "@/core/i18n/routing";
@@ -14,7 +15,9 @@ import { SiteLogo } from "./site-logo";
 
 export function SiteHeader() {
   const t = useTranslations();
-  const links = siteConfig.nav.header.map((link) => ({
+  const { nav, landing } = withOverlay(siteConfig);
+  const CtaIcon = landing.demo ? ArrowUpRightIcon : ArrowRightIcon;
+  const links = nav.header.map((link) => ({
     href: link.href,
     label: t(`Nav.${link.key}` as "Nav.features"),
   }));
@@ -45,16 +48,16 @@ export function SiteHeader() {
             <LocaleSwitcher locales={routing.locales} />
           )}
           <ThemeToggle />
-          {/* On narrow screens keep theme, language and menu; the demo entry is in the hero copy. */}
+          {/* On narrow screens keep theme, language and menu; the same entry is in the hero copy. */}
           <Link
-            href="/demo"
+            href={landing.demo ? "/demo" : "/sign-in"}
             className={cn(
               buttonVariants({ variant: "outline", tone: "primary" }),
               "hidden px-4 sm:inline-flex",
             )}
           >
-            {t("Header.cta")}
-            <ArrowUpRightIcon aria-hidden className="size-4" />
+            {landing.demo ? t("Header.cta") : t("Header.start")}
+            <CtaIcon aria-hidden className="size-4" />
           </Link>
           {links.length > 0 && (
             <MobileNav title={siteConfig.name} links={links} />

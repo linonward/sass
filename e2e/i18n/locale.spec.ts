@@ -16,9 +16,7 @@ test("switching locale changes both the URL and the copy, and can switch back to
   const html = page.locator("html");
   const nav = page.getByRole("navigation", { name: messages.Header.main });
   await expect(html).toHaveAttribute("lang", "en");
-  await expect(
-    nav.getByRole("link", { name: messages.Nav.delivery }),
-  ).toBeVisible();
+  await expect(nav.getByRole("link", { name: messages.Nav.faq })).toBeVisible();
 
   await page.getByRole("button", { name: messages.Locale.switch }).click();
   await page.getByRole("menuitemradio", { name: localeName }).click();
@@ -29,11 +27,11 @@ test("switching locale changes both the URL and the copy, and can switch back to
     name: tr(messages.Header.main),
   });
   await expect(
-    localizedNav.getByRole("link", { name: tr(messages.Nav.delivery) }),
+    localizedNav.getByRole("link", { name: tr(messages.Nav.faq) }),
   ).toBeVisible();
   await expect(
     page.locator("#hero").getByRole("link", {
-      name: tr(messages.Landing.hero.primaryCta),
+      name: tr(messages.Landing.hero.startCta),
       exact: true,
     }),
   ).toBeVisible();
@@ -52,7 +50,7 @@ test("visiting a prefixed path directly serves that locale", async ({
   await expect(
     page
       .locator("#hero")
-      .getByRole("link", { name: tr(messages.Landing.hero.primaryCta) }),
+      .getByRole("link", { name: tr(messages.Landing.hero.startCta) }),
   ).toBeVisible();
 });
 

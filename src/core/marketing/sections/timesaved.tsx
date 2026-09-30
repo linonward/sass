@@ -19,7 +19,7 @@ export function TimeSaved({
 }) {
   const t = useTranslations("Landing.timesaved");
   const item = (key: string, field: "title" | "detail") =>
-    t(`items.${key}.${field}` as "items.payments.title");
+    t(`items.${key}.${field}` as "items.studio.title");
   const total = items.reduce((sum, { hours }) => sum + hours, 0);
   return (
     <Section id="timesaved" band={bands.timesaved} waveFrom={waveFrom}>
