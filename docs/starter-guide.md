@@ -66,6 +66,8 @@ Prerequisites (install anything that's missing first):
 
   If you already have Postgres on your machine, skip this line and put its address in `DATABASE_URL` in `.env.local`.
 
+  Building a second product on the same machine? The name `sass-postgres` and port `5432` are already taken by the first one, so give this one its own, for example `--name shop-postgres -p 5433:5432`, and change the port in `DATABASE_URL` and `DATABASE_URL_TEST` in `.env.local` to `5433` to match.
+
   Verify: in `docker ps`, the status of `sass-postgres` is `Up` (right after starting it shows `health: starting`, which changes after a few seconds).
 
 - [ ] **4. Create the tables: `pnpm db:migrate` (about 1 minute)**
@@ -168,7 +170,7 @@ Vercel's interface gets redesigned now and then; if you can't find a button, loo
 4. **Database tests in `pnpm test` are "silently skipped".** Without `DATABASE_URL_TEST`, the tests that need a database are skipped as a group and the exit code is still 0 (the output says they were skipped). In `.env.example` this line is enabled by default and points at the same database as `DATABASE_URL`, so if you copied it per the checklist the full suite runs — test data is written into your dev database; to keep them apart, point it at a separate database.
 5. **`SKIP_ENV_VALIDATION=1` has no effect at production runtime.** `next build`, `next start`, and Docker all run with `NODE_ENV` set to `production`, where variable validation is enforced — no environment variable lets you "skip required values". It's only a convenience for local development.
 6. **Email: only `resend` is allowed at production runtime.** Locally the default is `console` (the whole email is printed in the terminal); setting it to `console` / `file` at production runtime fails at startup — that would mean writing sign-in codes into server logs or onto disk. To run a production build locally: `ALLOW_NON_RESEND_EMAIL=1 EMAIL_TRANSPORT=console pnpm build`.
-7. **You can't check out while a paid plan still has `prod_placeholder_*`.** Clicking buy returns `plan_not_configured`. After creating the products in Creem, put the real IDs into `billing.plans[*].providerProductId` in `site.config.ts`, or override them with `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`.
+7. **You can't check out while a paid plan still has `prod_placeholder_*`.** Clicking buy returns `plan_not_configured`. After creating the products at your payment provider, put the real IDs into `billing.plans[*].providerProductId` in `site.config.ts`, or override them with the variables for the provider in effect: `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME` (Creem), `STRIPE_PRICE_ID_*` (Stripe), `LEMONSQUEEZY_VARIANT_ID_*` (Lemon Squeezy) or `WAFFO_PRODUCT_ID_*` (Waffo Pancake).
 8. **Commit messages must follow Conventional Commits.** `pnpm install` installed git hooks that run ESLint / Prettier on staged files and check the commit message with commitlint when you commit: `git commit -m "update"` is rejected, and only something like `feat: …` / `fix: …` / `docs: …` gets through.
 
 ## Next steps

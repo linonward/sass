@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  firstPlaceholderWarning,
   placeholderAction,
   placeholderIssues,
   placeholderMessage,
@@ -87,5 +88,19 @@ describe("placeholder sentinel", () => {
     expect(
       placeholderAction(placeholderIssues(customized()), "production"),
     ).toEqual({});
+  });
+});
+
+describe("firstPlaceholderWarning", () => {
+  test("is true once, then false for anything sharing the same environment", () => {
+    const env: Record<string, string | undefined> = {};
+    expect(firstPlaceholderWarning(env)).toBe(true);
+    expect(firstPlaceholderWarning(env)).toBe(false);
+    // A child process inherits the environment, so it stays quiet too.
+    expect(firstPlaceholderWarning({ ...env })).toBe(false);
+  });
+
+  test("a fresh environment warns again", () => {
+    expect(firstPlaceholderWarning({})).toBe(true);
   });
 });

@@ -90,3 +90,20 @@ export function placeholderAction(
   if (nodeEnv === "development") return { warnMessage: message };
   return {};
 }
+
+const warnedFlag = "ONWARDKIT_PLACEHOLDER_WARNING_SHOWN";
+
+/**
+ * True the first time it's called, false after that. `next dev` evaluates site.config.ts in several
+ * processes (it spawns workers) and again on every route compile, so without this the placeholder
+ * warning repeats for every page you open. The flag is an environment variable because child
+ * processes inherit the environment when they start, while module state and globalThis are
+ * per-process.
+ */
+export function firstPlaceholderWarning(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  if (env[warnedFlag]) return false;
+  env[warnedFlag] = "1";
+  return true;
+}
