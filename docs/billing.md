@@ -2,7 +2,7 @@
 
 The template ships with **Creem**, and also implements **Stripe**, **Lemon Squeezy** and **Waffo Pancake** (see the [Waffo Pancake](#waffo-pancake) section below). They all implement the same `PaymentProvider` interface (`src/core/billing/provider.ts`) and share the same checkout, webhooks, orders table, credit grants and admin stats — switching providers doesn't touch app code: you change two fields in `site.config.ts` and set a group of environment variables.
 
-This doc covers only **which to pick, how to switch, and how to add another one**. The step-by-step setup for each provider, from zero to real payments, is in the README's [Launch checklist](../README.md#launch-checklist) ([Payments (Creem / Stripe)](../README.md#payments-creem--stripe), [Payments (Lemon Squeezy)](../README.md#payments-lemon-squeezy)); this doc doesn't repeat it.
+This doc covers only **which to pick, how to switch, and how to add another one**. The step-by-step setup for each provider, from zero to real payments, is in the README's [Launch checklist](../README.md#launch-checklist) ([Payments: pick a provider](../README.md#payments-pick-a-provider), then [Creem / Stripe](../README.md#payments-creem--stripe), [Lemon Squeezy](../README.md#payments-lemon-squeezy) or [Waffo Pancake](../README.md#payments-waffo-pancake)); this doc doesn't repeat it.
 
 > External facts such as fees, supported regions and MoR status can change at any time. This doc was checked in **2026-09**; it gives structure, orders of magnitude and the reasoning behind the choice. For exact numbers, the official pages linked in each section are authoritative.
 

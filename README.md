@@ -143,9 +143,9 @@ On the live site, confirm in order:
 
 1. The homepage, `/pricing`, the legal pages, `/sitemap.xml` and `/robots.txt` load, and the certificate is valid.
 2. Sign in once with an email one-time code and once with Google, and receive the welcome email.
-3. Buy a paid plan once in the payment provider's test mode (Creem with a test card; Stripe with `sk_test_*` and a test card; Lemon Squeezy with a test-mode store): the success page shows completion, the plan and credits in `/billing` are correct, and you receive the payment email.
+3. Buy a paid plan once in the payment provider's test mode (Creem with a test card; Stripe with `sk_test_*` and a test card; Lemon Squeezy with a test-mode store; Waffo Pancake with a Test API key, `WAFFO_MODE` left empty (test), and a test card): the success page shows completion, the plan and credits in `/billing` are correct, and you receive the payment email.
 4. Sign in with an email from `ADMIN_EMAILS` and open `/admin`; you can see the order.
-5. Once everything works, switch to production mode (real payments): swap in the production API key, webhook secret and product IDs — for Creem also set `CREEM_MODE=live`; for Stripe switch to `sk_live_*` and recreate the webhook endpoint in the Stripe dashboard; for Lemon Squeezy turn off test mode in the dashboard and switch to the live store's API key, webhook secret, store ID and variant IDs. Redeploy when you're done.
+5. Once everything works, switch to production mode (real payments): swap in the production API key, webhook secret and product IDs — for Creem also set `CREEM_MODE=live`; for Stripe switch to `sk_live_*` and recreate the webhook endpoint in the Stripe dashboard; for Lemon Squeezy turn off test mode in the dashboard and switch to the live store's API key, webhook secret, store ID and variant IDs; for Waffo Pancake, once the store has passed review, swap in a Live API key, set `WAFFO_MODE=prod` and configure the webhook again in the Live environment. Redeploy when you're done.
 
 ## Local development
 
@@ -518,17 +518,23 @@ The subsections below give each module's variable names and sign-up steps.
 3. Preview deployment URLs change every time, so they can't be registered as redirect URIs or JavaScript origins; previews therefore offer only email-code sign-in. If you need it later, you can add Better Auth's `oauth-proxy` plugin.
 4. Account linking: if the same email first signs up with a code and then signs in with Google, both land in the same account (`google` is a trusted provider).
 
-#### Payments (Creem / Stripe)
+#### Payments: pick a provider
 
-This section covers Creem and Stripe; Lemon Squeezy and Waffo Pancake have their own sections below. Only one provider is active at a time. The active one is `billing.provider` in `site.config.ts` (`creem` out of the box), which you can override at runtime with `BILLING_PROVIDER` — change the field rather than only setting the environment variable: the prefix of the plan product ID environment variables follows the active provider (Creem `CREEM_PRODUCT_ID_*`, Stripe `STRIPE_PRICE_ID_*`, Lemon Squeezy `LEMONSQUEEZY_VARIANT_ID_*`, Waffo Pancake `WAFFO_PRODUCT_ID_*`), and when `site.config.ts` has no product ID configured, the variable with the matching prefix is read.
+There are four providers: Creem, Stripe, Lemon Squeezy and Waffo Pancake; use exactly one. [docs/billing.md](docs/billing.md) compares them and explains how to switch. The active one is `billing.provider` in `site.config.ts` (`creem` out of the box), which you can override at runtime with `BILLING_PROVIDER` — change the field rather than only setting the environment variable: the prefix of the plan product ID environment variables follows the active provider (Creem `CREEM_PRODUCT_ID_*`, Stripe `STRIPE_PRICE_ID_*`, Lemon Squeezy `LEMONSQUEEZY_VARIANT_ID_*`, Waffo Pancake `WAFFO_PRODUCT_ID_*`), and when `site.config.ts` has no product ID configured, the variable with the matching prefix is read.
 
-What both have in common:
+What all four have in common:
 
-- One payment maps to one order: one-time payments use the payment intent / checkout session as the order ID; a subscription's first period is recorded from its first invoice, not from the checkout session itself; every subscription period uses the invoice ID as the order ID, and a successful retry is merged with the failure event into the same order. The orders table, the credit ledger, and the admin stats don't distinguish between providers.
-- Both webhook routes exist (`/api/webhooks/creem`, `/api/webhooks/stripe`); only the **active provider's** route is processed, and the other returns 503 (`{"error":"billing_not_configured"}`).
-- Customer portal: "Manage subscription" on the billing page goes to the provider-hosted portal, where customers change cards, view invoices, and cancel subscriptions.
+- One payment maps to one order. The orders table, the credit ledger, and the admin stats don't distinguish between providers.
+- Every provider has its webhook route (`/api/webhooks/creem`, `/api/webhooks/stripe`, `/api/webhooks/lemonsqueezy`, `/api/webhooks/waffo`); only the **active provider's** route is processed, and the others return 503 (`{"error":"billing_not_configured"}`).
+- Customer portal: "Manage subscription" on the billing page goes to the provider-hosted portal, where customers change cards, view invoices, and cancel subscriptions. Each provider's section below lists its portal's limits.
 - Deleting an account first cancels any subscription that is still billing; if the cancellation fails, the deletion is aborted.
 - When self-hosting (Docker / `next start`, no `VERCEL_ENV`), the same gate applies based on `NODE_ENV`: setting `BILLING_PROVIDER` to `fake` in a production runtime makes startup fail, and the fake checkout page, customer portal, and webhook routes all return 404. Only an explicit `ALLOW_FAKE_BILLING=1` lets it through, and that is only for local/CI e2e or a deliberate simulated-payments environment — once it's on, anyone can go through the fake checkout and get plans and credits for free, so never turn it on in a public-facing environment.
+
+Then follow the section for your provider: [Creem / Stripe](#payments-creem--stripe), [Lemon Squeezy](#payments-lemon-squeezy) or [Waffo Pancake](#payments-waffo-pancake).
+
+#### Payments (Creem / Stripe)
+
+Order IDs: one-time payments use the payment intent / checkout session as the order ID; a subscription's first period is recorded from its first invoice, not from the checkout session itself; every subscription period uses the invoice ID as the order ID, and a successful retry is merged with the failure event into the same order.
 
 ##### Creem
 

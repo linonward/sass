@@ -700,3 +700,23 @@ T2605 翻译随包文档时，逐段对照了代码，发现几处文档与代�
 - [x] `pnpm dev` 打开三页，占位值警告只打印 1 次（改前两页 6 次）
 - [x] `firstPlaceholderWarning` 有单测（同一环境只返回一次 true，继承环境的子进程也不再打印）
 - [x] `pnpm english:check`、全仓锚点检查、`pnpm lint`、`pnpm typecheck`、`pnpm test` 绿
+
+---
+
+## T2318 payments-four-providers
+
+- 分支 / worktree：`docs/payments-four-providers` → `../sass-payments-four-providers`
+- 依赖：T2317
+- 在 T2306 之前做：T2317 合入后，同一批走查问题里还剩几处 README 支付说明只覆盖两三家。
+
+**问题与做法**
+
+- README 支付一节的共通说明（「What both have in common」、webhook 路由只列 creem / stripe 两条）挂在「Payments (Creem / Stripe)」下面，实际适用于全部四家：拆出新节「Payments: pick a provider」，列四家、各自产品 ID 变量前缀、四条 webhook 路由和共通行为，末尾链到各家小节；原节只留 Creem / Stripe 自己的订单 ID 规则与分步说明。三个既有锚点不变。
+- 上线清单第 3 步（测试环境付一次款）、第 5 步（切真实收款）没有 Waffo：补上（Test API key、`WAFFO_MODE` 留空；切换时先过店铺审核、换 Live key、`WAFFO_MODE=prod`、在 Live 环境重配 webhook）。
+- `docs/billing.md` 顶部链接只指向两节：补上新节与 Waffo 小节。
+- `.env.example` 的 Docker 注释补一句第二个产品要换容器名和端口，与 T2317 在 starter-guide 里的写法一致。
+
+**验收**
+
+- [x] README 与 `docs/*.md`、`UPGRADING.md` 里指向 README 的锚点全部能解析
+- [x] `pnpm english:check`、prettier 绿
