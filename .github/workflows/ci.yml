@@ -35,6 +35,7 @@ env:
   SITE_DOMAIN: ci.example.test
   SITE_LEGAL_NAME: CI Legal Entity
   SITE_EMAIL_FROM: noreply@ci.example.test
+  SITE_CONTACT_EMAIL: support@ci.example.test
   # e2e uses the on-site fake payment provider to simulate checkout and webhooks (env validation
   # rejects it on Vercel).
   BILLING_PROVIDER: fake

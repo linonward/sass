@@ -13,8 +13,11 @@ const config = (over: Partial<SiteConfig> = {}) =>
   ({
     name: "Acme",
     domain: "example.com",
-    legal: { companyName: "Acme Inc." },
-    email: { fromAddress: "noreply@example.com" },
+    legal: { companyName: "Acme Inc.", contactEmail: "support@example.com" },
+    email: {
+      fromAddress: "noreply@example.com",
+      replyTo: "support@example.com",
+    },
     ...over,
   }) as SiteConfig;
 
@@ -26,18 +29,50 @@ const customized = () =>
   config({
     name: "Example Corp",
     domain: "example.org",
-    legal: { companyName: "Example Corp" } as SiteConfig["legal"],
-    email: { fromAddress: "hello@example.org" } as SiteConfig["email"],
+    legal: {
+      companyName: "Example Corp",
+      contactEmail: "help@example.org",
+    } as SiteConfig["legal"],
+    email: {
+      fromAddress: "hello@example.org",
+      replyTo: "help@example.org",
+    } as SiteConfig["email"],
   });
 
 describe("placeholder sentinel", () => {
-  test("reports all four fields when all are still shipped placeholders", () => {
+  test("reports all six fields when all are still shipped placeholders", () => {
     expect(placeholderIssues(config()).map((issue) => issue.path)).toEqual([
       "name",
       "domain",
       "legal.companyName",
       "email.fromAddress",
+      "legal.contactEmail",
+      "email.replyTo",
     ]);
+  });
+
+  test("a support@example.com contact or reply-to address alone still blocks", () => {
+    const base = customized();
+    const issues = placeholderIssues({
+      ...base,
+      legal: { ...base.legal, contactEmail: "support@example.com" },
+      email: { ...base.email, replyTo: "support@example.com" },
+    });
+    expect(issues.map((issue) => issue.path)).toEqual([
+      "legal.contactEmail",
+      "email.replyTo",
+    ]);
+    expect(placeholderMessage(issues)).toContain("SITE_CONTACT_EMAIL");
+  });
+
+  test("an unset reply-to address is not a placeholder", () => {
+    const base = customized();
+    expect(
+      placeholderIssues({
+        ...base,
+        email: { ...base.email, replyTo: undefined },
+      }),
+    ).toEqual([]);
   });
 
   test("reports only the unchanged fields after a partial change", () => {
@@ -47,6 +82,8 @@ describe("placeholder sentinel", () => {
     expect(issues.map((issue) => issue.path)).toEqual([
       "legal.companyName",
       "email.fromAddress",
+      "legal.contactEmail",
+      "email.replyTo",
     ]);
   });
 

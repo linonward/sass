@@ -295,6 +295,7 @@ EMAIL_TRANSPORT=file E2E_PORT=3100 \
   CREEM_PRODUCT_ID_PRO=prod_ci_fake_pro CREEM_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
   SITE_NAME="CI Site" SITE_DOMAIN=ci.example.test \
   SITE_LEGAL_NAME="CI Legal Entity" SITE_EMAIL_FROM=noreply@ci.example.test \
+  SITE_CONTACT_EMAIL=support@ci.example.test \
   npx playwright test
 ```
 
