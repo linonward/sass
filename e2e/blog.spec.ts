@@ -78,7 +78,10 @@ test("tag page lists posts with that tag; unknown tags 404", async ({
   await expect(page.getByRole("link", { name: post.title })).toBeVisible();
 
   // Tag pages are in the sitemap, so they must really be indexable: self-referencing canonical,
-  // no meta robots.
+  // no meta robots. Checked on a fresh load, the way crawlers fetch it (see the note in
+  // changelog.spec.ts on the stale canonical after an early client-side navigation).
+  await page.goto(`/blog/tags/${post.tag}`);
+  await expect(page.locator('head link[rel="canonical"]')).toHaveCount(1);
   await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute(
     "href",
     `${origin}/blog/tags/${post.tag}`,

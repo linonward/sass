@@ -518,3 +518,33 @@ T2407 让首页可以直接下单，但阶段 23 仍按「T2308 外部试用 →
 - [x] `gh api …/branches/main/protection/required_status_checks` 返回 `checks: [ci]`、`strict: true`
 - [x] `docs/workflow.md` 与实际设置一致
 - [x] `pnpm format:check` 绿
+
+---
+
+## T2312 canonical-dedupe
+
+- 分支 / worktree：`fix/canonical-dedupe` → `../sass-canonical-dedupe`
+- 依赖：—
+
+**问题**
+
+`e2e/changelog.spec.ts` 与 `e2e/blog.spec.ts` 的「标签页」用例间歇失败：`head link[rel="canonical"]` 命中两个元素，一个是本页的，另一个是**上一页**的（从 `/` 进来就是首页的，从 `/pricing` 进来就是定价页的）。`main` 上合入后的 CI 红过两次（69beba0、d358f4b），PR 上也反复要手动重跑。
+
+**根因**（本地生产构建 + CPU 降速 6 倍复现）
+
+两条用例都是 `page.goto` 之后马上点链接做客户端跳转，再断言 `<head>`。点击发生在上一页的流式 metadata 水合之前时，那一页服务端渲染出来的 `<link rel="canonical">` 没被 React 接管，跳转后也就没人删它：
+
+- 立刻点击：60 次里 48 次失败，轮询 8 秒也不消失（不是慢，是永久残留）。
+- 先等 `networkidle` + 3 秒再点：40 次全过。
+
+爬虫每次都是直接请求 URL，拿到的 HTML 只有一条 canonical；残留只存在于「过早点击后客户端跳转」的 DOM 里，访客看不见。所以错的是测试的断言方式，不是站点的 SEO 输出。
+
+**做**
+
+- 两条用例保留客户端跳转对界面的断言；对 `<head>` 的断言改为先 `page.goto` 该 URL 重新加载（与爬虫取页面的方式一致），并加 `toHaveCount(1)`。
+- 全部 e2e 里只有这两处在点击跳转后断言 `<head>`（按用例扫描过）。
+
+**验收**
+
+- [x] 同样的 CPU 降速 + 8 并发下，两条用例各跑 40 次，80 次全过
+- [x] CI 的 `e2e (main)` 绿

@@ -54,9 +54,16 @@ test("footer leads to the changelog; entries are grouped by month with category 
   await expect(
     page.getByRole("link", { name: messages.Changelog.rss }),
   ).toHaveAttribute("href", "/changelog/rss.xml");
+
+  // Head tags are checked on a fresh load, the way crawlers and feed readers fetch the page. After a
+  // client-side navigation that starts before the previous page's streamed metadata has hydrated,
+  // that page's server-rendered canonical can stay in <head> next to this one — invisible to
+  // visitors and never seen by crawlers, but it made this assertion flaky.
+  await page.goto("/changelog");
   await expect(
     page.locator('link[type="application/rss+xml"]'),
   ).toHaveAttribute("href", `${origin}/changelog/rss.xml`);
+  await expect(page.locator('head link[rel="canonical"]')).toHaveCount(1);
   await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute(
     "href",
     `${origin}/changelog`,
