@@ -247,3 +247,26 @@ T2306 ─────────┴→ T2504
 - [ ] `changeEmail.enabled: false` 时设置页不出现入口
 - [ ] 设备列表标出当前设备；退出单台设备后该设备下一次请求被要求重新登录；「退出其他所有设备」后当前设备仍在线
 - [ ] `pnpm test`、`ui-shell` + `landing`、`e2e/email-change.spec.ts` 与设置页相关 e2e 通过
+
+---
+
+## T2506 button-variants-cn
+
+- 分支 / worktree：`fix/button-variants-cn` → `../sass-button-variants-cn`
+- 依赖：T2502（它的「清除筛选」链接是第一个被发现的受害者，也是本卡要撤掉的临时绕法）
+
+**问题**
+
+T2502 实施时发现：「清除筛选」链接在亮色下没有边框。根因不在调用处，而在 `src/core/ui/button.tsx`：`buttonVariants` 的基础串有 `border-transparent`，`outline` 变体再加 `border-border`，两者特异性相同，谁赢取决于 Tailwind 输出 CSS 的顺序 —— 实测是透明赢。`Button` 组件自己用 `cn()`（tailwind-merge）合并过，所以没事；但把 `buttonVariants()` 直接塞进 `className` 的地方（链接做成按钮样式）拿到的是未合并的串。全仓 22 个文件、34 处这样的调用。暗色不受影响：`dark:border-input` 带变体前缀，天然更具体。
+
+**做**
+
+- 在源头修：导出的 `buttonVariants` 包一层 `cn()`，返回已合并的串；`Button` 组件改为直接用它（`cn` 幂等，按钮输出不变）。调用处一行不用改，以后新写的也不会再踩。
+- 去掉因为这个问题而加的单参数 `cn(buttonVariants(...))` 包装（`src/core/ui/list.tsx` 的清除筛选链接及其解释注释、`demo/page.tsx`）；带额外 class 的 `cn(buttonVariants(...), extra)` 保留。
+- `badgeVariants`、`sidebarMenuButtonVariants` 查过：每处调用都已在 `cn()` 里，不动。
+
+**验收**
+
+- [x] 浏览器实测（`/status` 的 Refresh、`/changelog` 的 RSS，都是直接用 `buttonVariants` 的 outline 链接）：修前亮色 `border-top-color` 为 `rgba(0, 0, 0, 0)`，修后为 `--border` 的 `rgb(212, 219, 218)`；暗色修前修后都是 `rgb(42, 47, 46)`
+- [x] 单测 `src/core/ui/button.test.tsx`：outline 不再带 `border-transparent`；tone 的贴纸描边替换变体描边；没有自带描边的变体保留透明边。撤掉修复时其中两条失败
+- [x] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`ui-shell` + `landing` + `invoices` e2e 通过
