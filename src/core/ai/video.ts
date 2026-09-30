@@ -17,6 +17,7 @@ import { buildObjectKey } from "@/core/upload/validate";
 
 import type { VideoClient, VideoTaskStatus } from "./alibaba-video";
 import { MAX_IMAGE_PROMPT_LENGTH, type Generation } from "./image";
+import { createOwnedImageUrl } from "./owned-image";
 import { logUsage, reserveUsage, settleUsage, type UsageDeps } from "./usage";
 
 /** Source of AI job exceptions on the exceptions page: source_id is ai_usage.id. */
@@ -116,21 +117,7 @@ export function createVideoService({
   const getDb = () => (typeof db === "function" ? db() : db);
   const usageDeps: UsageDeps = { db: getDb, credits, logError };
 
-  async function ownImageUrl(userId: string, fileId: unknown) {
-    if (typeof fileId !== "string" || !fileId) return null;
-    const [file] = await getDb()
-      .select({ key: files.key, mime: files.mime, status: files.status })
-      .from(files)
-      .where(and(eq(files.id, fileId), eq(files.userId, userId)));
-    if (
-      !file ||
-      file.status !== "uploaded" ||
-      !file.mime.startsWith("image/")
-    ) {
-      return null;
-    }
-    return fileUrl(file.key);
-  }
+  const ownImageUrl = createOwnedImageUrl(getDb, fileUrl);
 
   async function startVideo(
     input: StartVideoInput,

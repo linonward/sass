@@ -571,6 +571,9 @@ export const aiConfigSchema = z
           // The model name on the provider's side, e.g. "qwen-image-3.0", "gpt-image-1".
           model: z.string().trim().min(1),
           creditCost: z.number().int().nonnegative(),
+          // true: a request may carry one reference image (the user's own upload) to edit or
+          // restyle. Only turn it on for models the provider documents as supporting editing.
+          acceptsImage: z.boolean().default(false),
         }),
       )
       .refine((models) => unique(models.map((m) => m.id)), {

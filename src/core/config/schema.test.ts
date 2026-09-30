@@ -448,7 +448,9 @@ describe("ai", () => {
           defaultImageModel: "qwen-image",
         }),
       );
-      expect(config.ai.imageModels).toEqual([image]);
+      expect(config.ai.imageModels).toEqual([
+        { ...image, acceptsImage: false },
+      ]);
       expect(config.ai.defaultImageModel).toBe("qwen-image");
     });
 

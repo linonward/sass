@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { APICallError } from "@ai-sdk/provider";
+import { APICallError, type ImageModelV4File } from "@ai-sdk/provider";
 import { describe, expect, test, vi } from "vitest";
 
 import { createAlibabaImageModel } from "./alibaba-image";
@@ -23,7 +23,12 @@ const ok = () =>
 
 function call(
   fetch: ReturnType<typeof stubFetch>,
-  options: { baseURL?: string; aspectRatio?: `${number}:${number}` } = {},
+  options: {
+    baseURL?: string;
+    aspectRatio?: `${number}:${number}`;
+    files?: ImageModelV4File[];
+    mask?: ImageModelV4File;
+  } = {},
 ) {
   const model = createAlibabaImageModel("qwen-image-3.0", {
     apiKey: "sk-x",
@@ -37,8 +42,8 @@ function call(
       size: undefined,
       aspectRatio: options.aspectRatio,
       seed: undefined,
-      files: undefined,
-      mask: undefined,
+      files: options.files,
+      mask: options.mask,
       providerOptions: {},
     }),
   );
@@ -66,6 +71,37 @@ describe("createAlibabaImageModel", () => {
     });
     expect(result.images).toEqual([bytes]);
     expect(result.warnings).toEqual([]);
+  });
+
+  test("input images go in front of the prompt as { image } parts: URLs as-is, bytes as data URLs", async () => {
+    const fetch = stubFetch(ok());
+    const result = await call(fetch, {
+      files: [
+        { type: "url", url: "https://files.test/product.png" },
+        { type: "file", mediaType: "image/jpeg", data: new Uint8Array([1, 2]) },
+      ],
+    });
+
+    const body = JSON.parse(String(fetch.mock.calls[0]![1]!.body));
+    expect(body.input.messages[0].content).toEqual([
+      { image: "https://files.test/product.png" },
+      { image: "data:image/jpeg;base64,AQI=" },
+      { text: "a boy" },
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("a mask is ignored with a warning", async () => {
+    const fetch = stubFetch(ok());
+    const result = await call(fetch, {
+      mask: { type: "url", url: "https://files.test/mask.png" },
+    });
+
+    const body = JSON.parse(String(fetch.mock.calls[0]![1]!.body));
+    expect(body.input.messages[0].content).toEqual([{ text: "a boy" }]);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({ type: "unsupported", feature: "mask" }),
+    );
   });
 
   test("ALIBABA_BASE_URL is the compatible-mode URL; the native endpoint uses the same host", async () => {

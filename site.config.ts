@@ -585,6 +585,8 @@ const config = defineConfig({
         provider: "alibaba",
         model: "qwen-image-3.0",
         creditCost: 5,
+        // qwen-image-3.0 also edits: pass one of the user's uploaded images as a reference.
+        acceptsImage: true,
       },
       {
         id: "wan-image",

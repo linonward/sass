@@ -11,6 +11,7 @@ const knownErrors = [
   "invalid_prompt",
   "invalid_aspect_ratio",
   "invalid_image",
+  "image_not_supported",
   "unauthorized",
   "model_error",
 ] as const;

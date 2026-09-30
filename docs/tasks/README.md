@@ -155,13 +155,14 @@
 | T2303                       | ai-job-recovery         | `feat/ai-job-recovery`         | T2302                         | done |
 | T2304                       | billing-exceptions      | `feat/billing-exceptions`      | T2303                         | done |
 | T2305                       | notification-recovery   | `feat/notification-recovery`   | T2303                         | done |
-| T2306                       | reference-product       | `docs/reference-product`       | T2305、T2606                  | todo |
+| T2306                       | reference-product       | `docs/reference-product`       | T2305、T2606、T2313           | todo |
 | T2307                       | release-candidate       | `chore/release-candidate`      | T2306                         | todo |
 | T2308                       | sell-gate               | `docs/sell-gate`               | T2307                         | todo |
 | T2309                       | waffo-billing           | `feat/waffo-billing`           | T2305                         | done |
 | T2310                       | delivery-gate           | `docs/delivery-gate`           | T2407                         | done |
 | T2311                       | merge-hygiene           | `docs/merge-hygiene`           | —                             | done |
 | T2312                       | canonical-dedupe        | `fix/canonical-dedupe`         | —                             | done |
+| T2313                       | image-edit              | `feat/image-edit`              | T2305                         | done |
 | **阶段 24：Landing 重设计** |                         |                                |                               |      |
 | T2401                       | landing-redesign        | `feat/landing-redesign`        | T105、T605、T1803             | done |
 | T2402                       | landing-seo             | `fix/landing-seo`              | T2401                         | done |
@@ -285,7 +286,7 @@
 阶段 22  T2201（独立；时限是 2026-10-19，见 phase-22-ubuntu-26.md）
 
 阶段 23  T2300 → T2301 → T2302 → T2303 → T2304 → T2305 → T2306 → T2307 → T2308（严格串行：
-         批次 A 不通过就不承诺「支持持续升级」，批次 C 不通过不交付第一份发行包；T2310、T2311 独立，只改文档；T2312 独立，只改 e2e）
+         批次 A 不通过就不承诺「支持持续升级」，批次 C 不通过不交付第一份发行包；T2310、T2311 独立，只改文档；T2312 独立，只改 e2e；T2305 → T2313 → T2306，T2313 是 T2306 自验时发现的图生图缺口）
 
 阶段 25  T2500 → T2501 → T2502 T2503（T2501 之后可并行）；T2503 → T2505；T2501, T2306 → T2504；T2502 → T2506
 阶段 26  T2600 → T2601 →（T2501 合入后）T2602 T2603 T2604（并行）→ T2605 → T2606 → T2306

@@ -1,11 +1,10 @@
 "use client";
 
-import { CheckIcon, Loader2Icon, UploadIcon, VideoIcon } from "lucide-react";
+import { Loader2Icon, VideoIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 
 import { Link } from "@/core/i18n/navigation";
-import { cn } from "@/core/lib/utils";
 import { Button, buttonVariants } from "@/core/ui/button";
 import {
   Select,
@@ -15,10 +14,10 @@ import {
   SelectValue,
 } from "@/core/ui/select";
 import { Textarea } from "@/core/ui/textarea";
-import { uploadFile } from "@/core/upload/client";
 
 import { useGenerations } from "./generations-context";
 import { imageErrorCode, type ImageErrorCode } from "./errors";
+import { ImagePicker, type PickedImage } from "./image-picker";
 import type { VideoJob } from "./video";
 
 const aspectRatios = ["16:9", "9:16", "1:1", "4:3", "3:4"] as const;
@@ -29,7 +28,6 @@ type VideoModelOption = {
   input: "text" | "image";
   duration: number;
 };
-type FirstFrame = { fileId: string; url: string };
 
 /**
  * Example video generation: text-to-video or image-to-video (the first frame is a recently
@@ -49,9 +47,8 @@ export function VideoStudio({
   const [aspectRatio, setAspectRatio] =
     useState<(typeof aspectRatios)[number]>("16:9");
   const [prompt, setPrompt] = useState("");
-  const [frame, setFrame] = useState<FirstFrame | null>(null);
+  const [frame, setFrame] = useState<PickedImage | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const {
     generations,
@@ -64,27 +61,10 @@ export function VideoStudio({
   // This page's own error wins; otherwise show a failed job found by polling (already refunded).
   const shownError = error ?? (videoFailed ? "video_failed" : null);
   const videos = generations.filter((g) => g.kind === "video");
-  const fileInput = useRef<HTMLInputElement>(null);
   const modelSelectId = useId();
   const ratioSelectId = useId();
   const promptId = useId();
   const model = models.find((m) => m.id === modelId) ?? models[0]!;
-
-  async function upload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const uploaded = await uploadFile(file);
-      setFrame({ fileId: uploaded.id, url: uploaded.url });
-    } catch {
-      setError("upload_failed");
-    } finally {
-      setUploading(false);
-    }
-  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -179,73 +159,12 @@ export function VideoStudio({
         </div>
 
         {model.input === "image" && (
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">{t("firstFrame")}</legend>
-            <div className="flex flex-wrap gap-2">
-              {images.slice(0, 8).map((image) => {
-                const selected = frame?.fileId === image.fileId;
-                return (
-                  <button
-                    key={image.id}
-                    type="button"
-                    onClick={() =>
-                      setFrame({ fileId: image.fileId, url: image.url })
-                    }
-                    aria-pressed={selected}
-                    aria-label={t("useImage", { prompt: image.prompt })}
-                    className={cn(
-                      "relative size-16 overflow-hidden rounded-md border",
-                      selected && "ring-primary ring-2",
-                    )}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={image.url}
-                      alt=""
-                      className="size-full object-cover"
-                    />
-                    {selected && (
-                      <CheckIcon
-                        className="bg-primary text-primary-foreground absolute top-1 right-1 size-4 rounded-full p-0.5"
-                        aria-hidden
-                      />
-                    )}
-                  </button>
-                );
-              })}
-              {frame && !images.some((i) => i.fileId === frame.fileId) && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={frame.url}
-                  alt={t("uploaded")}
-                  className="ring-primary size-16 rounded-md border object-cover ring-2"
-                />
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                className="size-16 flex-col gap-1 text-xs"
-                onClick={() => fileInput.current?.click()}
-                disabled={uploading}
-              >
-                {uploading ? (
-                  <Loader2Icon className="animate-spin" aria-hidden />
-                ) : (
-                  <UploadIcon aria-hidden />
-                )}
-                {t("upload")}
-              </Button>
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
-                tabIndex={-1}
-                aria-hidden
-                onChange={upload}
-              />
-            </div>
-          </fieldset>
+          <ImagePicker
+            legend={t("firstFrame")}
+            images={images}
+            value={frame}
+            onChange={setFrame}
+          />
         )}
 
         <label htmlFor={promptId} className="sr-only">
@@ -274,7 +193,7 @@ export function VideoStudio({
 
       {shownError && (
         <p role="alert" className="text-destructive text-sm">
-          {shownError === "video_failed" || shownError === "upload_failed"
+          {shownError === "video_failed"
             ? t(`errors.${shownError}`)
             : tErrors(shownError as ImageErrorCode)}{" "}
           {shownError === "insufficient_credits" && (
