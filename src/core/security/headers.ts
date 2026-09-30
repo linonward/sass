@@ -47,6 +47,21 @@ const GIS_PARENT = "https://accounts.google.com/gsi/";
 const GIS_STYLE = "https://accounts.google.com/gsi/style";
 
 /**
+ * Host of Google profile pictures. Signing in with Google (the OAuth redirect or One Tap) stores
+ * the ID token's `picture` claim as `user.image`, a `https://lh3.googleusercontent.com/a/...` URL,
+ * and the dashboard user menu renders it as an `<img>`.
+ *
+ * Only `lh3`, not `*.googleusercontent.com`: that parent domain also serves arbitrary user-uploaded
+ * content for many Google products, and account avatars come from `lh3` today (the older
+ * `lh4`–`lh6` hosts show up in legacy Google+ photo URLs, not in the `picture` claim). If Google
+ * ever moves a profile picture to another host, the avatar only falls back to the user's initials;
+ * nothing else breaks.
+ *
+ * Only loosened when Google sign-in is enabled: no other sign-in method sets a remote `user.image`.
+ */
+const GOOGLE_AVATAR_ORIGIN = "https://lh3.googleusercontent.com";
+
+/**
  * R2's S3-compatible API origin: direct browser uploads (presigned PUT) and signed GETs for private
  * files both go here. A wildcard instead of `<account>.r2.cloudflarestorage.com`: the CSP is a
  * public response header, so there's no reason to show every visitor the account ID; the domain
@@ -85,6 +100,7 @@ function mediaOrigins(runtimeEnv: RuntimeEnv): string[] {
  * - `img-src` / `media-src` / `connect-src`: R2 (generated results, direct uploads);
  * - `script-src` / `style-src` / `connect-src` / `frame-src`: Google One Tap, **only when Google
  *   sign-in is enabled** (see below);
+ * - `img-src`: Google profile pictures (`user.image` after a Google sign-in), under the same switch;
  * - `'self'` in `connect-src` covers Sentry's tunnel path `/monitoring` (`tunnelRoute` in
  *   `next.config.ts`, which sends reports through the site's own origin). **If you turn off
  *   tunnelRoute, add Sentry's ingest domain here.**
@@ -101,8 +117,8 @@ export function contentSecurityPolicy({
   runtimeEnv: RuntimeEnv;
   isDev: boolean;
 }): string {
-  // The sign-in page only loads the GIS script when Google is enabled, so the allowlist follows
-  // the same switch: without credentials (local, CI, Vercel previews) the policy isn't loosened at
+  // The sign-in page only loads the GIS script when Google is enabled, and only Google sign-ins
+  // store a remote avatar URL, so the allowlist follows the same switch: without credentials (local, CI, Vercel previews) the policy isn't loosened at
   // all.
   const google = Boolean(googleClientId(runtimeEnv));
 
@@ -120,7 +136,13 @@ export function contentSecurityPolicy({
     ],
     // 'unsafe-inline' covers both inline <style> and style="..." attributes in components.
     "style-src": ["'self'", "'unsafe-inline'", ...(google ? [GIS_STYLE] : [])],
-    "img-src": ["'self'", "blob:", "data:", ...mediaOrigins(runtimeEnv)],
+    "img-src": [
+      "'self'",
+      "blob:",
+      "data:",
+      ...mediaOrigins(runtimeEnv),
+      ...(google ? [GOOGLE_AVATAR_ORIGIN] : []),
+    ],
     "media-src": ["'self'", "blob:", ...mediaOrigins(runtimeEnv)],
     // next/font downloads fonts to /_next/static/media at build time, so there are no external
     // connections at runtime.
