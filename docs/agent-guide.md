@@ -27,6 +27,7 @@ From then on, add your own rules (what the product does, naming conventions, whi
 - What you wrote above it is not overwritten; it only maintains the section between those two markers;
 - If you delete it, the next `pnpm dev` writes it back, so just commit it along with your changes and your working tree stays clean;
 - If neither `AGENTS.md` nor `CLAUDE.md` exists, it creates both (`CLAUDE.md` contains only `@AGENTS.md`); in that case, add the line pointing to this file.
+- If you'd rather manage `AGENTS.md` entirely yourself, Next.js lets you turn this off with `agentRules: false` in `next.config.ts` (see `node_modules/next/dist/docs/01-app/02-guides/ai-agents.md`). Leaving it on is recommended: the reminder below is the reason it exists.
 
 That reminder is correct: the Next.js version this project uses differs from many models' training data (for example, the middleware file is `src/proxy.ts`, and route `params` is a Promise). Check `node_modules/next/dist/docs/` before writing Next.js-related code.
 

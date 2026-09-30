@@ -1,4 +1,5 @@
 import {
+  firstPlaceholderWarning,
   placeholderAction,
   placeholderIssues,
 } from "./src/core/config/sentinels";
@@ -630,6 +631,8 @@ const sentinel = placeholderAction(
   process.env.NODE_ENV,
 );
 if (sentinel.throwMessage) throw new Error(sentinel.throwMessage);
-if (sentinel.warnMessage) console.warn(sentinel.warnMessage);
+if (sentinel.warnMessage && firstPlaceholderWarning()) {
+  console.warn(sentinel.warnMessage);
+}
 
 export default config;

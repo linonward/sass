@@ -520,7 +520,7 @@ The subsections below give each module's variable names and sign-up steps.
 
 #### Payments (Creem / Stripe)
 
-Pick one of the two providers. The active one is `billing.provider` in `site.config.ts` (`creem` out of the box), which you can override at runtime with `BILLING_PROVIDER` — change the field rather than only setting the environment variable: the prefix of the plan product ID environment variables follows the active provider (Creem `CREEM_PRODUCT_ID_*`, Stripe `STRIPE_PRICE_ID_*`), and when `site.config.ts` has no product ID configured, the variable with the matching prefix is read.
+This section covers Creem and Stripe; Lemon Squeezy and Waffo Pancake have their own sections below. Only one provider is active at a time. The active one is `billing.provider` in `site.config.ts` (`creem` out of the box), which you can override at runtime with `BILLING_PROVIDER` — change the field rather than only setting the environment variable: the prefix of the plan product ID environment variables follows the active provider (Creem `CREEM_PRODUCT_ID_*`, Stripe `STRIPE_PRICE_ID_*`, Lemon Squeezy `LEMONSQUEEZY_VARIANT_ID_*`, Waffo Pancake `WAFFO_PRODUCT_ID_*`), and when `site.config.ts` has no product ID configured, the variable with the matching prefix is read.
 
 What both have in common:
 

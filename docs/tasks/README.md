@@ -166,6 +166,7 @@
 | T2314                       | doc-gaps                | `docs/doc-gaps`                | T2605                         | done |
 | T2315                       | dependabot-notices      | `chore/dependabot-notices`     | —                             | done |
 | T2316                       | pr-template             | `chore/pr-template`            | —                             | done |
+| T2317                       | pre-walk-docs           | `docs/pre-walk-docs`           | T2314                         | done |
 | **阶段 24：Landing 重设计** |                         |                                |                               |      |
 | T2401                       | landing-redesign        | `feat/landing-redesign`        | T105、T605、T1803             | done |
 | T2402                       | landing-seo             | `fix/landing-seo`              | T2401                         | done |

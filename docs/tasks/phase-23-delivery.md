@@ -678,3 +678,25 @@ T2605 翻译随包文档时，逐段对照了代码，发现几处文档与代�
 - [x] 新开 PR 时 GitHub 预填英文模板
 - [x] `scripts/release-package.sh` 出的包里包含 `.github/pull_request_template.md`，自检通过（无内部任务 ID）
 - [x] `pnpm english:check`、`pnpm format:check`、`pnpm test` 绿
+
+---
+
+## T2317 pre-walk-docs
+
+- 分支 / worktree：`docs/pre-walk-docs` → `../sass-pre-walk-docs`
+- 依赖：T2314
+- 在 T2306 之前做：这些是 2026-09-30 第一次按买家路径走（中文包，中途停下）时发现、英文化之后仍然存在的问题。先修好，T2306 验的才是修过的文档。
+
+**问题与做法**
+
+- `docs/starter-guide.md` 的坑 7 只讲 Creem 的占位产品 ID：改为按生效的支付商列出四家的覆盖变量。
+- README「Payments (Creem / Stripe)」开头写「二选一」：现在是四家，改为说明本节只讲 Creem 和 Stripe、另外两家有各自小节、同一时间只有一家生效；产品 ID 变量前缀补上 Lemon Squeezy 和 Waffo。
+- `docs/starter-guide.md` 的 Docker 命令写死了容器名 `sass-postgres` 和端口 `5432`：授权允许做任意多个产品，第二个产品照抄会撞名撞端口。保留可直接复制的默认命令，补一段第二个产品怎么改名、改端口和 `DATABASE_URL`。
+- `docs/agent-guide.md` 说 `pnpm dev` 总会往 `AGENTS.md` 追加一段：补上 Next.js 官方的关闭方式 `agentRules: false`（依据 `node_modules/next/dist/docs/01-app/02-guides/ai-agents.md`），并说明建议保留。
+- `pnpm dev` 时占位值警告打印很多次（实测打开两页打了 6 次）：`next dev` 在多个进程里、每次编译路由都会重新执行 `site.config.ts`。`src/core/config/sentinels.ts` 加 `firstPlaceholderWarning()`，用环境变量做标记（子进程启动时继承环境，模块状态和 `globalThis` 都是按进程的，实测 `globalThis` 只能降到 4 次）。生产构建遇到占位值照旧直接失败。
+
+**验收**
+
+- [x] `pnpm dev` 打开三页，占位值警告只打印 1 次（改前两页 6 次）
+- [x] `firstPlaceholderWarning` 有单测（同一环境只返回一次 true，继承环境的子进程也不再打印）
+- [x] `pnpm english:check`、全仓锚点检查、`pnpm lint`、`pnpm typecheck`、`pnpm test` 绿
