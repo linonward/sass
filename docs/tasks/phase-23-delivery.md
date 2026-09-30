@@ -868,11 +868,11 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 - 存储类型按表格「敏感」列，不再沿用 Vercel 现有类型。
 - 表格里 16 个占位格子清空（空格子跳过，不会把占位文本写进生产），等填真实值。
 - `--apply local` 每次写后 `chmod 600`。
-- `.env.example` 管 key、表格管 value：核对比对两者的 key（`.env.example` 有表格没有 → 差异；反之只报告），`--apply keys` 给缺的 key 在表格里建行（只写变量名，从不删行）。
+- `.env.example` 管 key、表格管 value：核对比对两者的 key（`.env.example` 有表格没有 → 差异；表格有 `.env.example` 没有 → 每次运行都以 ⚠️ 提示），`--apply keys` 给缺的 key 在表格里建行（只写变量名，从不删行）。
 
 **验收**
 
 - [x] `lib.test.mjs` （敏感变量按 `change`、空格子为 `untracked`）
 - [x] 清空占位后核对：16 个敏感变量显示为「表格为空、跳过」，`--apply prod` 不会碰它们
 - [x] 本地、CI 仍 in sync
-- [x] key 核对：`.env.example` 的 key 在表格里都有；表格多出的 `DATABASE_URL_UNPOOLED`（Neon 集成）、`POSTGRES_PASSWORD`（仅 CI）只报告；`--apply keys` 无缺失时不写表格；`lib.test.mjs` 增至 6 项
+- [x] key 核对：`.env.example` 的 key 在表格里都有；表格多出的 `DATABASE_URL_UNPOOLED`（Neon 集成）、`POSTGRES_PASSWORD`（仅 CI）以 ⚠️ 提示；`--apply keys` 无缺失时不写表格；`lib.test.mjs` 增至 6 项

@@ -184,6 +184,18 @@ const keyDiff = diffKeys({
   rows: table.names,
 });
 
+// .env.example owns the keys: a table row it doesn't declare is either a key someone forgot to add
+// there, or a leftover to remove from the table. Warn on every run, whatever the mode.
+const extraKeys = only
+  ? keyDiff.extra.filter((n) => only.has(n))
+  : keyDiff.extra;
+for (const name of extraKeys) {
+  console.warn(
+    `⚠️  ${name} is in the table but not in .env.example: add it to .env.example, or delete the row if it's no longer used.`,
+  );
+}
+if (extraKeys.length) console.warn("");
+
 if (args.apply === "keys") {
   if (keyDiff.missing.length === 0) {
     console.log("Every .env.example key already has a table row.");
@@ -233,17 +245,12 @@ if (!args.apply) {
   const keysMissing = only
     ? keyDiff.missing.filter((n) => only.has(n))
     : keyDiff.missing;
-  if (keysMissing.length || keyDiff.extra.length) {
-    console.log("keys (.env.example ↔ table):");
-    if (keysMissing.length)
-      console.log(`  in .env.example, no table row: ${keysMissing.join(", ")}`);
-    if (keyDiff.extra.length && !only)
-      console.log(
-        `  table row not in .env.example: ${keyDiff.extra.join(", ")}`,
-      );
-  } else {
-    console.log("keys (.env.example ↔ table): in sync");
-  }
+  // Rows missing from .env.example were already warned about above.
+  console.log(
+    keysMissing.length
+      ? `keys (.env.example → table):\n  in .env.example, no table row: ${keysMissing.join(", ")}`
+      : "keys (.env.example → table): in sync",
+  );
   const drift =
     keysMissing.length +
     report("local (.env.local)", localDiff) +

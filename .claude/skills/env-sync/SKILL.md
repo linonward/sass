@@ -20,7 +20,7 @@ node --test .claude/skills/env-sync/scripts/lib.test.mjs       # 脚本自身的
 
 ## 脚本的规则
 
-- 核对也比对 key：`.env.example` 里有、表格没有的算差异；表格有、`.env.example` 没有的只报告（如 Neon 集成注入的 `DATABASE_URL_UNPOOLED`、只在 CI 用的 `POSTGRES_PASSWORD`）。
+- 比对 key：`.env.example` 里有、表格没有的算差异（`--apply keys` 补行）；表格有、`.env.example` 没有的，每次运行（任何模式）都以 ⚠️ 提示——要么补进 `.env.example`，要么删掉表格这一行。转述结果时把 ⚠️ 这几行原样告诉用户。
 - **表格覆盖目标**：`--apply` 时，表格里有值的变量一律以表格为准写入；值已相同的跳过。
 - 空单元格跳过、只报告，**脚本从不删除变量**。
 - CI 列只核对：`.github/workflows/ci.yml` 随包交付给买家、里面全是测试值，改它走正常 PR。
