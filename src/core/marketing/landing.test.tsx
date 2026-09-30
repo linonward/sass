@@ -4,14 +4,29 @@ import { describe, expect, test } from "vitest";
 
 import { defineConfig, type SiteConfigInput } from "@/core/config/schema";
 
+import { withOverlay, withOverlayMessages } from "@/core/config/overlay";
+
 import messages from "../../../messages/en.json";
 import siteConfig from "../../../site.config";
 import { Landing } from "./landing";
 
+// The optional sections' example keys shipped in messages (off in the default config).
+const exampleTimeSaved = [
+  { key: "studio", hours: 4 },
+  { key: "shoot", hours: 3 },
+  { key: "retouch", hours: 2 },
+];
+const exampleDeliverables = ["credits", "commercial", "support"];
+
 function renderSections(sections: string[]) {
   const config = defineConfig({
     ...siteConfig,
-    landing: { ...siteConfig.landing, sections },
+    landing: {
+      ...siteConfig.landing,
+      sections,
+      timeSaved: exampleTimeSaved,
+      deliverables: exampleDeliverables,
+    },
   } as SiteConfigInput);
   return render(
     <NextIntlClientProvider locale="en" messages={messages}>
@@ -89,7 +104,12 @@ describe("delivery section purchase card", () => {
         ...input.billing,
         plans: plans ? plans(input.billing?.plans ?? []) : input.billing?.plans,
       },
-      landing: { ...input.landing, sections: ["delivery"] },
+      landing: {
+        ...input.landing,
+        sections: ["delivery"],
+        purchasePlan: "lifetime",
+        deliverables: exampleDeliverables,
+      },
     } as SiteConfigInput);
     return render(
       <NextIntlClientProvider locale="en" messages={messages}>
@@ -109,6 +129,21 @@ describe("delivery section purchase card", () => {
     expect(
       view.getByRole("button", { name: messages.Landing.delivery.buy }),
     ).toBeDefined();
+    const listed = [...view.container.querySelectorAll("#delivery dt")].map(
+      (dt) => dt.textContent,
+    );
+    expect(listed).toEqual(
+      exampleDeliverables.map(
+        (key) =>
+          messages.Landing.delivery.items[
+            key as keyof typeof messages.Landing.delivery.items
+          ].title,
+      ),
+    );
+    // The demo link only appears when landing.demo is on.
+    expect(
+      view.queryByRole("link", { name: messages.Landing.delivery.demo }),
+    ).toBeNull();
   });
 
   test('falls back to "coming soon" with no buy button when the plan is hidden or missing', () => {
@@ -167,9 +202,20 @@ describe("landing / billing config", () => {
 
 describe("hero and closing buttons", () => {
   function renderWith({
+    purchasePlan,
     hidden = false,
+    demo = false,
     showcaseUrl,
-  }: { hidden?: boolean; showcaseUrl?: string } = {}) {
+    sections = ["hero", "cta"],
+    colorSwitcher,
+  }: {
+    purchasePlan?: string;
+    hidden?: boolean;
+    demo?: boolean;
+    showcaseUrl?: string;
+    sections?: string[];
+    colorSwitcher?: boolean;
+  } = {}) {
     const input = siteConfig as SiteConfigInput;
     const config = defineConfig({
       ...input,
@@ -179,7 +225,14 @@ describe("hero and closing buttons", () => {
           p.id === "lifetime" ? { ...p, price: 99, hidden } : p,
         ),
       },
-      landing: { ...input.landing, sections: ["hero", "cta"], showcaseUrl },
+      landing: {
+        ...input.landing,
+        sections,
+        purchasePlan,
+        demo,
+        showcaseUrl,
+        hero: { ...input.landing?.hero, colorSwitcher },
+      },
     } as SiteConfigInput);
     return render(
       <NextIntlClientProvider locale="en" messages={messages}>
@@ -188,43 +241,82 @@ describe("hero and closing buttons", () => {
     );
   }
   const t = messages.Landing;
+  const hrefs = (view: ReturnType<typeof renderWith>, name: string | RegExp) =>
+    view.getAllByRole("link", { name }).map((a) => a.getAttribute("href"));
+
+  test("product site (the default): get started leads to sign-in, the secondary button to pricing", () => {
+    const view = renderWith();
+    expect(hrefs(view, t.hero.startCta)).toEqual([
+      expect.stringMatching(/\/sign-in$/),
+      expect.stringMatching(/\/sign-in$/),
+    ]);
+    // Without a pricing section on the page, the secondary button opens the pricing page.
+    expect(hrefs(view, t.hero.pricingCta)).toEqual([
+      expect.stringMatching(/\/pricing$/),
+      expect.stringMatching(/\/pricing$/),
+    ]);
+    expect(view.queryByRole("link", { name: t.hero.demoCta })).toBeNull();
+    expect(view.queryByText(t.hero.offerNote)).toBeNull();
+  });
+
+  test("with a pricing section on the page, the secondary button jumps to it", () => {
+    const view = renderWith({ sections: ["hero", "pricing", "cta"] });
+    for (const href of hrefs(view, t.hero.pricingCta)) {
+      expect(href).toMatch(/#pricing$/);
+    }
+  });
 
   test('with a purchasable plan: the primary button is "Buy now · price" and jumps to the delivery purchase card', () => {
-    const view = renderWith();
-    const buy = view.getAllByRole("link", { name: "Buy now · $99" });
+    const view = renderWith({ purchasePlan: "lifetime", demo: true });
+    const buy = hrefs(view, "Buy now · $99");
     expect(buy).toHaveLength(2);
-    for (const link of buy) {
-      expect(link.getAttribute("href")).toMatch(/#delivery$/);
-    }
+    for (const href of buy) expect(href).toMatch(/#delivery$/);
     expect(view.getByText(t.hero.offerNote)).toBeDefined();
-    // Without a real showcase configured, the secondary button is the in-site demo.
-    for (const link of view.getAllByRole("link", {
-      name: t.hero.primaryCta,
-    })) {
-      expect(link.getAttribute("href")).toMatch(/\/demo$/);
+    // With landing.demo on and no real showcase, the secondary button is the in-site demo.
+    for (const href of hrefs(view, t.hero.demoCta)) {
+      expect(href).toMatch(/\/demo$/);
     }
   });
 
   test("with showcaseUrl set: the secondary button opens the real showcase in a new tab", () => {
-    const view = renderWith({ showcaseUrl: "https://shots.example.com" });
+    const view = renderWith({
+      purchasePlan: "lifetime",
+      demo: true,
+      showcaseUrl: "https://shots.example.com",
+    });
     for (const link of view.getAllByRole("link", {
       name: t.hero.showcaseCta,
     })) {
       expect(link.getAttribute("href")).toBe("https://shots.example.com");
       expect(link.getAttribute("target")).toBe("_blank");
     }
-    expect(view.queryByRole("link", { name: t.hero.primaryCta })).toBeNull();
+    expect(view.queryByRole("link", { name: t.hero.demoCta })).toBeNull();
   });
 
-  test("with the plan hidden: falls back to the demo as the primary button, with no price note", () => {
-    const view = renderWith({ hidden: true });
+  test("with the plan hidden: falls back to the demo when landing.demo is on, with no price note", () => {
+    const view = renderWith({
+      purchasePlan: "lifetime",
+      hidden: true,
+      demo: true,
+      sections: ["hero", "delivery", "cta"],
+    });
     expect(view.queryByRole("link", { name: /Buy now/ })).toBeNull();
     expect(view.queryByText(t.hero.offerNote)).toBeNull();
-    for (const link of view.getAllByRole("link", {
-      name: t.hero.primaryCta,
-    })) {
-      expect(link.getAttribute("href")).toMatch(/\/demo$/);
+    for (const href of hrefs(view, t.hero.demoCta)) {
+      expect(href).toMatch(/\/demo$/);
     }
+    for (const href of hrefs(view, t.hero.deliveryCta)) {
+      expect(href).toMatch(/#delivery$/);
+    }
+  });
+
+  test("the brand color switcher only shows when hero.colorSwitcher is on", () => {
+    const label = t.hero.colorSwitcher.label;
+    const off = renderWith();
+    expect(off.queryByRole("radiogroup", { name: label })).toBeNull();
+    off.unmount();
+    const on = renderWith({ colorSwitcher: true });
+    expect(on.getByRole("radiogroup", { name: label })).toBeDefined();
   });
 
   test("showcaseUrl only accepts https", () => {
@@ -258,10 +350,10 @@ describe("time saved", () => {
   }
 
   test("lists hours per item and computes the total", () => {
-    const view = renderTimeSaved(siteConfig.landing.timeSaved);
+    const view = renderTimeSaved(exampleTimeSaved);
     const items = view.container.querySelectorAll("#timesaved li");
-    expect(items).toHaveLength(siteConfig.landing.timeSaved.length);
-    const total = siteConfig.landing.timeSaved.reduce((n, i) => n + i.hours, 0);
+    expect(items).toHaveLength(exampleTimeSaved.length);
+    const total = exampleTimeSaved.reduce((n, i) => n + i.hours, 0);
     expect(view.getByTestId("timesaved-total").textContent).toContain(
       `${total} hours`,
     );
@@ -274,7 +366,7 @@ describe("time saved", () => {
 
   test("every key in config exists in both the English and Chinese messages", async () => {
     const zh = (await import("../../../messages/zh.json")).default;
-    for (const { key } of siteConfig.landing.timeSaved) {
+    for (const { key } of exampleTimeSaved) {
       for (const m of [messages, zh]) {
         expect(
           m.Landing.timesaved.items[
@@ -292,3 +384,26 @@ describe("time saved", () => {
     }
   });
 });
+
+// A deployment's own home page (SITE_OVERLAY_DIR, see core/config/overlay.ts) is checked when the
+// variable is set: run `SITE_OVERLAY_DIR=<dir> pnpm test src/core/marketing` after editing it.
+describe.skipIf(!process.env.SITE_OVERLAY_DIR)(
+  "home page with the SITE_OVERLAY_DIR overlay",
+  () => {
+    test.each(["en", "zh"])(
+      "%s: every section resolves its copy",
+      async (locale) => {
+        const base = (await import(`../../../messages/${locale}.json`)).default;
+        const { textContent } = render(
+          <NextIntlClientProvider
+            locale={locale}
+            messages={withOverlayMessages(locale, base)}
+          >
+            <Landing config={withOverlay(siteConfig)} />
+          </NextIntlClientProvider>,
+        ).container;
+        expect(textContent).not.toMatch(/Landing\.[A-Za-z]/);
+      },
+    );
+  },
+);

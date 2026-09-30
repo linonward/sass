@@ -16,10 +16,11 @@
     "main": "Main",
     "mobile": "Mobile",
     "openMenu": "Open menu",
-    "cta": "View demo"
+    "cta": "View demo",
+    "start": "Get started"
   },
   "Footer": {
-    "tagline": "The starter kit for your AI business.",
+    "tagline": "Product photos, without the photoshoot.",
     "copyright": "© {year} {name}"
   },
   "Theme": {
@@ -57,8 +58,8 @@
     "retry": "Try again"
   },
   "Metadata": {
-    "homeTitle": "Turn your AI product into a business",
-    "description": "Next.js SaaS starter with auth, payments, credits and AI already connected. Launch your AI product and start charging, then spend your time on the product."
+    "homeTitle": "Studio-quality product photos from a single snapshot",
+    "description": "Upload one product photo, describe the scene, and get studio-quality shots for your store, ads and social posts in seconds. Pay with credits, only for what you create."
   },
   "Llms": {
     "intro": "Machine-readable index of {name} for AI agents and answer engines. Public pages come first with a one-line description, then the URLs that only exist for machines, then the areas that need an account.",
@@ -80,71 +81,50 @@
   },
   "Landing": {
     "hero": {
-      "badge": "Next.js SaaS starter",
-      "title": "Turn your AI product into a business.",
-      "subtitle": "Auth, payments, credits and AI, already connected.\nMake time for your product.",
-      "primaryCta": "Explore demo",
-      "secondaryCta": "See what’s included",
-      "imageAlt": "Product dashboard preview",
-      "demoCta": "View demo",
-      "deployToVercel": "Deploy to Vercel",
+      "title": "Product photos, without the photoshoot.",
+      "titleAccent": "without the photoshoot.",
+      "subtitle": "Upload one snapshot and describe the scene.\nGet studio-quality shots in seconds.",
+      "startCta": "Start creating free",
+      "pricingCta": "See pricing",
+      "demoCta": "Explore demo",
+      "deliveryCta": "See what’s included",
+      "buyCta": "Buy now · {price}",
+      "showcaseCta": "See a live product",
+      "offerNote": "One-time payment · Credits added right after payment",
+      "imageAlt": "Product preview",
+      "stack": "100 free credits every month · Commercial use included",
+      "steps": {
+        "step1": "Upload a photo",
+        "step2": "Describe the scene",
+        "step3": "Download and publish",
+        "detail1": "Any clear product shot works, even one from your phone.",
+        "detail2": "Pick a setting or write your own prompt.",
+        "detail3": "Use the shots in your store, ads and social posts."
+      },
       "colorSwitcher": {
         "label": "Brand color",
         "prompt": "Try a color →",
         "switchTo": "Switch brand color to __HEX__"
-      },
-      "titleAccent": "a business.",
-      "stack": "Next.js · TypeScript · Built for independent makers",
-      "steps": {
-        "step1": "Accept payments",
-        "step2": "Charge in credits",
-        "step3": "Track every request",
-        "detail1": "Connect your provider and start accepting payments.",
-        "detail2": "Set credit rules and control usage costs.",
-        "detail3": "Keep credit activity and usage in view."
-      },
-      "buyCta": "Buy now · {price}",
-      "showcaseCta": "See a live product",
-      "offerNote": "One-time payment · 1 year of updates · Download link emailed right after payment"
+      }
     },
     "features": {
-      "title": "From the first payment to every request.",
-      "subtitle": "The essential flows are connected. The product is yours to define.",
+      "title": "From one snapshot to every channel.",
+      "subtitle": "Create, pay for and keep track of every shot in one place.",
       "items": {
-        "auth": {
-          "title": "Authentication",
-          "description": "Google sign-in and email one-time codes, with sessions and roles built in.",
-          "detail": "role: user | admin"
+        "studio": {
+          "title": "Describe it. See it.",
+          "description": "Turn one product photo into scenes for every season, campaign and channel.",
+          "detail": "Images, copy and short videos from the same studio."
         },
-        "billing": {
-          "title": "Payment received. Credits ready.",
-          "description": "Subscriptions and one-time purchases, connected to a single credit ledger.",
-          "detail": "Creem / Stripe / Lemon Squeezy"
+        "credits": {
+          "title": "Pay only for what you create.",
+          "description": "Start with free monthly credits, then subscribe or top up when you need more.",
+          "detail": "Credits are returned when a generation fails."
         },
-        "i18n": {
-          "title": "Internationalization",
-          "description": "Localized routes and messages. Adding a language is just a config change.",
-          "detail": "en · zh · ja"
-        },
-        "ai": {
-          "title": "Make AI your product.",
-          "description": "Text, image and video generation, connected to credit billing and usage records.",
-          "detail": "Credits are returned when a model call fails."
-        },
-        "seo": {
-          "title": "SEO built in",
-          "description": "Metadata, sitemap, hreflang and Open Graph images out of the box.",
-          "detail": "sitemap.xml · rss.xml · json-ld"
-        },
-        "fast": {
-          "title": "Fast by default",
-          "description": "Static rendering, optimized fonts and images, and a tiny client bundle.",
-          "detail": "static · no client JS by default"
-        },
-        "operations": {
-          "title": "Know what happens after launch.",
-          "description": "See orders, users and usage. Enable attribution, lead capture and referral rewards when you need them.",
-          "detail": "Understand product usage from one admin dashboard."
+        "history": {
+          "title": "Every shot, saved.",
+          "description": "Find past generations, see what each one cost, and download them again any time.",
+          "detail": "Your full generation history in one place."
         }
       }
     },
@@ -184,156 +164,122 @@
     "faq": {
       "title": "A few things before you start.",
       "items": {
-        "stack": {
-          "question": "What is it built with?",
-          "answer": "Next.js, TypeScript, Tailwind CSS and shadcn/ui, with Postgres for data."
+        "photos": {
+          "question": "What kind of photo should I upload?",
+          "answer": "A clear photo of a single product works best. It doesn’t need a studio: a phone photo on a plain background is enough."
         },
-        "payments": {
-          "question": "Can I switch payment providers?",
-          "answer": "Choose Creem, Stripe, Lemon Squeezy or Waffo Pancake through configuration. Set up the matching products and webhooks when switching; existing subscriptions are not migrated automatically."
+        "rights": {
+          "question": "Can I use the images commercially?",
+          "answer": "Yes. Use the images you create in your store, ads, marketplace listings and social posts."
         },
-        "customize": {
-          "question": "How do I build my own features?",
-          "answer": "Configure branding, pages and plans, then write features in the business directory using the shared auth, credits and AI interfaces. The starter guide includes examples."
+        "credits": {
+          "question": "How do credits work?",
+          "answer": "Each generation uses credits. The free plan includes 100 credits a month; paid plans include more, and every charge shows up in your history."
         },
-        "license": {
-          "question": "Can I use it for commercial projects?",
-          "answer": "Yes. Personal and commercial use are both covered."
+        "failed": {
+          "question": "What if a generation fails?",
+          "answer": "The credits go straight back to your balance. You only pay for results you receive."
         },
-        "fit": {
-          "question": "Which projects is this for?",
-          "answer": "AI tools that need authentication, payments and credit billing. Team collaboration and multi-tenancy require additional development."
-        },
-        "services": {
-          "question": "Which external services do I need?",
-          "answer": "Deployment needs a database and email service. Configure payments, AI models, object storage and rate limiting for the features you enable. Local development supports substitutes."
-        },
-        "deliverables": {
-          "question": "What exactly do I get?",
-          "answer": "The complete source (auth, payments, credits, AI and admin), the starter guide and business examples. Your download link is emailed right after payment, and you can sign in to your downloads page any time."
-        },
-        "costs": {
-          "question": "Are there any other costs?",
-          "answer": "The template is a one-time purchase. Neon, Resend and Vercel all have free tiers that usually cover the early days; AI models are billed per use by your model provider."
-        },
-        "updates": {
-          "question": "How long do I get updates?",
-          "answer": "Every release within one year of purchase is included and appears on your downloads page, with email support during that time. After that, the releases you already have stay downloadable and keep working."
+        "cancel": {
+          "question": "Can I cancel anytime?",
+          "answer": "Yes. Manage or cancel your subscription from the billing page; your plan stays active until the end of the current period."
         },
         "refund": {
           "question": "Can I get a refund?",
-          "answer": "No. The template is a digital product that can’t be returned once delivered, so all sales are final. Try the demo and read the docs before buying; contact us about duplicate or unauthorized charges."
+          "answer": "See our refund policy for the details. If something looks wrong with a charge, contact us and we’ll sort it out."
         }
       }
     },
     "cta": {
-      "title": "The foundation is ready.\nYour product comes next.",
-      "subtitle": "Go from idea to paying customers in a day.",
-      "button": "Explore demo",
-      "secondaryCta": "See what’s included",
+      "title": "Your next product photo\nis one snapshot away.",
+      "subtitle": "Start with free credits every month.",
+      "startCta": "Start creating free",
+      "pricingCta": "See pricing",
+      "demoCta": "Explore demo",
+      "deliveryCta": "See what’s included",
       "buyCta": "Buy now · {price}",
       "showcaseCta": "See a live product"
     },
     "delivery": {
-      "title": "A complete starting point.",
-      "description": "Source code, configuration, documentation and examples, together in one project.",
-      "offer": "OnwardKit template",
+      "title": "Pay once. Keep creating.",
+      "description": "A one-time pack for teams that create product photos every week.",
+      "offer": "Lifetime pack",
       "pending": "Coming soon",
-      "terms": "One-time payment, including all updates for one year and email support. Your download link is emailed right after payment. Digital product — no refunds once delivered.",
-      "termsPending": "Pricing, update period and support scope are to be confirmed.",
+      "terms": "One-time payment. Credits are added to your account right after payment.",
+      "termsPending": "Pricing is to be confirmed.",
       "buy": "Buy now",
       "demo": "Explore the demo first",
       "items": {
-        "source": {
-          "title": "Complete source",
-          "description": "Auth, payments, credits, AI and administration"
+        "credits": {
+          "title": "Monthly credits",
+          "description": "A fresh credit allowance every month"
         },
-        "brand": {
-          "title": "Configuration & branding",
-          "description": "Make it yours with your own copy and primary color"
+        "commercial": {
+          "title": "Commercial use",
+          "description": "Use every image in your store, ads and posts"
         },
-        "docs": {
-          "title": "Getting started guide",
-          "description": "Instructions from local setup to deployment"
-        },
-        "examples": {
-          "title": "Business examples",
-          "description": "Build your own features on working implementations"
+        "support": {
+          "title": "Priority support",
+          "description": "Email support with faster replies"
         }
       }
     },
     "testimonials": {
-      "eyebrow": "Maker stories",
-      "title": "From idea to launch. In their words.",
-      "subtitle": "See how developers take the next step, from AI tools to subscription products.",
+      "eyebrow": "Customer stories",
+      "title": "Better product photos. In their words.",
+      "subtitle": "How small shops and marketing teams create images for launches, listings and ads.",
       "exampleNotice": "Layout preview · These are sample quotes, not customer testimonials.",
       "exampleLabel": "Sample quote",
       "source": "Read the original",
       "videoLabel": "Watch the story from {name}",
       "videoFallback": "Download the video",
       "items": {
-        "focus": {
-          "quote": "“With the basics in place, <highlight>I can finally focus on the product itself.</highlight>”",
-          "role": "Independent developer · AI tools"
+        "listings": {
+          "quote": "“I refreshed every photo in my shop <highlight>in one afternoon instead of booking a studio.</highlight>”",
+          "role": "Independent shop owner · Home goods"
         },
-        "validate": {
-          "quote": "“With a starting point for sign-in and payments, <highlight>I can test whether people want the feature</highlight> before investing more.”",
-          "role": "Subscription product founder",
+        "launch": {
+          "quote": "“For our summer launch, <highlight>I tried five scenes before lunch</highlight> and picked the one that fit the campaign.”",
+          "role": "Brand founder · Fragrance",
           "imageAlt": "Illustrative product photo: a perfume bottle. Not a customer result."
         },
-        "flow": {
-          "quote": "“From payment to credits to an AI request, <highlight>I can follow one complete flow</highlight> instead of stitching separate examples together.”",
-          "role": "AI product developer"
+        "catalog": {
+          "quote": "“New products get consistent photos <highlight>the day they arrive</highlight>, not two weeks later.”",
+          "role": "E-commerce manager"
         },
-        "brand": {
-          "quote": "“With my own color and copy, <highlight>the product feels like mine.</highlight> I don’t have to restyle every page.”",
-          "role": "Independent developer"
+        "ads": {
+          "quote": "“We test more ad creatives now, because <highlight>a new image takes seconds, not a reshoot.</highlight>”",
+          "role": "Performance marketer"
         },
-        "operate": {
-          "quote": "“After launch, I can look up orders and usage. <highlight>I have more context when responding to users.</highlight>”",
-          "role": "Small SaaS team",
+        "skincare": {
+          "quote": "“The light and textures look right, so <highlight>the photos feel like our brand.</highlight>”",
+          "role": "Skincare brand team",
           "imageAlt": "Illustrative product photo: skincare bottles. Not a customer result."
         },
-        "build": {
-          "quote": "“The core flows are connected, so <highlight>I can concentrate on the one feature that matters most.</highlight>”",
-          "role": "AI app creator"
+        "social": {
+          "quote": "“Credits make the cost easy to follow. <highlight>I know what every post costs me.</highlight>”",
+          "role": "Social media freelancer"
         }
       }
     },
     "timesaved": {
-      "title": "Work you won’t have to do again.",
-      "subtitle": "Each of these is already built and tested in the template. Hours are estimates for building it from scratch.",
+      "title": "Hours you won’t spend on a photoshoot.",
+      "subtitle": "What each shot takes the traditional way. Hours are estimates.",
       "hours": "{hours, plural, one {# hour} other {# hours}}",
       "total": "Total",
-      "result": "Launch today",
+      "result": "Ready in seconds",
       "items": {
-        "payments": {
-          "title": "Payment webhooks & idempotency",
-          "detail": "Four providers, with replays, out-of-order events and refunds handled"
+        "studio": {
+          "title": "Booking a studio and props",
+          "detail": "Finding a space, a photographer and a set"
         },
-        "credits": {
-          "title": "Credit ledger & refunds on failure",
-          "detail": "Charge per use; credits return automatically when an AI call fails"
+        "shoot": {
+          "title": "Lighting and shooting",
+          "detail": "Setting up lights and angles for each product"
         },
-        "email": {
-          "title": "Transactional email & retries",
-          "detail": "Queued in an outbox and resent automatically on failure"
-        },
-        "auth": {
-          "title": "Sign-in & roles",
-          "detail": "Google sign-in, email codes and admin roles"
-        },
-        "seo": {
-          "title": "SEO & social images",
-          "detail": "Sitemap, hreflang, structured data and Open Graph images"
-        },
-        "i18n": {
-          "title": "Internationalization",
-          "detail": "Localized routes and copy; add a language in config"
-        },
-        "admin": {
-          "title": "Admin & billing exceptions",
-          "detail": "Orders, users, discrepancies and an audit trail"
+        "retouch": {
+          "title": "Retouching",
+          "detail": "Cleaning up backgrounds, color and reflections"
         }
       }
     }
@@ -1681,7 +1627,7 @@
     "description": "Everything you’ve bought lives here. Each download gets a fresh link valid for 5 minutes, so you can come back any time.",
     "products": {
       "template": {
-        "name": "OnwardKit template"
+        "name": "Download pack"
       }
     },
     "purchased": "Purchased {date}",

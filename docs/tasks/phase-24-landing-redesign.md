@@ -190,3 +190,29 @@ T2406 合入前修正：同步 main 的购买卡片配置，解决合并冲突�
 
 - [x] 单测覆盖按钮取向（有套餐 / 隐藏 / showcaseUrl）、https 校验、工时合计、空列表隐藏、中英文 key 齐全
 - [x] `e2e/ui-shell.spec.ts`、`e2e/landing.spec.ts` 通过（含 375px 不横向溢出）；品牌色断言改看新的主按钮
+
+## T2408 seller-landing
+
+- 分支 / worktree：`feat/seller-landing` → `../sass-seller-landing`
+- 依赖：T2407，已合入 `main`；起点 `77040d0`。
+
+**问题**
+
+模板默认首页就是 OnwardKit 售卖站首页：Hero 写「Next.js SaaS starter」「Buy now」「下载链接邮件发送」，交付卡、省时清单、FAQ 都在卖模板本身。买家拿到包、换个名字上线，首页卖的是模板而不是他的产品（`../promo-image-studio` 就是这样）。售卖站和模板默认值也没法各自演进。
+
+**决定**
+
+- 售卖站专属内容不随包：放在 `seller/`（`site.json` + `messages/{en,zh}.json`），`release-package.sh` 的 `exclude_paths` 排除。
+- 通用覆盖机制 `src/core/config/overlay.ts`：`SITE_OVERLAY_DIR` 指向目录，`site.json` 的 `landing` / `nav` 整段替换并用同一 schema 校验，messages 按 locale 深合并；目录不存在或校验失败直接报错。首页、顶栏、i18n request 用它；`next.config.ts` 在设了变量时把目录加进 `outputFileTracingIncludes`。
+- 买家默认首页改成虚构的 AI 商品图工具 Acme：hero → features → testimonials → pricing → faq → cta，按钮去登录 / 定价；示例评价、FAQ、Metadata、页脚标语、`description`（新增 `SITE_DESCRIPTION` 覆盖）都按产品写。
+- 原来写死的卖模板行为变成配置：`landing.demo`（按钮和顶栏去 `/demo`）、`landing.hero.colorSwitcher`、`landing.hero.stepIcons`、`landing.deliverables`（交付清单不再写死 4 项）。
+- 售卖站部署设 `SITE_OVERLAY_DIR=seller`、`SITE_DESCRIPTION=The starter kit for your AI business.`，页面与改动前一致。
+
+**验收**
+
+- [x] 默认首页无 starter / template / OnwardKit 字样；`SITE_OVERLAY_DIR=seller` 时区块、按钮、文案与改动前一致（中英、1440 / 375，无横向溢出、无 console error）
+- [x] 覆盖机制单测：无变量不变、整段替换并补默认值、非法字段带路径报错、目录不存在报错、messages 深合并
+- [x] `SITE_OVERLAY_DIR=seller` 跑 `src/core/marketing`：中英所有区块文案都能解析
+- [x] `pnpm test`（1689 passed，2 项按设计跳过：未设 `SITE_OVERLAY_DIR` 时的覆盖渲染）、`pnpm typecheck`、`pnpm lint`、`pnpm english:check`
+- [x] `ui-shell`、`landing`、`i18n/locale` e2e 通过；品牌色预览 e2e 在 `colorSwitcher` 关闭时跳过，开关由单测覆盖
+- [ ] 售卖站部署环境加 `SITE_OVERLAY_DIR=seller` 和 `SITE_DESCRIPTION`（合并后、下次部署前）

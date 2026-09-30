@@ -16,10 +16,11 @@
     "main": "主导航",
     "mobile": "移动端",
     "openMenu": "打开菜单",
-    "cta": "体验演示"
+    "cta": "体验演示",
+    "start": "免费开始"
   },
   "Footer": {
-    "tagline": "把你的 AI 产品，做成可以收费的生意。",
+    "tagline": "商品图，不用再进摄影棚。",
     "copyright": "© {year} {name}"
   },
   "Theme": {
@@ -57,8 +58,8 @@
     "retry": "重试"
   },
   "Metadata": {
-    "homeTitle": "把你的 AI 产品做成可以收费的生意",
-    "description": "登录、收款、积分与 AI 已经接好的 Next.js SaaS 模板。把 AI 产品上线并开始收费，把时间留给产品本身。"
+    "homeTitle": "一张随手拍，生成棚拍级商品图",
+    "description": "上传一张商品照片，描述想要的场景，几秒钟得到可用于店铺、广告和社交媒体的棚拍级商品图。按积分付费，只为生成的图片买单。"
   },
   "Llms": {
     "intro": "{name} 的机器可读索引，供 AI 代理和搜索引擎使用。公开页面在前，带一行描述；然后是仅供机器使用的 URL；最后是需要登录的区域。",
@@ -80,71 +81,50 @@
   },
   "Landing": {
     "hero": {
-      "badge": "Next.js SaaS 模板",
-      "title": "把你的 AI 产品，做成可以收费的生意。",
-      "subtitle": "登录、收款、积分与 AI 已经接好。\n把时间留给你的产品。",
-      "primaryCta": "体验演示",
-      "secondaryCta": "查看交付内容",
-      "demoCta": "查看演示",
-      "deployToVercel": "部署到 Vercel",
-      "imageAlt": "产品仪表盘预览",
+      "title": "商品图，不用再进摄影棚。",
+      "titleAccent": "不用再进摄影棚。",
+      "subtitle": "上传一张随手拍，描述想要的场景。\n几秒钟，得到棚拍级商品图。",
+      "startCta": "免费开始创作",
+      "pricingCta": "查看价格",
+      "demoCta": "体验演示",
+      "deliveryCta": "查看包含内容",
+      "buyCta": "立即购买 · {price}",
+      "showcaseCta": "看真实产品",
+      "offerNote": "一次性付款 · 付款后积分立即到账",
+      "imageAlt": "产品预览",
+      "stack": "每月 100 免费积分 · 可商用",
+      "steps": {
+        "step1": "上传照片",
+        "step2": "描述场景",
+        "step3": "下载发布",
+        "detail1": "清晰的商品照片就行，手机拍的也可以。",
+        "detail2": "选一个场景，或写下你自己的描述。",
+        "detail3": "直接用在店铺、广告和社交媒体上。"
+      },
       "colorSwitcher": {
         "label": "品牌色",
         "prompt": "换个颜色 →",
         "switchTo": "将品牌色切换为 __HEX__"
-      },
-      "titleAccent": "收费的生意。",
-      "stack": "Next.js · TypeScript · 为独立开发者而建",
-      "steps": {
-        "step1": "接入收款",
-        "step2": "按次扣积分",
-        "step3": "查看使用记录",
-        "detail1": "支持主流支付方式，快速开启收款能力",
-        "detail2": "灵活设置积分规则，控制使用成本",
-        "detail3": "随时查看积分流水，使用情况清晰透明"
-      },
-      "buyCta": "立即购买 · {price}",
-      "showcaseCta": "看真实案例",
-      "offerNote": "一次性付款 · 含 1 年更新 · 付款后立即邮件发送下载链接"
+      }
     },
     "features": {
-      "title": "从第一次付款，到每一次使用。",
-      "subtitle": "关键流程已经接好，业务由你定义。",
+      "title": "从一张照片，到每一个渠道。",
+      "subtitle": "生成、付费、查记录，都在一个地方。",
       "items": {
-        "auth": {
-          "title": "用户认证",
-          "description": "Google 登录和邮箱验证码，内置会话和角色管理。",
-          "detail": "角色：用户 | 管理员"
+        "studio": {
+          "title": "说出来，就能看到。",
+          "description": "一张商品照片，变成适合每个季节、每场活动、每个渠道的场景图。",
+          "detail": "图片、文案和短视频，在同一个工作室里生成。"
         },
-        "billing": {
-          "title": "收款之后，积分就位。",
-          "description": "订阅与一次性购买，接入同一套积分账本。",
-          "detail": "Creem / Stripe / Lemon Squeezy"
+        "credits": {
+          "title": "用多少，付多少。",
+          "description": "每月有免费积分，需要更多时再订阅或充值。",
+          "detail": "生成失败时，积分自动退回。"
         },
-        "i18n": {
-          "title": "多语言",
-          "description": "本地化路由和文案。加一门语言只需改配置。",
-          "detail": "英文 · 中文 · 日文"
-        },
-        "ai": {
-          "title": "让 AI 成为你的产品。",
-          "description": "文字、图片、视频生成，接入积分扣费与用量记录。",
-          "detail": "模型调用失败时退回积分。"
-        },
-        "seo": {
-          "title": "SEO 内置",
-          "description": "元数据、站点地图、hreflang 和 Open Graph 图片开箱即用。",
-          "detail": "sitemap.xml · rss.xml · json-ld"
-        },
-        "fast": {
-          "title": "默认飞快",
-          "description": "静态渲染、字体和图片优化，客户端 bundle 极小。",
-          "detail": "静态 · 默认零客户端 JS"
-        },
-        "operations": {
-          "title": "上线之后，看清发生了什么。",
-          "description": "查看订单、用户和使用记录，按需启用来源归因、留资与邀请奖励。",
-          "detail": "在同一个后台，了解产品的使用情况。"
+        "history": {
+          "title": "每张图，都留着。",
+          "description": "随时找到以前生成的图片，看每张花了多少积分，再次下载。",
+          "detail": "完整的生成记录，集中在一处。"
         }
       }
     },
@@ -184,156 +164,122 @@
     "faq": {
       "title": "开始之前，你可能想知道。",
       "items": {
-        "stack": {
-          "question": "用到了哪些技术？",
-          "answer": "Next.js、TypeScript、Tailwind CSS 和 shadcn/ui，数据库为 Postgres。"
+        "photos": {
+          "question": "上传什么样的照片效果最好？",
+          "answer": "单个商品、画面清晰就好。不需要专业拍摄，纯色背景下用手机拍的照片就够了。"
         },
-        "payments": {
-          "question": "能否更换支付服务商？",
-          "answer": "支持 Creem、Stripe、Lemon Squeezy 和 Waffo Pancake，通过配置选择。切换时需要配置对应的产品和 webhook，已有订阅不会自动迁移。"
+        "rights": {
+          "question": "生成的图片可以商用吗？",
+          "answer": "可以。生成的图片可以用在你的店铺、广告、平台详情页和社交媒体上。"
         },
-        "customize": {
-          "question": "如何定制自己的业务？",
-          "answer": "通过配置调整品牌、页面与套餐，在业务目录编写功能，复用登录、积分和 AI 接口。上手文档提供了具体示例。"
+        "credits": {
+          "question": "积分怎么算？",
+          "answer": "每次生成消耗积分。免费版每月送 100 积分，付费版更多；每一笔扣减都能在记录里看到。"
         },
-        "license": {
-          "question": "可以用于商业项目吗？",
-          "answer": "可以。个人和商业用途都覆盖。"
+        "failed": {
+          "question": "生成失败了怎么办？",
+          "answer": "积分会直接退回你的余额。只为拿到的结果付费。"
         },
-        "fit": {
-          "question": "适合什么样的项目？",
-          "answer": "适合需要登录、收款与积分计费的 AI 工具。团队协作和多租户需要另行开发。"
-        },
-        "services": {
-          "question": "需要哪些外部服务？",
-          "answer": "部署需要数据库和邮件服务。按启用的功能配置支付商、AI 模型、对象存储及限流服务；本地启动可使用开发替代方案。"
-        },
-        "deliverables": {
-          "question": "具体能拿到什么？",
-          "answer": "完整源码（登录、支付、积分、AI 与后台）、上手文档和业务示例。付款后下载链接立即发到你的邮箱，也可以随时登录站内的下载页获取。"
-        },
-        "costs": {
-          "question": "还有其他费用吗？",
-          "answer": "模板本身一次付清。Neon、Resend、Vercel 都有免费额度，起步阶段通常够用；AI 模型按调用量付费给模型服务商。"
-        },
-        "updates": {
-          "question": "能获得多久的更新？",
-          "answer": "购买后 1 年内发布的所有版本都包含在内，新版本会出现在下载页，期间提供邮件支持。1 年后，已经拿到的版本照常可下、照常可用。"
+        "cancel": {
+          "question": "可以随时取消吗？",
+          "answer": "可以。在账单页管理或取消订阅，当前周期结束前套餐照常可用。"
         },
         "refund": {
           "question": "可以退款吗？",
-          "answer": "不可以。模板是数字产品，交付后无法收回，所以售出不退款。购买前可以先体验演示、阅读文档；如果遇到重复扣款或未经授权的扣款，联系我们处理。"
+          "answer": "具体规则见退款政策。如果某笔扣款看起来不对，联系我们处理。"
         }
       }
     },
     "cta": {
-      "title": "基础已就位，\n下一步是你的产品。",
-      "subtitle": "从想法到付费用户，只需一天。",
-      "button": "体验演示",
-      "secondaryCta": "查看交付内容",
+      "title": "下一张商品图，\n只差一张随手拍。",
+      "subtitle": "每月都有免费积分。",
+      "startCta": "免费开始创作",
+      "pricingCta": "查看价格",
+      "demoCta": "体验演示",
+      "deliveryCta": "查看包含内容",
       "buyCta": "立即购买 · {price}",
-      "showcaseCta": "看真实案例"
+      "showcaseCta": "看真实产品"
     },
     "delivery": {
-      "title": "你拿到的，是完整的起点。",
-      "description": "源码、配置、文档与示例，放在同一个项目里。",
-      "offer": "OnwardKit 模板",
+      "title": "一次付款，持续创作。",
+      "description": "适合每周都要做商品图的团队的一次性套餐。",
+      "offer": "终身套餐",
       "pending": "即将公布",
-      "terms": "一次性付款，含 1 年内的全部更新和邮件支持。付款后下载链接立即发到你的邮箱；数字产品，交付后不退款。",
-      "termsPending": "价格、更新期限与支持范围待确认。",
+      "terms": "一次性付款，付款后积分立即到账。",
+      "termsPending": "价格待确认。",
       "buy": "立即购买",
       "demo": "先体验演示",
       "items": {
-        "source": {
-          "title": "完整源码",
-          "description": "登录、支付、积分、AI 与后台"
+        "credits": {
+          "title": "每月积分",
+          "description": "每个月都有新的积分额度"
         },
-        "brand": {
-          "title": "配置与品牌",
-          "description": "替换文案与主色，建立自己的站点"
+        "commercial": {
+          "title": "可商用",
+          "description": "每张图都能用在店铺、广告和内容里"
         },
-        "docs": {
-          "title": "上手文档",
-          "description": "从本地启动到部署的操作说明"
-        },
-        "examples": {
-          "title": "业务示例",
-          "description": "参考现有实现，接入自己的功能"
+        "support": {
+          "title": "优先支持",
+          "description": "邮件支持，回复更快"
         }
       }
     },
     "testimonials": {
       "eyebrow": "用户故事",
-      "title": "把想法上线的人，这样说。",
-      "subtitle": "从 AI 工具到订阅服务，看看开发者如何迈出下一步。",
+      "title": "更好的商品图，听听他们怎么说。",
+      "subtitle": "小店主和营销团队，如何为上新、详情页和广告准备图片。",
       "exampleNotice": "版式预览 · 以下为示例文案，非真实用户评价。",
       "exampleLabel": "示例评价",
       "source": "查看原始评价",
       "videoLabel": "观看 {name} 的用户故事",
       "videoFallback": "下载视频",
       "items": {
-        "focus": {
-          "quote": "“基础流程有了起点，<highlight>终于把时间花在产品本身。</highlight>”",
-          "role": "独立开发者 / AI 工具"
+        "listings": {
+          "quote": "“店里所有商品图，<highlight>一个下午就换完了，不用再约摄影棚。</highlight>”",
+          "role": "独立店主 / 家居"
         },
-        "validate": {
-          "quote": "“登录和收款有了起点，<highlight>我能先验证用户是否需要这个功能</highlight>，再决定往哪里投入。”",
-          "role": "订阅产品创始人",
-          "imageAlt": "示意产品摄影：香水瓶，非用户成果截图。"
+        "launch": {
+          "quote": "“夏季新品上线前，<highlight>我一上午试了五种场景</highlight>，挑出最贴合活动的那张。”",
+          "role": "品牌创始人 / 香氛",
+          "imageAlt": "示意商品图：一瓶香水。非真实用户作品。"
         },
-        "flow": {
-          "quote": "“从付款、积分到账到 AI 调用，<highlight>可以顺着完整流程修改</highlight>，不用自己把几套示例拼起来。”",
-          "role": "AI 产品开发者"
+        "catalog": {
+          "quote": "“新品<highlight>到货当天就有统一风格的图</highlight>，不用再等两周。”",
+          "role": "电商运营"
         },
-        "brand": {
-          "quote": "“换上自己的品牌色和文案，<highlight>产品就有了自己的样子</highlight>。不必逐页修改配色。”",
-          "role": "独立开发者"
+        "ads": {
+          "quote": "“现在能测更多广告素材，因为<highlight>换一张图只要几秒，不用重拍。</highlight>”",
+          "role": "效果广告投放"
         },
-        "operate": {
-          "quote": "“上线之后，订单和使用记录都能查到。<highlight>处理用户反馈时，心里更有底</highlight>。”",
-          "role": "小团队 / SaaS",
-          "imageAlt": "示意产品摄影：护肤瓶，非用户成果截图。"
+        "skincare": {
+          "quote": "“光线和质感都对，<highlight>图片一看就是我们的品牌。</highlight>”",
+          "role": "护肤品牌团队",
+          "imageAlt": "示意商品图：几瓶护肤品。非真实用户作品。"
         },
-        "build": {
-          "quote": "“基础流程已经串好，<highlight>我可以集中打磨最重要的那一个功能</highlight>。”",
-          "role": "AI 应用创作者"
+        "social": {
+          "quote": "“按积分计费，成本一目了然。<highlight>每条内容花了多少，我心里有数。</highlight>”",
+          "role": "社交媒体自由职业者"
         }
       }
     },
     "timesaved": {
-      "title": "这些活，\n你不用再干一遍。",
-      "subtitle": "每一项都已经在模板里写好、测好。工时是按从零实现估算的。",
+      "title": "不用再花在拍摄上的时间。",
+      "subtitle": "按传统方式拍一组图要花的时间，工时为估算。",
       "hours": "{hours} 小时",
       "total": "合计",
-      "result": "今天上线",
+      "result": "几秒钟完成",
       "items": {
-        "payments": {
-          "title": "支付 webhook 与幂等",
-          "detail": "4 家支付商，重放、乱序、退款都有处理"
+        "studio": {
+          "title": "约影棚、找道具",
+          "detail": "找场地、摄影师和布景"
         },
-        "credits": {
-          "title": "积分账本与失败退款",
-          "detail": "按次扣费，AI 调用失败自动退回积分"
+        "shoot": {
+          "title": "布光与拍摄",
+          "detail": "为每个商品调灯光和角度"
         },
-        "email": {
-          "title": "事务邮件与补发",
-          "detail": "邮件进 outbox 排队，发送失败自动补发"
-        },
-        "auth": {
-          "title": "登录与角色",
-          "detail": "Google 登录、邮箱验证码、管理员角色"
-        },
-        "seo": {
-          "title": "SEO 与分享图",
-          "detail": "sitemap、hreflang、结构化数据、Open Graph 图片"
-        },
-        "i18n": {
-          "title": "多语言",
-          "detail": "本地化路由和文案，加一门语言只改配置"
-        },
-        "admin": {
-          "title": "后台与计费异常台",
-          "detail": "订单、用户、差额单与审计记录"
+        "retouch": {
+          "title": "后期修图",
+          "detail": "处理背景、颜色和反光"
         }
       }
     }
@@ -1681,7 +1627,7 @@
     "description": "你购买的文件都在这里。点下载时现签一个 5 分钟有效的地址，这一页随时可以回来。",
     "products": {
       "template": {
-        "name": "OnwardKit 模板"
+        "name": "下载包"
       }
     },
     "purchased": "购买于 {date}",

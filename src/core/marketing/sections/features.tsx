@@ -15,7 +15,7 @@ export function Features({
 }) {
   const t = useTranslations("Landing.features");
   const item = (key: string, field: "title" | "description" | "detail") =>
-    t(`items.${key}.${field}` as "items.auth.title");
+    t(`items.${key}.${field}` as "items.studio.title");
   return (
     <section
       id="features"

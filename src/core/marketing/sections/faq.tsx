@@ -7,7 +7,7 @@ import { Section } from "./section";
 export function Faq({ items, waveFrom }: { items: string[]; waveFrom?: Band }) {
   const t = useTranslations("Landing.faq");
   const item = (key: string, field: "question" | "answer") =>
-    t(`items.${key}.${field}` as "items.stack.question");
+    t(`items.${key}.${field}` as "items.photos.question");
   return (
     <Section id="faq" band={bands.faq} waveFrom={waveFrom} className="border-t">
       <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:gap-20">

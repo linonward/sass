@@ -11,14 +11,20 @@ import { Section } from "./section";
 
 /**
  * The "delivery" section: the purchase card on the left (the plan `landing.purchasePlan` points to)
- * and the list of deliverables on the right. When no purchase plan is configured or the plan is
+ * and the list of deliverables (`landing.deliverables`) on the right. When no purchase plan is configured or the plan is
  * hidden, the card shows "coming soon" with no buy button.
  */
 export function Delivery({
+  items,
+  demo,
   waveFrom,
   plan,
   currency,
 }: {
+  /** `landing.deliverables`: message keys of the list on the right. */
+  items: string[];
+  /** `landing.demo`: show the "try the demo first" link under the card. */
+  demo: boolean;
   waveFrom?: Band;
   plan?: Plan;
   currency: string;
@@ -70,16 +76,18 @@ export function Delivery({
               </p>
             </div>
           )}
-          <Link
-            href="/demo"
-            className="text-primary-text mt-6 inline-flex min-h-11 items-center gap-2 border-b text-base font-semibold"
-          >
-            {t("demo")}
-            <ArrowUpRightIcon className="size-4" aria-hidden />
-          </Link>
+          {demo && (
+            <Link
+              href="/demo"
+              className="text-primary-text mt-6 inline-flex min-h-11 items-center gap-2 border-b text-base font-semibold"
+            >
+              {t("demo")}
+              <ArrowUpRightIcon className="size-4" aria-hidden />
+            </Link>
+          )}
         </div>
         <dl className="divide-border border-border divide-y border-t">
-          {(["source", "brand", "docs", "examples"] as const).map((key) => (
+          {items.map((key) => (
             <div key={key} className="flex gap-5 py-7">
               <CheckIcon
                 className="text-primary-text bg-primary-band mt-1 size-8 shrink-0 rounded-full p-1.5"
@@ -87,10 +95,10 @@ export function Delivery({
               />
               <div>
                 <dt className="text-xl font-semibold">
-                  {t(`items.${key}.title`)}
+                  {t(`items.${key}.title` as "items.credits.title")}
                 </dt>
                 <dd className="text-muted-foreground mt-2 leading-relaxed">
-                  {t(`items.${key}.description`)}
+                  {t(`items.${key}.description` as "items.credits.description")}
                 </dd>
               </div>
             </div>

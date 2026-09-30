@@ -1,13 +1,18 @@
 import {
   ArrowRightIcon,
+  ChartColumnIcon,
   DatabaseIcon,
+  DownloadIcon,
+  ImageIcon,
   NotebookTextIcon,
+  SparklesIcon,
+  UploadIcon,
   WalletCardsIcon,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import Image from "next/image";
 
-import type { LandingConfig, Plan } from "@/core/config/schema";
+import type { heroStepIcons, LandingConfig, Plan } from "@/core/config/schema";
 import { cn } from "@/core/lib/utils";
 import { buttonVariants } from "@/core/ui/button";
 import { bands, type Band } from "./band";
@@ -18,8 +23,23 @@ import { CtaLink, ctaTargets } from "./cta-buttons";
 import { formatPrice } from "./price";
 import { Wave } from "./wave";
 
+const stepIcons = {
+  upload: UploadIcon,
+  sparkles: SparklesIcon,
+  download: DownloadIcon,
+  wallet: WalletCardsIcon,
+  database: DatabaseIcon,
+  notebook: NotebookTextIcon,
+  image: ImageIcon,
+  chart: ChartColumnIcon,
+} satisfies Record<(typeof heroStepIcons)[number], unknown>;
+
 export function Hero({
   image,
+  colorSwitcher,
+  stepIcons: stepIconNames,
+  demo,
+  sections,
   waveFrom,
   primaryColor,
   plan,
@@ -32,6 +52,8 @@ export function Hero({
   plan?: Plan;
   currency: string;
   showcaseUrl?: string;
+  demo: boolean;
+  sections: LandingConfig["sections"];
 }) {
   const t = useTranslations("Landing.hero");
   const format = useFormatter();
@@ -39,10 +61,14 @@ export function Hero({
   const { primary, secondary } = ctaTargets({
     price,
     showcaseUrl,
+    demo,
+    sections,
     labels: {
       buy: t("buyCta", { price: price ?? "" }),
-      demo: t("primaryCta"),
-      delivery: t("secondaryCta"),
+      demo: t("demoCta"),
+      delivery: t("deliveryCta"),
+      start: t("startCta"),
+      pricing: t("pricingCta"),
       showcase: t("showcaseCta"),
     },
   });
@@ -107,12 +133,14 @@ export function Hero({
                 {t("offerNote")}
               </p>
             )}
-            <ColorSwitcher
-              current={primaryColor}
-              label={t("colorSwitcher.label")}
-              prompt={t("colorSwitcher.prompt")}
-              switchToLabel={t("colorSwitcher.switchTo")}
-            />
+            {colorSwitcher && (
+              <ColorSwitcher
+                current={primaryColor}
+                label={t("colorSwitcher.label")}
+                prompt={t("colorSwitcher.prompt")}
+                switchToLabel={t("colorSwitcher.switchTo")}
+              />
+            )}
             <p className="text-muted-foreground mt-8 text-xs leading-relaxed sm:text-sm">
               {t("stack")}
             </p>
@@ -153,8 +181,9 @@ export function Hero({
       <div className="bg-primary-band">
         <Wave from="canvas" className="h-6 sm:h-9" />
         <div className="container-marketing grid gap-6 py-6 sm:grid-cols-3 sm:gap-8">
-          {([WalletCardsIcon, DatabaseIcon, NotebookTextIcon] as const).map(
-            (Icon, i) => (
+          {stepIconNames.map((name, i) => {
+            const Icon = stepIcons[name];
+            return (
               <div key={i} className="flex items-center gap-4">
                 <span className="text-primary-text bg-background/50 flex size-12 shrink-0 items-center justify-center rounded-full">
                   <Icon className="size-6" aria-hidden />
@@ -177,8 +206,8 @@ export function Hero({
                   />
                 )}
               </div>
-            ),
-          )}
+            );
+          })}
         </div>
         <Wave from="primary" className="bg-background h-6 sm:h-9" />
       </div>

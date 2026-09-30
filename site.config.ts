@@ -28,8 +28,10 @@ import { defaultLocale, locales } from "./src/core/i18n/locales";
  * (for example, your own site sells only some plans or at a different price, and you don't want
  * to change the defaults everyone else gets): `SITE_PRICE_<PLAN ID IN UPPERCASE>` overrides the
  * list price (`SITE_PRICE_LIFETIME=99`), `SITE_HIDDEN_PLANS` hides a comma-separated list of
- * plans (`SITE_HIDDEN_PLANS=pro`, see `hidden` on plans), and `SITE_DOWNLOADS=1` turns on
- * selling downloadable files (see downloads).
+ * plans (`SITE_HIDDEN_PLANS=pro`, see `hidden` on plans), `SITE_DOWNLOADS=1` turns on
+ * selling downloadable files (see downloads), `SITE_DESCRIPTION` replaces `description`, and
+ * `SITE_OVERLAY_DIR` swaps in a different home page (`landing`, `nav` and their copy) from a
+ * directory, see src/core/config/overlay.ts.
  * Fields without a matching variable (colors, copy) can only be changed in this file.
  */
 const envOverride = (name: string): string | undefined => {
@@ -115,7 +117,11 @@ const config = defineConfig({
   // Placeholder domain; change it to your own (without the protocol). The demo site overrides it
   // with SITE_DOMAIN.
   domain: envOverride("SITE_DOMAIN") ?? "example.com",
-  description: "The starter kit for your AI business.",
+  // One sentence about the product: the default description in search results, share cards and
+  // llms.txt.
+  description:
+    envOverride("SITE_DESCRIPTION") ??
+    "Studio-quality product photos from a single snapshot.",
   brand: {
     primaryColor: "#0f766e",
   },
@@ -149,7 +155,7 @@ const config = defineConfig({
   nav: {
     header: [
       { key: "features", href: "/#features" },
-      { key: "delivery", href: "/#delivery" },
+      { key: "pricing", href: "/#pricing" },
       { key: "faq", href: "/#faq" },
       // Remove the Blog link as well when you turn off features.blog.
       { key: "blog", href: "/blog" },
@@ -185,42 +191,42 @@ const config = defineConfig({
     jurisdiction: "the State of Delaware, United States",
     effectiveDate: "2026-01-01",
   },
+  // The home page. The shipped copy describes a made-up AI product-photo tool called Acme so every
+  // section shows a realistic product page; replace the copy in messages (Landing.*) with your own.
   landing: {
-    sections: [
-      "hero",
-      "timesaved",
-      "features",
-      "testimonials",
-      "delivery",
-      "faq",
-      "cta",
-    ],
-    // The plan sold by the purchase card in the "delivery" section: its price and checkout both
-    // use it (when the plan is hidden, the card shows "coming soon").
-    purchasePlan: "lifetime",
+    sections: ["hero", "features", "testimonials", "pricing", "faq", "cta"],
+    // Leave this off for a product site: buttons then lead to sign-in and pricing. Turn it on to
+    // point visitors at the in-site /demo instead.
+    demo: false,
+    // Sells one plan from the "delivery" section: add "delivery" to `sections`, set the plan id
+    // here (for example "lifetime"), and list what's included in `deliverables` (copy in
+    // Landing.delivery.items.<key>). With a purchasable plan, the hero's primary button becomes
+    // "Buy now · price". When the plan is hidden, the card shows "coming soon".
+    // purchasePlan: "lifetime",
+    // deliverables: ["credits", "commercial", "support"],
     // Without an `image` on hero, the right side of the first screen renders a product mock built
     // from real DOM (AI studio + credit transactions, clearly labeled as sample data, no model
     // calls). To switch back to a static image, add image: { src, darkSrc?, width, height } under
     // hero; put the image in public/, and the alt text lives in Landing.hero.imageAlt in messages.
-    hero: {},
+    // `stepIcons` picks the icons of the three steps under the hero (copy in Landing.hero.steps);
+    // `colorSwitcher: true` adds brand color swatches under the buttons.
+    hero: {
+      stepIcons: ["upload", "sparkles", "download"],
+    },
     // Once a real site built with this code is live, put its URL here (https); the secondary hero
     // button then becomes "see a real example".
     // showcaseUrl: "https://…",
-    // Hours are estimates; the copy lives in Landing.timesaved.items.<key> in messages. The total
-    // is computed automatically.
-    timeSaved: [
-      { key: "payments", hours: 6 },
-      { key: "credits", hours: 8 },
-      { key: "email", hours: 3 },
-      { key: "auth", hours: 4 },
-      { key: "seo", hours: 3 },
-      { key: "i18n", hours: 3 },
-      { key: "admin", hours: 6 },
-    ],
+    // "Time saved" section (add "timesaved" to `sections`): each item is a key in
+    // Landing.timesaved.items plus its estimated hours; the total is computed automatically.
+    // timeSaved: [
+    //   { key: "studio", hours: 4 },
+    //   { key: "shoot", hours: 3 },
+    //   { key: "retouch", hours: 2 },
+    // ],
     features: [
-      { key: "billing", icon: "creditCard", preview: "billing" },
-      { key: "ai", icon: "sparkles", preview: "ai" },
-      { key: "operations", icon: "chart", preview: "usage" },
+      { key: "studio", icon: "sparkles", preview: "ai" },
+      { key: "credits", icon: "creditCard", preview: "billing" },
+      { key: "history", icon: "chart", preview: "usage" },
     ],
     // Sample testimonials are not customer endorsements. After replacing them with real,
     // authorized testimonials, remove `example` from each item.
@@ -232,55 +238,46 @@ const config = defineConfig({
     testimonials: {
       items: [
         {
-          key: "focus",
+          key: "listings",
           type: "quote",
           example: true,
-          author: { name: "Maker A" },
+          author: { name: "Customer A" },
         },
         {
-          key: "validate",
+          key: "launch",
           type: "image",
           example: true,
-          author: { name: "Maker B" },
+          author: { name: "Customer B" },
           media: { src: "/landing/perfume.webp", width: 1536, height: 1024 },
         },
         {
-          key: "flow",
+          key: "catalog",
           type: "quote",
           example: true,
-          author: { name: "Maker C" },
+          author: { name: "Customer C" },
         },
         {
-          key: "brand",
+          key: "ads",
           type: "quote",
           example: true,
-          author: { name: "Maker D" },
+          author: { name: "Customer D" },
         },
         {
-          key: "operate",
+          key: "skincare",
           type: "image",
           example: true,
-          author: { name: "Maker E" },
+          author: { name: "Customer E" },
           media: { src: "/landing/skincare.webp", width: 1122, height: 1402 },
         },
         {
-          key: "build",
+          key: "social",
           type: "quote",
           example: true,
-          author: { name: "Maker F" },
+          author: { name: "Customer F" },
         },
       ],
     },
-    faq: [
-      "deliverables",
-      "fit",
-      "services",
-      "costs",
-      "payments",
-      "customize",
-      "updates",
-      "refund",
-    ],
+    faq: ["photos", "rights", "credits", "failed", "cancel", "refund"],
   },
   billing: {
     // Payment provider. Before changing it, read the "Payments" parts of the launch checklist in

@@ -23,7 +23,8 @@ set -euo pipefail
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-# Internal docs: buyers get the product, not the process of developing this template.
+# Internal docs and the official sales site's home page overlay (seller/): buyers get the product,
+# not the process of developing or selling this template.
 # This list is the **single source of truth**: the git archive excludes, the self-check find and the
 # manifest check are all derived from it.
 exclude_paths=(
@@ -34,6 +35,7 @@ exclude_paths=(
   docs/tasks
   docs/go-to-market.md
   docs/competitive-landscape.md
+  seller
 )
 excludes=()
 for p in "${exclude_paths[@]}"; do excludes+=(":(exclude)$p"); done

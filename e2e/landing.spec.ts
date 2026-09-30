@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import messages from "../messages/en.json";
 import siteConfig from "../site.config";
 
-const { landing } = siteConfig;
+const { landing, billing, nav } = siteConfig;
 const t = messages.Landing;
 
 test("home page renders all sections in config order", async ({ page }) => {
@@ -29,17 +29,30 @@ test("section content comes from config and messages", async ({ page }) => {
     ).toHaveCount(1);
   }
 
-  // When there's a purchasable plan, the hero's primary button sells directly: it shows the price
-  // and jumps to the purchase card in the delivery section.
-  const buy = page.locator("#hero").getByRole("link", {
-    name: new RegExp(`^${t.hero.buyCta.split(" ·")[0]}`),
-  });
-  await expect(buy).toBeVisible();
-  await expect(buy).toHaveAttribute("href", /#delivery$/);
+  // The hero's primary button: "Buy now · price" (jumping to the delivery purchase card) when the
+  // config sells a plan, otherwise the demo (landing.demo) or "get started" (sign-in).
+  const purchasable = billing.plans.some(
+    (p) => p.id === landing.purchasePlan && !p.hidden,
+  );
+  const hero = page.locator("#hero");
+  if (purchasable) {
+    const buy = hero.getByRole("link", {
+      name: new RegExp(`^${t.hero.buyCta.split(" ·")[0]}`),
+    });
+    await expect(buy).toBeVisible();
+    await expect(buy).toHaveAttribute("href", /#delivery$/);
+  } else if (landing.demo) {
+    await expect(
+      hero.getByRole("link", { name: t.hero.demoCta, exact: true }),
+    ).toHaveAttribute("href", /\/demo$/);
+  } else {
+    await expect(
+      hero.getByRole("link", { name: t.hero.startCta, exact: true }),
+    ).toHaveAttribute("href", /\/sign-in$/);
+  }
 
-  const timesaved = page.locator("#timesaved");
-  await expect(timesaved.getByRole("listitem")).toHaveCount(
-    landing.timeSaved.length,
+  await expect(page.locator("#timesaved li")).toHaveCount(
+    landing.sections.includes("timesaved") ? landing.timeSaved.length : 0,
   );
 
   const features = page.locator("#features");
@@ -49,23 +62,35 @@ test("section content comes from config and messages", async ({ page }) => {
 
   // The delivery section sells landing.purchasePlan: price, terms, and the buy button (the
   // checkout flow is covered by billing.spec).
-  const offer = page.getByTestId("delivery-offer");
-  await expect(offer).toBeVisible();
-  await expect(offer.getByText(t.delivery.terms)).toBeVisible();
-  await expect(
-    offer.getByRole("button", { name: t.delivery.buy }),
-  ).toBeVisible();
-  await expect(page.locator("[data-plan]")).toHaveCount(0);
+  if (landing.sections.includes("delivery") && purchasable) {
+    const offer = page.getByTestId("delivery-offer");
+    await expect(offer).toBeVisible();
+    await expect(offer.getByText(t.delivery.terms)).toBeVisible();
+    await expect(
+      offer.getByRole("button", { name: t.delivery.buy }),
+    ).toBeVisible();
+  }
+  await expect(page.locator("[data-plan]")).toHaveCount(
+    landing.sections.includes("pricing")
+      ? billing.plans.filter((p) => !p.hidden).length
+      : 0,
+  );
 
   const faq = page.locator("#faq");
   await expect(faq.locator("details")).toHaveCount(landing.faq.length);
-  const first = t.faq.items[landing.faq[0] as "fit"];
+  const first = t.faq.items[landing.faq[0] as keyof typeof t.faq.items];
   await expect(faq.getByText(first.answer)).toBeVisible();
   await faq.getByText(first.question).click();
   await expect(faq.getByText(first.answer)).toBeHidden();
 
   await expect(
-    page.locator("#cta").getByRole("link", { name: t.cta.button }),
+    page.locator("#cta").getByRole("link", {
+      name: purchasable
+        ? new RegExp(`^${t.cta.buyCta.split(" ·")[0]}`)
+        : landing.demo
+          ? t.cta.demoCta
+          : t.cta.startCta,
+    }),
   ).toBeVisible();
 });
 
@@ -74,13 +99,16 @@ test("nav anchors jump to their sections", async ({ page, isMobile }) => {
     isMobile,
     "mobile nav lives in the menu and is covered by ui-shell",
   );
+  const anchor = nav.header.find((link) => link.href.startsWith("/#"));
+  test.skip(!anchor, "the header nav has no in-page anchors");
+  const id = anchor!.href.slice(2);
   await page.goto("/");
   await page
     .getByRole("navigation", { name: messages.Header.main })
-    .getByRole("link", { name: messages.Nav.delivery })
+    .getByRole("link", { name: messages.Nav[anchor!.key as "features"] })
     .click();
-  await expect(page).toHaveURL("/#delivery");
-  await expect(page.locator("#delivery")).toBeInViewport();
+  await expect(page).toHaveURL(`/#${id}`);
+  await expect(page.locator(`#${id}`)).toBeInViewport();
 });
 
 for (const path of ["/", "/zh"]) {
@@ -113,10 +141,12 @@ for (const path of ["/", "/zh"]) {
     await expect(hero.getByRole("img")).toBeVisible();
     await expect.poll(layout).toEqual(initialLayout);
     expect(aiRequests).toEqual([]);
-    const demoLink = hero.locator('a[href$="/demo"]');
-    await expect(demoLink).toHaveCount(1);
-    await demoLink.click();
-    await expect(page).toHaveURL(path === "/zh" ? "/zh/demo" : "/demo");
+    // The hero's way in: the demo when landing.demo is on, otherwise sign-in.
+    const entry = landing.demo ? "demo" : "sign-in";
+    const entryLink = hero.locator(`a[href$="/${entry}"]`);
+    await expect(entryLink).toHaveCount(1);
+    await entryLink.click();
+    await expect(page).toHaveURL(path === "/zh" ? `/zh/${entry}` : `/${entry}`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 }
@@ -169,15 +199,20 @@ for (const path of ["/", "/zh"]) {
           () => document.documentElement.scrollWidth - innerWidth,
         ),
       ).toBeLessThanOrEqual(0);
-      const mark = wall.locator("mark").first();
-      const before = await mark.evaluate(
-        (el) => getComputedStyle(el).backgroundColor,
-      );
-      const swatch = page.locator('button[aria-label$="#4f46e5"]').first();
-      await swatch.click();
-      await expect
-        .poll(() => mark.evaluate((el) => getComputedStyle(el).backgroundColor))
-        .not.toBe(before);
+      // Highlights follow the brand color preview (only when the switcher is on).
+      if (landing.hero.colorSwitcher) {
+        const mark = wall.locator("mark").first();
+        const before = await mark.evaluate(
+          (el) => getComputedStyle(el).backgroundColor,
+        );
+        const swatch = page.locator('button[aria-label$="#4f46e5"]').first();
+        await swatch.click();
+        await expect
+          .poll(() =>
+            mark.evaluate((el) => getComputedStyle(el).backgroundColor),
+          )
+          .not.toBe(before);
+      }
     }
     expect(errors).toEqual([]);
   });
