@@ -27,6 +27,7 @@ export const clientNamespaces = [
   "Referrals",
   "Status",
   "Theme",
+  "Upload",
 ] as const;
 
 /** Picks the client-side subset of the full messages, for NextIntlClientProvider. */

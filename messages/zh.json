@@ -494,20 +494,7 @@
     },
     "upload": {
       "title": "上传文件",
-      "description": "文件从你的浏览器直接上传到存储服务。用此功能检查上传是否正常配置。",
-      "choose": "选择文件",
-      "uploading": "上传中…",
-      "done": "已上传：",
-      "errors": {
-        "invalid_type": "不支持此文件类型。",
-        "invalid_size": "此文件为空或无法读取大小。",
-        "too_large": "文件过大。",
-        "rate_limited": "上传过于频繁，请稍后再试。",
-        "upload_not_configured": "上传功能尚未配置。",
-        "put_failed": "上传到存储服务失败。请检查存储桶的 CORS 设置。",
-        "mismatch": "上传的文件与请求不符。",
-        "unknown": "出了点问题，请重试。"
-      }
+      "description": "文件从你的浏览器直接上传到存储服务。用此功能检查上传是否正常配置。"
     },
     "flags": {
       "title": "功能开关",
@@ -518,6 +505,28 @@
       "preview": "beta-preview 仅限管理员，因此只有管理员能看到这一行。",
       "soonOn": "beta-soon 已开启并向所有已注册用户开放。",
       "soonOff": "beta-soon 在 site.config.ts 中被禁用，因此对所有人评估为 false。"
+    }
+  },
+  "Upload": {
+    "choose": "选择文件",
+    "dropHint": "或拖到这里",
+    "maxSize": "不超过 {size}",
+    "uploading": "正在上传 {name}…",
+    "progress": "{name} 的上传进度",
+    "done": "已上传 {name}。",
+    "canceled": "已取消上传。",
+    "cancel": "取消",
+    "retry": "重试",
+    "remove": "移除",
+    "errors": {
+      "invalid_type": "不支持此文件类型。",
+      "invalid_size": "此文件为空或无法读取大小。",
+      "too_large": "文件过大。",
+      "rate_limited": "上传过于频繁，请稍后再试。",
+      "upload_not_configured": "上传功能尚未配置。",
+      "put_failed": "上传到存储服务失败。请检查存储桶的 CORS 设置。",
+      "mismatch": "上传的文件与请求不符。",
+      "unknown": "出了点问题，请重试。"
     }
   },
   "Demo": {
@@ -840,8 +849,7 @@
       "useImage": "使用图片：{prompt}",
       "uploaded": "已上传图片",
       "upload": "上传",
-      "remove": "移除",
-      "uploadFailed": "图片上传失败。请试用 PNG、JPEG 或 WebP 格式。"
+      "remove": "移除"
     },
     "video": {
       "model": "模型",

@@ -191,7 +191,7 @@ T2306 ─────────┴→ T2504
 ## T2504 upload-field
 
 - 分支 / worktree：`feat/upload-field` → `../sass-upload-field`
-- 依赖：T2501、T2306
+- 依赖：T2501（原先还依赖 T2306，2026-09-30 去掉，见下方「实施记录」）
 
 **问题**
 
@@ -210,13 +210,21 @@ T2306 ─────────┴→ T2504
 - 不做裁剪、压缩、断点续传、分片上传。
 - 不改服务端接口和 R2 存储结构。
 
+**实施记录**
+
+- **范围改由现有使用方决定**：原计划开工前读 T2306 的参考产品记录再定范围；按收敛顺序（先收敛其余任务、再在 production 上验证全部功能、最后做发行包独立项目），T2504 提前做。范围按仓库里已有的三个上传使用方来定：仪表盘上传示例、视频首帧、图生图参考图（T2313）——都是单张，都不需要裁剪。草案范围不变。
+- **两处迁移变成「钩子 + 两种 UI」**：`ImagePicker` 是 64px 的图块选择器（最近生成的图 + 上传），直接换成拖放区会破坏它的布局。所以状态放进 `useUpload()`（预检、进度、取消、重试、本地预览、防止旧请求覆盖新状态），`UploadField` 和 `ImagePicker` 都建在它上面。两处原来各自的 `uploading` / `uploadFailed` 状态都删掉了。`ImagePicker` 顺带获得了取消、重试、按错误码的提示（原来只有一句笼统的失败提示）。
+- **预检不引入 `schema.ts`**：服务端的 `validateUpload` 会把整个配置 schema（zod）带进客户端包，所以客户端预检 `precheckUpload` 只按调用方传入的 `accept` / `maxSize` 判断，错误码与服务端一致。
+- **文案**：新增 `Upload` 命名空间（中英），并加入 `clientNamespaces`（本地 e2e 先暴露了漏加：页面显示原始键名；`client-messages.test.ts` 同样会拦）。`Dashboard.upload` 里的错误文案挪到 `Upload.errors`，`Playground.picker.uploadFailed` 删除。
+- **e2e 在网络层伪造上传接口**：CI 没有 R2，`e2e/upload.spec.ts` 用 `page.route` 伪造 presign / PUT / complete；PUT 地址用同源路径，跨域地址会先被 CSP 的 `connect-src` 拦掉。真实 R2 往返留给 production 功能验证。
+
 **验收**
 
-- [ ] 两处迁移后本地的上传状态管理已删除
-- [ ] 类型 / 大小不合规时不发请求，直接提示；服务端拒绝时显示对应错误
-- [ ] 取消后不再调用 `/api/upload/complete`；重试复用同一个文件
-- [ ] 键盘可选择文件；拖放区有可访问名
-- [ ] `pnpm test`、`ui-shell` + `landing`、上传相关 e2e 通过
+- [x] 两处迁移后本地的上传状态管理已删除（`upload-example.tsx` 只剩外框；`image-picker.tsx` 用 `useUpload`）
+- [x] 类型 / 大小不合规时不发请求，直接提示；服务端拒绝时显示对应错误（单测 + e2e）
+- [x] 取消后不再调用 `/api/upload/complete`；重试复用同一个文件（单测 + e2e；重试断言两次 presign 的 size 相同）
+- [x] 键盘可选择文件；拖放区有可访问名（e2e 用 Enter 触发文件选择；拖放区是有名字的 `<button>`，限制说明挂在 `aria-describedby`）
+- [x] `pnpm test`、`ui-shell` + `landing`、上传相关 e2e 通过（本地一次跑出 `overflow.spec.ts` 登录页暗色 flaky，重复 3 轮 24/24 通过，与本改动无关）
 
 ---
 
