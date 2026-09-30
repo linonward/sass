@@ -581,3 +581,45 @@ T2306 的参考产品是「上传商品图 → 生成宣传图」，需要以用
 - [x] 别人的 `fileId`、未上传完成的文件、非图片文件、不接受参考图的模型：400，不扣分
 - [x] 适配器单测覆盖请求体里的 `{ image }` 顺序与 mask 的 warning
 - [x] `pnpm test` / `pnpm lint` / `pnpm typecheck` 绿；UI 改动跑 `e2e/ui-shell.spec.ts`
+
+---
+
+## T2314 doc-gaps
+
+- 分支 / worktree：`docs/doc-gaps` → `../sass-doc-gaps`
+- 依赖：T2605
+- 建议在 T2306 之前做：T2306 是作者只凭发行包和包内文档走一遍买家路径，文档里漏的步骤会直接变成卡点。
+
+**问题**
+
+T2605 翻译随包文档时，逐段对照了代码，发现几处文档与代码不一致。翻译 PR 只改了明显过时的说法，下面这些涉及补充事实，没有顺手改：
+
+`docs/billing.md`
+
+- 「Switching providers」第 1 步只列了 Creem / Stripe / Lemon Squeezy 的产品对象，没有 Waffo（`site.config.ts` 的 `productIdEnvPrefix` 里是 `waffo: "WAFFO_PRODUCT_ID"`，ID 形如 `PROD_…`）。
+- 第 2 步的环境变量块没有 Waffo：`WAFFO_MERCHANT_ID`、`WAFFO_PRIVATE_KEY`（必填）、`WAFFO_MODE`、`WAFFO_PRODUCT_ID_*`。
+- 「How they actually differ in the product」表没有 Waffo 一列（Waffo 的差异写在它自己的小节里，属于缺口不是错误）。
+- 「Which provider to use locally and in CI」里 fake 被禁用的条件不全：漏了 `WAFFO_MODE=prod`；写成「生产运行时一律失败」，实际 `ALLOW_FAKE_BILLING=1|true` 可以放行生产运行时（CI 就靠它），Vercel 与各家 live 模式的锁才放不开。以 `src/core/billing/env.ts` 的 `fakeBillingAllowed` 为准。
+- Waffo 小节后的退款段落只总结了三家，没说 Waffo：按退款的那笔付款回收积分，部分 / 全额，14 天内。
+- 代码注释同样没跟上：`billingServerEnv` 的文档注释没列 Waffo 变量，fake 相关的两处注释没提 `WAFFO_MODE=prod`（报错文案本身是对的）。
+
+`docs/i18n.md`
+
+- 「Adding a language」没提要在 `src/core/i18n/locales.ts` 的 `openGraphLocales` 里加一项（那里的注释要求每个新语言都加）。
+- 同一节拿 `zh` 当例子，但 `zh` 已经在 `locales` 里了，换一个还没有的语言做例子。
+- 「Testing」说 i18n 套件会「构建并启动」副本，实际本地跑的是 `next dev`，只有 CI 才构建再启动（`e2e/i18n/serve.ts`）。
+
+`README.md`
+
+- 开头介绍和「Quick start」列支付方式时只写 Creem / Stripe / Lemon Squeezy，没有 Waffo Pancake（上线清单里已经有它的小节）。
+
+**做**
+
+- 按代码补齐上面每一条；以代码为准，不改代码行为。注释的缺口（`billing/env.ts`）一起补。
+- 改完跑 `pnpm english:check`（随包文件保持英文）和全仓锚点检查（改标题时同步链接）。
+
+**验收**
+
+- [ ] 上面每一条都有对应修改，或在 PR 里说明为什么不改
+- [ ] 文档里出现的变量名、判断条件逐条能在代码里找到
+- [ ] `pnpm format:check`、`pnpm english:check` 绿
