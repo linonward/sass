@@ -127,7 +127,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `@tailwindcss/typography`         | 0.5.20  | dev  |
 | `@testing-library/dom`            | 10.4.2  | dev  |
 | `@testing-library/react`          | 16.3.3  | dev  |
-| `@types/node`                     | 24.13.6 | dev  |
+| `@types/node`                     | 24.19.0 | dev  |
 | `@types/pg`                       | 8.23.1  | dev  |
 | `@types/react`                    | 19.3.0  | dev  |
 | `@types/react-dom`                | 19.3.0  | dev  |
@@ -149,9 +149,9 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `eslint-config-prettier`          | 10.1.8  | dev  |
 | `husky`                           | 9.1.7   | dev  |
 | `jsdom`                           | 30.1.1  | dev  |
-| `lint-staged`                     | 17.5.1  | dev  |
+| `lint-staged`                     | 17.6.0  | dev  |
 | `next`                            | 16.3.6  | prod |
-| `next-intl`                       | 4.14.6  | prod |
+| `next-intl`                       | 4.14.7  | prod |
 | `next-themes`                     | 0.4.6   | prod |
 | `pg`                              | 8.23.0  | prod |
 | `prettier`                        | 3.9.9   | dev  |
@@ -165,22 +165,22 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `stripe`                          | 22.6.2  | prod |
 | `tailwindcss`                     | 4.3.3   | dev  |
 | `tw-animate-css`                  | 1.4.0   | prod |
-| `vitest`                          | 5.0.1   | dev  |
-| `ws`                              | 8.21.3  | prod |
+| `vitest`                          | 5.0.2   | dev  |
+| `ws`                              | 8.22.0  | prod |
 | `zod`                             | 4.6.5   | prod |
 
 ### Apache-2.0 (21)
 
 | Package                          | Version  | Type |
 | -------------------------------- | -------- | ---- |
-| `@ai-sdk/alibaba`                | 2.0.54   | prod |
-| `@ai-sdk/anthropic`              | 4.0.62   | prod |
-| `@ai-sdk/google`                 | 4.0.79   | prod |
-| `@ai-sdk/openai`                 | 4.0.74   | prod |
+| `@ai-sdk/alibaba`                | 2.0.56   | prod |
+| `@ai-sdk/anthropic`              | 4.0.65   | prod |
+| `@ai-sdk/google`                 | 4.0.82   | prod |
+| `@ai-sdk/openai`                 | 4.0.78   | prod |
 | `@ai-sdk/provider`               | 4.0.18   | prod |
-| `@ai-sdk/react`                  | 4.0.116  | prod |
-| `@aws-sdk/client-s3`             | 3.1139.0 | prod |
-| `@aws-sdk/s3-request-presigner`  | 3.1139.0 | prod |
+| `@ai-sdk/react`                  | 4.0.119  | prod |
+| `@aws-sdk/client-s3`             | 3.1141.0 | prod |
+| `@aws-sdk/s3-request-presigner`  | 3.1141.0 | prod |
 | `@opentelemetry/api`             | 1.9.1    | prod |
 | `@opentelemetry/api-logs`        | 0.222.0  | prod |
 | `@opentelemetry/instrumentation` | 0.222.0  | prod |
@@ -190,7 +190,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `@opentelemetry/sdk-trace-base`  | 2.11.0   | prod |
 | `@playwright/test`               | 1.63.0   | dev  |
 | `@vercel/speed-insights`         | 2.0.0    | prod |
-| `ai`                             | 7.0.113  | prod |
+| `ai`                             | 7.0.116  | prod |
 | `class-variance-authority`       | 0.7.1    | prod |
 | `drizzle-orm`                    | 0.45.3   | prod |
 | `typescript`                     | 6.0.3    | dev  |
