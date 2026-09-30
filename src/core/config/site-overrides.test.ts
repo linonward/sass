@@ -60,3 +60,53 @@ describe("downloadable files switch (SITE_DOWNLOADS)", () => {
     }
   });
 });
+
+describe("contact address (SITE_CONTACT_EMAIL)", () => {
+  test("without it, the legal pages and Reply-To keep the shipped placeholder", async () => {
+    vi.stubEnv("SITE_CONTACT_EMAIL", "");
+    const config = await loadConfig();
+    expect(config.legal.contactEmail).toBe("support@example.com");
+    expect(config.email.replyTo).toBe("support@example.com");
+  });
+
+  test("one variable sets both the legal contact address and the Reply-To", async () => {
+    vi.stubEnv("SITE_CONTACT_EMAIL", " help@example.org ");
+    const config = await loadConfig();
+    expect(config.legal.contactEmail).toBe("help@example.org");
+    expect(config.email.replyTo).toBe("help@example.org");
+    const { placeholderIssues } = await import("./sentinels");
+    const paths = placeholderIssues(config).map((issue) => issue.path);
+    expect(paths).not.toContain("legal.contactEmail");
+    expect(paths).not.toContain("email.replyTo");
+  });
+
+  test("a malformed address fails config validation at startup", async () => {
+    vi.stubEnv("SITE_CONTACT_EMAIL", "not-an-email");
+    await expect(loadConfig()).rejects.toThrow(/contactEmail/);
+  });
+});
+
+describe("email sender name follows the site name (SITE_NAME)", () => {
+  test("without it, both keep the shipped placeholder, which the name check reports", async () => {
+    vi.stubEnv("SITE_NAME", "");
+    const config = await loadConfig();
+    expect(config.name).toBe("Acme");
+    expect(config.email.fromName).toBe("Acme");
+    // No separate fromName check: the "name" issue covers the sender name too.
+    const { placeholderIssues } = await import("./sentinels");
+    expect(placeholderIssues(config).map((issue) => issue.path)).toContain(
+      "name",
+    );
+  });
+
+  test("SITE_NAME renames the site and the email sender together", async () => {
+    vi.stubEnv("SITE_NAME", "Example Corp");
+    const config = await loadConfig();
+    expect(config.name).toBe("Example Corp");
+    expect(config.email.fromName).toBe("Example Corp");
+    const { placeholderIssues } = await import("./sentinels");
+    expect(placeholderIssues(config).map((issue) => issue.path)).not.toContain(
+      "name",
+    );
+  });
+});

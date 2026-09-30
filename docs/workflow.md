@@ -60,6 +60,7 @@ EMAIL_TRANSPORT=file E2E_PORT=3100 \
   CREEM_PRODUCT_ID_PRO=prod_ci_fake_pro CREEM_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
   SITE_NAME="CI Site" SITE_DOMAIN=ci.example.test \
   SITE_LEGAL_NAME="CI Legal Entity" SITE_EMAIL_FROM=noreply@ci.example.test \
+  SITE_CONTACT_EMAIL=support@ci.example.test \
   npx playwright test
 ```
 
@@ -74,7 +75,7 @@ EMAIL_TRANSPORT=file E2E_PORT=3100 \
 - `BILLING_PROVIDER=fake` 让站点用站内的假服务商：`e2e/pricing.spec.ts` 那条「结账 → webhook → 积分到账」的链路全靠它，而那个文件开头就是 `test.skip(process.env.BILLING_PROVIDER !== "fake", …)` —— **不设不会红，是整条链路静默跳过**，覆盖没了而汇总依然全绿。不设时站点还按 `site.config.ts` 里的真实服务商启动，`e2e/billing.spec.ts` 退回「未配置」分支。
 - `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`：出厂的产品 ID 是占位值，`src/core/billing/checkout.ts` 的 `PLACEHOLDER_PRODUCT` 判据会把结账挡成 `plan_not_configured`（503）。只设了 `BILLING_PROVIDER=fake`、忘了这两条，`pricing.spec.ts` 的购买流程就会红在 `buy()` 那一步 —— 点完套餐页面不动。
 - `BILLING_SUCCESS_TIMEOUT_MS`：成功页默认等 webhook 60 秒，`pricing.spec.ts` 自己的等待上限也按它算（`timeoutMs + 5000`），不设时会超过 Playwright 默认的 30 秒用例上限。
-- `SITE_NAME` / `SITE_DOMAIN` / `SITE_LEGAL_NAME` / `SITE_EMAIL_FROM` 和上面那两个产品 ID 是**同一组**：`e2e/onboarding.spec.ts` 的 `placeholdersGone` 按「出厂占位值还在不在」分叉断言，只设一半（比如设了产品 ID、没设 `SITE_NAME`）两边都不成立 —— 清单里定价那步已经是 done，断言却按「占位值还在」算，于是清单那几条用例自相矛盾地红。
+- `SITE_NAME` / `SITE_DOMAIN` / `SITE_LEGAL_NAME` / `SITE_EMAIL_FROM` / `SITE_CONTACT_EMAIL` 和上面那两个产品 ID 是**同一组**：`e2e/onboarding.spec.ts` 的 `placeholdersGone` 按「出厂占位值还在不在」分叉断言，只设一半（比如设了产品 ID、没设 `SITE_NAME`）两边都不成立 —— 清单里定价那步已经是 done，断言却按「占位值还在」算，于是清单那几条用例自相矛盾地红。
 - 单独跑某个套件：`pnpm test:e2e:acquisition`（还有 `test:e2e:flags`），它们各自带 config，同样认上面的环境变量。
 - `E2E_PORT` 换一个端口，避免和你正在跑的 `pnpm dev`（默认 3000）撞车 —— `reuseExistingServer` 会直接复用那个服务器，测的就不是当前 worktree 的代码。
 - `ci.yml` 里还有三条**本地用不上**的：`ALLOW_FAKE_BILLING`、`ALLOW_UNRATELIMITED`、`ALLOW_NON_RESEND_EMAIL` —— 都是生产运行时的闸门（`NODE_ENV=development` 下 fake 本来就放行；缺 Redis 只在自托管生产才拒绝请求；`console` / `file` 两种邮件只在生产运行时才需要显式放行），本地 dev 不是生产。想在本地按生产构建跑一遍（`pnpm build` 后 `CI=1 npx playwright test`，那时 webServer 换成 `pnpm start`）就得把这三条也补上。

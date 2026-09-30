@@ -13,10 +13,11 @@ import { defaultLocale, locales } from "./src/core/i18n/locales";
 /**
  * Site configuration. Edit the literals in this file directly.
  *
- * Six fields can also be overridden by environment variables. Each one is written as
+ * Nine fields can also be overridden by environment variables. Each one is written as
  * `envOverride(VAR_NAME) ?? placeholder literal`:
- * `name` (`SITE_NAME`), `domain` (`SITE_DOMAIN`), `email.fromAddress` (`SITE_EMAIL_FROM`),
- * `legal.companyName` (`SITE_LEGAL_NAME`), and the `providerProductId` of the two paid plans
+ * `name` and `email.fromName` (both from `SITE_NAME`, see siteName below), `domain` (`SITE_DOMAIN`), `email.fromAddress` (`SITE_EMAIL_FROM`),
+ * `legal.companyName` (`SITE_LEGAL_NAME`), `legal.contactEmail` and `email.replyTo` (both from
+ * `SITE_CONTACT_EMAIL`, see contactEmail below), and the `providerProductId` of the two paid plans
  * (the variable name follows the active payment provider, see effectiveBillingProvider below:
  * creem uses `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`, stripe uses
  * `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`, lemonsqueezy uses
@@ -112,8 +113,23 @@ const productIdEnvPrefix: Record<BillingProviderName, string> = {
  */
 const placeholderProductId = (plan: string) => `prod_placeholder_${plan}`;
 
+/**
+ * The product name. It is also the default sender name of transactional email (`email.fromName`),
+ * so `SITE_NAME` renames the site and the "From" line together; give `fromName` its own literal if
+ * mail should come from a different name (e.g. "Acme Support").
+ */
+const siteName = envOverride("SITE_NAME") ?? "Acme";
+
+/**
+ * The address people write to: shown on the legal pages (`legal.contactEmail`) and used as the
+ * Reply-To of transactional email (`email.replyTo`). One variable feeds both so a reply to a
+ * sign-in code lands in the same inbox the privacy policy points to. If you want them to differ,
+ * give either field its own literal.
+ */
+const contactEmail = envOverride("SITE_CONTACT_EMAIL") ?? "support@example.com";
+
 const config = defineConfig({
-  name: envOverride("SITE_NAME") ?? "Acme",
+  name: siteName,
   // Placeholder domain; change it to your own (without the protocol). The demo site overrides it
   // with SITE_DOMAIN.
   domain: envOverride("SITE_DOMAIN") ?? "example.com",
@@ -187,7 +203,7 @@ const config = defineConfig({
   // before launch.
   legal: {
     companyName: envOverride("SITE_LEGAL_NAME") ?? "Acme Inc.",
-    contactEmail: "support@example.com",
+    contactEmail,
     jurisdiction: "the State of Delaware, United States",
     effectiveDate: "2026-01-01",
   },
@@ -328,11 +344,13 @@ const config = defineConfig({
   // Sender details for transactional email (sign-in verification codes, welcome email, etc.).
   // The sending domain must be verified in Resend.
   email: {
-    fromName: "Acme",
+    // Follows SITE_NAME (see siteName above).
+    fromName: siteName,
     // Change to a sender address you have verified in Resend; the demo site overrides it with
     // SITE_EMAIL_FROM.
     fromAddress: envOverride("SITE_EMAIL_FROM") ?? "noreply@example.com",
-    replyTo: "support@example.com",
+    // Follows SITE_CONTACT_EMAIL (see contactEmail above).
+    replyTo: contactEmail,
   },
   // Settings for email verification-code sign-in (set explicitly rather than relying on plugin
   // defaults). expiresIn and resendCooldown are in seconds.

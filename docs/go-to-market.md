@@ -51,7 +51,7 @@ I'll be sharing demos and the build process. What takes the most time when you t
 
 - README 和推广资料使用 OnwardKit；买家应用的默认名称仍是 Acme 占位值。
 - 官方演示在本地环境或部署环境设置 `SITE_NAME=OnwardKit`，重新构建／启动。导航、页脚、页面标题、分享图和邮件沿用现有站点配置读取名称，不在组件内写死品牌。
-- `SITE_DOMAIN`、`SITE_LEGAL_NAME`、`SITE_EMAIL_FROM` 分别填写实际域名、法律主体、已验证的发信地址；产品名不能替代法律主体。
+- `SITE_DOMAIN`、`SITE_LEGAL_NAME`、`SITE_EMAIL_FROM`、`SITE_CONTACT_EMAIL` 分别填写实际域名、法律主体、已验证的发信地址、客服联系地址（法律页展示 + 邮件 Reply-To）；产品名不能替代法律主体。
 - 部署验收：检查中英首页标题、导航和页脚名称、`/opengraph-image`，并确认 375px 下名称、语言和主题按钮无挤压或横向溢出。
 - 仓库地址与更新清单中的 `sass-template` 保持原标识，避免破坏买家升级路径。
 

@@ -775,6 +775,35 @@ CI 的 e2e 覆盖了页面和流程，但外部服务全是替身：fake 支付�
 
 ---
 
+## T2320 contact-email
+
+- 分支 / worktree：`fix/contact-email` → `../sass-contact-email`
+- 依赖：—
+- T2319 在 production（`https://sass.linonward.com`）验证时发现（2026-09-30）；发件人名称是同一天在同类问题上追加的。
+
+**问题**
+
+`site.config.ts` 里 `legal.contactEmail` 和 `email.replyTo` 写死为 `support@example.com`，没有环境变量覆盖（`name` / `domain` / `legal.companyName` / `email.fromAddress` 都走 `envOverride("SITE_…")`），占位值哨兵 `placeholderIssues` 也不检查这两项。结果 production 的 `/privacy`、`/terms`、`/refund` 显示 `support@example.com`，事务邮件的回复也发到 `support@example.com`，生产构建却照样通过。
+
+同类：`email.fromName` 写死为 `"Acme"`，没跟 `name` 走。production 设了 `SITE_NAME=OnwardKit`、邮件正文已经是 OnwardKit，收到的邮件发件人却是 `Acme <noreply@sass.linonward.com>`。
+
+**做**
+
+- `site.config.ts` 加 `SITE_CONTACT_EMAIL`：一个变量同时给 `legal.contactEmail` 和 `email.replyTo`（法律页写的联系地址和邮件回复落到同一个收件箱；要分开就直接改字面量，不再多加一个变量）。
+- `email.fromName` 默认取站点名（`site.config.ts` 抽出 `siteName`，`name` 和 `fromName` 共用），`SITE_NAME` 一并改掉发件人名称；不另加环境变量，想用别的发件人名称就给 `fromName` 写字面量。哨兵不单独查 `fromName`：它跟着 `name`，`name` 的检查通过时 "Acme" 发件人名也就没了（`sentinels.ts` 注释写明）。
+- `src/core/config/sentinels.ts` 把两项加进占位值检查，提示指向 `SITE_CONTACT_EMAIL`；`email.replyTo` 是可选字段，未设置不算占位值。
+- CI（`.github/workflows/ci.yml`）补 `SITE_CONTACT_EMAIL: support@ci.example.test`，否则生产构建被哨兵拦下，`e2e/onboarding.spec.ts` 的 `placeholdersGone` 也会翻转；`docs/workflow.md`、`docs/agent-guide.md` 的本地 e2e 命令同步。
+- `.env.example`、README（覆盖变量清单、占位值哨兵、`email` 字段说明）、`docs/starter-guide.md`（占位值个数 4 → 6）、`docs/go-to-market.md` 补上新变量。
+
+**验收**
+
+- [x] 单测：哨兵报出两项新字段、只剩联系地址时仍拦、`replyTo` 未设置不报；`SITE_CONTACT_EMAIL` 同时覆盖两个字段、非法地址启动即失败；`SITE_NAME` 同时改 `name` 和 `email.fromName`，未设置时两者都是 "Acme" 且哨兵报出 `name`
+- [x] 不设 `SITE_CONTACT_EMAIL` 时 `pnpm build`（其余 CI 变量齐全）失败并列出 `legal.contactEmail`、`email.replyTo`；设了之后构建通过，法律页预渲染出覆盖后的地址
+- [x] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm english:check`、prettier 绿
+- [x] PR 的「New env vars」写明 production 需要设 `SITE_CONTACT_EMAIL`（法律页是静态预渲染的，设完要重新部署）
+
+---
+
 ## T2321 avatar-csp
 
 - 分支 / worktree：`fix/avatar-csp` → `../sass-avatar-csp`

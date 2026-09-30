@@ -12,7 +12,12 @@ export type PlaceholderIssue = {
 
 /**
  * The shipped placeholder values. If the buyer launches without changing them, the site shows
- * "Acme", example.com, and an example.com sender address.
+ * "Acme", example.com, an example.com sender address, and support@example.com as the contact
+ * address on the legal pages (and as the Reply-To of every transactional email).
+ *
+ * `email.fromName` is not checked on its own: site.config.ts derives it from `name` (siteName), so
+ * the "Acme" sender name goes away exactly when the `name` check passes. A buyer who gives it a
+ * separate literal has already chosen a sender name on purpose.
  *
  * All of these fields can be overridden by environment variables (see the top of site.config.ts),
  * so a demo site doesn't have to commit real values to the repo — and they don't end up in the
@@ -22,7 +27,7 @@ export function placeholderIssues(config: SiteConfig): PlaceholderIssue[] {
   const issues: PlaceholderIssue[] = [];
   const check = (
     path: string,
-    value: string,
+    value: string | undefined,
     placeholder: string,
     hint: string,
   ) => {
@@ -52,6 +57,18 @@ export function placeholderIssues(config: SiteConfig): PlaceholderIssue[] {
     config.email.fromAddress,
     "noreply@example.com",
     "change it to your sender address (or set SITE_EMAIL_FROM)",
+  );
+  check(
+    "legal.contactEmail",
+    config.legal.contactEmail,
+    "support@example.com",
+    "change it to the address customers can reach you at (or set SITE_CONTACT_EMAIL)",
+  );
+  check(
+    "email.replyTo",
+    config.email.replyTo,
+    "support@example.com",
+    "change it to the address that should receive replies (or set SITE_CONTACT_EMAIL)",
   );
 
   return issues;
