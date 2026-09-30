@@ -5,7 +5,6 @@ import {
   diffColumn,
   parseDotenv,
   parseWorkflowEnv,
-  SENSITIVE_MARKER,
   updateDotenv,
   VERCEL_SENSITIVE,
 } from "./lib.mjs";
@@ -53,21 +52,20 @@ test("diffColumn classifies every case and never proposes deletions", () => {
     "EMPTY_BOTH",
     "UNTRACKED",
     "SECRET",
-    "MARKED",
+    "SECRET_EMPTY",
   ];
   const table = {
     SAME: "a",
     CHANGED: "new",
     NEW: "x",
     SECRET: "real",
-    MARKED: SENSITIVE_MARKER,
   };
   const target = {
     SAME: "a",
     CHANGED: "old",
     UNTRACKED: "present",
     SECRET: VERCEL_SENSITIVE,
-    MARKED: VERCEL_SENSITIVE,
+    SECRET_EMPTY: VERCEL_SENSITIVE,
     EXTRA: "1",
     VERCEL_ENV: "production",
   };
@@ -75,8 +73,10 @@ test("diffColumn classifies every case and never proposes deletions", () => {
     { name: "CHANGED", kind: "change" },
     { name: "NEW", kind: "add" },
     { name: "UNTRACKED", kind: "untracked" },
-    { name: "SECRET", kind: "unverifiable", sensitive: true },
-    { name: "MARKED", kind: "unverifiable", sensitive: true },
+    // Can't be compared: --apply prod writes the table's value again.
+    { name: "SECRET", kind: "sensitive" },
+    // Empty in the table: left alone, only reported.
+    { name: "SECRET_EMPTY", kind: "untracked" },
     { name: "EXTRA", kind: "missing_row" },
   ]);
 });

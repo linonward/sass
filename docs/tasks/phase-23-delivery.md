@@ -852,3 +852,25 @@ T2319 在 production（https://sass.linonward.com）验证时发现：用 Google
 - [x] Claude Code skill `.claude/skills/env-sync/`，`release-package.sh` 排除 `.claude`
 - [x] 按 skill 流程完整走一遍：改表格 → 核对报出 2 个缺失 → 确认后 `--apply prod --only SITE_OVERLAY_DIR,SITE_DESCRIPTION` → 复核 in sync；两者按表格「敏感」未勾存为 Config（T2408 的生产变量就此补上，重新部署后生效）
 - [x] 走查中修正：`+record-search` 需 `--format json` 且为子串匹配；新变量不再一律存为敏感（否则以后无法核对），改按表格「敏感」列
+
+## T2323 env-sync-overwrite
+
+- 分支 / worktree：`fix/env-sync-overwrite` → `../sass-env-sync-overwrite`
+- 依赖：T2322，已合入 `main`。
+
+**问题**
+
+T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写，表格里还放了「（Vercel 敏感变量，无法读取）」占位文本，要 `--include-sensitive` 才覆盖。这和「多维表格是唯一来源」矛盾；另外 `--apply local` 只在新建 `.env.local` 时设 600，已有文件仍是 644。
+
+**决定**
+
+- 表格覆盖目标：`--apply prod` 写入表格里所有有值的 Prod 格子，值已相同的跳过；敏感变量无法比对，每次都重写。去掉 `--include-sensitive` 和占位文本。
+- 存储类型按表格「敏感」列，不再沿用 Vercel 现有类型。
+- 表格里 16 个占位格子清空（空格子跳过，不会把占位文本写进生产），等填真实值。
+- `--apply local` 每次写后 `chmod 600`。
+
+**验收**
+
+- [x] `lib.test.mjs` 4 项通过（敏感变量归为 `sensitive`、空格子为 `untracked`）
+- [x] 清空占位后核对：16 个敏感变量显示为「表格为空、跳过」，`--apply prod` 不会碰它们
+- [x] 本地、CI 仍 in sync

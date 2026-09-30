@@ -172,6 +172,7 @@
 | T2320                       | contact-email           | `fix/contact-email`            | —                             | done |
 | T2321                       | avatar-csp              | `fix/avatar-csp`               | —                             | done |
 | T2322                       | env-sync                | `chore/env-sync`               | —                             | done |
+| T2323                       | env-sync-overwrite      | `fix/env-sync-overwrite`       | T2322                         | done |
 | **阶段 24：Landing 重设计** |                         |                                |                               |      |
 | T2401                       | landing-redesign        | `feat/landing-redesign`        | T105、T605、T1803             | done |
 | T2402                       | landing-seo             | `fix/landing-seo`              | T2401                         | done |

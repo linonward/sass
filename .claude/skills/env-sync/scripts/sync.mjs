@@ -6,15 +6,14 @@
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply local   write the Local column into .env.local
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply prod    write the Prod column to Vercel production
 //     --only A,B              limit to these variables
-//     --include-sensitive     with --apply prod: also overwrite variables Vercel stores as
-//                             sensitive (their current value can't be read, so it can't be diffed)
 //
-// Rules: empty cells are skipped (never deletes anything), ci.yml is only checked (it ships to
-// buyers and holds test values), and cells holding the "can't read" marker are skipped.
+// Rules: the table overwrites Vercel production and .env.local; empty cells are skipped (never
+// deletes anything); ci.yml is only checked (it ships to buyers and holds test values).
 // Needs `lark-cli` logged in as you and `vercel` linked to the project (see .claude/skills/env-sync/SKILL.md).
 
 import { execFileSync } from "node:child_process";
 import {
+  chmodSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -29,7 +28,6 @@ import {
   parseDotenv,
   parseWorkflowEnv,
   updateDotenv,
-  VERCEL_SENSITIVE,
 } from "./lib.mjs";
 
 const BASE_TOKEN = "Lk9Pb1ogSagQemszfgycPS6nnHc";
@@ -44,7 +42,6 @@ const { values: args } = parseArgs({
   options: {
     apply: { type: "string" },
     only: { type: "string" },
-    "include-sensitive": { type: "boolean", default: false },
   },
 });
 if (args.apply && !["local", "prod"].includes(args.apply)) {
@@ -156,7 +153,8 @@ const labels = {
   add: "missing in target",
   change: "differs",
   untracked: "set in target, empty in table (skipped)",
-  unverifiable: "can't compare (sensitive)",
+  sensitive:
+    "sensitive on Vercel, can't compare (rewritten on every --apply prod)",
   missing_row: "set in target, no row in table",
 };
 
@@ -171,7 +169,7 @@ function report(title, diffs) {
     const names = shown.filter((d) => d.kind === kind).map((d) => d.name);
     if (names.length) console.log(`  ${labels[kind]}: ${names.join(", ")}`);
   }
-  // Only real differences count as drift; reports about untracked/unverifiable values don't.
+  // Only real differences count as drift; reports about untracked/sensitive values don't.
   return shown.filter((d) => d.kind === "add" || d.kind === "change").length;
 }
 
@@ -215,6 +213,8 @@ if (args.apply === "local") {
   );
   const before = existsSync(localFile) ? readFileSync(localFile, "utf8") : "";
   writeFileSync(localFile, updateDotenv(before, values), { mode: 0o600 });
+  // `mode` only applies when the file is created; tighten an existing file too.
+  chmodSync(localFile, 0o600);
   console.log(`.env.local updated: ${Object.keys(values).join(", ")}`);
   report(
     "remaining",
@@ -223,32 +223,20 @@ if (args.apply === "local") {
   process.exit(0);
 }
 
-// --apply prod
-const writable = filter(prodDiff).filter(
-  (d) =>
-    d.kind === "add" ||
-    d.kind === "change" ||
-    // Sensitive on Vercel and a real value in the table: overwrite only when asked to.
-    (d.kind === "unverifiable" &&
-      args["include-sensitive"] &&
-      prod[d.name] === VERCEL_SENSITIVE &&
-      table.prod[d.name] &&
-      !table.prod[d.name].startsWith("（")),
+// --apply prod: the table wins. Every non-empty Prod cell that differs, is missing, or can't be
+// compared (Vercel sensitive) is written; values already equal are left alone.
+const writable = filter(prodDiff).filter((d) =>
+  ["add", "change", "sensitive"].includes(d.kind),
 );
 if (writable.length === 0) {
-  console.log(
-    "Vercel production already matches the table (sensitive values not compared).",
-  );
+  console.log("Vercel production already matches the table.");
   report("prod (Vercel production)", prodDiff);
   process.exit(0);
 }
 for (const { name } of writable) {
-  // Keep the variable's current storage type; a new variable follows the table's 敏感 checkbox
-  // (a sensitive variable can never be read back, so it could never be compared again).
-  const sensitive =
-    prod[name] === undefined
-      ? table.sensitive[name]
-      : prod[name] === VERCEL_SENSITIVE;
+  // Storage type follows the table's 敏感 checkbox too. A sensitive variable can never be read
+  // back, so it's rewritten on every --apply prod.
+  const sensitive = table.sensitive[name];
   // The value goes in on stdin, not argv, so it never shows up in the process list.
   run(
     "vercel",
