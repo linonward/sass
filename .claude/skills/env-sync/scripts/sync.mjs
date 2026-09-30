@@ -5,10 +5,10 @@
 //   node .claude/skills/env-sync/scripts/sync.mjs                 check local, ci and prod; exit 1 on drift
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply local   write the Local column into .env.local
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply prod    write the Prod column to Vercel production
-//   node .claude/skills/env-sync/scripts/sync.mjs --apply keys    add a table row for every .env.example key missing one
 //     --only A,B              limit to these variables
 //
-// .env.example owns the list of keys; the table owns their values.
+// The table is the single source of both keys and values. .env.example (the buyers' list) is only
+// checked against it: a key it declares that the table lacks gets a ⚠️ warning.
 // Rules: the table overwrites Vercel production and .env.local; empty cells are skipped (never
 // deletes anything); ci.yml is only checked (it ships to buyers and holds test values).
 // Needs `lark-cli` logged in as you and `vercel` linked to the project (see .claude/skills/env-sync/SKILL.md).
@@ -30,7 +30,7 @@ import {
   parseDotenv,
   parseWorkflowEnv,
   parseKeys,
-  diffKeys,
+  missingKeys,
   updateDotenv,
 } from "./lib.mjs";
 
@@ -49,10 +49,8 @@ const { values: args } = parseArgs({
     only: { type: "string" },
   },
 });
-if (args.apply && !["local", "prod", "keys"].includes(args.apply)) {
-  console.error(
-    '--apply takes "local", "prod" or "keys" (ci.yml is check-only).',
-  );
+if (args.apply && !["local", "prod"].includes(args.apply)) {
+  console.error('--apply takes "local" or "prod" (ci.yml is check-only).');
   process.exit(2);
 }
 const only = args.only
@@ -179,55 +177,18 @@ function report(title, diffs) {
 }
 
 const table = readTable();
-const keyDiff = diffKeys({
+// A key .env.example declares (so the code uses it) but the table doesn't manage yet. Warned on
+// every run, whatever the mode; extra table keys (integration- or CI-only) are fine.
+const unmanaged = missingKeys({
   declared: parseKeys(readFileSync(exampleFile, "utf8")),
   rows: table.names,
-});
-
-// .env.example owns the keys: a table row it doesn't declare is either a key someone forgot to add
-// there, or a leftover to remove from the table. Warn on every run, whatever the mode.
-const extraKeys = only
-  ? keyDiff.extra.filter((n) => only.has(n))
-  : keyDiff.extra;
-for (const name of extraKeys) {
+}).filter((n) => !only || only.has(n));
+for (const name of unmanaged) {
   console.warn(
-    `⚠️  ${name} is in the table but not in .env.example: add it to .env.example, or delete the row if it's no longer used.`,
+    `⚠️  ${name} is in .env.example but not in the table: add a row for it (${BASE_URL}).`,
   );
 }
-if (extraKeys.length) console.warn("");
-
-if (args.apply === "keys") {
-  if (keyDiff.missing.length === 0) {
-    console.log("Every .env.example key already has a table row.");
-    process.exit(0);
-  }
-  const created = JSON.parse(
-    run("lark-cli", [
-      "base",
-      "+record-batch-create",
-      "--as",
-      "user",
-      "--base-token",
-      BASE_TOKEN,
-      "--table-id",
-      TABLE,
-      "--json",
-      JSON.stringify({
-        create_records: keyDiff.missing.map((name) => ({
-          变量名: name,
-          备注: "从 .env.example 补录：填分组、说明、敏感和各列的值",
-        })),
-      }),
-    ]),
-  );
-  if (created.ok === false) {
-    console.error(`lark-cli: ${JSON.stringify(created.error)}`);
-    process.exit(2);
-  }
-  console.log(`Added table rows: ${keyDiff.missing.join(", ")}`);
-  console.log(`Fill in their values: ${BASE_URL}`);
-  process.exit(0);
-}
+if (unmanaged.length) console.warn("");
 
 const rows = only ? table.names.filter((n) => only.has(n)) : table.names;
 const local = existsSync(localFile)
@@ -242,23 +203,13 @@ const prodDiff = diffColumn({ table: table.prod, target: prod, rows });
 
 if (!args.apply) {
   console.log(`Table: ${BASE_URL}\n`);
-  const keysMissing = only
-    ? keyDiff.missing.filter((n) => only.has(n))
-    : keyDiff.missing;
-  // Rows missing from .env.example were already warned about above.
-  console.log(
-    keysMissing.length
-      ? `keys (.env.example → table):\n  in .env.example, no table row: ${keysMissing.join(", ")}`
-      : "keys (.env.example → table): in sync",
-  );
   const drift =
-    keysMissing.length +
     report("local (.env.local)", localDiff) +
     report("ci (.github/workflows/ci.yml, check only)", ciDiff) +
     report("prod (Vercel production)", prodDiff);
   if (drift > 0) {
     console.log(
-      "\nApply with --apply keys / --apply local / --apply prod; update ci.yml by hand.",
+      "\nApply with --apply local / --apply prod; update ci.yml by hand.",
     );
     process.exit(1);
   }

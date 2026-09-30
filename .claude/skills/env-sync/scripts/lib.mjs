@@ -28,10 +28,7 @@ export function parseDotenv(text) {
   return out;
 }
 
-/**
- * Variable names declared in .env.example (`NAME=` lines, values ignored). .env.example owns the
- * list of keys; the table owns their values.
- */
+/** Variable names declared in .env.example (`NAME=` lines, values and comments ignored). */
 export function parseKeys(text) {
   const names = [];
   for (const line of text.split("\n")) {
@@ -41,14 +38,13 @@ export function parseKeys(text) {
   return names;
 }
 
-/** Keys in .env.example with no table row (`missing`), and table rows not in it (`extra`). */
-export function diffKeys({ declared, rows }) {
+/**
+ * Keys .env.example declares that have no table row. The table is the single source of keys, so
+ * the reverse (a table row .env.example doesn't list) is normal and not reported.
+ */
+export function missingKeys({ declared, rows }) {
   const listed = new Set(rows);
-  const known = new Set(declared);
-  return {
-    missing: declared.filter((name) => !listed.has(name)),
-    extra: rows.filter((name) => !known.has(name)),
-  };
+  return declared.filter((name) => !listed.has(name));
 }
 
 /**

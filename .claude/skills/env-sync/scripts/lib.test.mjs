@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import {
   diffColumn,
-  diffKeys,
+  missingKeys,
   parseDotenv,
   parseKeys,
   parseWorkflowEnv,
@@ -100,12 +100,12 @@ test("parseKeys reads names from .env.example, ignoring values and comments", ()
   );
 });
 
-test("diffKeys: .env.example owns the keys, the table only the values", () => {
+test("missingKeys: only .env.example keys without a table row", () => {
   assert.deepEqual(
-    diffKeys({
+    missingKeys({
       declared: ["A", "B", "NEW"],
       rows: ["A", "B", "INTEGRATION_ONLY"],
     }),
-    { missing: ["NEW"], extra: ["INTEGRATION_ONLY"] },
+    ["NEW"],
   );
 });
