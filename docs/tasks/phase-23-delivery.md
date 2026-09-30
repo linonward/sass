@@ -850,4 +850,5 @@ T2319 在 production（https://sass.linonward.com）验证时发现：用 Google
 - [x] `--apply local` 在空 worktree 生成的 `.env.local` 与主 checkout 的逐项相同，文件权限 600
 - [x] 无差异时 `--apply prod` 不写 Vercel；临时目录退出即删
 - [x] Claude Code skill `.claude/skills/env-sync/`，`release-package.sh` 排除 `.claude`
-- [ ] 第一次真实 `--apply prod`（下次改生产变量时，例如补 `SITE_OVERLAY_DIR`）
+- [x] 按 skill 流程完整走一遍：改表格 → 核对报出 2 个缺失 → 确认后 `--apply prod --only SITE_OVERLAY_DIR,SITE_DESCRIPTION` → 复核 in sync；两者按表格「敏感」未勾存为 Config（T2408 的生产变量就此补上，重新部署后生效）
+- [x] 走查中修正：`+record-search` 需 `--format json` 且为子串匹配；新变量不再一律存为敏感（否则以后无法核对），改按表格「敏感」列

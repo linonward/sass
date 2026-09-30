@@ -99,6 +99,8 @@ function readTable() {
       "CI",
       "--field-id",
       "Prod",
+      "--field-id",
+      "敏感",
       "--limit",
       "200",
       "--format",
@@ -122,7 +124,7 @@ function readTable() {
     .split("\n")
     .filter(Boolean)
     .map((l) => JSON.parse(l));
-  const table = { names: [], local: {}, ci: {}, prod: {} };
+  const table = { names: [], local: {}, ci: {}, prod: {}, sensitive: {} };
   for (const row of rows) {
     const name = text(row["变量名"])?.trim();
     if (!name) continue;
@@ -130,6 +132,7 @@ function readTable() {
     table.local[name] = text(row.Local);
     table.ci[name] = text(row.CI);
     table.prod[name] = text(row.Prod);
+    table.sensitive[name] = row["敏感"] === true;
   }
   return table;
 }
@@ -240,8 +243,12 @@ if (writable.length === 0) {
   process.exit(0);
 }
 for (const { name } of writable) {
-  // Keep the variable's current storage type; new variables are stored as sensitive.
-  const sensitive = prod[name] === undefined || prod[name] === VERCEL_SENSITIVE;
+  // Keep the variable's current storage type; a new variable follows the table's 敏感 checkbox
+  // (a sensitive variable can never be read back, so it could never be compared again).
+  const sensitive =
+    prod[name] === undefined
+      ? table.sensitive[name]
+      : prod[name] === VERCEL_SENSITIVE;
   // The value goes in on stdin, not argv, so it never shows up in the process list.
   run(
     "vercel",

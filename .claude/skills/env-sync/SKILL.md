@@ -23,7 +23,7 @@ node --test .claude/skills/env-sync/scripts/lib.test.mjs       # 脚本自身的
 - 空单元格跳过、只报告，**脚本从不删除变量**。
 - CI 列只核对：`.github/workflows/ci.yml` 随包交付给买家、里面全是测试值，改它走正常 PR。
 - Vercel 敏感变量读不出值：表格里写「（Vercel 敏感变量，无法读取）」的格子一律跳过；填了真实值后加 `--include-sensitive` 才覆盖。
-- 写 Vercel 时保持变量原来的存储类型（Config / Sensitive），新变量按敏感存；值经 stdin 传入，不进 argv。
+- 写 Vercel 时保持变量原来的存储类型（Config / Sensitive）；新变量按表格「敏感」勾选决定（敏感变量以后读不回来、无法再核对，非敏感的就别勾）。值经 stdin 传入，不进 argv。
 - 临时文件（表格导出、拉下来的 production 值）在 `/tmp/env-sync-*`，脚本退出即删。
 
 ## 流程
@@ -33,7 +33,7 @@ node --test .claude/skills/env-sync/scripts/lib.test.mjs       # 脚本自身的
    - 同步 prod 需要 `.vercel/project.json`；worktree 里没有时从主 checkout 复制：`cp -R ../sass/.vercel .`。
 2. **先核对**：跑核对命令，把输出（只有变量名）转述给用户：哪些 `differs` / `missing in target` 会被写入，哪些只是报告（空单元格、敏感变量无法比对、目标里有但表格没有的行）。
 3. **要改值时，先改表格**：
-   - 用户直接在飞书里改，或让你改：`lark-cli base +record-search` 按「变量名」找到记录，`+record-batch-update` 写 Local / CI / Prod 列。
+   - 用户直接在飞书里改，或让你改：`lark-cli base +record-search --keyword <NAME> --search-field 变量名 --field-id 变量名 --format json` 找记录（默认输出 markdown、不能配 `--jq`；关键词是子串匹配，要从结果里挑变量名完全相等的那条），再用 `+record-batch-update` 写 Local / CI / Prod 列。
    - 新变量：`+record-batch-create` 加一行（变量名、分组、说明、敏感、对应列的值），同时提醒在 `.env.example` 里给买家加一行。
 4. **应用**（写生产前向用户确认要写入的变量名清单）：
    - `--apply prod [--only A,B]` → Vercel production；之后提醒用户重新部署（或 `vercel --prod`），新值才生效。
