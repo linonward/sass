@@ -849,4 +849,5 @@ T2319 在 production（https://sass.linonward.com）验证时发现：用 Google
 - [x] 核对模式对真实表格：CI、Prod 一致（16 个敏感变量标为无法比对）
 - [x] `--apply local` 在空 worktree 生成的 `.env.local` 与主 checkout 的逐项相同，文件权限 600
 - [x] 无差异时 `--apply prod` 不写 Vercel；临时目录退出即删
+- [x] Claude Code skill `.claude/skills/env-sync/`，`release-package.sh` 排除 `.claude`
 - [ ] 第一次真实 `--apply prod`（下次改生产变量时，例如补 `SITE_OVERLAY_DIR`）

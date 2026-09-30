@@ -38,3 +38,4 @@ node --test seller/env/lib.test.mjs       # 脚本自身的单测
 - 需要 `lark-cli` 以你本人身份登录、当前 checkout 已 `vercel link`（worktree 里没有 `.vercel/`，可从主 checkout 复制）。
 - 新增变量：代码里用到新变量时，同时在 `.env.example`（给买家）和表格里各加一行。
 - 临时文件（表格导出、拉下来的 production 值）放在 `/tmp/env-sync-*`，脚本退出即删。
+- Claude Code 里说「同步 env」会走 `.claude/skills/env-sync/SKILL.md`（同样不随包）。
