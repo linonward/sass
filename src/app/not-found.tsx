@@ -21,7 +21,7 @@ import "./globals.css";
 // root makes it the parent boundary of that layout.
 //
 // Verified in practice (the two forms of 404 and the status code conventions are covered in the
-// README section on error and permission boundaries):
+// "Error and permission boundaries" section of the README):
 // 1. This path doesn't need experimental.globalNotFound — a root-level not-found.tsx is enough, and
 //    it renders into the framework's <html id="__next_error__"> document, so it must not wrap
 //    another <html>.

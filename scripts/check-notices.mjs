@@ -39,8 +39,8 @@
 // `pnpm licenses list --prod` to update the two distribution tables, then fix the versions in the
 // direct-dependency section one by one per the printed drift, and finally rerun this script.
 //
-// The section headings and the count sentence matched below are literal text from TPN (currently
-// in Chinese); when TPN's wording changes, update the matching strings here in the same change.
+// The section headings and the count sentence matched below are literal text from TPN; when TPN's
+// wording changes, update the matching strings here in the same change.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -142,10 +142,10 @@ function packageJsonDirectDeps() {
 // TPN: the three tables in the direct-dependency section
 
 function noticesDirectDeps(md) {
-  const start = md.indexOf("## 直接依赖明细");
+  const start = md.indexOf("## Direct dependencies");
   if (start === -1) {
     fail(
-      `Could not find the "## 直接依赖明细" (direct dependencies) section in ${NOTICES} — if the heading was renamed, update this script too.`,
+      `Could not find the "## Direct dependencies" section in ${NOTICES} — if the heading was renamed, update this script too.`,
     );
     return new Map();
   }
@@ -165,17 +165,17 @@ function noticesDirectDeps(md) {
   return found;
 }
 
-// The "N dependencies + M devDependencies, K total" sentence above the table is for humans, but
-// nobody remembers to update it, so it's verified too (a wording change is an error, so the check
-// can't silently stop working).
+// The "N `dependencies` + M `devDependencies`, K in total" sentence above the table is for humans,
+// but nobody remembers to update it, so it's verified too (a wording change is an error, so the
+// check can't silently stop working).
 function checkDeclaredCounts(md, pkg) {
   const match =
-    /(\d+)\s*个\s*`dependencies`\s*\+\s*(\d+)\s*个\s*`devDependencies`，共\s*(\d+)\s*个/.exec(
+    /(\d+)\s*`dependencies`\s*\+\s*(\d+)\s*`devDependencies`,\s*(\d+)\s+in total/.exec(
       md,
     );
   if (!match) {
     fail(
-      `Could not find the "N 个 \`dependencies\` + M 个 \`devDependencies\`" sentence in the direct-dependency section of ${NOTICES} — if the wording changed, update this script too.`,
+      `Could not find the "N \`dependencies\` + M \`devDependencies\`, K in total" sentence in the direct-dependency section of ${NOTICES} — if the wording changed, update this script too.`,
     );
     return;
   }
@@ -236,8 +236,8 @@ function licenseDistribution(json) {
 function documentedLicenses(md) {
   const ids = new Set();
   for (const [from, to] of [
-    ["## 全量依赖树", "## 生产依赖树"],
-    ["## 生产依赖树", "## 需要单独说明的许可"],
+    ["## Full dependency tree", "## Production dependency tree"],
+    ["## Production dependency tree", "## Licenses that need a separate note"],
   ]) {
     const start = md.indexOf(from);
     const end = md.indexOf(to, start + from.length);
@@ -272,7 +272,7 @@ function checkLicenses(md) {
       if (!documented.has(id)) {
         fail(
           `The ${label} dependency tree has a license missing from both distribution tables of ${NOTICES}: "${id}" — ` +
-            `add a row to both the full and the production dependency-tree tables, and explain in the licenses-needing-notes section whether it carries obligations.`,
+            `add a row to both the full and the production dependency-tree tables, and explain under "Licenses that need a separate note" whether it carries obligations.`,
         );
       }
       // Whether a dual license (`A AND B` / `A OR B`) allows picking the permissive branch is a human
@@ -361,7 +361,7 @@ if (failures.length > 0) {
   );
   for (const message of failures) console.error(`- ${message}`);
   console.error(
-    `\nSee the reproduce-and-maintain section at the end of ${NOTICES} for how to fix; then rerun \`pnpm notices:check\`.`,
+    `\nSee "Reproducing and maintaining this file" at the end of ${NOTICES} for how to fix; then rerun \`pnpm notices:check\`.`,
   );
   process.exit(1);
 }

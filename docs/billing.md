@@ -1,113 +1,113 @@
-# 支付服务商
+# Payment providers
 
-模板出厂用 **Creem**，另外实现了 **Stripe**、**Lemon Squeezy** 和 **Waffo Pancake**（见下文 [Waffo Pancake](#waffo-pancake) 一节）。它们实现同一个 `PaymentProvider` 接口（`src/core/billing/provider.ts`），共用同一套结账、webhook、订单表、积分发放和后台统计 —— 换服务商不碰业务代码，改 `site.config.ts` 的两处字段、再设一组环境变量即可。
+The template ships with **Creem**, and also implements **Stripe**, **Lemon Squeezy** and **Waffo Pancake** (see the [Waffo Pancake](#waffo-pancake) section below). They all implement the same `PaymentProvider` interface (`src/core/billing/provider.ts`) and share the same checkout, webhooks, orders table, credit grants and admin stats — switching providers doesn't touch app code: you change two fields in `site.config.ts` and set a group of environment variables.
 
-本文只讲**选谁、怎么换、怎么加第四个**。每个服务商从零到真实收款的逐条操作在 README 的[上线清单](../README.md#上线清单)里（[支付（Creem / Stripe）](../README.md#支付creem--stripe)、[支付（Lemon Squeezy）](../README.md#支付lemon-squeezy)），本文不重复。
+This doc covers only **which to pick, how to switch, and how to add another one**. The step-by-step setup for each provider, from zero to real payments, is in the README's [Launch checklist](../README.md#launch-checklist) ([Payments (Creem / Stripe)](../README.md#payments-creem--stripe), [Payments (Lemon Squeezy)](../README.md#payments-lemon-squeezy)); this doc doesn't repeat it.
 
-> 费率、支持地区、MoR 状态这些外部事实随时会变。本文核对日期 **2026-09**，给的是结构、量级和判断依据；具体数字以各节链接的官方页面为准。
+> External facts such as fees, supported regions and MoR status can change at any time. This doc was checked in **2026-09**; it gives structure, orders of magnitude and the reasoning behind the choice. For exact numbers, the official pages linked in each section are authoritative.
 
-## 怎么选
+## How to choose
 
-三家的定位差别比费率差别更大：
+The three differ more in positioning than in fees:
 
-- **Creem**（出厂默认）：MoR，中国大陆卖家能注册、提现还有支付宝通道，审核通常 1–2 天。费率居中（3.9% + $0.40，高于 Stripe、低于 Lemon Squeezy），买到的是 MoR 的税务、退款和拒付代管 —— 个人和小团队最快能真实收款的一条路。
-- **Stripe**：费率最低（美国区 2.9% + 30¢）、工具链最全（Billing、Tax、Invoicing、Radar），但**标准模式不是 MoR** —— 增值税 / 销售税要你自己注册、申报、缴纳。适合已经有香港 / 新加坡 / 美国等海外主体、愿意把支付栈握在自己手里的团队。
-- **Lemon Squeezy**：MoR，买家支付方式最多（含支付宝、微信、银联）。费率三家最高（5% + 50¢）。但 Stripe 已在 2024 年收购它，官方 2026 年 1 月的口径是「目标是让 Lemon Squeezy 用户迁移到 Stripe Managed Payments」，并承认支持响应和产品更新变慢。现在选它没有问题，但要按「这家几年内可能被整合掉」来预期 —— 好在换服务商只要改两处配置（见下文）。
+- **Creem** (the shipped default): an MoR. Sellers in mainland China can sign up, payouts include an Alipay option, and review usually takes 1–2 days. Its fees sit in the middle (3.9% + $0.40, higher than Stripe, lower than Lemon Squeezy), and what you pay for is the MoR handling tax, refunds and chargebacks for you — the fastest path to real payments for individuals and small teams.
+- **Stripe**: the lowest fees (2.9% + 30¢ in the US) and the most complete toolchain (Billing, Tax, Invoicing, Radar), but **in standard mode it is not an MoR** — you register for, file and pay VAT / sales tax yourself. It suits teams that already have an overseas entity (Hong Kong / Singapore / US, etc.) and want to own their payments stack.
+- **Lemon Squeezy**: an MoR with the most payment methods for your customers (including Alipay, WeChat Pay and UnionPay). Its fees are the highest of the three (5% + 50¢). Stripe acquired it in 2024, though, and the official line as of January 2026 is that "the goal is to migrate Lemon Squeezy users to Stripe Managed Payments," while acknowledging slower support responses and product updates. Choosing it today is fine, but plan on "this may be folded into something else within a few years" — fortunately, switching providers only takes two config changes (see below).
 
-| 你的情况                                      | 选                                                                 |
-| --------------------------------------------- | ------------------------------------------------------------------ |
-| 个人 / 小团队，不想碰税务合规，想最快真实收款 | Creem                                                              |
-| 中国大陆卖家                                  | Creem（提现可走支付宝）                                            |
-| 已有海外主体，想自己掌控支付栈、要最低费率    | Stripe                                                             |
-| 想让买家能用 PayPal / 支付宝 / 微信 / 银联    | Lemon Squeezy（注意：订阅只支持卡、Apple Pay、Google Pay、PayPal） |
+| Your situation                                                                              | Choose                                                                                   |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Individual / small team, don't want to deal with tax compliance, want real payments fastest | Creem                                                                                    |
+| Seller in mainland China                                                                    | Creem (payouts can go to Alipay)                                                         |
+| Already have an overseas entity, want to control your payments stack, want the lowest fees  | Stripe                                                                                   |
+| Want customers to be able to pay with PayPal / Alipay / WeChat Pay / UnionPay               | Lemon Squeezy (note: subscriptions only support cards, Apple Pay, Google Pay and PayPal) |
 
-## 三家对比
+## Comparison
 
-下表数字核对于 **2026-09**，出处是各家官方页面（列在表后）。费率随国家、支付方式、商品类型变化，**签约前以官方页面为准**。
+The figures below were checked in **2026-09** against each provider's official pages (listed after the table). Fees vary by country, payment method and product type; **the official pages are authoritative before you sign up**.
 
-|                   | Creem                                                       | Stripe                                                                                  | Lemon Squeezy                                                                                                                        |
-| ----------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| 交易费            | 3.9% + $0.40                                                | 2.9% + 30¢（美国区；香港 3.4% + HK$2.35、新加坡 3.4% + S$0.50）                         | 5% + 50¢                                                                                                                             |
-| 订阅附加费        | 无                                                          | Stripe Billing 按量 0.7%，或包月 $620/月起                                              | 订阅付款 +0.5%                                                                                                                       |
-| 国际卡 / 货币转换 | 货币转换费未公布具体数字                                    | 国际卡 +1.5%、货币转换 +1%（美国区；香港、新加坡的货币转换是 +2%）                      | 国际卡 +1.5%、PayPal 交易 +1.5%                                                                                                      |
-| 提现费            | 银行转账 $7 或 1% 取高；USDC 2%                             | 按国家和方式而定                                                                        | 美国银行免费，非美国 1%；PayPal 通道非美国 3%（单笔上限 $30）                                                                        |
-| 拒付费            | $25 / 笔                                                    | $15 / 笔（香港 HK$85）                                                                  | $15 / 笔                                                                                                                             |
-| 月费              | 无                                                          | 无（Billing、Tax、自定义域名等增值项另计）                                              | 无                                                                                                                                   |
-| MoR               | 是                                                          | 标准模式**不是**；Managed Payments 是（在标准费率上再 +3.5%）                           | 是                                                                                                                                   |
-| 卖家可用地区      | 87 个国家 / 地区，**含中国大陆、香港、新加坡**              | 支持列表含香港、新加坡，**不含中国大陆**；Managed Payments 亚太只开放 AU / HK / JP / SG | 银行提现约 120 国含香港、新加坡、澳门、台湾，**中国大陆不在银行提现列表**；PayPal 通道 200+                                          |
-| 买家支付方式      | 卡、Apple Pay、Google Pay                                   | 取决于你的 Stripe 配置                                                                  | 卡（含银联）、PayPal、Apple Pay、Google Pay、支付宝、微信支付、Cash App Pay、银行借记；**订阅只有卡、Apple Pay、Google Pay、PayPal** |
-| 上线审批          | KYC / KYB 人工审核 24–48 小时（高峰 72 小时），被拒不能复审 | 标准模式无需人工审核                                                                    | 激活问卷 + 身份验证，约 2–3 个工作日                                                                                                 |
+|                                           | Creem                                                                                   | Stripe                                                                                                                                       | Lemon Squeezy                                                                                                                                                                    |
+| ----------------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Transaction fee                           | 3.9% + $0.40                                                                            | 2.9% + 30¢ (US; Hong Kong 3.4% + HK$2.35, Singapore 3.4% + S$0.50)                                                                           | 5% + 50¢                                                                                                                                                                         |
+| Subscription surcharge                    | None                                                                                    | Stripe Billing 0.7% pay-as-you-go, or from $620/month on a monthly plan                                                                      | +0.5% on subscription payments                                                                                                                                                   |
+| International cards / currency conversion | No specific currency conversion fee published                                           | International cards +1.5%, currency conversion +1% (US; currency conversion is +2% in Hong Kong and Singapore)                               | International cards +1.5%, PayPal transactions +1.5%                                                                                                                             |
+| Payout fee                                | Bank transfer $7 or 1%, whichever is higher; USDC 2%                                    | Depends on country and method                                                                                                                | Free to US banks, 1% outside the US; PayPal payouts 3% outside the US (capped at $30 per payout)                                                                                 |
+| Chargeback fee                            | $25 each                                                                                | $15 each (Hong Kong HK$85)                                                                                                                   | $15 each                                                                                                                                                                         |
+| Monthly fee                               | None                                                                                    | None (add-ons such as Billing, Tax and custom domains are billed separately)                                                                 | None                                                                                                                                                                             |
+| MoR                                       | Yes                                                                                     | Standard mode is **not**; Managed Payments is (+3.5% on top of standard fees)                                                                | Yes                                                                                                                                                                              |
+| Seller regions                            | 87 countries / regions, **including mainland China, Hong Kong and Singapore**           | Supported list includes Hong Kong and Singapore, **not mainland China**; in Asia-Pacific, Managed Payments is only open to AU / HK / JP / SG | Bank payouts in about 120 countries including Hong Kong, Singapore, Macau and Taiwan; **mainland China is not on the bank payout list**; PayPal payouts in 200+                  |
+| Customer payment methods                  | Cards, Apple Pay, Google Pay                                                            | Depends on your Stripe configuration                                                                                                         | Cards (including UnionPay), PayPal, Apple Pay, Google Pay, Alipay, WeChat Pay, Cash App Pay, bank debits; **subscriptions only support cards, Apple Pay, Google Pay and PayPal** |
+| Go-live approval                          | Manual KYC / KYB review in 24–48 hours (72 hours at peak); rejections can't be appealed | No manual review in standard mode                                                                                                            | Activation questionnaire + identity verification, about 2–3 business days                                                                                                        |
 
-出处：[creem.io/pricing](https://www.creem.io/pricing)、[docs.creem.io 财务文档](https://docs.creem.io/merchant-of-record/finance/payouts.md)、[Creem 支持国家](https://docs.creem.io/merchant-of-record/supported-countries)；[stripe.com/pricing](https://stripe.com/pricing)、[stripe.com/global](https://stripe.com/global)、[Managed Payments 资格](https://docs.stripe.com/payments/managed-payments/eligibility)、[Stripe Billing 定价](https://stripe.com/billing/pricing)；[lemonsqueezy.com/pricing](https://www.lemonsqueezy.com/pricing)、[LS 费率](https://docs.lemonsqueezy.com/help/getting-started/fees)、[LS 支持国家](https://docs.lemonsqueezy.com/help/getting-started/supported-countries)、[LS 收款](https://docs.lemonsqueezy.com/help/getting-started/getting-paid)。
+Sources: [creem.io/pricing](https://www.creem.io/pricing), [docs.creem.io finance docs](https://docs.creem.io/merchant-of-record/finance/payouts.md), [Creem supported countries](https://docs.creem.io/merchant-of-record/supported-countries); [stripe.com/pricing](https://stripe.com/pricing), [stripe.com/global](https://stripe.com/global), [Managed Payments eligibility](https://docs.stripe.com/payments/managed-payments/eligibility), [Stripe Billing pricing](https://stripe.com/billing/pricing); [lemonsqueezy.com/pricing](https://www.lemonsqueezy.com/pricing), [LS fees](https://docs.lemonsqueezy.com/help/getting-started/fees), [LS supported countries](https://docs.lemonsqueezy.com/help/getting-started/supported-countries), [LS getting paid](https://docs.lemonsqueezy.com/help/getting-started/getting-paid).
 
-三条表里放不下、但会影响决策的事实：
+Three facts that don't fit in the table but affect the decision:
 
-- **Stripe 的费率随卖家所在国家变**，上表用的是美国区；香港、新加坡的卡费都是 3.4% + 本地货币小额。跨境和货币转换附加也按地区不同。
-- **Managed Payments 的商家国清单官方没有给全**：资格页列出的是亚太 AU / HK / JP / SG、北美 CA / US，加一批欧洲国家（LS 的官方博客说「35+ 国」）—— **中国大陆主体开不了**。更要注意的是它的**买家侧受限地区包含中国大陆**：你的大陆客户在 Managed Payments 下买不了。
-- **Lemon Squeezy 的订阅周期上限 1 年**，且订阅付款方式只有卡、Apple Pay、Google Pay、PayPal 四种（支付宝 / 微信等只支持一次性付款）。
+- **Stripe's fees depend on the seller's country**; the table uses the US. In Hong Kong and Singapore card fees are 3.4% plus a small amount in local currency. Cross-border and currency conversion surcharges also vary by region.
+- **Stripe doesn't publish the full list of merchant countries for Managed Payments**: the eligibility page lists AU / HK / JP / SG in Asia-Pacific, CA / US in North America, plus a set of European countries (LS's official blog says "35+ countries") — **a mainland China entity can't use it**. More importantly, its **restricted customer regions include mainland China**: your mainland customers can't buy under Managed Payments.
+- **Lemon Squeezy's subscription interval is capped at 1 year**, and subscriptions can only be paid with cards, Apple Pay, Google Pay or PayPal (Alipay / WeChat Pay and the like only support one-time payments).
 
-## MoR 是什么
+## What an MoR is
 
-Merchant of Record（记录商户，MoR）是**法律意义上的卖方**：买家付款给 MoR，MoR 再跟你结算。它替你承担：
+A Merchant of Record (MoR) is the **seller in the legal sense**: the customer pays the MoR, and the MoR then settles with you. It takes on:
 
-- **全球税务**：按买家所在地计算、代收、申报、缴纳 VAT / GST / 销售税（Creem 称覆盖 190+ 国家；Stripe Managed Payments 称 80+ 国家）。
-- **退款与拒付**：由 MoR 处理，拒付责任也在它 —— Lemon Squeezy 文档原话是 "Generally, Lemon Squeezy is responsible for handling any chargebacks made against your sales"。
-- 合规发票和 PCI 合规。
+- **Global tax**: calculating, collecting, filing and paying VAT / GST / sales tax based on where the customer is (Creem says it covers 190+ countries; Stripe Managed Payments says 80+).
+- **Refunds and chargebacks**: handled by the MoR, and chargeback liability is also its own — in Lemon Squeezy's docs: "Generally, Lemon Squeezy is responsible for handling any chargebacks made against your sales".
+- Compliant invoices and PCI compliance.
 
-反过来，**非 MoR（标准 Stripe）意味着这些都是你的责任**：自己去每个有客户的辖区注册税号、申报、缴纳。Stripe Tax 只负责算税和代收（Basic 版 0.5% / 交易或 50¢ / 交易），**不含申报**；要代注册代申报得买 Tax Complete，起价 $90/月。标准 Stripe 便宜出来的那两三个点，很大程度是「这些活你自己干」换来的。
+Conversely, **a non-MoR (standard Stripe) means all of this is your responsibility**: registering for a tax ID in every jurisdiction where you have customers, filing and paying. Stripe Tax only calculates and collects tax (Basic is 0.5% per transaction or 50¢ per transaction) and **doesn't file**; to have registration and filing done for you, you need Tax Complete, starting at $90/month. The two or three points you save with standard Stripe largely come from "you do this work yourself."
 
-判断依据是官方原话，不用猜：Creem 和 Lemon Squeezy 都在文档里明确自称 merchant of record；Stripe 的 SSA 第 7.3(b) 条规定用户自行 "assessing, collecting, reporting, and remitting Taxes"，其对比文档把 "Merchant of record" 一行写成 **Managed Payments → Stripe；其他 Stripe 产品 → Your business**。
+You don't have to guess; the basis is the providers' own wording: Creem and Lemon Squeezy both explicitly call themselves the merchant of record in their docs; section 7.3(b) of Stripe's SSA says the user is responsible for "assessing, collecting, reporting, and remitting Taxes", and its comparison doc lists the "Merchant of record" row as **Managed Payments → Stripe; other Stripe products → Your business**.
 
-（Lemon Squeezy 的条款用的是 "non-exclusive reseller" 措辞，法律含义相同。）
+(Lemon Squeezy's terms use the wording "non-exclusive reseller", which has the same legal meaning.)
 
-出海 SaaS 用 MoR 的主要收益是**省掉税务合规的人力**：不必在每个有客户的国家注册税号、盯申报截止日。代价是费率高 1–3 个百分点，且你和买家之间隔了一层。
+For a SaaS selling internationally, the main benefit of an MoR is **saving the people-hours of tax compliance**: you don't need to register for a tax ID in every country where you have customers or track filing deadlines. The cost is fees 1–3 percentage points higher, and an extra layer between you and your customers.
 
-## 三家在站内的真实差异
+## How they actually differ in the product
 
-选型时最容易被忽略的是「同一个接口之下，三家的行为并不完全一样」。下面这些差异全部来自本模板的实现，直接决定你的运营动作：
+The thing most easily overlooked when choosing is that "under the same interface, the three don't behave exactly the same." All of the differences below come from this template's implementation and directly determine what you have to do operationally:
 
-|                | Creem                                | Stripe                                                               | Lemon Squeezy                                                             |
-| -------------- | ------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| 产品 ID 含义   | 产品 ID（`prod_`）                   | Price ID（`price_`）                                                 | 变体 ID（variant）                                                        |
-| 变量前缀       | `CREEM_PRODUCT_ID_*`                 | `STRIPE_PRICE_ID_*`                                                  | `LEMONSQUEEZY_VARIANT_ID_*`                                               |
-| 结账页取消地址 | 不支持，用户关掉页面即可             | 支持 `cancel_url`                                                    | 不支持，用户关掉页面即可                                                  |
-| 客户门户       | `customers.generateBillingLinks`     | Billing Portal 会话，要传 `return_url`；首次需在后台保存一次门户配置 | 读客户的 `customer_portal` 地址，**只在客户有生效订阅时才有值**，否则报错 |
-| 删号时取消订阅 | 立即取消                             | 立即取消                                                             | 只停掉后续扣款，用户可以用到 `ends_at`                                    |
-| 退款回收积分   | 按已退比例回收（`refund.created`）   | **不回收**：退款对象上没有发票字段，v1 忽略退款事件                  | **只回收全额退款**，部分退款不回收                                        |
-| 测试 / 生产    | `CREEM_MODE=test` / `live`，两个域名 | 密钥本身区分（`sk_test_` / `sk_live_`）                              | 店铺上的一个开关，密钥不区分                                              |
-| fake 硬锁      | `CREEM_MODE=live` 时拒绝             | 配了 `sk_live_` / `rk_live_` 时拒绝                                  | 没有：造不出可靠判据，见 `src/core/billing/env.ts` 的注释                 |
+|                                             | Creem                                                            | Stripe                                                                                                            | Lemon Squeezy                                                                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| What the product ID means                   | Product ID (`prod_`)                                             | Price ID (`price_`)                                                                                               | Variant ID (variant)                                                                                                                      |
+| Variable prefix                             | `CREEM_PRODUCT_ID_*`                                             | `STRIPE_PRICE_ID_*`                                                                                               | `LEMONSQUEEZY_VARIANT_ID_*`                                                                                                               |
+| Checkout cancel URL                         | Not supported; the user just closes the page                     | Supports `cancel_url`                                                                                             | Not supported; the user just closes the page                                                                                              |
+| Customer portal                             | `customers.generateBillingLinks`                                 | Billing Portal session, requires `return_url`; the portal configuration must be saved once in the dashboard first | Reads the customer's `customer_portal` URL, **which only has a value while the customer has an active subscription**; otherwise it errors |
+| Canceling subscriptions on account deletion | Cancels immediately                                              | Cancels immediately                                                                                               | Only stops future charges; the user keeps access until `ends_at`                                                                          |
+| Reclaiming credits on refund                | Reclaims in proportion to the amount refunded (`refund.created`) | **Doesn't reclaim**: the refund object has no invoice field, so v1 ignores refund events                          | **Only reclaims on full refunds**; partial refunds don't reclaim                                                                          |
+| Test / live                                 | `CREEM_MODE=test` / `live`, two domains                          | The key itself tells them apart (`sk_test_` / `sk_live_`)                                                         | A toggle on the store; keys don't differ                                                                                                  |
+| Fake hard lock                              | Refused when `CREEM_MODE=live`                                   | Refused when an `sk_live_` / `rk_live_` key is set                                                                | None: there's no reliable signal to check; see the comment in `src/core/billing/env.ts`                                                   |
 
 ## Waffo Pancake
 
-第四家，按「加第四个支付商」的路径接入（`src/core/billing/providers/waffo.ts`，官方 SDK `@waffo/pancake-ts`）。它是 MoR（Waffo.com Limited，香港），有产品目录，接法和 Creem / Lemon Squeezy 最像。选它之前要知道的几件事（核对于 **2026-09**，出处 [docs.waffo.ai](https://docs.waffo.ai)）：
+The fourth provider, integrated by following the "Adding another provider" path (`src/core/billing/providers/waffo.ts`, official SDK `@waffo/pancake-ts`). It's an MoR (Waffo.com Limited, Hong Kong), has a product catalog, and integrates most like Creem / Lemon Squeezy. Things to know before choosing it (checked in **2026-09**, source: [docs.waffo.ai](https://docs.waffo.ai)):
 
-- **提现目前只能是人民币**：到中国大陆的银行卡或支付宝（支付宝单次 5 万、每年 30 万上限），身份核验用大陆身份证或护照，公司账户提现「即将支持」。实际上是给**中国大陆个人卖家**用的 —— 没有大陆银行卡 / 支付宝的卖家收不到钱。
-- **MoR，但税费代收还没开启**：官方 webhook 文档写明目前每笔订单的税率都是 0。卖方身份、拒付由它承担，税务这块要按它的进展再确认。
-- **费率**：卡和钱包 3.9% + $0.50，无月费；退款每笔 $1（原手续费不退）；提现 1%（最低 $10）；拒付 $25。
-- **买家侧**：卡、Apple Pay、Google Pay；币种 USD / EUR / GBP / JPY / HKD（CNY 只支持一次性商品）。
-- **站内差异**：客户门户是托管的魔法链接登录页（没有预登录链接）；取消订阅用到当期结束；退款按被退的那笔付款回收积分（部分 / 全额都行，付款后 14 天内）；fake 硬锁是 `WAFFO_MODE=prod`；webhook 固定按当前环境验签，拒收另一个环境的事件。
-- **上线前**店铺要过审核（1–3 个工作日）。
+- **Payouts are currently RMB only**: to a mainland China bank card or Alipay (Alipay is capped at 50,000 per payout and 300,000 per year), with identity verification by mainland ID card or passport; payouts to company accounts are "coming soon." In practice it's for **individual sellers in mainland China** — sellers without a mainland bank card / Alipay can't get paid.
+- **An MoR, but tax collection isn't switched on yet**: the official webhook docs state that the tax rate on every order is currently 0. It takes on the seller-of-record role and chargebacks; for tax, check again as it progresses.
+- **Fees**: cards and wallets 3.9% + $0.50, no monthly fee; refunds $1 each (the original fee isn't returned); payouts 1% (minimum $10); chargebacks $25.
+- **Customer side**: cards, Apple Pay, Google Pay; currencies USD / EUR / GBP / JPY / HKD (CNY only for one-time products).
+- **In-product differences**: the customer portal is a hosted magic-link sign-in page (no pre-authenticated link); canceling a subscription keeps it until the end of the current period; refunds reclaim credits against the specific payment refunded (partial or full, within 14 days of payment); the fake hard lock is `WAFFO_MODE=prod`; webhooks are always verified for the current environment, and events from the other environment are rejected.
+- **Before going live** the store must pass review (1–3 business days).
 
-逐条上线操作见 README 的[支付（Waffo Pancake）](../README.md#支付waffo-pancake)。
+For step-by-step go-live setup, see [Payments (Waffo Pancake)](../README.md#payments-waffo-pancake) in the README.
 
-退款那一行是**真金白银的差别**，值得单独读一遍 README 的[收入口径](../README.md#收入口径)和对应服务商的上线清单小节：Creem 会按比例自动回收集分；Stripe 完全不管（退款只在后台做，积分要人工处理）；Lemon Squeezy 只认全额退款。
+The refund row is **a real-money difference**, and it's worth reading the README's [Revenue definition](../README.md#revenue-definition) and the launch checklist section for your provider on their own: Creem automatically reclaims credits in proportion; Stripe doesn't handle it at all (refunds are done only in the dashboard, and credits have to be handled manually); Lemon Squeezy only recognizes full refunds.
 
-## 换一个支付商
+## Switching providers
 
-前提：目标服务商的账号和产品已经开好（步骤见 README 上线清单的对应小节，含 webhook 地址、事件清单、测试卡）。
+Prerequisite: the account and products at the target provider are already set up (steps in the corresponding section of the README launch checklist, including the webhook URL, event list and test cards).
 
-1. **改 `site.config.ts`**：把 `billingProvider` 的字面量改成目标服务商，并把两个付费套餐的 `providerProductId` 换成新服务商那边的对象 ID（Creem 产品、Stripe Price、Lemon Squeezy 变体）。
+1. **Change `site.config.ts`**: change the `billingProvider` literal to the target provider, and replace the `providerProductId` of both paid plans with the object IDs on the new provider's side (Creem product, Stripe Price, Lemon Squeezy variant).
 
    ```ts
    const billingProvider: BillingProviderName = "stripe";
    ```
 
-   `billingProvider` 也可以被运行时的 `BILLING_PROVIDER` 覆盖，两边都改最不容易忘；产品 ID 的环境变量前缀跟着**生效**的服务商走，所以选 Stripe 时 `CREEM_PRODUCT_ID_*` 会被忽略。
+   `billingProvider` can also be overridden at runtime by `BILLING_PROVIDER`; changing both is the least likely to be forgotten. The environment variable prefix for product IDs follows the provider **in effect**, so with Stripe selected, `CREEM_PRODUCT_ID_*` is ignored.
 
-2. **设环境变量**。切换后要的是一整套新变量（变量名以 `.env.example` 为准）：
+2. **Set environment variables**. After switching you need a whole new set of variables (`.env.example` is authoritative for variable names):
 
    ```bash
-   # Stripe：生效服务商 + 密钥 + 产品 ID
+   # Stripe: provider in effect + keys + product IDs
    BILLING_PROVIDER=stripe
    STRIPE_SECRET_KEY=sk_test_...
    STRIPE_WEBHOOK_SECRET=whsec_...
@@ -116,7 +116,7 @@ Merchant of Record（记录商户，MoR）是**法律意义上的卖方**：买�
    ```
 
    ```bash
-   # Lemon Squeezy：多一个 STORE_ID（建结账会话必须带 store 关系）
+   # Lemon Squeezy: one extra STORE_ID (creating a checkout session must include the store relationship)
    BILLING_PROVIDER=lemonsqueezy
    LEMONSQUEEZY_API_KEY=...
    LEMONSQUEEZY_WEBHOOK_SECRET=...
@@ -126,7 +126,7 @@ Merchant of Record（记录商户，MoR）是**法律意义上的卖方**：买�
    ```
 
    ```bash
-   # Creem：出厂默认。切回来时记得 CREEM_MODE 在真实收款前要设成 live
+   # Creem: the shipped default. When switching back, remember CREEM_MODE must be set to live before real payments
    BILLING_PROVIDER=creem
    CREEM_API_KEY=...
    CREEM_WEBHOOK_SECRET=...
@@ -135,71 +135,71 @@ Merchant of Record（记录商户，MoR）是**法律意义上的卖方**：买�
    CREEM_MODE=test
    ```
 
-   只填**生效**服务商那一组：Vercel 生产环境缺了生效服务商的密钥，构建会直接失败（`src/core/billing/env.ts` 的 `billingServerEnv` 只在「Vercel 生产 + 站点有付费套餐 + 生效服务商是它」时要求必填）；本地不会，缺 key 的后果是结账和 webhook 返回 503，其他功能照常。
+   Fill in only the set for the provider **in effect**: if Vercel production is missing the keys for the provider in effect, the build fails outright (`billingServerEnv` in `src/core/billing/env.ts` only makes them required when "Vercel production + the site has paid plans + this is the provider in effect"). Locally it doesn't; a missing key means checkout and webhooks return 503, and everything else works as usual.
 
-3. **在新服务商后台加 webhook 端点**，指向 `https://<你的域名>/api/webhooks/<服务商>`。事件要勾哪些、签名密钥在哪拿、本地怎么转发，都在 README 上线清单的对应小节里写好了 —— 漏勾事件不会报错，只会静默漏账。
+3. **Add a webhook endpoint in the new provider's dashboard**, pointing to `https://<your-domain>/api/webhooks/<provider>`. Which events to select, where to get the signing secret and how to forward locally are all written up in the corresponding section of the README launch checklist — missing an event doesn't produce an error, it just silently drops transactions.
 
-4. **验证**：单元测试 + 站内的完整购买链路。
+4. **Verify**: unit tests + the full in-product purchase flow.
 
    ```bash
-   pnpm test   # adapter 单测，用官方示例 payload 当 fixture，不联网、不需要真实密钥
+   pnpm test   # adapter unit tests, using the official sample payloads as fixtures; no network, no real keys needed
    ```
 
    ```bash
-   # 完整链路（结账 → webhook → 发积分）用站内的 fake 服务商跑，与具体服务商无关：
+   # The full flow (checkout → webhook → credit grant) runs against the built-in fake provider and is independent of any specific provider:
    EMAIL_TRANSPORT=file E2E_PORT=3100 \
      BILLING_PROVIDER=fake BILLING_SUCCESS_TIMEOUT_MS=8000 \
      CREEM_PRODUCT_ID_PRO=prod_ci_fake_pro CREEM_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
      npx playwright test e2e/pricing.spec.ts
    ```
 
-   `E2E_PORT` 换一个端口，免得复用你正在跑的 `pnpm dev`。真实服务商的测试模式下单要自己在新服务商后台走一遍（README 上线清单里有测试卡号），本模板不做这件事的自动化。
+   `E2E_PORT` switches to another port so it doesn't reuse the `pnpm dev` you have running. You need to place a test-mode order with the real provider yourself in the new provider's dashboard (the README launch checklist has test card numbers); this template doesn't automate that.
 
-### 切换前先处理存量订阅
+### Handle existing subscriptions before switching
 
-同时只有一家服务商生效，**旧服务商的 webhook 路由在切换后一律返回 503**（`billing_not_configured`）：路由会先确认自己就是当前生效的服务商。这意味着切换之后，旧订阅的续费、取消、退款事件都进不了系统 —— 积分不再按周期发放，订阅状态也不再更新，而且**不会有任何报错**。
+Only one provider is in effect at a time, and **the old provider's webhook route always returns 503 after the switch** (`billing_not_configured`): the route first checks that it is the provider currently in effect. This means that after switching, renewal, cancellation and refund events for old subscriptions never reach the system — credits stop being granted each period, subscription status stops updating, and **there's no error of any kind**.
 
-同样地，账单页的「管理订阅」是按生效服务商查客户记录的（`billingCustomers.provider`），切换后旧客户记录查不到，接口返回 `no_customer`，用户自助不了。
+Likewise, "Manage subscription" on the billing page looks up the customer record by the provider in effect (`billingCustomers.provider`). After switching, old customer records aren't found, the endpoint returns `no_customer`, and users can't help themselves.
 
-所以切换的正确姿势是**先把存量订阅处理干净**：让它们自然跑完，或者在旧服务商后台取消并通知用户到新服务商重新订阅，然后才切。历史订单、订阅和积分流水不会被删除或改写（账单表里有 `provider` 列区分），切换不影响已经记好的账。
+So the right way to switch is to **clear out existing subscriptions first**: let them run out naturally, or cancel them in the old provider's dashboard and tell users to resubscribe with the new provider, and only then switch. Historical orders, subscriptions and credit transactions aren't deleted or rewritten (the billing tables have a `provider` column to tell them apart), so switching doesn't affect what's already recorded.
 
-## 加第四个支付商
+## Adding another provider
 
-路径已经踩平了：新服务商 = 一个 adapter + 一条 webhook 路由 + 几处注册。按现有两个 adapter 的实际改动整理成清单：
+The path is already well worn: a new provider = one adapter + one webhook route + a few registrations. Here's the checklist, based on the changes the existing adapters actually needed:
 
-1. **实现接口**：新建 `src/core/billing/providers/<name>.ts`，导出 `<NAME>_PROVIDER_ID`，实现 `createCheckout`、`getPortalUrl`、`cancelSubscription`、`verifyWebhook`、`parseEvent`。要调的接口多的话，在它旁边开个子目录放薄 HTTP 客户端（见 `providers/lemonsqueezy/client.ts`，几十行、fetch 可注入）；有官方 SDK 就直接用（见 `providers/stripe.ts`）。
-2. **注册**：`src/core/billing/env.ts` 的 `billingProviderNames` 加上名字（`site.config.ts` 的类型和校验都从这里取，加一个枚举值即可）；`providers/index.ts` 的 `createProvider()` 加一个分支，缺 key 时返回 `null`（结账和 webhook 就自动是 503）。
-3. **环境变量**：在 `billingServerEnv` 里用 `requiredFor("<name>")` 加这家的密钥变量，写进 `.env.example` 并说明去哪儿拿。
-4. **webhook 路由**：新建 `src/app/api/webhooks/<name>/route.ts`，照抄现有路由的十来行 —— 先确认自己是生效服务商（不是就 503），再 `processWebhook(provider, request)`。事件到 `BillingEvent` 的映射表写在 adapter 顶部注释里，那是这个文件最该看懂的地方。
-5. **配置**：`site.config.ts` 的 `productIdEnvPrefix` 加一行前缀。如果这家有 test / live 两种模式，看看要不要在 `fakeBillingAllowed` 里加一条硬锁 —— **只在判据可靠时加**：Lemon Squeezy 没有模式变量、密钥也不带标记，就没有加（`src/core/billing/env.ts` 里有完整理由）。
-6. **测试**：`providers/<name>.test.ts`。用官方文档的示例 payload 当 fixture（放 `providers/__fixtures__/`），注入假的 SDK / fetch，**不联网、不需要任何真实密钥**；签名用官方 SDK 的离线签名函数或自己算 HMAC。覆盖验签、全部事件映射、结账请求体、门户地址（包括拿不到门户的分支）、取消订阅的幂等，以及「payload 结构不对时返回 null」。
-7. **文档**：README 上线清单加一节（产品怎么建、webhook 怎么配、测试卡是什么）；引入新依赖的话，更新 `THIRD-PARTY-NOTICES.md` 并跑 `pnpm notices:check`。
-8. **跑一遍**：`pnpm test`（adapter 单测），再把上面那条 e2e 命令的文件名换成 `e2e/billing.spec.ts` 跑一遍 —— 接口鉴权、未签名 webhook、未配置分支这几条，比购买链路快得多。
+1. **Implement the interface**: create `src/core/billing/providers/<name>.ts`, export `<NAME>_PROVIDER_ID`, and implement `createCheckout`, `getPortalUrl`, `cancelSubscription`, `verifyWebhook` and `parseEvent`. If there are many endpoints to call, add a subdirectory next to it for a thin HTTP client (see `providers/lemonsqueezy/client.ts`, a few dozen lines with injectable fetch); if there's an official SDK, just use it (see `providers/stripe.ts`).
+2. **Register it**: add the name to `billingProviderNames` in `src/core/billing/env.ts` (the types and validation in `site.config.ts` both come from here, so adding one enum value is enough); add a branch to `createProvider()` in `providers/index.ts` that returns `null` when keys are missing (checkout and webhooks then automatically return 503).
+3. **Environment variables**: add this provider's key variables to `billingServerEnv` with `requiredFor("<name>")`, and write them into `.env.example` with a note on where to get them.
+4. **Webhook route**: create `src/app/api/webhooks/<name>/route.ts` by copying the ten-or-so lines of an existing route — first check that it's the provider in effect (503 if not), then `processWebhook(provider, request)`. The mapping from events to `BillingEvent` goes in the comment at the top of the adapter; that's the part of the file most worth understanding.
+5. **Configuration**: add a prefix line to `productIdEnvPrefix` in `site.config.ts`. If the provider has test / live modes, consider adding a hard lock in `fakeBillingAllowed` — **only when there's a reliable signal**: Lemon Squeezy has no mode variable and its keys carry no marker, so none was added (the full reasoning is in `src/core/billing/env.ts`).
+6. **Tests**: `providers/<name>.test.ts`. Use sample payloads from the official docs as fixtures (in `providers/__fixtures__/`), inject a fake SDK / fetch, **no network and no real keys at all**; for signatures, use the official SDK's offline signing function or compute the HMAC yourself. Cover signature verification, every event mapping, the checkout request body, the portal URL (including the branch where there's no portal), idempotent subscription cancellation, and "returns null when the payload structure is wrong."
+7. **Docs**: add a section to the README launch checklist (how to create products, how to configure the webhook, what the test cards are); if you add a new dependency, update `THIRD-PARTY-NOTICES.md` and run `pnpm notices:check`.
+8. **Run it**: `pnpm test` (adapter unit tests), then run the e2e command above with the file name changed to `e2e/billing.spec.ts` — endpoint auth, unsigned webhooks and the unconfigured branch are much faster than the purchase flow.
 
    ```bash
-   # 注意：env 一个字都别省
+   # Note: don't leave out a single env var
    EMAIL_TRANSPORT=file E2E_PORT=3100 \
      BILLING_PROVIDER=fake BILLING_SUCCESS_TIMEOUT_MS=8000 \
      CREEM_PRODUCT_ID_PRO=prod_ci_fake_pro CREEM_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
      npx playwright test e2e/billing.spec.ts
    ```
 
-   三个容易踩的坑，症状都不是「命令本身报错」：少了 `E2E_PORT`，`reuseExistingServer` 会复用你正在跑的 `pnpm dev`（默认 3000 端口），测的就不是当前 worktree 的代码（实测：接口全 404）；少了 `EMAIL_TRANSPORT=file`，验证码只打到服务端终端，登录那几条会卡在等邮件；少了 `CREEM_PRODUCT_ID_*`，出厂占位产品 ID 会把结账挡成 503 `plan_not_configured`。
+   Three easy traps, none of which show up as "the command itself errors": without `E2E_PORT`, `reuseExistingServer` reuses the `pnpm dev` you have running (port 3000 by default), so you aren't testing the current worktree's code (observed: every endpoint returns 404); without `EMAIL_TRANSPORT=file`, verification codes only print to the server terminal, and the sign-in tests hang waiting for email; without `CREEM_PRODUCT_ID_*`, the shipped placeholder product IDs block checkout with 503 `plan_not_configured`.
 
-不用为新服务商重测「结账 → webhook → 发积分」的整条链路：adapter 的职责边界就是**把服务商的事件翻译成 `BillingEvent`**，翻译之后的那半条链路和具体服务商无关，已经由 fake 服务商的 e2e 覆盖（`e2e/pricing.spec.ts`）。
+You don't need to retest the whole "checkout → webhook → credit grant" flow for a new provider: the adapter's job ends at **translating the provider's events into `BillingEvent`**, and the half of the flow after translation is independent of any specific provider and already covered by the fake provider's e2e (`e2e/pricing.spec.ts`).
 
-## 本地和 CI 用哪个
+## Which provider to use locally and in CI
 
-本地开发、CI 和 e2e 一律用站内的 fake 服务商（`BILLING_PROVIDER=fake`）：结账页和 webhook 都由站内路由模拟，可以设定 webhook 延迟或不发送，不需要任何外部账号。`e2e/billing.spec.ts` 和 `e2e/pricing.spec.ts` 分别覆盖「未配置时的接口行为」和「完整购买链路」。
+Local development, CI and e2e all use the built-in fake provider (`BILLING_PROVIDER=fake`): the checkout page and webhooks are simulated by in-app routes, you can set a webhook delay or not send it at all, and no external accounts are needed. `e2e/billing.spec.ts` and `e2e/pricing.spec.ts` cover "endpoint behavior when unconfigured" and "the full purchase flow" respectively.
 
-fake 是测试替身，闸门在 `fakeBillingAllowed`（`src/core/billing/env.ts`）：生产运行时（`next build` / `next start` / Docker）、Vercel 上（任何环境）、`CREEM_MODE=live`、或者配了 live 的 Stripe 密钥，设成 `fake` 都会启动失败；还有一条通用想法 —— 别在任何对外环境里开它，那等于让任何人走假结账白拿套餐和积分。
+Fake is a test double, gated by `fakeBillingAllowed` (`src/core/billing/env.ts`): in a production runtime (`next build` / `next start` / Docker), on Vercel (any environment), with `CREEM_MODE=live`, or with a live Stripe key configured, setting `fake` fails at startup. There's also a general rule: don't turn it on in any public-facing environment — that would let anyone go through fake checkout and get plans and credits for free.
 
-## 常见问题
+## FAQ
 
-**没配密钥会怎样？** 结账和 webhook 接口返回 503 `billing_not_configured`，站点其余部分照常（本地就是这样默认跑起来的）。webhook 路由对**非生效**服务商同样返回 503，所以多挂几条路由不会互相抢事件。
+**What happens without keys?** The checkout and webhook endpoints return 503 `billing_not_configured`, and the rest of the site works as usual (this is how it runs locally by default). Webhook routes for providers **not in effect** also return 503, so mounting several routes doesn't make them compete for events.
 
-**能同时用两家吗？** 不能。同一时刻只有一家生效，其余服务商的 webhook 会被 503 挡掉。要迁就按上面的「切换前先处理存量订阅」走。
+**Can I use two providers at once?** No. Only one provider is in effect at a time; webhooks for the others are blocked with 503. To migrate, follow "Handle existing subscriptions before switching" above.
 
-**买家能用什么支付方式？** 由服务商决定，在服务商后台配置，本模板不介入 —— 模板只负责跳转到服务商托管的结账页，不内嵌支付组件。
+**What payment methods can customers use?** That's up to the provider and configured in the provider's dashboard; this template doesn't get involved — it only redirects to the provider's hosted checkout page and doesn't embed payment components.
 
-**想换的支付商没有在这里面？** 按上面的「加第四个支付商」加就行 —— 绝大多数情况只需要新写一个 adapter 文件，其余都不动。
+**The provider I want isn't one of these?** Add it following "Adding another provider" above — in the vast majority of cases you only write one new adapter file and leave everything else alone.
