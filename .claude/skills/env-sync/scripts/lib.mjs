@@ -35,6 +35,29 @@ export function parseDotenv(text) {
 }
 
 /**
+ * Variable names declared in .env.example (`NAME=` lines, values ignored). .env.example owns the
+ * list of keys; the table owns their values.
+ */
+export function parseKeys(text) {
+  const names = [];
+  for (const line of text.split("\n")) {
+    const m = /^(?:export\s+)?([A-Z][A-Z0-9_]*)=/.exec(line);
+    if (m && !names.includes(m[1])) names.push(m[1]);
+  }
+  return names;
+}
+
+/** Keys in .env.example with no table row (`missing`), and table rows not in it (`extra`). */
+export function diffKeys({ declared, rows }) {
+  const listed = new Set(rows);
+  const known = new Set(declared);
+  return {
+    missing: declared.filter((name) => !listed.has(name)),
+    extra: rows.filter((name) => !known.has(name)),
+  };
+}
+
+/**
  * Reads `NAME: value` lines from a workflow file (workflow, job and service `env:` blocks). The
  * first occurrence wins, matching the workflow-level block at the top of ci.yml.
  */

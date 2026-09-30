@@ -5,8 +5,10 @@
 //   node .claude/skills/env-sync/scripts/sync.mjs                 check local, ci and prod; exit 1 on drift
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply local   write the Local column into .env.local
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply prod    write the Prod column to Vercel production
+//   node .claude/skills/env-sync/scripts/sync.mjs --apply keys    add a table row for every .env.example key missing one
 //     --only A,B              limit to these variables
 //
+// .env.example owns the list of keys; the table owns their values.
 // Rules: the table overwrites Vercel production and .env.local; empty cells are skipped (never
 // deletes anything); ci.yml is only checked (it ships to buyers and holds test values).
 // Needs `lark-cli` logged in as you and `vercel` linked to the project (see .claude/skills/env-sync/SKILL.md).
@@ -27,6 +29,8 @@ import {
   diffColumn,
   parseDotenv,
   parseWorkflowEnv,
+  parseKeys,
+  diffKeys,
   updateDotenv,
 } from "./lib.mjs";
 
@@ -37,6 +41,7 @@ const BASE_URL = `https://linonward.feishu.cn/base/${BASE_TOKEN}`;
 const root = path.resolve(import.meta.dirname, "../../../..");
 const localFile = path.join(root, ".env.local");
 const ciFile = path.join(root, ".github/workflows/ci.yml");
+const exampleFile = path.join(root, ".env.example");
 
 const { values: args } = parseArgs({
   options: {
@@ -44,8 +49,10 @@ const { values: args } = parseArgs({
     only: { type: "string" },
   },
 });
-if (args.apply && !["local", "prod"].includes(args.apply)) {
-  console.error('--apply takes "local" or "prod" (ci.yml is check-only).');
+if (args.apply && !["local", "prod", "keys"].includes(args.apply)) {
+  console.error(
+    '--apply takes "local", "prod" or "keys" (ci.yml is check-only).',
+  );
   process.exit(2);
 }
 const only = args.only
@@ -174,6 +181,44 @@ function report(title, diffs) {
 }
 
 const table = readTable();
+const keyDiff = diffKeys({
+  declared: parseKeys(readFileSync(exampleFile, "utf8")),
+  rows: table.names,
+});
+
+if (args.apply === "keys") {
+  if (keyDiff.missing.length === 0) {
+    console.log("Every .env.example key already has a table row.");
+    process.exit(0);
+  }
+  const created = JSON.parse(
+    run("lark-cli", [
+      "base",
+      "+record-batch-create",
+      "--as",
+      "user",
+      "--base-token",
+      BASE_TOKEN,
+      "--table-id",
+      TABLE,
+      "--json",
+      JSON.stringify({
+        create_records: keyDiff.missing.map((name) => ({
+          变量名: name,
+          备注: "从 .env.example 补录：填分组、说明、敏感和各列的值",
+        })),
+      }),
+    ]),
+  );
+  if (created.ok === false) {
+    console.error(`lark-cli: ${JSON.stringify(created.error)}`);
+    process.exit(2);
+  }
+  console.log(`Added table rows: ${keyDiff.missing.join(", ")}`);
+  console.log(`Fill in their values: ${BASE_URL}`);
+  process.exit(0);
+}
+
 const rows = only ? table.names.filter((n) => only.has(n)) : table.names;
 const local = existsSync(localFile)
   ? parseDotenv(readFileSync(localFile, "utf8"))
@@ -187,13 +232,28 @@ const prodDiff = diffColumn({ table: table.prod, target: prod, rows });
 
 if (!args.apply) {
   console.log(`Table: ${BASE_URL}\n`);
+  const keysMissing = only
+    ? keyDiff.missing.filter((n) => only.has(n))
+    : keyDiff.missing;
+  if (keysMissing.length || keyDiff.extra.length) {
+    console.log("keys (.env.example ↔ table):");
+    if (keysMissing.length)
+      console.log(`  in .env.example, no table row: ${keysMissing.join(", ")}`);
+    if (keyDiff.extra.length && !only)
+      console.log(
+        `  table row not in .env.example: ${keyDiff.extra.join(", ")}`,
+      );
+  } else {
+    console.log("keys (.env.example ↔ table): in sync");
+  }
   const drift =
+    keysMissing.length +
     report("local (.env.local)", localDiff) +
     report("ci (.github/workflows/ci.yml, check only)", ciDiff) +
     report("prod (Vercel production)", prodDiff);
   if (drift > 0) {
     console.log(
-      "\nApply with --apply local / --apply prod; update ci.yml by hand.",
+      "\nApply with --apply keys / --apply local / --apply prod; update ci.yml by hand.",
     );
     process.exit(1);
   }

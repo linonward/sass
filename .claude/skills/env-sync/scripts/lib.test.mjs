@@ -3,7 +3,9 @@ import { test } from "node:test";
 
 import {
   diffColumn,
+  diffKeys,
   parseDotenv,
+  parseKeys,
   parseWorkflowEnv,
   updateDotenv,
   VERCEL_SENSITIVE,
@@ -90,4 +92,21 @@ test("updateDotenv replaces in place, appends new keys, quotes when needed", () 
   // Round trip: what we write parses back to the same values.
   const written = updateDotenv("", { X: 'a "b" #c', Y: "plain" });
   assert.deepEqual(parseDotenv(written), { X: 'a "b" #c', Y: "plain" });
+});
+
+test("parseKeys reads names from .env.example, ignoring values and comments", () => {
+  assert.deepEqual(
+    parseKeys("# A=commented\nA=\nB=default\nexport C=1\nA=again\n"),
+    ["A", "B", "C"],
+  );
+});
+
+test("diffKeys: .env.example owns the keys, the table only the values", () => {
+  assert.deepEqual(
+    diffKeys({
+      declared: ["A", "B", "NEW"],
+      rows: ["A", "B", "INTEGRATION_ONLY"],
+    }),
+    { missing: ["NEW"], extra: ["INTEGRATION_ONLY"] },
+  );
 });
