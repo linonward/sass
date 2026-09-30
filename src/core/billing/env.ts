@@ -117,7 +117,7 @@ export function fakeBillingAllowed(runtimeEnv: RuntimeEnv) {
  *   below); fake is only usable locally and in CI (see fakeBillingAllowed).
  * - `ALLOW_FAKE_BILLING`: optional, off by default. Setting it explicitly to 1 / true allows fake
  *   (CI's e2e needs it, since e2e runs on a production build); it doesn't allow it on Vercel, with
- *   CREEM_MODE=live or with a live Stripe key.
+ *   CREEM_MODE=live, with WAFFO_MODE=prod or with a live Stripe key.
  * - `BILLING_SUCCESS_TIMEOUT_MS`: how long the success page waits for the webhook; defaults to 60s.
  */
 export function billingServerEnv(
@@ -168,8 +168,8 @@ export function billingServerEnv(
     ),
     // fake is only for e2e and local: the checkout page and webhook are simulated by on-site test
     // routes.
-    // Setting fake in a disallowed environment (production build, Vercel, CREEM_MODE=live, a live Stripe
-    // key) fails at startup; see fakeBillingAllowed.
+    // Setting fake in a disallowed environment (Vercel, CREEM_MODE=live, WAFFO_MODE=prod, a live Stripe
+    // key, or a production build without ALLOW_FAKE_BILLING) fails at startup; see fakeBillingAllowed.
     BILLING_PROVIDER: z
       .enum(billingProviders)
       .default(provider)

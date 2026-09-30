@@ -64,18 +64,18 @@ For a SaaS selling internationally, the main benefit of an MoR is **saving the p
 
 ## How they actually differ in the product
 
-The thing most easily overlooked when choosing is that "under the same interface, the three don't behave exactly the same." All of the differences below come from this template's implementation and directly determine what you have to do operationally:
+The thing most easily overlooked when choosing is that "under the same interface, the providers don't behave exactly the same." All of the differences below come from this template's implementation and directly determine what you have to do operationally:
 
-|                                             | Creem                                                            | Stripe                                                                                                            | Lemon Squeezy                                                                                                                             |
-| ------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| What the product ID means                   | Product ID (`prod_`)                                             | Price ID (`price_`)                                                                                               | Variant ID (variant)                                                                                                                      |
-| Variable prefix                             | `CREEM_PRODUCT_ID_*`                                             | `STRIPE_PRICE_ID_*`                                                                                               | `LEMONSQUEEZY_VARIANT_ID_*`                                                                                                               |
-| Checkout cancel URL                         | Not supported; the user just closes the page                     | Supports `cancel_url`                                                                                             | Not supported; the user just closes the page                                                                                              |
-| Customer portal                             | `customers.generateBillingLinks`                                 | Billing Portal session, requires `return_url`; the portal configuration must be saved once in the dashboard first | Reads the customer's `customer_portal` URL, **which only has a value while the customer has an active subscription**; otherwise it errors |
-| Canceling subscriptions on account deletion | Cancels immediately                                              | Cancels immediately                                                                                               | Only stops future charges; the user keeps access until `ends_at`                                                                          |
-| Reclaiming credits on refund                | Reclaims in proportion to the amount refunded (`refund.created`) | **Doesn't reclaim**: the refund object has no invoice field, so v1 ignores refund events                          | **Only reclaims on full refunds**; partial refunds don't reclaim                                                                          |
-| Test / live                                 | `CREEM_MODE=test` / `live`, two domains                          | The key itself tells them apart (`sk_test_` / `sk_live_`)                                                         | A toggle on the store; keys don't differ                                                                                                  |
-| Fake hard lock                              | Refused when `CREEM_MODE=live`                                   | Refused when an `sk_live_` / `rk_live_` key is set                                                                | None: there's no reliable signal to check; see the comment in `src/core/billing/env.ts`                                                   |
+|                                             | Creem                                                            | Stripe                                                                                                            | Lemon Squeezy                                                                                                                             | Waffo Pancake                                                                                                    |
+| ------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| What the product ID means                   | Product ID (`prod_`)                                             | Price ID (`price_`)                                                                                               | Variant ID (variant)                                                                                                                      | Product ID (`PROD_`)                                                                                             |
+| Variable prefix                             | `CREEM_PRODUCT_ID_*`                                             | `STRIPE_PRICE_ID_*`                                                                                               | `LEMONSQUEEZY_VARIANT_ID_*`                                                                                                               | `WAFFO_PRODUCT_ID_*`                                                                                             |
+| Checkout cancel URL                         | Not supported; the user just closes the page                     | Supports `cancel_url`                                                                                             | Not supported; the user just closes the page                                                                                              | Not supported; the user just closes the page                                                                     |
+| Customer portal                             | `customers.generateBillingLinks`                                 | Billing Portal session, requires `return_url`; the portal configuration must be saved once in the dashboard first | Reads the customer's `customer_portal` URL, **which only has a value while the customer has an active subscription**; otherwise it errors | Hosted magic-link sign-in page shared across merchants (no pre-authenticated link)                               |
+| Canceling subscriptions on account deletion | Cancels immediately                                              | Cancels immediately                                                                                               | Only stops future charges; the user keeps access until `ends_at`                                                                          | Stops future charges; the user keeps access until the end of the current period                                  |
+| Reclaiming credits on refund                | Reclaims in proportion to the amount refunded (`refund.created`) | **Doesn't reclaim**: the refund object has no invoice field, so v1 ignores refund events                          | **Only reclaims on full refunds**; partial refunds don't reclaim                                                                          | Reclaims in proportion to the refunded payment, partial or full (refunds are possible within 14 days of payment) |
+| Test / live                                 | `CREEM_MODE=test` / `live`, two domains                          | The key itself tells them apart (`sk_test_` / `sk_live_`)                                                         | A toggle on the store; keys don't differ                                                                                                  | `WAFFO_MODE=test` / `prod`; private keys and product IDs are separate per environment                            |
+| Fake hard lock                              | Refused when `CREEM_MODE=live`                                   | Refused when an `sk_live_` / `rk_live_` key is set                                                                | None: there's no reliable signal to check; see the comment in `src/core/billing/env.ts`                                                   | Refused when `WAFFO_MODE=prod`                                                                                   |
 
 ## Waffo Pancake
 
@@ -90,13 +90,13 @@ The fourth provider, integrated by following the "Adding another provider" path 
 
 For step-by-step go-live setup, see [Payments (Waffo Pancake)](../README.md#payments-waffo-pancake) in the README.
 
-The refund row is **a real-money difference**, and it's worth reading the README's [Revenue definition](../README.md#revenue-definition) and the launch checklist section for your provider on their own: Creem automatically reclaims credits in proportion; Stripe doesn't handle it at all (refunds are done only in the dashboard, and credits have to be handled manually); Lemon Squeezy only recognizes full refunds.
+The refund row is **a real-money difference**, and it's worth reading the README's [Revenue definition](../README.md#revenue-definition) and the launch checklist section for your provider on their own: Creem automatically reclaims credits in proportion; Stripe doesn't handle it at all (refunds are done only in the dashboard, and credits have to be handled manually); Lemon Squeezy only recognizes full refunds; Waffo Pancake reclaims in proportion to the specific payment refunded, partial or full, and refunds are only possible within 14 days of payment.
 
 ## Switching providers
 
 Prerequisite: the account and products at the target provider are already set up (steps in the corresponding section of the README launch checklist, including the webhook URL, event list and test cards).
 
-1. **Change `site.config.ts`**: change the `billingProvider` literal to the target provider, and replace the `providerProductId` of both paid plans with the object IDs on the new provider's side (Creem product, Stripe Price, Lemon Squeezy variant).
+1. **Change `site.config.ts`**: change the `billingProvider` literal to the target provider, and replace the `providerProductId` of both paid plans with the object IDs on the new provider's side (Creem product, Stripe Price, Lemon Squeezy variant, Waffo Pancake product).
 
    ```ts
    const billingProvider: BillingProviderName = "stripe";
@@ -133,6 +133,17 @@ Prerequisite: the account and products at the target provider are already set up
    CREEM_PRODUCT_ID_PRO=prod_...
    CREEM_PRODUCT_ID_LIFETIME=prod_...
    CREEM_MODE=test
+   ```
+
+   ```bash
+   # Waffo Pancake: merchant ID + API private key; set WAFFO_MODE=prod for real payments. Private keys and
+   # product IDs belong to one environment (test or prod) and don't carry over
+   BILLING_PROVIDER=waffo
+   WAFFO_MERCHANT_ID=MER_...
+   WAFFO_PRIVATE_KEY=...
+   WAFFO_PRODUCT_ID_PRO=PROD_...
+   WAFFO_PRODUCT_ID_LIFETIME=PROD_...
+   WAFFO_MODE=test
    ```
 
    Fill in only the set for the provider **in effect**: if Vercel production is missing the keys for the provider in effect, the build fails outright (`billingServerEnv` in `src/core/billing/env.ts` only makes them required when "Vercel production + the site has paid plans + this is the provider in effect"). Locally it doesn't; a missing key means checkout and webhooks return 503, and everything else works as usual.
@@ -192,7 +203,7 @@ You don't need to retest the whole "checkout → webhook → credit grant" flow 
 
 Local development, CI and e2e all use the built-in fake provider (`BILLING_PROVIDER=fake`): the checkout page and webhooks are simulated by in-app routes, you can set a webhook delay or not send it at all, and no external accounts are needed. `e2e/billing.spec.ts` and `e2e/pricing.spec.ts` cover "endpoint behavior when unconfigured" and "the full purchase flow" respectively.
 
-Fake is a test double, gated by `fakeBillingAllowed` (`src/core/billing/env.ts`): in a production runtime (`next build` / `next start` / Docker), on Vercel (any environment), with `CREEM_MODE=live`, or with a live Stripe key configured, setting `fake` fails at startup. There's also a general rule: don't turn it on in any public-facing environment — that would let anyone go through fake checkout and get plans and credits for free.
+Fake is a test double, gated by `fakeBillingAllowed` (`src/core/billing/env.ts`). Setting `fake` fails at startup on Vercel (any environment), with `CREEM_MODE=live`, with `WAFFO_MODE=prod`, or with a live Stripe key configured — nothing overrides these. It also fails in a production runtime (`next build` / `next start` / Docker) unless `ALLOW_FAKE_BILLING=1` (or `true`) is set; that is how CI runs e2e against a production build. There's also a general rule: don't turn it on in any public-facing environment — that would let anyone go through fake checkout and get plans and credits for free.
 
 ## FAQ
 

@@ -163,6 +163,7 @@
 | T2311                       | merge-hygiene           | `docs/merge-hygiene`           | —                             | done |
 | T2312                       | canonical-dedupe        | `fix/canonical-dedupe`         | —                             | done |
 | T2313                       | image-edit              | `feat/image-edit`              | T2305                         | done |
+| T2314                       | doc-gaps                | `docs/doc-gaps`                | T2605                         | done |
 | **阶段 24：Landing 重设计** |                         |                                |                               |      |
 | T2401                       | landing-redesign        | `feat/landing-redesign`        | T105、T605、T1803             | done |
 | T2402                       | landing-seo             | `fix/landing-seo`              | T2401                         | done |

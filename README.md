@@ -4,9 +4,9 @@
 
 Turn your AI product into a business that gets paid. Sign-in, payments, credits and AI are already wired up, so your time goes into your product.
 
-A reusable SaaS template for selling worldwide: change the config and you get sign-in, payments (Creem / Stripe / Lemon Squeezy), credits, AI, internationalization, SEO and the rest of the infrastructure. You only write your product features.
+A reusable SaaS template for selling worldwide: change the config and you get sign-in, payments (Creem / Stripe / Lemon Squeezy / Waffo Pancake), credits, AI, internationalization, SEO and the rest of the infrastructure. You only write your product features.
 
-v1 includes: email one-time code and Google sign-in, payments through Creem / Stripe / Lemon Squeezy (subscriptions and one-time purchases), a credits ledger, AI (text, image and video, charged in credits per call), file uploads (R2), internationalization, SEO, legal pages, an MDX blog, and an admin area.
+v1 includes: email one-time code and Google sign-in, payments through Creem / Stripe / Lemon Squeezy / Waffo Pancake (subscriptions and one-time purchases), a credits ledger, AI (text, image and video, charged in credits per call), file uploads (R2), internationalization, SEO, legal pages, an MDX blog, and an admin area.
 
 - 🚀 Live in 10 minutes: [the zero-to-live checklist](docs/starter-guide.md#from-zero-to-live-in-10-minutes) (clone → run locally → sign in and see the dashboard)
 - Upgrading to a new template version: [UPGRADING.md](UPGRADING.md)
@@ -131,7 +131,7 @@ Before writing product features, take a look at the directory boundaries in [UPG
 
 ### 4. Prepare external accounts
 
-Following section 4 of the [launch checklist](#launch-checklist), prepare only the services the modules you enabled need: Neon (database), Resend (email, with SPF / DKIM set up), Google OAuth (sign-in), a payment provider (Creem, Stripe or Lemon Squeezy — create the products / variants in test mode first and put their IDs in `billing.plans`); with AI and uploads on, also Upstash, R2 and your model providers.
+Following section 4 of the [launch checklist](#launch-checklist), prepare only the services the modules you enabled need: Neon (database), Resend (email, with SPF / DKIM set up), Google OAuth (sign-in), a payment provider (Creem, Stripe, Lemon Squeezy or Waffo Pancake — create the products / variants in test mode first and put their IDs in `billing.plans`); with AI and uploads on, also Upstash, R2 and your model providers.
 
 ### 5. Deploy to Vercel
 
@@ -473,17 +473,17 @@ In the Vercel project → Settings → Environment Variables, fill these in per 
 
 ### 4. External accounts for the modules you enabled
 
-| Module                                 | External service                | When you need it                      |
-| -------------------------------------- | ------------------------------- | ------------------------------------- |
-| Database                               | Neon Postgres                   | When sign-in goes live                |
-| Email                                  | Resend (with SPF / DKIM set up) | When sign-in goes live                |
-| Sign-in                                | Google Cloud OAuth client       | When sign-in goes live                |
-| Payments                               | Creem, Stripe, or Lemon Squeezy | When you start taking payments        |
-| `features.rateLimit` / `ai` / `upload` | Upstash Redis                   | When any of these is on in production |
-| `features.ai`                          | AI model provider               | When AI is on                         |
-| `features.upload`                      | Cloudflare R2                   | When uploads are on                   |
-| `features.admin`                       | None (only `ADMIN_EMAILS`)      | When the admin is on                  |
-| `observability.sentry`                 | Sentry                          | When error tracking is on             |
+| Module                                 | External service                               | When you need it                      |
+| -------------------------------------- | ---------------------------------------------- | ------------------------------------- |
+| Database                               | Neon Postgres                                  | When sign-in goes live                |
+| Email                                  | Resend (with SPF / DKIM set up)                | When sign-in goes live                |
+| Sign-in                                | Google Cloud OAuth client                      | When sign-in goes live                |
+| Payments                               | Creem, Stripe, Lemon Squeezy, or Waffo Pancake | When you start taking payments        |
+| `features.rateLimit` / `ai` / `upload` | Upstash Redis                                  | When any of these is on in production |
+| `features.ai`                          | AI model provider                              | When AI is on                         |
+| `features.upload`                      | Cloudflare R2                                  | When uploads are on                   |
+| `features.admin`                       | None (only `ADMIN_EMAILS`)                     | When the admin is on                  |
+| `observability.sentry`                 | Sentry                                         | When error tracking is on             |
 
 The subsections below give each module's variable names and sign-up steps.
 
