@@ -105,9 +105,18 @@ describe("Google One Tap allowlist", () => {
     ]);
   });
 
+  test("when enabled, allows Google profile pictures (user.image) and nothing broader", () => {
+    const parsed = directives(
+      contentSecurityPolicy({ runtimeEnv: credentials, isDev: false }),
+    );
+    expect(parsed["img-src"]).toContain("https://lh3.googleusercontent.com");
+    expect(parsed["img-src"]).not.toContain("https://*.googleusercontent.com");
+  });
+
   test("without credentials none of them appear, and frame-src isn't sent at all", () => {
     const csp = contentSecurityPolicy({ runtimeEnv: {}, isDev: false });
     expect(csp).not.toContain("accounts.google.com");
+    expect(csp).not.toContain("googleusercontent.com");
     // Not sending it keeps the original policy when disabled (frames keep falling back to
     // default-src 'self').
     expect(directives(csp)["frame-src"]).toBeUndefined();
@@ -120,6 +129,7 @@ describe("Google One Tap allowlist", () => {
     ]) {
       const csp = contentSecurityPolicy({ runtimeEnv, isDev: false });
       expect(csp).not.toContain("accounts.google.com");
+      expect(csp).not.toContain("googleusercontent.com");
       expect(directives(csp)["frame-src"]).toBeUndefined();
     }
   });

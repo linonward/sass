@@ -772,3 +772,29 @@ CI 的 e2e 覆盖了页面和流程，但外部服务全是替身：fake 支付�
 **验证记录**
 
 （按模块逐条追加。）
+
+---
+
+## T2321 avatar-csp
+
+- 分支 / worktree：`fix/avatar-csp` → `../sass-avatar-csp`
+- 依赖：—
+
+**问题**
+
+T2319 在 production（https://sass.linonward.com）验证时发现：用 Google 登录的用户，`user.image` 是 `https://lh3.googleusercontent.com/a/...`，而 `src/core/security/headers.ts` 生成的 CSP `img-src` 只有 `'self' blob: data:` 和 R2 源，头像被浏览器拦下（控制台报 `violates the following Content Security Policy directive: img-src ...`），用户菜单（应用与后台共用的 dashboard shell）只剩首字母。
+
+**做**
+
+- 确认头像只有一个渲染点：`src/core/dashboard/user-menu.tsx` 的 `AvatarImage`；`user.image` 只由 Google 登录（OAuth 跳转与 One Tap，都取 ID token 的 `picture`）写入，验证码登录不设头像。
+- `img-src` 在启用 Google 登录时加 `https://lh3.googleusercontent.com`，与 One Tap 各域名走同一个 `googleClientId` 开关；未配置时策略不变。
+- 只放 `lh3`，不用 `*.googleusercontent.com`：父域名还托管各种 Google 产品的用户上传内容；`picture` 声明目前都在 `lh3`。万一换了主机，只会退回首字母，不影响其他功能。理由写在代码注释里。
+- 单测：启用时有 `lh3` 且没有通配；未启用、预览部署、只有 client ID 时都不出现 `googleusercontent.com`。
+- e2e `security-headers.spec.ts` 只断言关键指令，精确白名单归单测，不用改。
+- README 两处 CSP 说明补上 Google 头像。
+
+**验收**
+
+- [x] 配置 Google 时 `img-src` 含 `https://lh3.googleusercontent.com`，未配置时不含（单测）
+- [x] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm english:check`、`prettier --check` 通过
+- [x] CI 绿
