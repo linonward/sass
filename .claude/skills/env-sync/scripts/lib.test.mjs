@@ -3,11 +3,11 @@ import { test } from "node:test";
 
 import {
   diffColumn,
+  missingKeys,
   parseDotenv,
+  parseKeys,
   parseWorkflowEnv,
-  SENSITIVE_MARKER,
   updateDotenv,
-  VERCEL_SENSITIVE,
 } from "./lib.mjs";
 
 test("parseDotenv reads plain, quoted and empty values", () => {
@@ -53,21 +53,20 @@ test("diffColumn classifies every case and never proposes deletions", () => {
     "EMPTY_BOTH",
     "UNTRACKED",
     "SECRET",
-    "MARKED",
+    "SECRET_EMPTY",
   ];
   const table = {
     SAME: "a",
     CHANGED: "new",
     NEW: "x",
     SECRET: "real",
-    MARKED: SENSITIVE_MARKER,
   };
   const target = {
     SAME: "a",
     CHANGED: "old",
     UNTRACKED: "present",
-    SECRET: VERCEL_SENSITIVE,
-    MARKED: VERCEL_SENSITIVE,
+    SECRET: "[SENSITIVE]",
+    SECRET_EMPTY: "[SENSITIVE]",
     EXTRA: "1",
     VERCEL_ENV: "production",
   };
@@ -75,8 +74,10 @@ test("diffColumn classifies every case and never proposes deletions", () => {
     { name: "CHANGED", kind: "change" },
     { name: "NEW", kind: "add" },
     { name: "UNTRACKED", kind: "untracked" },
-    { name: "SECRET", kind: "unverifiable", sensitive: true },
-    { name: "MARKED", kind: "unverifiable", sensitive: true },
+    // A Vercel sensitive value pulls as a placeholder, so it always differs and is rewritten.
+    { name: "SECRET", kind: "change" },
+    // Empty in the table: left alone, only reported.
+    { name: "SECRET_EMPTY", kind: "untracked" },
     { name: "EXTRA", kind: "missing_row" },
   ]);
 });
@@ -90,4 +91,21 @@ test("updateDotenv replaces in place, appends new keys, quotes when needed", () 
   // Round trip: what we write parses back to the same values.
   const written = updateDotenv("", { X: 'a "b" #c', Y: "plain" });
   assert.deepEqual(parseDotenv(written), { X: 'a "b" #c', Y: "plain" });
+});
+
+test("parseKeys reads names from .env.example, ignoring values and comments", () => {
+  assert.deepEqual(
+    parseKeys("# A=commented\nA=\nB=default\nexport C=1\nA=again\n"),
+    ["A", "B", "C"],
+  );
+});
+
+test("missingKeys: only .env.example keys without a table row", () => {
+  assert.deepEqual(
+    missingKeys({
+      declared: ["A", "B", "NEW"],
+      rows: ["A", "B", "INTEGRATION_ONLY"],
+    }),
+    ["NEW"],
+  );
 });

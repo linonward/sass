@@ -6,15 +6,16 @@
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply local   write the Local column into .env.local
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply prod    write the Prod column to Vercel production
 //     --only A,B              limit to these variables
-//     --include-sensitive     with --apply prod: also overwrite variables Vercel stores as
-//                             sensitive (their current value can't be read, so it can't be diffed)
 //
-// Rules: empty cells are skipped (never deletes anything), ci.yml is only checked (it ships to
-// buyers and holds test values), and cells holding the "can't read" marker are skipped.
+// The table is the single source of both keys and values. Every difference (keys against
+// .env.example, and values against .env.local, ci.yml and Vercel) is shown with ⚠️ in every mode.
+// Rules: the table overwrites Vercel production and .env.local; empty cells are skipped (never
+// deletes anything); ci.yml is only checked (it ships to buyers and holds test values).
 // Needs `lark-cli` logged in as you and `vercel` linked to the project (see .claude/skills/env-sync/SKILL.md).
 
 import { execFileSync } from "node:child_process";
 import {
+  chmodSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -28,8 +29,9 @@ import {
   diffColumn,
   parseDotenv,
   parseWorkflowEnv,
+  parseKeys,
+  missingKeys,
   updateDotenv,
-  VERCEL_SENSITIVE,
 } from "./lib.mjs";
 
 const BASE_TOKEN = "Lk9Pb1ogSagQemszfgycPS6nnHc";
@@ -39,12 +41,12 @@ const BASE_URL = `https://linonward.feishu.cn/base/${BASE_TOKEN}`;
 const root = path.resolve(import.meta.dirname, "../../../..");
 const localFile = path.join(root, ".env.local");
 const ciFile = path.join(root, ".github/workflows/ci.yml");
+const exampleFile = path.join(root, ".env.example");
 
 const { values: args } = parseArgs({
   options: {
     apply: { type: "string" },
     only: { type: "string" },
-    "include-sensitive": { type: "boolean", default: false },
   },
 });
 if (args.apply && !["local", "prod"].includes(args.apply)) {
@@ -152,31 +154,37 @@ function readProd() {
 const filter = (items) =>
   only ? items.filter((i) => only.has(i.name)) : items;
 
+// Every difference is shown with ⚠️, in every mode, before anything is applied.
 const labels = {
-  add: "missing in target",
-  change: "differs",
-  untracked: "set in target, empty in table (skipped)",
-  unverifiable: "can't compare (sensitive)",
-  missing_row: "set in target, no row in table",
+  add: "missing in target (written by --apply)",
+  change: "differs from the table (written by --apply)",
+  untracked: "set in target, empty in the table (left alone)",
+  missing_row: "set in target, no row in the table",
 };
 
 function report(title, diffs) {
   const shown = filter(diffs);
   if (shown.length === 0) {
-    console.log(`${title}: in sync`);
+    console.log(`✅ ${title}: in sync`);
     return 0;
   }
-  console.log(`${title}:`);
+  console.log(`⚠️  ${title}:`);
   for (const kind of Object.keys(labels)) {
     const names = shown.filter((d) => d.kind === kind).map((d) => d.name);
-    if (names.length) console.log(`  ${labels[kind]}: ${names.join(", ")}`);
+    if (names.length) console.log(`     ${labels[kind]}: ${names.join(", ")}`);
   }
-  // Only real differences count as drift; reports about untracked/unverifiable values don't.
-  return shown.filter((d) => d.kind === "add" || d.kind === "change").length;
+  return shown.length;
 }
 
 const table = readTable();
-const rows = only ? table.names.filter((n) => only.has(n)) : table.names;
+const declared = parseKeys(readFileSync(exampleFile, "utf8"));
+const keep = (names) => (only ? names.filter((n) => only.has(n)) : names);
+// Keys .env.example declares (the code reads them) that the table doesn't manage, and table keys
+// .env.example doesn't list (integration- or CI-only, or leftovers).
+const unmanaged = keep(missingKeys({ declared, rows: table.names }));
+const undeclared = keep(missingKeys({ declared: table.names, rows: declared }));
+
+const rows = keep(table.names);
 const local = existsSync(localFile)
   ? parseDotenv(readFileSync(localFile, "utf8"))
   : {};
@@ -187,13 +195,27 @@ const localDiff = diffColumn({ table: table.local, target: local, rows });
 const ciDiff = diffColumn({ table: table.ci, target: ci, rows });
 const prodDiff = diffColumn({ table: table.prod, target: prod, rows });
 
+console.log(`Table: ${BASE_URL}\n`);
+let differences = unmanaged.length + undeclared.length;
+if (differences === 0) console.log("✅ keys (table ↔ .env.example): in sync");
+else {
+  console.log("⚠️  keys (table ↔ .env.example):");
+  if (unmanaged.length)
+    console.log(
+      `     in .env.example, no table row (add a row): ${unmanaged.join(", ")}`,
+    );
+  if (undeclared.length)
+    console.log(
+      `     in the table, not in .env.example: ${undeclared.join(", ")}`,
+    );
+}
+differences +=
+  report("local (.env.local)", localDiff) +
+  report("ci (.github/workflows/ci.yml, check only)", ciDiff) +
+  report("prod (Vercel production)", prodDiff);
+
 if (!args.apply) {
-  console.log(`Table: ${BASE_URL}\n`);
-  const drift =
-    report("local (.env.local)", localDiff) +
-    report("ci (.github/workflows/ci.yml, check only)", ciDiff) +
-    report("prod (Vercel production)", prodDiff);
-  if (drift > 0) {
+  if (differences > 0) {
     console.log(
       "\nApply with --apply local / --apply prod; update ci.yml by hand.",
     );
@@ -202,12 +224,14 @@ if (!args.apply) {
   process.exit(0);
 }
 
+const toWrite = (diffs) =>
+  filter(diffs).filter((d) => d.kind === "add" || d.kind === "change");
+
+console.log("");
 if (args.apply === "local") {
-  const changes = filter(localDiff).filter(
-    (d) => d.kind === "add" || d.kind === "change",
-  );
+  const changes = toWrite(localDiff);
   if (changes.length === 0) {
-    console.log(".env.local already matches the table.");
+    console.log("Nothing to write to .env.local.");
     process.exit(0);
   }
   const values = Object.fromEntries(
@@ -215,40 +239,23 @@ if (args.apply === "local") {
   );
   const before = existsSync(localFile) ? readFileSync(localFile, "utf8") : "";
   writeFileSync(localFile, updateDotenv(before, values), { mode: 0o600 });
-  console.log(`.env.local updated: ${Object.keys(values).join(", ")}`);
-  report(
-    "remaining",
-    localDiff.filter((d) => !(d.name in values)),
-  );
+  // `mode` only applies when the file is created; tighten an existing file too.
+  chmodSync(localFile, 0o600);
+  console.log(`✅ .env.local updated: ${Object.keys(values).join(", ")}`);
   process.exit(0);
 }
 
-// --apply prod
-const writable = filter(prodDiff).filter(
-  (d) =>
-    d.kind === "add" ||
-    d.kind === "change" ||
-    // Sensitive on Vercel and a real value in the table: overwrite only when asked to.
-    (d.kind === "unverifiable" &&
-      args["include-sensitive"] &&
-      prod[d.name] === VERCEL_SENSITIVE &&
-      table.prod[d.name] &&
-      !table.prod[d.name].startsWith("（")),
-);
+// --apply prod: the table wins. Every non-empty Prod cell that differs or is missing is written
+// (sensitive variables can't be read back, so they always differ); equal values are left alone.
+const writable = toWrite(prodDiff);
 if (writable.length === 0) {
-  console.log(
-    "Vercel production already matches the table (sensitive values not compared).",
-  );
-  report("prod (Vercel production)", prodDiff);
+  console.log("Nothing to write to Vercel production.");
   process.exit(0);
 }
 for (const { name } of writable) {
-  // Keep the variable's current storage type; a new variable follows the table's 敏感 checkbox
-  // (a sensitive variable can never be read back, so it could never be compared again).
-  const sensitive =
-    prod[name] === undefined
-      ? table.sensitive[name]
-      : prod[name] === VERCEL_SENSITIVE;
+  // Storage type follows the table's 敏感 checkbox too. A sensitive variable can never be read
+  // back, so it's rewritten on every --apply prod.
+  const sensitive = table.sensitive[name];
   // The value goes in on stdin, not argv, so it never shows up in the process list.
   run(
     "vercel",
@@ -263,7 +270,7 @@ for (const { name } of writable) {
     ],
     { input: table.prod[name], stdio: ["pipe", "pipe", "pipe"] },
   );
-  console.log(`  set ${name}${sensitive ? " (sensitive)" : ""}`);
+  console.log(`✅ set ${name}${sensitive ? " (sensitive)" : ""}`);
 }
 console.log(
   "Vercel production updated. Redeploy for the new values to take effect.",

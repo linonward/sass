@@ -1,12 +1,6 @@
 // Pure helpers for sync.mjs: parsing, diffing and rewriting. No I/O here, so it can be
 // tested with `node --test .claude/skills/env-sync/scripts/lib.test.mjs`.
 
-/** Marker written in the Prod column for Vercel "sensitive" variables, whose values can't be read. */
-export const SENSITIVE_MARKER = "（Vercel 敏感变量，无法读取）";
-
-/** What `vercel env pull` writes instead of a sensitive variable's value. */
-export const VERCEL_SENSITIVE = "[SENSITIVE]";
-
 /** Variables Vercel injects itself; not managed in the table. */
 export const isVercelSystemVar = (name) =>
   /^(VERCEL|TURBO|NX)_/.test(name) || name === "VERCEL";
@@ -34,6 +28,25 @@ export function parseDotenv(text) {
   return out;
 }
 
+/** Variable names declared in .env.example (`NAME=` lines, values and comments ignored). */
+export function parseKeys(text) {
+  const names = [];
+  for (const line of text.split("\n")) {
+    const m = /^(?:export\s+)?([A-Z][A-Z0-9_]*)=/.exec(line);
+    if (m && !names.includes(m[1])) names.push(m[1]);
+  }
+  return names;
+}
+
+/**
+ * Names in `declared` that have no entry in `rows`. Used both ways: .env.example keys missing
+ * from the table, and table keys missing from .env.example.
+ */
+export function missingKeys({ declared, rows }) {
+  const listed = new Set(rows);
+  return declared.filter((name) => !listed.has(name));
+}
+
 /**
  * Reads `NAME: value` lines from a workflow file (workflow, job and service `env:` blocks). The
  * first occurrence wins, matching the workflow-level block at the top of ci.yml.
@@ -53,7 +66,7 @@ const blank = (v) => v === undefined || v === null || v === "";
  * Compares one table column with what a target environment actually has.
  *
  * - table has a value, target differs → `change` (or `add` when the target lacks it)
- * - table has the sensitive marker, or the target value can't be read → `unverifiable`
+ *   (a Vercel sensitive variable pulls as a placeholder, so it always counts as `change`)
  * - table is empty, target has a value → `untracked` (reported, never deleted)
  * - target has a variable the table doesn't list at all → `missing_row`
  */
@@ -65,14 +78,6 @@ export function diffColumn({ table, target, rows }) {
     const have = target[name];
     if (blank(want)) {
       if (!blank(have)) result.push({ name, kind: "untracked" });
-      continue;
-    }
-    if (want === SENSITIVE_MARKER || have === VERCEL_SENSITIVE) {
-      result.push({
-        name,
-        kind: "unverifiable",
-        sensitive: have === VERCEL_SENSITIVE,
-      });
       continue;
     }
     if (blank(have)) result.push({ name, kind: "add" });
