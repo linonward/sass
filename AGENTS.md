@@ -12,6 +12,7 @@
 - 开工前确认任务依赖已合入 `main`；PR 内同步更新任务表状态。
 - 套件代码放 `src/core/`；不要把业务逻辑写进 `src/core/`。
 - 依赖版本以官方文档最新稳定版为准，不凭记忆写。
+- 环境变量（local / CI / prod 的值）以飞书多维表格为准：改值先改表，再用 `node seller/env/sync.mjs` 核对和同步，见 [seller/README.md](seller/README.md)。
 - 不引入第二种语言或运行时（TypeScript + Node 单栈）。
 - 随发行包交付的内容（代码注释、测试标题、报错 / 日志 / 脚本输出、买家文档）一律用英文；界面文案走 `messages/*.json`。不随包的内部文档（`docs/plan.md`、`docs/tasks/**`、`docs/workflow.md`、`docs/go-to-market.md`、`docs/competitive-landscape.md`、本文件）保持中文。随包口径以 `scripts/release-package.sh` 的排除清单为准，见 [阶段 26](docs/tasks/phase-26-english.md)。
 
