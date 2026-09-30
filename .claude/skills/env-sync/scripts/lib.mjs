@@ -39,8 +39,8 @@ export function parseKeys(text) {
 }
 
 /**
- * Keys .env.example declares that have no table row. The table is the single source of keys, so
- * the reverse (a table row .env.example doesn't list) is normal and not reported.
+ * Names in `declared` that have no entry in `rows`. Used both ways: .env.example keys missing
+ * from the table, and table keys missing from .env.example.
  */
 export function missingKeys({ declared, rows }) {
   const listed = new Set(rows);

@@ -7,8 +7,8 @@
 //   node .claude/skills/env-sync/scripts/sync.mjs --apply prod    write the Prod column to Vercel production
 //     --only A,B              limit to these variables
 //
-// The table is the single source of both keys and values. .env.example (the buyers' list) is only
-// checked against it: a key it declares that the table lacks gets a ⚠️ warning.
+// The table is the single source of both keys and values. Every difference (keys against
+// .env.example, and values against .env.local, ci.yml and Vercel) is shown with ⚠️ in every mode.
 // Rules: the table overwrites Vercel production and .env.local; empty cells are skipped (never
 // deletes anything); ci.yml is only checked (it ships to buyers and holds test values).
 // Needs `lark-cli` logged in as you and `vercel` linked to the project (see .claude/skills/env-sync/SKILL.md).
@@ -154,43 +154,37 @@ function readProd() {
 const filter = (items) =>
   only ? items.filter((i) => only.has(i.name)) : items;
 
+// Every difference is shown with ⚠️, in every mode, before anything is applied.
 const labels = {
-  add: "missing in target",
-  change: "differs",
-  untracked: "set in target, empty in table (skipped)",
-  missing_row: "set in target, no row in table",
+  add: "missing in target (written by --apply)",
+  change: "differs from the table (written by --apply)",
+  untracked: "set in target, empty in the table (left alone)",
+  missing_row: "set in target, no row in the table",
 };
 
 function report(title, diffs) {
   const shown = filter(diffs);
   if (shown.length === 0) {
-    console.log(`${title}: in sync`);
+    console.log(`✅ ${title}: in sync`);
     return 0;
   }
-  console.log(`${title}:`);
+  console.log(`⚠️  ${title}:`);
   for (const kind of Object.keys(labels)) {
     const names = shown.filter((d) => d.kind === kind).map((d) => d.name);
-    if (names.length) console.log(`  ${labels[kind]}: ${names.join(", ")}`);
+    if (names.length) console.log(`     ${labels[kind]}: ${names.join(", ")}`);
   }
-  // Only real differences count as drift; reports about untracked/sensitive values don't.
-  return shown.filter((d) => d.kind === "add" || d.kind === "change").length;
+  return shown.length;
 }
 
 const table = readTable();
-// A key .env.example declares (so the code uses it) but the table doesn't manage yet. Warned on
-// every run, whatever the mode; extra table keys (integration- or CI-only) are fine.
-const unmanaged = missingKeys({
-  declared: parseKeys(readFileSync(exampleFile, "utf8")),
-  rows: table.names,
-}).filter((n) => !only || only.has(n));
-for (const name of unmanaged) {
-  console.warn(
-    `⚠️  ${name} is in .env.example but not in the table: add a row for it (${BASE_URL}).`,
-  );
-}
-if (unmanaged.length) console.warn("");
+const declared = parseKeys(readFileSync(exampleFile, "utf8"));
+const keep = (names) => (only ? names.filter((n) => only.has(n)) : names);
+// Keys .env.example declares (the code reads them) that the table doesn't manage, and table keys
+// .env.example doesn't list (integration- or CI-only, or leftovers).
+const unmanaged = keep(missingKeys({ declared, rows: table.names }));
+const undeclared = keep(missingKeys({ declared: table.names, rows: declared }));
 
-const rows = only ? table.names.filter((n) => only.has(n)) : table.names;
+const rows = keep(table.names);
 const local = existsSync(localFile)
   ? parseDotenv(readFileSync(localFile, "utf8"))
   : {};
@@ -201,13 +195,27 @@ const localDiff = diffColumn({ table: table.local, target: local, rows });
 const ciDiff = diffColumn({ table: table.ci, target: ci, rows });
 const prodDiff = diffColumn({ table: table.prod, target: prod, rows });
 
+console.log(`Table: ${BASE_URL}\n`);
+let differences = unmanaged.length + undeclared.length;
+if (differences === 0) console.log("✅ keys (table ↔ .env.example): in sync");
+else {
+  console.log("⚠️  keys (table ↔ .env.example):");
+  if (unmanaged.length)
+    console.log(
+      `     in .env.example, no table row (add a row): ${unmanaged.join(", ")}`,
+    );
+  if (undeclared.length)
+    console.log(
+      `     in the table, not in .env.example: ${undeclared.join(", ")}`,
+    );
+}
+differences +=
+  report("local (.env.local)", localDiff) +
+  report("ci (.github/workflows/ci.yml, check only)", ciDiff) +
+  report("prod (Vercel production)", prodDiff);
+
 if (!args.apply) {
-  console.log(`Table: ${BASE_URL}\n`);
-  const drift =
-    report("local (.env.local)", localDiff) +
-    report("ci (.github/workflows/ci.yml, check only)", ciDiff) +
-    report("prod (Vercel production)", prodDiff);
-  if (drift > 0) {
+  if (differences > 0) {
     console.log(
       "\nApply with --apply local / --apply prod; update ci.yml by hand.",
     );
@@ -216,12 +224,14 @@ if (!args.apply) {
   process.exit(0);
 }
 
+const toWrite = (diffs) =>
+  filter(diffs).filter((d) => d.kind === "add" || d.kind === "change");
+
+console.log("");
 if (args.apply === "local") {
-  const changes = filter(localDiff).filter(
-    (d) => d.kind === "add" || d.kind === "change",
-  );
+  const changes = toWrite(localDiff);
   if (changes.length === 0) {
-    console.log(".env.local already matches the table.");
+    console.log("Nothing to write to .env.local.");
     process.exit(0);
   }
   const values = Object.fromEntries(
@@ -231,22 +241,15 @@ if (args.apply === "local") {
   writeFileSync(localFile, updateDotenv(before, values), { mode: 0o600 });
   // `mode` only applies when the file is created; tighten an existing file too.
   chmodSync(localFile, 0o600);
-  console.log(`.env.local updated: ${Object.keys(values).join(", ")}`);
-  report(
-    "remaining",
-    localDiff.filter((d) => !(d.name in values)),
-  );
+  console.log(`✅ .env.local updated: ${Object.keys(values).join(", ")}`);
   process.exit(0);
 }
 
 // --apply prod: the table wins. Every non-empty Prod cell that differs or is missing is written
 // (sensitive variables can't be read back, so they always differ); equal values are left alone.
-const writable = filter(prodDiff).filter((d) =>
-  ["add", "change"].includes(d.kind),
-);
+const writable = toWrite(prodDiff);
 if (writable.length === 0) {
-  console.log("Vercel production already matches the table.");
-  report("prod (Vercel production)", prodDiff);
+  console.log("Nothing to write to Vercel production.");
   process.exit(0);
 }
 for (const { name } of writable) {
@@ -267,7 +270,7 @@ for (const { name } of writable) {
     ],
     { input: table.prod[name], stdio: ["pipe", "pipe", "pipe"] },
   );
-  console.log(`  set ${name}${sensitive ? " (sensitive)" : ""}`);
+  console.log(`✅ set ${name}${sensitive ? " (sensitive)" : ""}`);
 }
 console.log(
   "Vercel production updated. Redeploy for the new values to take effect.",

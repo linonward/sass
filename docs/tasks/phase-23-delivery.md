@@ -868,11 +868,11 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 - 存储类型按表格「敏感」列，不再沿用 Vercel 现有类型。
 - 表格里 16 个占位格子清空（空格子跳过，不会把占位文本写进生产），等填真实值。
 - `--apply local` 每次写后 `chmod 600`。
-- 表格是 key 和 value 的唯一来源；`.env.example` 只做反向检查：它有而表格没有的 key，每次运行都以 ⚠️ 提示（表格多出的 key 正常，不提示）。
+- 表格是 key 和 value 的唯一来源。只要有差异就提示：每次运行（核对和任何 `--apply`）先打印完整报告，key 两个方向（`.env.example` ↔ 表格）和三处的值差异都带 ⚠️、一致的带 ✅，核对模式有任何差异退出码 1。
 
 **验收**
 
 - [x] `lib.test.mjs` （敏感变量按 `change`、空格子为 `untracked`）
 - [x] 清空占位后核对：16 个敏感变量显示为「表格为空、跳过」，`--apply prod` 不会碰它们
 - [x] 本地、CI 仍 in sync
-- [x] 反向 key 检查：临时往 `.env.example` 加一个 key，`--apply local` 也打出 ⚠️；当前 `.env.example` 的 key 表格都有，无提示；`lib.test.mjs` 6 项通过
+- [x] 差异报告：核对显示 key ⚠️（表格多出 `DATABASE_URL_UNPOOLED`、`POSTGRES_PASSWORD`）、local/ci ✅、prod ⚠️（16 个表格为空），退出码 1；临时往 `.env.example` 加 key 会出 ⚠️；把 worktree `.env.local` 的 `EMAIL_TRANSPORT` 改掉后 `--apply local` 先报 ⚠️ 再写回，已有文件权限收紧为 600；`lib.test.mjs` 6 项通过

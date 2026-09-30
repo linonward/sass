@@ -19,7 +19,10 @@ node --test .claude/skills/env-sync/scripts/lib.test.mjs       # 脚本自身的
 
 ## 脚本的规则
 
-- `.env.example`（随包给买家的变量说明）只做反向检查：它里面有、表格里没有的 key，每次运行（任何模式）都以 ⚠️ 提示，说明代码用到了但表格没管起来，去表格补一行。表格多出来的 key 是正常的（如 Neon 集成注入的 `DATABASE_URL_UNPOOLED`、只在 CI 用的 `POSTGRES_PASSWORD`）。转述结果时把 ⚠️ 行原样告诉用户。
+- **只要有差异就提示**：每次运行（核对和任何 `--apply`）都先打印完整差异报告，每项差异带 ⚠️、一致的带 ✅，然后才执行写入。覆盖：
+  - key：`.env.example` 有、表格没有（代码用到了但表格没管，去表格补一行）；表格有、`.env.example` 没有（如 Neon 集成注入的 `DATABASE_URL_UNPOOLED`、只在 CI 用的 `POSTGRES_PASSWORD`，确认是否该补进 `.env.example` 或删行）。
+  - 值：`.env.local`、`ci.yml`、Vercel production 与表格的每一处不同（缺失、不同、目标有而表格空、目标有而表格无此行）。
+- 核对模式有任何差异就退出码 1。转述结果时把所有 ⚠️ 行原样告诉用户，不要省略。
 - **表格覆盖目标**：`--apply` 时，表格里有值的变量一律以表格为准写入；值已相同的跳过。
 - 空单元格跳过、只报告，**脚本从不删除变量**。
 - CI 列只核对：`.github/workflows/ci.yml` 随包交付给买家、里面全是测试值，改它走正常 PR。
@@ -32,7 +35,7 @@ node --test .claude/skills/env-sync/scripts/lib.test.mjs       # 脚本自身的
 1. **前置检查**（在要操作的 checkout 根目录）：
    - `lark-cli` 已以用户身份登录。
    - 同步 prod 需要 `.vercel/project.json`；worktree 里没有时从主 checkout 复制：`cp -R ../sass/.vercel .`。
-2. **先核对**：跑核对命令，把输出（只有变量名）转述给用户：哪些 `differs` / `missing in target` 会被写入，哪些只是报告（空单元格、敏感变量无法比对、目标里有但表格没有的行）。
+2. **先核对**：跑核对命令，把输出（只有变量名）转述给用户：把每条 ⚠️ 都告诉用户，并说明哪些会被 `--apply` 写入（缺失、与表格不同），哪些不会（表格空、表格无此行、key 差异）。
 3. **要改值时，先改表格**：
    - 用户直接在飞书里改，或让你改：`lark-cli base +record-search --keyword <NAME> --search-field 变量名 --field-id 变量名 --format json` 找记录（默认输出 markdown、不能配 `--jq`；关键词是子串匹配，要从结果里挑变量名完全相等的那条），再用 `+record-batch-update` 写 Local / CI / Prod 列。
    - 新变量：在表格里加一行（`+record-batch-create`：变量名、分组、说明、敏感、各列的值）。代码里要读它、买家也需要配置的，同时在 `.env.example` 里加 key（带英文注释）。
