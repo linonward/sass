@@ -620,6 +620,6 @@ T2605 翻译随包文档时，逐段对照了代码，发现几处文档与代�
 
 **验收**
 
-- [ ] 上面每一条都有对应修改，或在 PR 里说明为什么不改
-- [ ] 文档里出现的变量名、判断条件逐条能在代码里找到
-- [ ] `pnpm format:check`、`pnpm english:check` 绿
+- [x] 上面每一条都有对应修改：billing 的差异表加了 Waffo 一列，切换步骤、环境变量块、退款总结补上 Waffo，fake 的禁用条件按 `fakeBillingAllowed` 重写（哪些能被 `ALLOW_FAKE_BILLING` 放行、哪些不能）；`billing/env.ts` 两处注释补上 `WAFFO_MODE=prod`（`billingServerEnv` 的注释本来就列了 Waffo 变量，不用改）；i18n 的例子换成 `de`，加上 `openGraphLocales` 一步，「Testing」按 `e2e/i18n/serve.ts` 写清本地 / CI 的区别；README 四处支付方式列表补上 Waffo Pancake
+- [x] 文档里出现的变量名、判断条件逐条能在代码里找到（`.env.example`、`fakeBillingAllowed`、`openGraphLocales`、`serve.ts`）
+- [x] `pnpm format:check`、`pnpm english:check` 绿；代码只改了注释（AST 与 `main` 一致）
