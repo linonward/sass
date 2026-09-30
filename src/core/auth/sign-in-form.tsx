@@ -17,19 +17,13 @@ import { Input } from "@/core/ui/input";
 import { Label } from "@/core/ui/label";
 
 import { authClient } from "./client";
-import { EMAIL_SEND_FAILED, RESEND_COOLDOWN } from "./errors";
+import { authErrorMessage, RESEND_COOLDOWN, type AuthError } from "./errors";
 import { signInWithOneTap } from "./one-tap";
 
 type OtpSettings = {
   length: number;
   expiresIn: number;
   resendCooldown: number;
-};
-
-type AuthError = {
-  code?: string;
-  status?: number;
-  retryAfter?: number;
 };
 
 type Props = {
@@ -151,24 +145,13 @@ export function SignInForm({
   }
 
   function describe(err: AuthError): string {
-    switch (err.code) {
-      case "INVALID_OTP":
-        return te("invalidCode");
-      case "OTP_EXPIRED":
-        return te("codeExpired");
-      case "TOO_MANY_ATTEMPTS":
-        return te("tooManyAttempts");
-      case "BANNED_USER":
-        return te("banned");
-      case RESEND_COOLDOWN:
-        return te("cooldown", {
-          seconds: err.retryAfter ?? otp.resendCooldown,
-        });
-      case EMAIL_SEND_FAILED:
-        return googleEnabled ? te("sendFailedGoogle") : te("sendFailed");
-    }
-    if (err.status === 429) return te("rateLimited");
-    return te("generic");
+    const message = authErrorMessage(err, {
+      resendCooldown: otp.resendCooldown,
+      googleEnabled,
+    });
+    return "values" in message
+      ? te(message.key, message.values)
+      : te(message.key);
   }
 
   async function sendCode(address = email) {

@@ -673,6 +673,51 @@
       "cancel": "取消",
       "confirm": "删除账户",
       "deleting": "删除中…"
+    },
+    "email": {
+      "title": "邮箱",
+      "description": "修改登录用的邮箱。修改后所有设备都会退出登录。",
+      "newLabel": "新邮箱",
+      "hintVerifyCurrent": "我们会先给当前邮箱发验证码确认是你本人，再给新邮箱发一个。",
+      "hintNewOnly": "我们会给新邮箱发一个验证码。",
+      "continue": "继续",
+      "sending": "发送中…",
+      "currentCodeLabel": "当前邮箱收到的验证码",
+      "currentCodeHint": "输入发到 {email} 的验证码。",
+      "newCodeLabel": "新邮箱收到的验证码",
+      "newCodeHint": "输入发到 {email} 的验证码。如果一直收不到，请检查地址 —— 已经注册过的邮箱不会收到验证码。",
+      "verifying": "验证中…",
+      "confirm": "修改邮箱",
+      "resend": "重新发送验证码",
+      "resent": "已重新发送验证码。",
+      "startOver": "换一个邮箱",
+      "same": "这已经是你当前的邮箱。",
+      "done": "邮箱已改为 {email}。所有设备都已退出登录，请用新邮箱重新登录。",
+      "signIn": "去登录"
+    },
+    "devices": {
+      "title": "登录设备",
+      "description": "当前登录着你账号的设备。不认识的设备可以直接退出。",
+      "current": "本设备",
+      "impersonated": "管理员打开",
+      "meta": "IP {ip} · {active}活跃",
+      "unknownIp": "未知",
+      "unknownDevice": "未知设备",
+      "browserOnOs": "{os} 上的 {browser}",
+      "signOut": "退出",
+      "signOutDevice": "退出 {device}",
+      "signingOut": "正在退出…",
+      "signOutOthers": "退出其他所有设备",
+      "othersTitle": "退出其他所有设备？",
+      "othersDescription": "除了本设备，其他设备都需要重新登录。",
+      "othersConfirm": "退出其他设备",
+      "cancel": "取消",
+      "onlyThis": "目前只有本设备登录着。",
+      "errors": {
+        "notFound": "这台设备已经退出了，刷新页面查看最新列表。",
+        "current": "要退出本设备，请使用退出登录按钮。",
+        "generic": "出了点问题，请重试。"
+      }
     }
   },
   "ApiKeys": {

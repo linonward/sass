@@ -243,10 +243,21 @@ T2306 ─────────┴→ T2504
 
 **验收**
 
-- [ ] 界面改邮箱全流程可走通，改完旧 session 全部失效（查 `session` 表确认，不以页面提示为证据）
-- [ ] `changeEmail.enabled: false` 时设置页不出现入口
-- [ ] 设备列表标出当前设备；退出单台设备后该设备下一次请求被要求重新登录；「退出其他所有设备」后当前设备仍在线
-- [ ] `pnpm test`、`ui-shell` + `landing`、`e2e/email-change.spec.ts` 与设置页相关 e2e 通过
+- [x] 界面改邮箱全流程可走通，改完旧 session 全部失效（e2e 查 `session` 表，行数为 0；不以页面提示为证据）
+- [x] `changeEmail.enabled: false` 时设置页不出现入口（临时改 `site.config.ts` 在浏览器里实测：关掉后表单消失、设备列表仍在；同一断言在关掉时期待表单会失败，证明断言有效）
+- [x] 设备列表标出当前设备；退出单台设备后该设备下一次请求被要求重新登录；「退出其他所有设备」后当前设备仍在线（e2e 用多个浏览器上下文当多台设备，查 `session` 表行数）
+- [x] `pnpm test`、`ui-shell` + `landing`、`e2e/email-change.spec.ts` 与设置页相关 e2e 通过
+
+**实施记录（与上面「做」的出入）**
+
+- **设备列表不走 `list-sessions` 接口。** 它挂着 `freshSessionMiddleware`：当前 session 创建超过 `freshAge`（默认 1 天）就返回 `SESSION_NOT_FRESH`，大多数用户打开设置页时都会报错。改为服务端通过 Better Auth 的 `auth.$context.internalAdapter.listSessions`（就是那个接口内部的读取，不是手写 SQL，也照顾 secondary storage）读取，只把 id、设备、IP、时间、是否当前设备交给页面，**token 不出服务端**。吊销单台时服务端按 id 在本人 session 里找 token，再调 `revoke-session`（只要求 session 有效，不要求新鲜）；「其他所有设备」调 `revoke-other-sessions`。当前设备不能在列表里被退出（用退出登录按钮）。
+- **「最近活动」是近似值**：取 session 的 `updatedAt`，Better Auth 只在续期时（`updateAge`，默认一天）才更新它；页面用相对时间显示，不受服务端时区影响。
+- **改邮箱在浏览器里直接调 Better Auth 的 email OTP 接口**（和登录页一样），保留 HTTP 层限流与 CSRF 校验。开了 `verifyCurrentEmail` 时，新邮箱那一步「重新发送」会回到当前邮箱那一步：当前邮箱的验证码已经被 `request-email-change` 用掉了。新邮箱已被占用时 Better Auth 回成功但不发信（不暴露哪些邮箱已注册），提示文案里说明了这种情况。
+- **成功后不自动跳转**：显示「所有设备已退出，请用新邮箱登录」并给一个「去登录」按钮（整页跳转），自动跳走会让用户看不到这条说明。
+- **错误码 → 文案抽成共享函数** `authErrorMessage`（`src/core/auth/errors.ts`），登录页和改邮箱共用；登录页行为不变（`e2e/auth.spec.ts` 通过）。
+- 管理员模拟登录产生的 session 也会列出来，并标「管理员打开」。
+- `verifyCurrentEmail: false` 的分支只有单测覆盖（直接向新邮箱发码），没在浏览器里单独跑。
+- 截图核对时 dev 浮层出现过一次「1 Issue」（服务端日志带 `RedirectErrorBoundary`），之后按同样流程重跑三次都没有复现，浏览器控制台也没有错误，判断为 dev 编译中的瞬时问题。
 
 ---
 

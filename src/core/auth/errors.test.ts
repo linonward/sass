@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 import { expect, test } from "vitest";
 
-import { EMAIL_SEND_FAILED, RESEND_COOLDOWN } from "./errors";
+import { authErrorMessage, EMAIL_SEND_FAILED, RESEND_COOLDOWN } from "./errors";
 
 const read = (name: string) =>
   readFileSync(new URL(name, import.meta.url), "utf8");
@@ -31,4 +31,56 @@ test("the two error codes are distinct (a collision would show the wrong message
  */
 test("errors.ts is a leaf module with no imports", () => {
   expect(read("./errors.ts")).not.toMatch(/^\s*import\s/m);
+});
+
+test("authErrorMessage maps Better Auth and custom codes to Auth.errors keys", () => {
+  const options = { resendCooldown: 60 };
+  expect(authErrorMessage({ code: "INVALID_OTP" }, options)).toEqual({
+    key: "invalidCode",
+  });
+  expect(authErrorMessage({ code: "OTP_EXPIRED" }, options)).toEqual({
+    key: "codeExpired",
+  });
+  expect(authErrorMessage({ code: "TOO_MANY_ATTEMPTS" }, options)).toEqual({
+    key: "tooManyAttempts",
+  });
+  expect(authErrorMessage({ code: "BANNED_USER" }, options)).toEqual({
+    key: "banned",
+  });
+  expect(authErrorMessage({ status: 429 }, options)).toEqual({
+    key: "rateLimited",
+  });
+  expect(authErrorMessage({ status: 500 }, options)).toEqual({
+    key: "generic",
+  });
+});
+
+test("authErrorMessage uses the server's retryAfter, else the configured cooldown", () => {
+  expect(
+    authErrorMessage(
+      { code: RESEND_COOLDOWN, retryAfter: 12 },
+      { resendCooldown: 60 },
+    ),
+  ).toEqual({
+    key: "cooldown",
+    values: { seconds: 12 },
+  });
+  expect(
+    authErrorMessage({ code: RESEND_COOLDOWN }, { resendCooldown: 60 }),
+  ).toEqual({
+    key: "cooldown",
+    values: { seconds: 60 },
+  });
+});
+
+test("authErrorMessage offers Google only when it is enabled", () => {
+  expect(
+    authErrorMessage({ code: EMAIL_SEND_FAILED }, { resendCooldown: 60 }),
+  ).toEqual({ key: "sendFailed" });
+  expect(
+    authErrorMessage(
+      { code: EMAIL_SEND_FAILED },
+      { resendCooldown: 60, googleEnabled: true },
+    ),
+  ).toEqual({ key: "sendFailedGoogle" });
 });
