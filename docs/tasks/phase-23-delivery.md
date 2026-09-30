@@ -876,3 +876,23 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 - [x] 清空占位后核对：16 个敏感变量显示为「表格为空、跳过」，`--apply prod` 不会碰它们
 - [x] 本地、CI 仍 in sync
 - [x] 差异报告：核对显示 key ⚠️（表格多出 `DATABASE_URL_UNPOOLED`、`POSTGRES_PASSWORD`）、local/ci ✅、prod ⚠️（16 个表格为空），退出码 1；临时往 `.env.example` 加 key 会出 ⚠️；把 worktree `.env.local` 的 `EMAIL_TRANSPORT` 改掉后 `--apply local` 先报 ⚠️ 再写回，已有文件权限收紧为 600；`lib.test.mjs` 6 项通过
+
+## T2324 env-sync-links
+
+- 分支 / worktree：`fix/env-sync-links` → `../sass-env-sync-links`
+- 依赖：T2323，已合入 `main`；起点 `c0a3b68`。
+
+**问题**
+
+飞书会把邮箱、URL、像域名的值（`GOOGLE_CLIENT_ID` 的 `….apps.googleusercontent.com` 也算）自动转成超链接，`+record-list` 返回的是 `[文字](链接)` 的 Markdown。同步脚本原样写出：2026-09-30 填 Local / Prod 列时，11 个格子被转成链接，`--apply local` 把 `SITE_EMAIL_FROM`、`GOOGLE_CLIENT_ID`、`ADMIN_EMAILS`、`ALIBABA_BASE_URL` 的 Markdown 写进了 `.env.local`；Prod 列的 `BETTER_AUTH_URL` 若写进 Vercel，`z.url()` 校验会让生产起不来。核对也发现不了：表格和目标里是同一串 Markdown，显示 in sync。
+
+**决定**
+
+- `lib.mjs` 新增 `cellText`：读表时把「整格一个链接、链接地址 = 文字 / `mailto:` + 文字 / `http(s)://` + 文字」还原成文字；文字和地址对不上的链接原样保留，不猜。`sync.mjs` 的 `readTable` 改用它。
+- 表格数据（不在 diff 里）：当天已把 11 个格子改回纯文本，`.env.local` 重新同步。
+- `SKILL.md` 写明这条规则。
+
+**验收**
+
+- [x] `lib.test.mjs` 7 项通过（新增自动链接还原、非自动链接保留、富文本数组、非字符串）
+- [x] 新脚本对真实表格核对：local、ci in sync，输出与改动前一致

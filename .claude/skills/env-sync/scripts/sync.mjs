@@ -26,6 +26,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 
 import {
+  cellText,
   diffColumn,
   parseDotenv,
   parseWorkflowEnv,
@@ -115,12 +116,6 @@ function readTable() {
     throw new Error(`lark-cli: ${JSON.stringify(summary.error)}`);
   if (summary.data?.has_more)
     throw new Error("More than 200 rows: add paging to readTable().");
-  const text = (v) =>
-    typeof v === "string"
-      ? v
-      : Array.isArray(v)
-        ? v.map((x) => x.text ?? x).join("")
-        : undefined;
   const rows = readFileSync(out, "utf8")
     .trim()
     .split("\n")
@@ -128,12 +123,12 @@ function readTable() {
     .map((l) => JSON.parse(l));
   const table = { names: [], local: {}, ci: {}, prod: {}, sensitive: {} };
   for (const row of rows) {
-    const name = text(row["变量名"])?.trim();
+    const name = cellText(row["变量名"])?.trim();
     if (!name) continue;
     table.names.push(name);
-    table.local[name] = text(row.Local);
-    table.ci[name] = text(row.CI);
-    table.prod[name] = text(row.Prod);
+    table.local[name] = cellText(row.Local);
+    table.ci[name] = cellText(row.CI);
+    table.prod[name] = cellText(row.Prod);
     table.sensitive[name] = row["敏感"] === true;
   }
   return table;
