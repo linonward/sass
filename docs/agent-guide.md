@@ -1,70 +1,71 @@
-# 给 AI 编码助手的项目指引
+# Project guide for AI coding assistants
 
-写给在这个项目里写业务代码的 AI 编码助手（Claude Code、Cursor、Codex 之类），也写给指挥它们的你。内容是这个模板的几条「踩了会在下一次升级时还债」的线：目录边界、怎么加一个业务页面、数据库迁移、测试、升级。
+This is for the AI coding assistant writing product code in this project (Claude Code, Cursor, Codex and the like), and for you, the person directing it. It covers the lines in this template that, if crossed, you pay for again at the next upgrade: directory boundaries, how to add a product page, database migrations, testing, and upgrading.
 
-本文件随买家分发包一起交付，也会随模板的差量更新一起更新 —— 所以**别直接改它**，你自己的项目规则写在 `AGENTS.md` 里（见下一节）。
+This file ships in the release package and is updated along with the template's update packages, so **don't edit it directly**. Put your own project rules in `AGENTS.md` (see the next section).
 
-## 让助手读到这份指引
+## Making your assistant read this guide
 
-前提：已经按 [docs/starter-guide.md](starter-guide.md) 第 1–4 步建好基线提交、装好依赖、写好 `.env.local` 并执行过 `pnpm db:migrate`（先 `git init` 再 `pnpm install`，git 钩子才装得上）。
+Prerequisite: you have followed steps 1–4 of [docs/starter-guide.md](starter-guide.md) to create the baseline commit, install dependencies, write `.env.local`, and run `pnpm db:migrate` (run `git init` before `pnpm install`, or the git hooks won't install).
 
-编码助手打开仓库时自动加载的是根目录的 `AGENTS.md`（Cursor、Codex 等）或 `CLAUDE.md`（Claude Code），不会自己去翻 `docs/`。分发包里**没有**这两个文件：它们属于你的项目，模板不提供、差量更新也不会碰。在仓库根目录建一次：
+When a coding assistant opens the repository, it automatically loads `AGENTS.md` (Cursor, Codex, etc.) or `CLAUDE.md` (Claude Code) from the root. It won't go looking in `docs/` on its own. The release package does **not** include either file: they belong to your project, so the template doesn't ship them and update packages never touch them. Create them once in the repository root:
 
 ```bash
 cat > AGENTS.md <<'EOF'
 # AGENTS.md
 
-写代码前先读 docs/agent-guide.md（目录边界、加页面的步骤、迁移、测试、升级）。
+Before writing code, read docs/agent-guide.md (directory boundaries, steps for adding a page, migrations, testing, upgrading).
 EOF
 printf '@AGENTS.md\n' > CLAUDE.md
 git add AGENTS.md CLAUDE.md && git commit -m "docs: point coding agents to the agent guide"
 ```
 
-之后你自己的规则（产品是做什么的、命名习惯、哪些页面不要动）都往 `AGENTS.md` 里加。
+From then on, add your own rules (what the product does, naming conventions, which pages not to touch) to `AGENTS.md`.
 
-**`pnpm dev` 会往 `AGENTS.md` 里追加一段英文**（跑 e2e 也会：Playwright 启动的就是 `pnpm dev`）。 Next.js 的开发服务器检测到自己跑在 AI 编码助手里时，会在 `AGENTS.md` 末尾写入一段以 `<!-- BEGIN:nextjs-agent-rules -->` 开头、标题为「This is NOT the Next.js you know」的说明（提醒助手按 `node_modules/next/dist/docs/` 里的文档写代码，而不是凭训练数据）。这是 Next.js 自己的行为（`node_modules/next/dist/server/lib/generate-agent-files.js`），不是文件被改坏了：
+**`pnpm dev` appends a block of text to `AGENTS.md`** (so does running e2e: Playwright starts `pnpm dev`). When the Next.js dev server detects that it is running inside an AI coding assistant, it writes a block to the end of `AGENTS.md` that starts with `<!-- BEGIN:nextjs-agent-rules -->` and is titled "This is NOT the Next.js you know" (it reminds the assistant to write code from the docs in `node_modules/next/dist/docs/` rather than from training data). This is Next.js's own behavior (`node_modules/next/dist/server/lib/generate-agent-files.js`), not a corrupted file:
 
-- 你上面写的内容不会被覆盖，它只维护那两个标记之间的一段；
-- 删掉它，下次 `pnpm dev` 还会写回来 —— 直接和你的改动一起提交，工作区就干净了；
-- 如果 `AGENTS.md` 和 `CLAUDE.md` 都不存在，它会两个都新建（`CLAUDE.md` 里只有 `@AGENTS.md`）；这时补上指向本文件的那一行即可。
+- What you wrote above it is not overwritten; it only maintains the section between those two markers;
+- If you delete it, the next `pnpm dev` writes it back, so just commit it along with your changes and your working tree stays clean;
+- If neither `AGENTS.md` nor `CLAUDE.md` exists, it creates both (`CLAUDE.md` contains only `@AGENTS.md`); in that case, add the line pointing to this file.
 
-那段提醒是对的：这个项目用的 Next.js 版本与很多模型的训练数据有出入（例如中间件文件叫 `src/proxy.ts`，路由参数 `params` 是 Promise），写 Next.js 相关代码前先查 `node_modules/next/dist/docs/`。
+That reminder is correct: the Next.js version this project uses differs from many models' training data (for example, the middleware file is `src/proxy.ts`, and route `params` is a Promise). Check `node_modules/next/dist/docs/` before writing Next.js-related code.
 
-## 硬规则
+## Hard rules
 
-1. **不改 `src/core/`。** 需要的东西从 `@/core/...` 导入；缺能力时先找配置项（`site.config.ts`），找不到再改，改动要小并在提交信息里写原因。
-2. **业务代码放 `src/features/<name>/`**，路由文件放 `src/app/[locale]/(app)/<name>/page.tsx` 且只做转发。
-3. **改了表结构就 `pnpm db:generate`，生成的 SQL 不手改**，提交前跑 `pnpm migrations:check`。
-4. **文案进 `messages/`，`en.json` 和 `zh.json` 的 key 必须一一对应**（`pnpm test` 会查）。
-5. **界面遵守 `docs/design.md`**：颜色从配置色推导，没有模糊投影（不写 `shadow-sm/md/lg`），组件用 `@/core/ui/*`。
-6. **交付前至少跑 `pnpm lint`、`pnpm typecheck`、`pnpm test`**；改了页面再跑对应的 e2e（见[测试](#测试)）。
-7. **提交信息用 Conventional Commits**（`feat: …` / `fix: …`），`git commit` 时钩子会检查。
+1. **Don't modify `src/core/`.** Import what you need from `@/core/...`. When a capability is missing, look for a config option first (`site.config.ts`); only if there isn't one, change the kit, keep the change small, and explain why in the commit message.
+2. **Product code goes in `src/features/<name>/`.** Route files go in `src/app/[locale]/(app)/<name>/page.tsx` and only re-export.
+3. **After changing the schema, run `pnpm db:generate` and don't hand-edit the generated SQL.** Run `pnpm migrations:check` before committing.
+4. **Copy goes in `messages/`, and the keys in `en.json` and `zh.json` must match one to one** (`pnpm test` checks this).
+5. **UI follows `docs/design.md`:** colors derive from the configured color, no blurred shadows (don't write `shadow-sm/md/lg`), components come from `@/core/ui/*`.
+6. **Before handing off, run at least `pnpm lint`, `pnpm typecheck`, and `pnpm test`.** If you changed a page, also run the matching e2e (see [Testing](#testing)).
+7. **Commit messages use Conventional Commits** (`feat: …` / `fix: …`); a hook checks them on `git commit`.
+8. **The kit's code, comments and docs are in English; keep your changes under `src/core/` in English too** so template updates merge cleanly. Your own product code can use any language.
 
-## 目录边界
+## Directory boundaries
 
-模板以后发新版本时，买家用差量更新包升级（[UPGRADING.md](../UPGRADING.md)）。更新包只含**模板自己的文件**，应用脚本对每个文件做三路合并：你没动过的文件直接换成新版，你动过、模板这次也动了的文件要合并，合不上就留下冲突标记等你手工处理。所以目录边界的意义很具体：**你在模板文件上改的每一行，都是以后每次升级时可能要解的冲突；你新建的文件，更新包永远不会碰。**
+When the template ships a new version, buyers upgrade with an update package ([UPGRADING.md](../UPGRADING.md)). The update package contains only **the template's own files**, and the apply script does a three-way merge on each one: files you haven't touched are replaced with the new version; files that both you and this template release changed get merged; if the merge fails, conflict markers are left for you to resolve by hand. So the directory boundaries mean something concrete: **every line you change in a template file is a potential conflict at every future upgrade; files you create are never touched by an update package.**
 
-| 路径                                              | 归属 | 对升级的影响                                                                         |
-| ------------------------------------------------- | ---- | ------------------------------------------------------------------------------------ |
-| `src/core/**`                                     | 模板 | 升级改得最多的地方。改一行，以后每次模板动到这个文件都要手工合                       |
-| `src/app/[locale]/(marketing)/**`、`(admin)/**`   | 模板 | 落地页、定价、法律页、博客、后台；同上                                               |
-| `src/app/api/**`                                  | 模板 | 登录、支付、上传、AI、webhook 的接口；同上                                           |
-| `drizzle/`                                        | 两边 | 两边都会新增迁移，编号可能撞车；升级脚本在这里会停下让你处理（见[数据库](#数据库)）  |
-| `src/features/<你的模块>/`                        | 业务 | 你新建的目录，升级不会碰                                                             |
-| `src/app/[locale]/(app)/<你的页面>/`              | 业务 | 同上；模板自带的 `dashboard`、`billing`、`settings` 等页面仍归模板                   |
-| `site.config.ts`、`messages/*.json`               | 业务 | 模板也会往里加新字段 / 新文案。改值、加自己的 key 都行，别删模板的 key、别重排       |
-| `content/**`、`public/**`                         | 业务 | 法律页正文、博客、图片；随便改                                                       |
-| `src/features/example/`、`src/features/invoices/` | 模板 | 示例模块。要么原样留着，要么整个删掉（删法见各自文件里的清单），别在上面改成你的业务 |
+| Path                                              | Owner    | Effect on upgrades                                                                                                                               |
+| ------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/core/**`                                     | Template | Where upgrades change the most. Change one line and you merge by hand every time the template touches that file                                  |
+| `src/app/[locale]/(marketing)/**`, `(admin)/**`   | Template | Landing page, pricing, legal pages, blog, admin; same as above                                                                                   |
+| `src/app/api/**`                                  | Template | Sign-in, payments, uploads, AI, and webhook endpoints; same as above                                                                             |
+| `drizzle/`                                        | Both     | Both sides add migrations and the numbers can collide; the upgrade script stops here for you to handle it (see [Database](#database))            |
+| `src/features/<your module>/`                     | Product  | Directories you create; upgrades never touch them                                                                                                |
+| `src/app/[locale]/(app)/<your page>/`             | Product  | Same as above; the template's own `dashboard`, `billing`, `settings`, etc. pages still belong to the template                                    |
+| `site.config.ts`, `messages/*.json`               | Product  | The template also adds new fields / new copy here. Changing values and adding your own keys is fine; don't delete or reorder the template's keys |
+| `content/**`, `public/**`                         | Product  | Legal page text, blog, images; change freely                                                                                                     |
+| `src/features/example/`, `src/features/invoices/` | Template | Example modules. Either keep them as they are or delete them entirely (see the checklist in each one's files); don't turn them into your product |
 
-最后一行值得多说一句：想从示例起步，**复制**到一个新名字（`src/features/projects/`）再改，而不是就地改示例。就地改的话，模板以后修示例时你会收到一堆和业务无关的冲突；删掉的文件则会被升级脚本跳过，不会被塞回来。
+The last row deserves a word: if you want to start from an example, **copy** it to a new name (`src/features/projects/`) and change the copy, rather than editing the example in place. If you edit it in place, you'll get a pile of conflicts unrelated to your product whenever the template fixes the example; deleted files are skipped by the upgrade script and won't be put back.
 
-## 加一个业务页面
+## Adding a product page
 
-以一个登录后可见、出现在侧边栏里的「Projects」页为例，业务名 `projects`。整个过程**不改 `src/core/` 的任何文件**。
+Take a "Projects" page as the example: visible after sign-in, listed in the sidebar, with the module name `projects`. The whole process **doesn't change any file in `src/core/`**.
 
-### 1. feature 模块
+### 1. Feature module
 
-`src/features/projects/page.tsx`：页面本体。套件的能力都从 `@/core` 导入。
+`src/features/projects/page.tsx` is the page itself. All kit capabilities are imported from `@/core`.
 
 ```tsx
 import { getTranslations } from "next-intl/server";
@@ -90,7 +91,7 @@ export async function generateMetadata({ params }: Props) {
 export default async function ProjectsPage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Projects" });
-  // (app) 的 layout 已经挡住了未登录访问；这里取 session 是为了拿当前用户。
+  // The (app) layout already blocks signed-out visits; we get the session here for the current user.
   const { user } = await requirePageSession(locale);
 
   return (
@@ -109,50 +110,50 @@ export default async function ProjectsPage({ params }: Props) {
 }
 ```
 
-纯逻辑（计算、校验、格式化）放同目录的普通模块里（如 `src/features/projects/projects.ts`），单测才好写。要看完整一点的写法：`src/features/example/`（调 AI、扣积分）和 `src/features/invoices/`（表 + 列表 + Server Actions 的 CRUD）。
+Put pure logic (calculation, validation, formatting) in plain modules in the same directory (such as `src/features/projects/projects.ts`) so it's easy to unit test. For fuller examples, see `src/features/example/` (calls AI, spends credits) and `src/features/invoices/` (CRUD with a table, a list, and Server Actions).
 
-### 2. 路由文件
+### 2. Route files
 
-`src/app/[locale]/(app)/projects/page.tsx` 只有一行转发：
+`src/app/[locale]/(app)/projects/page.tsx` is a single re-export:
 
 ```tsx
 export { default, generateMetadata } from "@/features/projects/page";
 ```
 
-放在 `(app)` 下的页面自动需要登录（未登录会跳到 `/sign-in`）。
+Pages under `(app)` require sign-in automatically (signed-out visitors are sent to `/sign-in`).
 
-### 3. 侧边栏菜单
+### 3. Sidebar menu
 
-`site.config.ts` 的 `dashboard.nav` 里加一项：
+Add an item to `dashboard.nav` in `site.config.ts`:
 
 ```ts
 dashboard: {
   nav: [
-    // …保留已有的项
+    // …keep the existing items
     { key: "projects", href: "/projects", icon: "layers" },
   ],
 },
 ```
 
-- `key` 对应文案 `Dashboard.nav.<key>`；`href` 必须是站内路径；
-- `icon` 只能从 `src/core/config/schema.ts` 的 `dashboardIcons` 里选（`home`、`settings`、`layers`、`sparkles`、`fileText`、`chart`、`users`、`creditCard`、`key`、`flag`、`receipt`），写别的会在启动时报配置错误；
-- 这些项显示在侧边栏的 **Product** 组（文案 `Dashboard.businessNav`），Dashboard / Billing / Settings 这些套件自带的项在另一组；
-- 列在这里的路径，未登录访问时跳登录页会带上回跳地址（`/sign-in?callbackURL=%2Fprojects`）。
+- `key` maps to the copy at `Dashboard.nav.<key>`; `href` must be an on-site path;
+- `icon` must come from `dashboardIcons` in `src/core/config/schema.ts` (`home`, `settings`, `layers`, `sparkles`, `fileText`, `chart`, `users`, `creditCard`, `key`, `flag`, `receipt`, `download`); anything else fails config validation at startup;
+- These items appear in the sidebar's **Product** group (copy `Dashboard.businessNav`); the kit's own items such as Dashboard / Billing / Settings are in the other group;
+- For paths listed here, signed-out visitors are sent to sign-in with a return URL (`/sign-in?callbackURL=%2Fprojects`).
 
-### 4. 文案
+### 4. Copy
 
-`messages/en.json` 和 `messages/zh.json` **都要改，key 必须一致**。下面是示意结构（注释只为说明，真正的 JSON 里不能写注释）：
+Change **both** `messages/en.json` and `messages/zh.json`, **with identical keys**. Below is the structure for illustration (the comments are only explanatory; real JSON can't contain comments):
 
 ```jsonc
 // messages/en.json
 {
   "Dashboard": {
     "nav": {
-      // …已有的 key 保留
+      // …keep the existing keys
       "projects": "Projects",
     },
   },
-  // 顶层新增一个命名空间，名字和 getTranslations 的 namespace 对上
+  // Add a new top-level namespace whose name matches the namespace passed to getTranslations
   "Projects": {
     "title": "Projects",
     "description": "Everything you're working on, {email}.",
@@ -162,19 +163,19 @@ dashboard: {
 }
 ```
 
-`zh.json` 同样的结构，填中文。新增一门语言见 [docs/i18n.md](i18n.md)。
+`zh.json` has the same structure, filled in with Chinese. To add a language, see [docs/i18n.md](i18n.md).
 
-验证：
+Verify:
 
 ```bash
-pnpm test src/core/i18n/messages.test.ts   # en/zh key 一致、侧边栏 key 都有文案
-pnpm typecheck                              # 路由类型和 site.config 字段
-pnpm dev                                    # 登录后侧边栏出现 Projects，点进去能打开
+pnpm test src/core/i18n/messages.test.ts   # en/zh keys match, every sidebar key has copy
+pnpm typecheck                              # route types and site.config fields
+pnpm dev                                    # after sign-in, Projects appears in the sidebar and opens
 ```
 
-### 5. 单测
+### 5. Unit tests
 
-单测放在被测文件旁边，命名 `*.test.ts` / `*.test.tsx`（`vitest.config.mts` 只收 `src/**` 下的这两种）。比如 feature 里有一个纯函数：
+Unit tests sit next to the file under test and are named `*.test.ts` / `*.test.tsx` (`vitest.config.mts` only picks up these two patterns under `src/**`). For example, a pure function in the feature:
 
 ```ts
 // src/features/projects/projects.ts
@@ -190,22 +191,22 @@ import { describe, expect, test } from "vitest";
 import { slugify } from "./projects";
 
 describe("slugify", () => {
-  test("转小写、空白换成连字符", () => {
+  test("lowercases and replaces whitespace with hyphens", () => {
     expect(slugify("My First Project")).toBe("my-first-project");
   });
 });
 ```
 
 ```bash
-pnpm test src/features/projects   # 只跑这个模块
-pnpm test                         # 全量
+pnpm test src/features/projects   # run only this module
+pnpm test                         # run everything
 ```
 
-组件测试的写法参考 `src/features/example/tagline-tool.test.tsx`。
+For component tests, see `src/features/example/tagline-tool.test.tsx`.
 
 ### 6. e2e
 
-`e2e/projects.spec.ts`，登录用 `e2e/auth-helpers.ts` 里的现成函数，文案直接从 `messages/en.json` 读（改文案不用改测试）：
+`e2e/projects.spec.ts`. Sign in with the ready-made functions in `e2e/auth-helpers.ts`, and read copy straight from `messages/en.json` (changing copy doesn't require changing the test):
 
 ```ts
 import { expect, test } from "@playwright/test";
@@ -214,10 +215,12 @@ import messages from "../messages/en.json";
 import { signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
 
 test.beforeEach(async ({ page }) => {
-  await useRandomIp(page); // 每个用例换一个 IP，免得撞上登录限流
+  await useRandomIp(page); // a new IP per test so you don't hit the sign-in rate limit
 });
 
-test("未登录访问跳登录页，登录后回到 Projects", async ({ page }) => {
+test("signed-out visit goes to sign-in, then back to Projects after sign-in", async ({
+  page,
+}) => {
   await page.goto("/projects");
   await expect(page).toHaveURL(/\/sign-in\?callbackURL=%2Fprojects/);
   await signIn(page, uniqueEmail("projects"));
@@ -228,60 +231,60 @@ test("未登录访问跳登录页，登录后回到 Projects", async ({ page }) 
 });
 ```
 
-怎么跑见下一节。
+How to run it is in the next section.
 
-## 数据库
+## Database
 
-业务的表写在 `src/features/<name>/schema.ts`（`drizzle.config.ts` 会自动收录这个路径，不用在 `src/core` 里登记）。写法照抄 `src/features/invoices/schema.ts`：主键、`user_id` 外键带 `onDelete: "cascade"`，钱用整数存最小货币单位；所有读写都带 `user_id` 条件。
+Product tables go in `src/features/<name>/schema.ts` (`drizzle.config.ts` picks up this path automatically; there's nothing to register in `src/core`). Copy the pattern in `src/features/invoices/schema.ts`: a primary key, a `user_id` foreign key with `onDelete: "cascade"`, money stored as an integer in the smallest currency unit, and every read and write filtered by `user_id`.
 
-顺序固定：
+The order is fixed:
 
 ```bash
-# 1. 改 src/features/<name>/schema.ts
-pnpm db:generate --name <name>   # 2. 生成迁移：drizzle/<编号>_<name>.sql + drizzle/meta/ 下的快照
-pnpm migrations:check            # 3. 离线检查：编号连续、when 严格递增、快照链闭合
-pnpm db:migrate                  # 4. 应用到 DATABASE_URL 指向的库（先本地，再线上）
+# 1. Change src/features/<name>/schema.ts
+pnpm db:generate --name <name>   # 2. Generate the migration: drizzle/<number>_<name>.sql + a snapshot under drizzle/meta/
+pnpm migrations:check            # 3. Offline check: sequential numbers, strictly increasing when, closed snapshot chain
+pnpm db:migrate                  # 4. Apply to the database DATABASE_URL points to (local first, then production)
 ```
 
-- 生成的 SQL 和 `drizzle/meta/` **不要手改**，要改就改 schema 再生成一条新迁移。
-- 已经在生产库执行过的迁移不要删掉重建。
-- 数据库单测读 `DATABASE_URL_TEST`：没设时整组跳过、退出码仍然是 0。`.env.example` 里这一行默认启用，且和 `DATABASE_URL` 指向**同一个库** —— 照抄 `.env.local` 的话，测试数据会写进你的开发库；想分开就建一个单独的库（例如 `.../postgres_test`）再改这一行。
-- **升级时编号撞车**（你加了 `0024_projects`，模板的新版本也带来一条 `0024_…`）：升级脚本会在 `drizzle/` 整块停下、一个文件都不动，并打印处理步骤 —— 保留模板那条的编号，用 `pnpm db:generate --name <你原来的名字>` 重新生成你自己的那一条。完整步骤在 [UPGRADING.md 的迁移冲突](../UPGRADING.md#迁移冲突)。
+- **Don't hand-edit** the generated SQL or `drizzle/meta/`. To change something, change the schema and generate a new migration.
+- Don't delete and recreate migrations that have already run on the production database.
+- Database unit tests read `DATABASE_URL_TEST`: when it's unset the whole group is skipped and the exit code is still 0. In `.env.example` this line is enabled by default and points to **the same database** as `DATABASE_URL`. If you copy it into `.env.local` as is, test data gets written to your development database; to keep them separate, create a dedicated database (for example `.../postgres_test`) and change this line.
+- **Migration number collisions during upgrades** (you added `0024_projects`, and the new template version also brings a `0024_…`): the upgrade script stops on the whole `drizzle/` directory without touching a single file, and prints the steps to follow. Keep the template's number, then regenerate your own migration with `pnpm db:generate --name <your original name>`. The full steps are in [the "Migration conflicts" section of UPGRADING.md](../UPGRADING.md#migration-conflicts).
 
-## 测试
+## Testing
 
-| 命令                                     | 什么时候跑                                      |
-| ---------------------------------------- | ----------------------------------------------- |
-| `pnpm lint`                              | 每次提交前（钩子只查暂存的文件）                |
-| `pnpm typecheck`                         | 改了路由、`site.config.ts`、类型之后            |
-| `pnpm test`                              | 每次提交前                                      |
-| `pnpm migrations:check`                  | 动了 `drizzle/` 之后                            |
-| `npx playwright test e2e/<name>.spec.ts` | 改了页面之后（完整命令见下）                    |
-| `pnpm build`                             | 上线前；占位值没改、文案 key 缺失都会在这里拦下 |
+| Command                                  | When to run it                                                                         |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| `pnpm lint`                              | Before every commit (the hook only checks staged files)                                |
+| `pnpm typecheck`                         | After changing routes, `site.config.ts`, or types                                      |
+| `pnpm test`                              | Before every commit                                                                    |
+| `pnpm migrations:check`                  | After touching `drizzle/`                                                              |
+| `npx playwright test e2e/<name>.spec.ts` | After changing a page (full command below)                                             |
+| `pnpm build`                             | Before launch; unchanged placeholder values and missing copy keys are both caught here |
 
-### 跑 e2e
+### Running e2e
 
-第一次先装浏览器：
+The first time, install the browser:
 
 ```bash
 pnpm exec playwright install chromium
 ```
 
-前提：本地 Postgres 在跑、已经 `pnpm db:migrate`、`.env.local` 里有 `DATABASE_URL`（Playwright 会自动读 `.env.local`，不用写进命令）。
+Prerequisites: local Postgres is running, you've run `pnpm db:migrate`, and `.env.local` has `DATABASE_URL` (Playwright reads `.env.local` automatically, so you don't need it on the command line).
 
-**只跑自己的用例**（最小可用命令）：
+**Run only your own tests** (the minimal working command):
 
 ```bash
 EMAIL_TRANSPORT=file E2E_PORT=3100 npx playwright test e2e/projects.spec.ts --project=desktop
 ```
 
-- `EMAIL_TRANSPORT=file` 是必须的：登录验证码要写到 `.tmp/emails/`，`signIn()` 从那里读。本地默认是 `console`，验证码只打到终端，用例会卡在输验证码那一步。
-- `E2E_PORT` 换一个不是 3000 的端口：你开着 `pnpm dev` 时，Playwright 会直接复用那个服务器，测的可能不是当前代码。
-- 去掉 `--project=desktop` 会再按手机尺寸（`mobile`）跑一遍。
-- 跑完 `AGENTS.md` 多出一段英文是正常的，见[让助手读到这份指引](#让助手读到这份指引)。
-- 每次运行会额外起一个多语言副本站点（`e2e/i18n/serve.ts`：把仓库复制到临时目录、装依赖、启动），第一次要多等一两分钟。它用 `git ls-files` 列文件，所以仓库要先 `git init`。
+- `EMAIL_TRANSPORT=file` is required: the sign-in code has to be written to `.tmp/emails/`, which is where `signIn()` reads it. The local default is `console`, which only prints the code to the terminal, so the test gets stuck at the code-entry step.
+- Set `E2E_PORT` to a port other than 3000: if you have `pnpm dev` running, Playwright reuses that server, and it may not be testing your current code.
+- Drop `--project=desktop` to also run at phone size (`mobile`).
+- It's normal for `AGENTS.md` to gain a block of English text after a run; see [Making your assistant read this guide](#making-your-assistant-read-this-guide).
+- Each run also starts a multi-locale copy of the site (`e2e/i18n/serve.ts`: copies the repository to a temp directory, installs dependencies, starts it), so the first run takes an extra minute or two. It lists files with `git ls-files`, so the repository must be `git init`-ed first.
 
-**跑全量**（改了共享的东西，或者提交前想跑一遍完整的）。模板自带的用例依赖下面这整组变量，**整组照抄**：
+**Run the full suite** (when you changed something shared, or want a complete run before committing). The template's own tests depend on this whole set of variables; **copy the whole set as is**:
 
 ```bash
 EMAIL_TRANSPORT=file E2E_PORT=3100 \
@@ -293,35 +296,35 @@ EMAIL_TRANSPORT=file E2E_PORT=3100 \
   npx playwright test
 ```
 
-这组值和 `.github/workflows/ci.yml` 顶部的 `env:` 是同一份。少设一条不一定报错，更常见的是整块用例**静默跳过**（例如不设 `BILLING_PROVIDER=fake`，结账那条链路就不跑，汇总照样全绿）；只设一半则会让断言自相矛盾地红。`ci.yml` 里另外三条 `ALLOW_*` 只有按生产构建跑（`pnpm build` 之后 `CI=1 npx playwright test`）时才需要补上。
+These values are the same set as the `env:` at the top of `.github/workflows/ci.yml`. Leaving one out doesn't necessarily cause an error; more often a whole block of tests is **silently skipped** (for example, without `BILLING_PROVIDER=fake` the checkout flow doesn't run and the summary is still all green). Setting only half of them makes assertions contradict each other and fail. The three additional `ALLOW_*` variables in `ci.yml` are only needed when running against a production build (`pnpm build` followed by `CI=1 npx playwright test`).
 
-另外三个套件各带自己的配置：`pnpm test:e2e:acquisition`、`pnpm test:e2e:flags`、`pnpm test:e2e:invoices`，同样认上面这组变量。
+Three more suites have their own configs: `pnpm test:e2e:acquisition`, `pnpm test:e2e:flags`, and `pnpm test:e2e:invoices`. They take the same set of variables.
 
-**所有页面一起报 `SyntaxError: Unexpected non-whitespace character after JSON`**：`.next/dev/` 里的缓存被中断的 dev server 写坏了，不是代码问题，`rm -rf .next` 重来。
+**Every page fails with `SyntaxError: Unexpected non-whitespace character after JSON`**: the cache in `.next/dev/` was corrupted by an interrupted dev server. It's not a code problem; `rm -rf .next` and start again.
 
-## 升级
+## Upgrading
 
-卖家发布新版本时会给你一个 `sass-template-update-<旧版本>-to-<新版本>.zip`。步骤：
+When the seller releases a new version, you get a `sass-template-update-<old version>-to-<new version>.zip`. Steps:
 
 ```bash
-git status                                            # 0. 工作区要干净：先提交手上的改动
-scripts/apply-template-update.sh ~/Downloads/sass-template-update-<旧>-to-<新>.zip
-# 1. 脚本非零退出 = 有冲突或迁移要处理，按它打印的清单逐个解决，别跳过
-pnpm install && pnpm test                             # 2. 依赖与验证（动了表再加 pnpm db:generate）
-git add -A && git commit -m "chore: upgrade template to <新版本>"   # 3. 你自己提交
+git status                                            # 0. The working tree must be clean: commit what you have first
+scripts/apply-template-update.sh ~/Downloads/sass-template-update-<old>-to-<new>.zip
+# 1. A non-zero exit = conflicts or migrations to handle; work through the list it prints, don't skip any
+pnpm install && pnpm test                             # 2. Dependencies and verification (add pnpm db:generate if tables changed)
+git add -A && git commit -m "chore: upgrade template to <new version>"   # 3. You commit it yourself
 ```
 
-- 根目录的 `template.json` 记录你手里是哪个版本，**别手改**；它不对时脚本会拒绝应用，提示先补中间版本。
-- 助手在帮你升级时：**不要替用户解决语义冲突后顺手提交**，冲突文件列出来让人看；解决完用 `--resolved <路径>` 重跑一次，基线才会推进。
-- 冲突标记、`--resolved`、`--migrations-done` 的用法和常见冲突（`pnpm-lock.yaml`、`site.config.ts`、`messages/en.json`）都在 [UPGRADING.md](../UPGRADING.md)。
+- `template.json` in the root records which version you have. **Don't edit it by hand.** When it's wrong, the script refuses to apply and tells you to apply the intermediate versions first.
+- When an assistant helps you upgrade: **don't resolve semantic conflicts on the user's behalf and then commit.** List the conflicted files for a human to review. After resolving, rerun with `--resolved <path>` so the baseline advances.
+- Conflict markers, how to use `--resolved` and `--migrations-done`, and common conflicts (`pnpm-lock.yaml`, `site.config.ts`, `messages/en.json`) are all covered in [UPGRADING.md](../UPGRADING.md).
 
-## 还有哪些文档
+## Other docs
 
-| 想做的事                           | 看哪里                                    |
-| ---------------------------------- | ----------------------------------------- |
-| 从零到上线、改成自己的站点         | [docs/starter-guide.md](starter-guide.md) |
-| 所有配置项、上线清单、各模块的开关 | [README.md](../README.md)                 |
-| 界面：颜色、表面、组件的用法       | [docs/design.md](design.md)               |
-| 加一门语言                         | [docs/i18n.md](i18n.md)                   |
-| 支付服务商                         | [docs/billing.md](billing.md)             |
-| 升级、冲突处理                     | [UPGRADING.md](../UPGRADING.md)           |
+| What you want to do                                      | Where to look                             |
+| -------------------------------------------------------- | ----------------------------------------- |
+| Go from zero to launch, make it your own site            | [docs/starter-guide.md](starter-guide.md) |
+| All config options, the launch checklist, module toggles | [README.md](../README.md)                 |
+| UI: colors, surfaces, how to use components              | [docs/design.md](design.md)               |
+| Add a language                                           | [docs/i18n.md](i18n.md)                   |
+| Payment providers                                        | [docs/billing.md](billing.md)             |
+| Upgrading, resolving conflicts                           | [UPGRADING.md](../UPGRADING.md)           |

@@ -36,7 +36,7 @@ export const OUTBOX_MAX_ATTEMPTS = 8;
 
 /**
  * After the immediate send fails, how long to wait before the nth retry. How often the sweep runs
- * is up to the deployment (see the recovery sweep section in the README); this is only "the
+ * is up to the deployment (see "Recovery sweep" in the README launch checklist); this is only "the
  * earliest it may be retried". About 7 hours in total: long enough to ride out a real provider
  * outage, short enough that a payment confirmation doesn't arrive the next day.
  */

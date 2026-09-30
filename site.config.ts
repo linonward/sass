@@ -282,8 +282,8 @@ const config = defineConfig({
     ],
   },
   billing: {
-    // Payment provider. Before changing it, read the payments part of the launch checklist in the
-    // README: each provider needs different environment variables.
+    // Payment provider. Before changing it, read the "Payments" parts of the launch checklist in
+    // the README: each provider needs different environment variables.
     provider: billingProvider,
     currency: "USD",
     plans: [
@@ -471,8 +471,8 @@ const config = defineConfig({
     // How many days of uptime and incidents the status page shows.
     historyDays: 30,
   },
-  // Acquisition features are turned on per module: see the attribution and lead capture sections
-  // of the README.
+  // Acquisition features are turned on per module: see the "Channel attribution" and "Email lead
+  // capture" sections of the README.
   // referrals: referral links and credit rewards. Referral links require features.credits to be
   // on as well; credit rewards are off by default (0 credits) and must be configured explicitly
   // by the operator.
@@ -490,7 +490,7 @@ const config = defineConfig({
   // its children, and the admin page /admin/flags returns 404.
   // v1 is purely config-driven: flag state is not in the database, so changes here need a
   // redeploy (the admin page is read-only, see /admin/flags).
-  // Evaluation logic and components live in src/core/flags/; usage is in the feature flags
+  // Evaluation logic and components live in src/core/flags/; usage is in the "Feature flags"
   // section of the README.
   // The demo site keeps the master switch off (a temporary copy made by e2e/flags sets it to true
   // to test the enabled behavior with the same definitions).

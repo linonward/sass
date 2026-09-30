@@ -8,8 +8,8 @@ const withPrices = (...prices: number[]) => ({
 });
 
 describe("revenue section visibility", () => {
-  // On a free deployment revenue is always 0 / "—" and shouldn't take up space (see the "Admin"
-  // section of the README).
+  // On a free deployment revenue is always 0 / "—" and shouldn't take up space (see the admin
+  // area in the "Configuration" section of the README).
   test("hidden when there are only free plans", () => {
     expect(revenueEnabled(withPrices(0))).toBe(false);
     expect(revenueEnabled(withPrices(0, 0))).toBe(false);

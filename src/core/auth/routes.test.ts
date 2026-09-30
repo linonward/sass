@@ -63,7 +63,7 @@ test("the sign-in page and post-sign-in landing page constants match the actual 
 
 test("/admin is not in the cookie gate list: admin checks the role in its own layout", () => {
   // If it were in protectedPrefixes, signed-out visitors would be sent to sign-in first, while
-  // /admin should 404 for every non-admin (see the permission boundaries in the README).
+  // /admin should 404 for every non-admin (see "Error and permission boundaries" in the README).
   expect(protectedPrefixes).not.toContain("/admin");
   expect(isProtectedPath("/admin")).toBe(false);
   expect(isProtectedPath("/admin/users")).toBe(false);
