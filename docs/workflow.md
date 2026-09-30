@@ -9,13 +9,13 @@
 
 ## 命名
 
-| 项       | 规则                                                        | 例子                              |
-| -------- | ----------------------------------------------------------- | --------------------------------- |
-| topic    | 小写 kebab-case，来自任务表                                 | `i18n`                            |
-| 分支     | `<type>/<topic>`，type 取 `feat` / `fix` / `docs` / `chore` | `feat/i18n`                       |
-| worktree | `../sass-<topic>`                                           | `../sass-i18n`                    |
-| PR 标题  | `<任务ID> <type>: <描述>`                                   | `T104 feat: next-intl 多语言路由` |
-| 提交信息 | Conventional Commits                                        | `feat(i18n): add locale switcher` |
+| 项       | 规则                                                        | 例子                                  |
+| -------- | ----------------------------------------------------------- | ------------------------------------- |
+| topic    | 小写 kebab-case，来自任务表                                 | `i18n`                                |
+| 分支     | `<type>/<topic>`，type 取 `feat` / `fix` / `docs` / `chore` | `feat/i18n`                           |
+| worktree | `../sass-<topic>`                                           | `../sass-i18n`                        |
+| PR 标题  | `<任务ID> <type>: <描述>`                                   | `T104 feat: next-intl locale routing` |
+| 提交信息 | Conventional Commits                                        | `feat(i18n): add locale switcher`     |
 
 ## 开始一个任务
 
@@ -92,7 +92,7 @@ git push -u origin <type>/<topic>   # rebase 过已推送的分支用 --force-wi
 gh pr create --base main --title "<任务ID> <type>: <描述>" --body-file <说明文件>
 ```
 
-PR 描述需要包含：
+PR 标题和描述统一用英文（和随包内容同一口径），描述按 [`.github/pull_request_template.md`](../.github/pull_request_template.md) 的结构填；模板随包交付，买家项目也会用它，所以里面不写任务 ID 和内部文档。rebase 后补的修改并进原有各节，不要在末尾另起一节，更不要换一种语言接着写。需要包含：
 
 - 对应的任务 ID，以及任务文档的链接
 - 验收项逐条勾选
