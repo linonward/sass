@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { preferredLocale } from "@/core/account/locale";
+import { SecuritySection } from "@/core/account/security-section";
 import {
   DeleteAccount,
   LocaleForm,
@@ -36,7 +37,7 @@ export default async function SettingsPage({
 }: PageProps<"/[locale]/settings">) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Account" });
-  const { user } = await requirePageSession(locale);
+  const { user, session } = await requirePageSession(locale);
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,6 +60,13 @@ export default async function SettingsPage({
           )}
         </CardContent>
       </Card>
+
+      <SecuritySection
+        locale={locale}
+        userId={user.id}
+        email={user.email}
+        sessionId={session.id}
+      />
 
       {/* Danger zone: panels default to a neutral outline; this one uses the semantic outline (flat, no lip). */}
       <Card className="border-[var(--destructive-edge)]">

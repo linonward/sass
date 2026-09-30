@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 
 import messages from "../messages/en.json";
 import { waitForEmail } from "../src/core/email/testing";
@@ -12,6 +12,8 @@ import {
 } from "./auth-helpers";
 
 const a = messages.Auth.signIn;
+const em = messages.Account.email;
+const dv = messages.Account.devices;
 
 test.beforeEach(async ({ page }) => {
   await useRandomIp(page);
@@ -45,10 +47,9 @@ async function changeEmailCode(to: string, since: Date) {
   return { code: String(mail.props.code), mail };
 }
 
-// The email-change endpoint currently has no entry point in settings (see the session
-// invalidation decision in docs/plan.md), so this calls the endpoint directly. Changing email is
-// security-sensitive: afterwards, every session created before the change (including the current
-// one) must be invalidated.
+// This case drives the endpoints directly to pin their contract; the settings UI flow is covered
+// below. Changing email is security-sensitive: afterwards, every session created before the change
+// (including the current one) must be invalidated.
 test("after a successful email change old sessions are invalidated immediately and the new email can sign in", async ({
   page,
   baseURL,
@@ -137,4 +138,161 @@ test("after a successful email change old sessions are invalidated immediately a
   await signIn(page, newEmail);
   await expect(page).toHaveURL("/onboarding");
   expect(await findUserId(newEmail)).toBe(userId);
+});
+
+/** Count the user's session rows. */
+const sessionCount = (userId: string) =>
+  withDatabase(async (client) =>
+    Number(
+      (
+        await client.query("select count(*) from session where user_id = $1", [
+          userId,
+        ])
+      ).rows[0].count,
+    ),
+  );
+
+/**
+ * Fill a field and submit until the next step shows up: values typed before hydration are reset by
+ * React, and the click must be bounded so a retry still has budget (same reason as requestCode).
+ */
+async function fillAndSubmit(
+  page: Page,
+  field: string,
+  value: string,
+  button: string,
+  next: string,
+) {
+  await expect(async () => {
+    await page.getByLabel(field, { exact: true }).fill(value);
+    await page
+      .getByRole("button", { name: button, exact: true })
+      .click({ timeout: 1000 });
+    await expect(page.getByLabel(next, { exact: true })).toBeVisible({
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 15_000 });
+}
+
+test("changing email from settings signs out every device and the new email signs in", async ({
+  page,
+}) => {
+  const email = uniqueEmail("settings-email");
+  const newEmail = uniqueEmail("settings-email-new");
+  await signIn(page, email);
+  const userId = (await findUserId(email))!;
+  await page.goto("/settings");
+
+  // A wrong current-address code is refused and stays in the box.
+  await clearResendCooldown(email);
+  const sinceCurrent = new Date(Date.now() - 1000);
+  await fillAndSubmit(
+    page,
+    em.newLabel,
+    newEmail,
+    em.continue,
+    em.currentCodeLabel,
+  );
+  const current = await changeEmailCode(email, sinceCurrent);
+  const wrong = current.code === "000000" ? "111111" : "000000";
+  await page.getByLabel(em.currentCodeLabel).fill(wrong);
+  await page.getByRole("button", { name: em.continue }).click();
+  // Scoped to the form: Next's route announcer is also a role="alert".
+  const form = page.getByRole("form", { name: em.title });
+  await expect(form.getByRole("alert")).toHaveText(
+    messages.Auth.errors.invalidCode,
+  );
+  await expect(page.getByLabel(em.currentCodeLabel)).toHaveValue(wrong);
+
+  const sinceNew = new Date(Date.now() - 1000);
+  await page.getByLabel(em.currentCodeLabel).fill(current.code);
+  await page.getByRole("button", { name: em.continue }).click();
+  await expect(page.getByLabel(em.newCodeLabel)).toBeVisible();
+  const next = await changeEmailCode(newEmail, sinceNew);
+  await page.getByLabel(em.newCodeLabel).fill(next.code);
+  await page.getByRole("button", { name: em.confirm }).click();
+
+  await expect(
+    page.getByRole("status").filter({ hasText: newEmail }),
+  ).toHaveText(em.done.replace("{email}", newEmail));
+  // The page says so, but the database is the evidence: no session is left.
+  expect(await sessionCount(userId)).toBe(0);
+  expect(await findUserId(newEmail)).toBe(userId);
+
+  await page.getByRole("link", { name: em.signIn }).click();
+  await expect(page).toHaveURL(/\/sign-in/);
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/sign-in/);
+});
+
+/** A fresh browser for the same user: another "device". */
+async function newDevice(browser: Browser) {
+  return (await browser.newContext()).newPage();
+}
+
+test("signing out one device ends only that device's session", async ({
+  page,
+  browser,
+}) => {
+  const email = uniqueEmail("devices-one");
+  await signIn(page, email);
+  const userId = (await findUserId(email))!;
+  const other = await newDevice(browser);
+  await useRandomIp(other);
+  await clearResendCooldown(email);
+  await signIn(other, email);
+  expect(await sessionCount(userId)).toBe(2);
+
+  await page.goto("/settings");
+  const rows = page.getByTestId("device-row");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.filter({ hasText: dv.current })).toHaveCount(1);
+  const otherRow = rows.filter({ hasNotText: dv.current });
+  await otherRow.getByRole("button", { name: /^Sign out / }).click();
+  await expect(rows).toHaveCount(1);
+  expect(await sessionCount(userId)).toBe(1);
+
+  // That device's next request has to sign in again; this one is still in.
+  await other.goto("/dashboard");
+  await expect(other).toHaveURL(/\/sign-in/);
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL("/dashboard");
+  await other.context().close();
+});
+
+test("signing out all other devices keeps this one", async ({
+  page,
+  browser,
+}) => {
+  const email = uniqueEmail("devices-all");
+  await signIn(page, email);
+  const userId = (await findUserId(email))!;
+  const second = await newDevice(browser);
+  await useRandomIp(second);
+  await clearResendCooldown(email);
+  await signIn(second, email);
+  const third = await newDevice(browser);
+  await useRandomIp(third);
+  await clearResendCooldown(email);
+  await signIn(third, email);
+  const others = [second, third];
+  expect(await sessionCount(userId)).toBe(3);
+
+  await page.goto("/settings");
+  await expect(page.getByTestId("device-row")).toHaveCount(3);
+  await page.getByRole("button", { name: dv.signOutOthers }).click();
+  const dialog = page.getByRole("alertdialog", { name: dv.othersTitle });
+  await dialog.getByRole("button", { name: dv.othersConfirm }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByTestId("device-row")).toHaveCount(1);
+  await expect(page.getByText(dv.onlyThis)).toBeVisible();
+  expect(await sessionCount(userId)).toBe(1);
+
+  for (const other of others) {
+    await other.goto("/dashboard");
+    await expect(other).toHaveURL(/\/sign-in/);
+    await other.context().close();
+  }
+  await page.reload();
+  await expect(page).toHaveURL("/settings");
 });

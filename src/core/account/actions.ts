@@ -15,7 +15,10 @@ import { routing } from "@/core/i18n/routing";
 import { logger } from "@/core/observability/logger";
 import { localizedPath } from "@/core/seo/urls";
 
+import type { ConfirmActionResult } from "@/core/ui/confirm-action-dialog";
+
 import { deleteUserAccount } from "./delete-user";
+import { sessionTokenFor } from "./devices";
 import { OnUserDeleteError } from "./on-user-delete";
 
 export type ActionState =
@@ -126,4 +129,54 @@ export async function deleteAccount(
     });
   }
   redirect(localizedPath(locale, "/"));
+}
+
+export type DeviceActionError = "notFound" | "current" | "generic";
+
+/**
+ * Sign out one of the user's other devices. The browser only knows session ids; the token is
+ * looked up here, and only among the user's own sessions. The current device is refused: signing
+ * yourself out belongs to the sign-out button, not this list.
+ */
+export async function signOutDevice(
+  locale: string,
+  form: FormData,
+): Promise<ConfirmActionResult<DeviceActionError>> {
+  const session = await requireSession(locale);
+  const sessionId = String(form.get("sessionId") ?? "");
+  if (sessionId === session.session.id) {
+    return { status: "error", error: "current" };
+  }
+  const token = await sessionTokenFor(session.user.id, sessionId);
+  if (!token) return { status: "error", error: "notFound" };
+  try {
+    await auth.api.revokeSession({
+      headers: await headers(),
+      body: { token },
+    });
+  } catch (error) {
+    logger.error("account.sign_out_device_failed", {
+      error,
+      userId: session.user.id,
+    });
+    return { status: "error", error: "generic" };
+  }
+  return { status: "success" };
+}
+
+/** Sign out every device except this one. */
+export async function signOutOtherDevices(
+  locale: string,
+): Promise<ConfirmActionResult<DeviceActionError>> {
+  const session = await requireSession(locale);
+  try {
+    await auth.api.revokeOtherSessions({ headers: await headers() });
+  } catch (error) {
+    logger.error("account.sign_out_other_devices_failed", {
+      error,
+      userId: session.user.id,
+    });
+    return { status: "error", error: "generic" };
+  }
+  return { status: "success" };
 }

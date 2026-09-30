@@ -176,7 +176,7 @@
 | T2502                       | list-kit                | `feat/list-kit`                | T2501                         | done |
 | T2503                       | confirm-action          | `feat/confirm-action`          | T2501                         | done |
 | T2504                       | upload-field            | `feat/upload-field`            | T2501、T2306                  | todo |
-| T2505                       | account-security        | `feat/account-security`        | T2503                         | todo |
+| T2505                       | account-security        | `feat/account-security`        | T2503                         | done |
 | T2506                       | button-variants-cn      | `fix/button-variants-cn`       | T2502                         | done |
 | **阶段 26：交付内容英文化** |                         |                                |                               |      |
 | T2600                       | english-plan            | `docs/english-plan`            | —                             | done |

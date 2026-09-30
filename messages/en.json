@@ -673,6 +673,51 @@
       "cancel": "Cancel",
       "confirm": "Delete account",
       "deleting": "Deleting…"
+    },
+    "email": {
+      "title": "Email",
+      "description": "Change the address you sign in with. Every device is signed out afterwards.",
+      "newLabel": "New email",
+      "hintVerifyCurrent": "We'll first send a code to your current address to confirm it's you, then one to the new address.",
+      "hintNewOnly": "We'll send a code to the new address.",
+      "continue": "Continue",
+      "sending": "Sending…",
+      "currentCodeLabel": "Code sent to your current email",
+      "currentCodeHint": "Enter the code we sent to {email}.",
+      "newCodeLabel": "Code sent to your new email",
+      "newCodeHint": "Enter the code we sent to {email}. If nothing arrives, check the address — we don't send codes to addresses that already have an account.",
+      "verifying": "Checking…",
+      "confirm": "Change email",
+      "resend": "Send a new code",
+      "resent": "We sent a new code.",
+      "startOver": "Use a different email",
+      "same": "That's already your email.",
+      "done": "Your email is now {email}. Every device has been signed out, so sign in again with the new address.",
+      "signIn": "Sign in"
+    },
+    "devices": {
+      "title": "Signed-in devices",
+      "description": "Devices where your account is signed in. Sign out any you don't recognize.",
+      "current": "This device",
+      "impersonated": "Opened by an admin",
+      "meta": "IP {ip} · Active {active}",
+      "unknownIp": "unknown",
+      "unknownDevice": "Unknown device",
+      "browserOnOs": "{browser} on {os}",
+      "signOut": "Sign out",
+      "signOutDevice": "Sign out {device}",
+      "signingOut": "Signing out…",
+      "signOutOthers": "Sign out all other devices",
+      "othersTitle": "Sign out all other devices?",
+      "othersDescription": "Every device except this one will need to sign in again.",
+      "othersConfirm": "Sign out others",
+      "cancel": "Cancel",
+      "onlyThis": "You're only signed in on this device.",
+      "errors": {
+        "notFound": "That device is already signed out. Refresh to see the current list.",
+        "current": "Use the sign-out button to sign out of this device.",
+        "generic": "Something went wrong. Please try again."
+      }
     }
   },
   "ApiKeys": {
