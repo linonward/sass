@@ -2,16 +2,16 @@
 // Syncs environment variables from the Feishu base "sass 环境变量" (the single source of truth) to
 // the places that use them. Values are never printed; output lists variable names only.
 //
-//   node seller/env/sync.mjs                 check local, ci and prod; exit 1 on drift
-//   node seller/env/sync.mjs --apply local   write the Local column into .env.local
-//   node seller/env/sync.mjs --apply prod    write the Prod column to Vercel production
+//   node .claude/skills/env-sync/scripts/sync.mjs                 check local, ci and prod; exit 1 on drift
+//   node .claude/skills/env-sync/scripts/sync.mjs --apply local   write the Local column into .env.local
+//   node .claude/skills/env-sync/scripts/sync.mjs --apply prod    write the Prod column to Vercel production
 //     --only A,B              limit to these variables
 //     --include-sensitive     with --apply prod: also overwrite variables Vercel stores as
 //                             sensitive (their current value can't be read, so it can't be diffed)
 //
 // Rules: empty cells are skipped (never deletes anything), ci.yml is only checked (it ships to
 // buyers and holds test values), and cells holding the "can't read" marker are skipped.
-// Needs `lark-cli` logged in as you and `vercel` linked to the project (see seller/README.md).
+// Needs `lark-cli` logged in as you and `vercel` linked to the project (see .claude/skills/env-sync/SKILL.md).
 
 import { execFileSync } from "node:child_process";
 import {
@@ -36,7 +36,7 @@ const BASE_TOKEN = "Lk9Pb1ogSagQemszfgycPS6nnHc";
 const TABLE = "环境变量";
 const BASE_URL = `https://linonward.feishu.cn/base/${BASE_TOKEN}`;
 
-const root = path.resolve(import.meta.dirname, "../..");
+const root = path.resolve(import.meta.dirname, "../../../..");
 const localFile = path.join(root, ".env.local");
 const ciFile = path.join(root, ".github/workflows/ci.yml");
 

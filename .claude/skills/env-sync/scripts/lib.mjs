@@ -1,5 +1,5 @@
-// Pure helpers for seller/env/sync.mjs: parsing, diffing and rewriting. No I/O here, so it can be
-// tested with `node --test seller/env`.
+// Pure helpers for sync.mjs: parsing, diffing and rewriting. No I/O here, so it can be
+// tested with `node --test .claude/skills/env-sync/scripts/lib.test.mjs`.
 
 /** Marker written in the Prod column for Vercel "sensitive" variables, whose values can't be read. */
 export const SENSITIVE_MARKER = "（Vercel 敏感变量，无法读取）";
