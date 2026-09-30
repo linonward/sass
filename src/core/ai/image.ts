@@ -20,6 +20,7 @@ import { rateLimitResponse } from "@/core/ratelimit/limiter";
 import type { ObjectStorage } from "@/core/upload/storage";
 import { buildObjectKey } from "@/core/upload/validate";
 
+import { createOwnedImageUrl } from "./owned-image";
 import { reserveUsage, settleUsage, type UsageDeps } from "./usage";
 
 /**
@@ -40,6 +41,9 @@ export type RunImageInput = {
   modelId?: unknown;
   prompt: unknown;
   aspectRatio?: unknown;
+  // Optional reference image: a files.id of the user's own uploaded image. Only models with
+  // acceptsImage take one; the provider edits or restyles it according to the prompt.
+  imageFileId?: unknown;
   abortSignal?: AbortSignal;
   maxRetries?: number;
 };
@@ -101,9 +105,10 @@ function imageMime(mediaType: string): UploadMimeType {
  * Creates runImage. The default instance is in `./index.ts`; tests inject mock models, database,
  * storage, and rate limiting.
  *
- * Order: check sign-in → validate prompt and model → check storage → rate limit (ai policy) →
- * pre-deduct credits and write ai_usage → generateImage → write to R2 and files. Credits are
- * refunded if generation or storage fails.
+ * Order: check sign-in → validate prompt and model → check storage → resolve the reference image
+ * → rate limit (ai policy) → pre-deduct credits and write ai_usage → generateImage → write to R2
+ * and files. Credits are refunded if generation or storage fails. A bad reference image is a 400
+ * before anything is charged.
  */
 export function createRunImage({
   db,
@@ -118,6 +123,7 @@ export function createRunImage({
 }: RunImageDeps) {
   const getDb = () => (typeof db === "function" ? db() : db);
   const usageDeps: UsageDeps = { db: getDb, credits, logError };
+  const ownedImageUrl = createOwnedImageUrl(getDb, fileUrl);
 
   // The whole call runs in one span; at the end settleUsage fills in the model, credits, and
   // outcome.
@@ -144,6 +150,13 @@ export function createRunImage({
     if (!imageModel) return fail(503, "model_unavailable");
     const storage = getStorage();
     if (!storage) return fail(503, "storage_unavailable");
+    let referenceUrl: string | undefined;
+    if (input.imageFileId !== undefined && input.imageFileId !== null) {
+      if (!model.acceptsImage) return fail(400, "image_not_supported");
+      referenceUrl =
+        (await ownedImageUrl(userId, input.imageFileId)) ?? undefined;
+      if (!referenceUrl) return fail(400, "invalid_image");
+    }
 
     const limit = await checkRateLimit("ai", { userId, ip });
     if (!limit.ok) {
@@ -166,7 +179,9 @@ export function createRunImage({
     try {
       const { image } = await generateImage({
         model: imageModel,
-        prompt,
+        prompt: referenceUrl
+          ? { text: prompt, images: [referenceUrl] }
+          : prompt,
         aspectRatio: aspectRatio as ImageAspectRatio,
         n: 1,
         abortSignal,

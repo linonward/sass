@@ -30,7 +30,8 @@ async function readJson(request: Request, maxBytes: number) {
 }
 
 /**
- * `POST /api/ai/image`: the body is `{ prompt, modelId?, aspectRatio? }`. Generates one image
+ * `POST /api/ai/image`: the body is `{ prompt, modelId?, aspectRatio?, imageFileId? }`
+ * (`imageFileId` is a reference image, for models with `acceptsImage`). Generates one image
  * synchronously and returns `{ generation }`. Error responses are JSON `{ error }`.
  */
 export async function handleImage(
@@ -55,6 +56,7 @@ export async function handleImage(
     prompt: body.prompt,
     modelId: body.modelId,
     aspectRatio: body.aspectRatio,
+    imageFileId: body.imageFileId,
     abortSignal: request.signal,
   });
   if (!run.ok) return run.response;

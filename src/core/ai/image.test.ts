@@ -59,7 +59,13 @@ function throwingModel() {
 
 const config = aiConfigSchema.parse({
   imageModels: [
-    { id: "img", provider: "alibaba", model: "qwen-image-3.0", creditCost: 4 },
+    {
+      id: "img",
+      provider: "alibaba",
+      model: "qwen-image-3.0",
+      creditCost: 4,
+      acceptsImage: true,
+    },
     {
       id: "free-img",
       provider: "alibaba",
@@ -194,6 +200,105 @@ describe.skipIf(!url)("runImage", () => {
       fileId: file!.id,
     });
     expect(await credits.getBalance(userId)).toBe(6);
+  });
+
+  async function newFile(
+    userId: string,
+    {
+      mime = "image/png",
+      status = "uploaded",
+    }: { mime?: string; status?: (typeof files.$inferInsert)["status"] } = {},
+  ) {
+    const [file] = await client.db
+      .insert(files)
+      .values({
+        userId,
+        key: `${userId}/ref/${randomUUID()}`,
+        size: 1024,
+        mime,
+        status,
+      })
+      .returning();
+    return file!;
+  }
+
+  test("reference image: the model gets the user's own upload as an input image, charged like any generation", async () => {
+    const userId = await newUser(10);
+    const reference = await newFile(userId);
+    const { runImage, model } = setup();
+
+    const run = await runImage({
+      userId,
+      prompt: "put it on a marble counter",
+      imageFileId: reference.id,
+    });
+    if (!run.ok) throw new Error(`unexpected ${run.status}`);
+
+    expect(calls(model)[0]).toMatchObject({
+      prompt: "put it on a marble counter",
+      files: [{ type: "url", url: `https://files.test/${reference.key}` }],
+    });
+    expect(await usageRow(run.generation.id)).toMatchObject({
+      status: "succeeded",
+      credits: 4,
+    });
+    expect(run.generation.fileId).not.toBe(reference.id);
+    expect(await credits.getBalance(userId)).toBe(6);
+  });
+
+  test("bad reference images are a 400 before anything is charged or the model is called", async () => {
+    const userId = await newUser(10);
+    const other = await newUser(0);
+    const cases = [
+      [
+        "someone else's file",
+        (await newFile(other)).id,
+        "img",
+        "invalid_image",
+      ],
+      [
+        "a pending upload",
+        (await newFile(userId, { status: "pending" })).id,
+        "img",
+        "invalid_image",
+      ],
+      [
+        "not an image",
+        (await newFile(userId, { mime: "application/pdf" })).id,
+        "img",
+        "invalid_image",
+      ],
+      ["an unknown id", randomUUID(), "img", "invalid_image"],
+      ["a non-string id", 42, "img", "invalid_image"],
+      [
+        "a model without acceptsImage",
+        (await newFile(userId)).id,
+        "free-img",
+        "image_not_supported",
+      ],
+    ] as const;
+
+    for (const [label, imageFileId, modelId, error] of cases) {
+      const { runImage, model, checkRateLimit } = setup();
+      const run = await runImage({
+        userId,
+        prompt: "a poster",
+        modelId,
+        imageFileId,
+      });
+      expect(run.ok, label).toBe(false);
+      if (run.ok) continue;
+      expect(run.status, label).toBe(400);
+      expect(await run.response.json(), label).toEqual({ error });
+      expect(calls(model), label).toEqual([]);
+      expect(checkRateLimit, label).not.toHaveBeenCalled();
+    }
+    const usage = await client.db
+      .select()
+      .from(aiUsage)
+      .where(eq(aiUsage.userId, userId));
+    expect(usage).toEqual([]);
+    expect(await credits.getBalance(userId)).toBe(10);
   });
 
   test("generations: lists only successful images, newest first", async () => {

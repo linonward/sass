@@ -867,7 +867,8 @@
       "storage_unavailable": "文件存储未配置，图片无法保存。",
       "invalid_prompt": "请输入最多 2,000 个字符的提示词。",
       "invalid_aspect_ratio": "不支持此宽高比。",
-      "invalid_image": "请选择或上传一张图片作为首帧。"
+      "invalid_image": "请先选择或上传一张图片。",
+      "image_not_supported": "这个模型不支持参考图。"
     },
     "tabs": {
       "chat": "对话",
@@ -885,7 +886,16 @@
       "wait": "通常需要 10-40 秒。",
       "recent": "最近",
       "empty": "你生成的图片将显示在此处。",
-      "buyCredits": "获取更多积分"
+      "buyCredits": "获取更多积分",
+      "reference": "参考图（可选）",
+      "referenceHint": "模型会按提示词编辑或重绘这张图。"
+    },
+    "picker": {
+      "useImage": "使用图片：{prompt}",
+      "uploaded": "已上传图片",
+      "upload": "上传",
+      "remove": "移除",
+      "uploadFailed": "图片上传失败。请试用 PNG、JPEG 或 WebP 格式。"
     },
     "video": {
       "model": "模型",
@@ -894,9 +904,6 @@
       "aspectRatio": "宽高比",
       "summary": "{duration}s · {cost, plural, =0 {免费} one {# 积分} other {# 积分}} 每个视频",
       "firstFrame": "首帧",
-      "useImage": "使用图片：{prompt}",
-      "uploaded": "已上传图片",
-      "upload": "上传",
       "placeholder": "描述动作和场景…",
       "generate": "生成视频",
       "generating": "生成中…",
@@ -905,8 +912,7 @@
       "empty": "你生成的视频将显示在此处。",
       "buyCredits": "获取更多积分",
       "errors": {
-        "video_failed": "视频生成失败，你的积分已退还。",
-        "upload_failed": "图片上传失败。请试用 PNG、JPEG 或 WebP 格式。"
+        "video_failed": "视频生成失败，你的积分已退还。"
       }
     }
   },

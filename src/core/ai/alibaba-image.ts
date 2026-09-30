@@ -1,6 +1,7 @@
 import {
   APICallError,
   type ImageModelV4,
+  type ImageModelV4File,
   type SharedV4Warning,
 } from "@ai-sdk/provider";
 
@@ -32,6 +33,10 @@ type ResponseBody = {
  * directly: POST {origin}/api/v1/services/aigc/multimodal-generation/generation.
  * The endpoint returns an image URL that is valid for 24 hours; we download it as bytes and hand
  * them to the caller to store.
+ *
+ * Input images (`files`) go in front of the prompt as `{ image }` parts, which is how the same
+ * endpoint does editing (qwen-image-3.0 takes 1–3 images, 384–2048 px per side, up to 10 MB).
+ * Masks are not supported.
  */
 export function createAlibabaImageModel(
   modelId: string,
@@ -60,13 +65,16 @@ export function createAlibabaImageModel(
       headers,
     }) {
       const warnings: SharedV4Warning[] = [];
-      if (files?.length || mask) {
+      if (mask) {
         warnings.push({
           type: "unsupported",
-          feature: "files",
-          details: "Image editing is not supported; input images were ignored.",
+          feature: "mask",
+          details: "Mask editing is not supported; the mask was ignored.",
         });
       }
+      const imageParts = (files ?? []).map((file) => ({
+        image: imageInput(file),
+      }));
       let resolvedSize = size?.replace("x", "*");
       if (!resolvedSize) {
         resolvedSize = SIZES[aspectRatio ?? "1:1"];
@@ -83,7 +91,12 @@ export function createAlibabaImageModel(
       const requestBody = {
         model: modelId,
         input: {
-          messages: [{ role: "user", content: [{ text: prompt ?? "" }] }],
+          messages: [
+            {
+              role: "user",
+              content: [...imageParts, { text: prompt ?? "" }],
+            },
+          ],
         },
         parameters: {
           size: resolvedSize,
@@ -146,4 +159,14 @@ export function createAlibabaImageModel(
       };
     },
   };
+}
+
+/** Model Studio takes a public URL or a `data:` URL for each input image. */
+function imageInput(file: ImageModelV4File): string {
+  if (file.type === "url") return file.url;
+  const base64 =
+    typeof file.data === "string"
+      ? file.data
+      : Buffer.from(file.data).toString("base64");
+  return `data:${file.mediaType};base64,${base64}`;
 }

@@ -334,7 +334,7 @@
 ## T2306 reference-product
 
 - 分支 / worktree：`docs/reference-product` → `../sass-reference-product`（本仓库只落记录文档，产品代码在独立仓库）
-- 依赖：T2305、T2606（自验的是英文化之后的发行包与文档，见阶段 26）
+- 依赖：T2305、T2606（自验的是英文化之后的发行包与文档，见阶段 26）、T2313（商品图作为生成输入）
 
 **问题**
 
@@ -548,3 +548,36 @@ T2407 让首页可以直接下单，但阶段 23 仍按「T2308 外部试用 →
 
 - [x] 同样的 CPU 降速 + 8 并发下，两条用例各跑 40 次，80 次全过
 - [x] CI 的 `e2e (main)` 绿
+
+---
+
+## T2313 image-edit
+
+- 分支 / worktree：`feat/image-edit` → `../sass-image-edit`
+- 依赖：T2305（T2306 走买家路径时发现的真缺口，插在 T2306 之前）
+
+**问题**
+
+T2306 的参考产品是「上传商品图 → 生成宣传图」，需要以用户上传的图为输入生成新图。套件的 `runImage` 只收文字提示词，百炼图片适配器收到输入图时显式丢弃（`Image editing is not supported; input images were ignored.`）。买家想做图生图只能绕过 `runImage` 自己预扣、结算、退款 —— 那正是套件该兜住的部分。
+
+出厂的 `qwen-image-3.0` 本身支持编辑（同一个 `multimodal-generation` 端点，`content` 里在文字前放 `{ "image": <url> }`，1–3 张，边长 384–2048 px、≤ 10 MB，核对于 2026-09）。
+
+**做**
+
+- `ai.imageModels[]` 加可选 `acceptsImage`（默认 `false`）：为 `true` 的模型可以带一张参考图。
+- `runImage` / `POST /api/ai/image` 接收可选的 `imageFileId`：只认当前用户、状态为 `uploaded` 的图片文件（和图生视频的首帧同一套判据），给不接受参考图的模型传图返回 400。
+- 百炼适配器把 `files` 里的 URL 转成 `{ image }` 放在文字前；不再对 `files` 报 unsupported（`mask` 仍然不支持）。
+- `/playground` 的 Image 标签页：选中接受参考图的模型时，可以上传一张参考图。
+- README 的 AI 一节、`.env.example` 不需要新变量；文档写明参考图的尺寸限制和失败时退款。
+
+**不做**
+
+- 多张参考图、蒙版（mask）编辑、OpenAI / Google 的图片编辑。
+- 在服务端校验参考图的像素尺寸（服务商会拒绝，按模型失败退款）。
+
+**验收**
+
+- [x] 带参考图生成：`ai_usage`（`kind = image`、`succeeded`）、`files`、积分流水三处正确；服务商失败时退款
+- [x] 别人的 `fileId`、未上传完成的文件、非图片文件、不接受参考图的模型：400，不扣分
+- [x] 适配器单测覆盖请求体里的 `{ image }` 顺序与 mask 的 warning
+- [x] `pnpm test` / `pnpm lint` / `pnpm typecheck` 绿；UI 改动跑 `e2e/ui-shell.spec.ts`

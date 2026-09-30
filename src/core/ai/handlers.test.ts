@@ -46,6 +46,7 @@ describe("handleImage", () => {
           prompt: "a boy",
           modelId: "img",
           aspectRatio: "16:9",
+          imageFileId: "file-1",
         }),
       ),
       d,
@@ -59,6 +60,7 @@ describe("handleImage", () => {
         prompt: "a boy",
         modelId: "img",
         aspectRatio: "16:9",
+        imageFileId: "file-1",
       }),
     );
   });

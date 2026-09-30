@@ -36,7 +36,7 @@ const tabs: PlaygroundTab[] = [
   },
   {
     id: "image",
-    models: [{ id: "image-model", creditCost: 2 }],
+    models: [{ id: "image-model", creditCost: 2, acceptsImage: false }],
     defaultModel: "image-model",
   },
   {

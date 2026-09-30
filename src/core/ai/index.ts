@@ -51,7 +51,7 @@ export const aiImageEnabled =
   aiEnabled && uploadEnabled && siteConfig.ai.imageModels.length > 0;
 
 export const aiImageModels = siteConfig.ai.imageModels.map(
-  ({ id, creditCost }) => ({ id, creditCost }),
+  ({ id, creditCost, acceptsImage }) => ({ id, creditCost, acceptsImage }),
 );
 
 export const defaultAiImageModel = siteConfig.ai.defaultImageModel;

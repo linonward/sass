@@ -17,19 +17,21 @@ import { Textarea } from "@/core/ui/textarea";
 
 import { imageErrorCode, type ImageErrorCode } from "./errors";
 import { useGenerations } from "./generations-context";
+import { ImagePicker, type PickedImage } from "./image-picker";
 import type { Generation } from "./image";
 
 const aspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4"] as const;
 
 /**
  * Example image generation: pick a model and aspect ratio, enter a prompt, and get an image
- * synchronously; recent generations are listed below.
+ * synchronously; recent generations are listed below. Models with acceptsImage can also take a
+ * reference image (a recent generation or an upload) to edit.
  */
 export function ImageStudio({
   models,
   defaultModel,
 }: {
-  models: { id: string; creditCost: number }[];
+  models: { id: string; creditCost: number; acceptsImage: boolean }[];
   defaultModel: string;
 }) {
   const t = useTranslations("Playground.image");
@@ -38,6 +40,7 @@ export function ImageStudio({
   const [aspectRatio, setAspectRatio] =
     useState<(typeof aspectRatios)[number]>("1:1");
   const [prompt, setPrompt] = useState("");
+  const [reference, setReference] = useState<PickedImage | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ImageErrorCode | null>(null);
   const { generations: all, addGeneration } = useGenerations();
@@ -47,7 +50,10 @@ export function ImageStudio({
   const modelSelectId = useId();
   const ratioSelectId = useId();
   const promptId = useId();
-  const cost = models.find((m) => m.id === modelId)?.creditCost ?? 0;
+  const model = models.find((m) => m.id === modelId);
+  const cost = model?.creditCost ?? 0;
+  // Only sent when the selected model takes one; switching models keeps the pick for later.
+  const imageFileId = model?.acceptsImage ? reference?.fileId : undefined;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -59,7 +65,12 @@ export function ImageStudio({
       const response = await fetch("/api/ai/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text, modelId, aspectRatio }),
+        body: JSON.stringify({
+          prompt: text,
+          modelId,
+          aspectRatio,
+          imageFileId,
+        }),
       });
       if (!response.ok) {
         setError(await imageErrorCode(response));
@@ -129,6 +140,21 @@ export function ImageStudio({
             {cost > 0 ? t("cost", { cost }) : t("free")}
           </span>
         </div>
+        {model?.acceptsImage && (
+          <div className="space-y-1">
+            <ImagePicker
+              legend={t("reference")}
+              images={generations}
+              value={reference}
+              onChange={setReference}
+              disabled={busy}
+              removable
+            />
+            <p className="text-muted-foreground text-xs">
+              {t("referenceHint")}
+            </p>
+          </div>
+        )}
         <label htmlFor={promptId} className="sr-only">
           {t("placeholder")}
         </label>
