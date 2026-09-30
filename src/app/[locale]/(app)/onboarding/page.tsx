@@ -40,9 +40,7 @@ export default async function OnboardingPage({ params }: Props) {
   const steps = onboardingSteps({
     brandColor: siteConfig.brand.primaryColor,
     placeholders: placeholderIssues(siteConfig),
-    planProductIds: siteConfig.billing.plans.flatMap((plan) =>
-      plan.providerProductId ? [plan.providerProductId] : [],
-    ),
+    plans: siteConfig.billing.plans,
     blogEnabled: siteConfig.features.blog,
     onVercel: Boolean(process.env.VERCEL),
   });

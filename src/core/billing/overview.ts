@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
 
+import type { Plan } from "@/core/config/schema";
 import type { Database } from "@/core/db";
 import { billingCustomers, orders, subscriptions } from "@/core/db/schema";
 import type { SubscriptionStatus } from "@/core/db/schema";
@@ -89,4 +90,22 @@ export function ownedPlans(overview: BillingOverview) {
     owned[overview.subscription.planId] = "subscribed";
   }
   return owned;
+}
+
+/**
+ * What the billing page says about the user's plan when there's no subscription line to show:
+ * - `subscription`: an active (or not yet expired) subscription;
+ * - `purchased`: no subscription, but paid one-time plans (a one-time purchase creates no subscription);
+ * - `free`: neither, and a free plan (price 0) is listed;
+ * - `none`: neither, and the free plan is hidden or doesn't exist, so "you're on the free plan" would be false.
+ *
+ * `listed` is listedPlans(): a free plan hidden with SITE_HIDDEN_PLANS doesn't count.
+ */
+export function planSummary(
+  overview: Pick<BillingOverview, "subscription" | "purchasedPlanIds">,
+  listed: readonly Pick<Plan, "price">[],
+): "subscription" | "purchased" | "free" | "none" {
+  if (overview.subscription) return "subscription";
+  if (overview.purchasedPlanIds.length > 0) return "purchased";
+  return listed.some((plan) => plan.price === 0) ? "free" : "none";
 }

@@ -10,7 +10,7 @@ function input(overrides: Partial<Parameters<typeof onboardingSteps>[0]> = {}) {
   return {
     brandColor: "#4f46e5",
     placeholders: [],
-    planProductIds: ["prod_live_pro"],
+    plans: [{ providerProductId: "prod_live_pro", hidden: false }],
     blogEnabled: true,
     onVercel: true,
     ...overrides,
@@ -89,7 +89,12 @@ describe("onboardingSteps", () => {
 
   test("a placeholder product ID still in the plans means todo", () => {
     const steps = onboardingSteps(
-      input({ planProductIds: ["prod_placeholder_pro", "prod_live_lifetime"] }),
+      input({
+        plans: [
+          { providerProductId: "prod_placeholder_pro", hidden: false },
+          { providerProductId: "prod_live_lifetime", hidden: false },
+        ],
+      }),
     );
     expect(statusOf(steps, "pricing")).toBe("todo");
     expect(steps.find((step) => step.id === "pricing")?.evidence).toEqual([
@@ -97,9 +102,26 @@ describe("onboardingSteps", () => {
     ]);
   });
 
+  test("a placeholder product ID on a hidden plan doesn't count (it can't be bought)", () => {
+    const steps = onboardingSteps(
+      input({
+        plans: [
+          { hidden: false },
+          { providerProductId: "prod_placeholder_pro", hidden: true },
+          { providerProductId: "prod_live_lifetime", hidden: false },
+        ],
+      }),
+    );
+    expect(statusOf(steps, "pricing")).toBe("done");
+    expect(steps.find((step) => step.id === "pricing")?.evidence).toEqual([]);
+  });
+
   test("no paid plans (no product IDs at all) counts as done", () => {
     expect(
-      statusOf(onboardingSteps(input({ planProductIds: [] })), "pricing"),
+      statusOf(
+        onboardingSteps(input({ plans: [{ hidden: false }] })),
+        "pricing",
+      ),
     ).toBe("done");
   });
 

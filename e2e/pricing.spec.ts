@@ -136,6 +136,11 @@ test("webhook later than the wait window: first suggests contacting support, the
   await expect(
     planCard(page, "lifetime").getByRole("link", { name: b.actions.purchased }),
   ).toBeVisible();
+
+  // A one-time purchase creates no subscription, but the billing page must not say "free plan".
+  await page.goto("/billing");
+  await expect(page.getByText(b.page.purchasedOnly)).toBeVisible();
+  await expect(page.getByText(b.page.freePlan)).toHaveCount(0);
 });
 
 test("webhook never arrives: success page stays on contact support without erroring", async ({

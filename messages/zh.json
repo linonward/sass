@@ -771,6 +771,8 @@
       "description": "你的套餐、购买记录和积分。",
       "planTitle": "套餐",
       "freePlan": "你当前使用免费套餐。",
+      "purchasedOnly": "你没有订阅，一次性购买见下方。",
+      "noPlan": "你还没有购买任何套餐。",
       "viewPlans": "查看套餐",
       "status": {
         "active": "生效中",

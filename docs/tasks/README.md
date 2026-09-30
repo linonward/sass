@@ -174,6 +174,7 @@
 | T2322                       | env-sync                | `chore/env-sync`               | —                             | done |
 | T2323                       | env-sync-overwrite      | `fix/env-sync-overwrite`       | T2322                         | done |
 | T2324                       | env-sync-links          | `fix/env-sync-links`           | T2323                         | done |
+| T2325                       | one-time-plans          | `fix/one-time-plans`           | —                             | done |
 | T2326                       | audit-next              | `fix/audit-next`               | —                             | done |
 | **阶段 24：Landing 重设计** |                         |                                |                               |      |
 | T2401                       | landing-redesign        | `feat/landing-redesign`        | T105、T605、T1803             | done |

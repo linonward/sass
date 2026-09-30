@@ -1,7 +1,8 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 
 import { requirePageSession } from "@/core/auth/session";
-import { getBillingOverview } from "@/core/billing/overview";
+import { getBillingOverview, planSummary } from "@/core/billing/overview";
+import { listedPlans } from "@/core/billing/plans";
 import { creditsEnabled, getBalance, listTransactions } from "@/core/credits";
 import { getDb } from "@/core/db";
 import { Link } from "@/core/i18n/navigation";
@@ -58,6 +59,10 @@ export default async function BillingPage({
     creditsEnabled ? listTransactions(userId, { limit: 20 }) : [],
   ]);
 
+  const summary = planSummary(
+    { subscription, purchasedPlanIds },
+    listedPlans(),
+  );
   const planName = (id: string | null) =>
     id ? tp(`plans.${id}.name` as "plans.free.name") : "";
   const date = (value: Date) => format.dateTime(value, { dateStyle: "long" });
@@ -75,8 +80,12 @@ export default async function BillingPage({
                 {planName(subscription.planId)} ·{" "}
                 {t(`status.${subscription.status}`)}
               </span>
-            ) : (
+            ) : summary === "purchased" ? (
+              t("purchasedOnly")
+            ) : summary === "free" ? (
               t("freePlan")
+            ) : (
+              t("noPlan")
             )}
           </CardDescription>
         </CardHeader>
