@@ -260,9 +260,7 @@ export function EmptyRow({
                 pathname: filtered.pathname,
                 query: cleanQuery(filtered.keep ?? {}),
               }}
-              // cn() lets the outline's border colour replace the base
-              // `border-transparent`; without it there's no visible edge in light mode.
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               {t("clearFilters")}
             </Link>

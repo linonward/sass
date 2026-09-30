@@ -11,7 +11,7 @@ const STICKER = "sticker border-[var(--edge)]";
 const STICKER_PRESS =
   "hover:[--tw-shadow:0_1px_0_0_var(--edge)] active:not-aria-[haspopup]:translate-y-[2px] active:[--tw-shadow:0_0_0_0_var(--edge)]";
 
-const buttonVariants = cva(
+const buttonVariantsRaw = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,translate,box-shadow] duration-150 ease-out outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
@@ -62,17 +62,31 @@ const buttonVariants = cva(
   },
 );
 
+/**
+ * Button classes for non-button elements (links styled as buttons).
+ *
+ * Returned already merged: the base sets `border-transparent` and variants such
+ * as `outline` add `border-border` at the same specificity, so an unmerged string
+ * lets whichever rule Tailwind emits last win — in light mode the outline border
+ * came out transparent wherever `buttonVariants()` went straight into `className`.
+ */
+function buttonVariants(
+  props?: Parameters<typeof buttonVariantsRaw>[0],
+): string {
+  return cn(buttonVariantsRaw(props));
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
   tone,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props & VariantProps<typeof buttonVariantsRaw>) {
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, tone, className }))}
+      className={buttonVariants({ variant, size, tone, className })}
       {...props}
     />
   );
