@@ -58,6 +58,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (file) => readFileSync(join(root, file), "utf8");
 
 const NOTICES = "THIRD-PARTY-NOTICES.md";
+// Shared by the check and --fix, so a renamed heading can't break only one of them.
+const DIRECT_DEPS_HEADING = "## Direct dependencies";
 
 // Strong-copyleft denylist: this is what TPN means by "no strong copyleft licenses such as GPL, AGPL
 // or SSPL".
@@ -149,10 +151,10 @@ function packageJsonDirectDeps() {
 // TPN: the three tables in the direct-dependency section
 
 function noticesDirectDeps(md) {
-  const start = md.indexOf("## Direct dependencies");
+  const start = md.indexOf(DIRECT_DEPS_HEADING);
   if (start === -1) {
     fail(
-      `Could not find the "## Direct dependencies" section in ${NOTICES} — if the heading was renamed, update this script too.`,
+      `Could not find the "${DIRECT_DEPS_HEADING}" section in ${NOTICES} — if the heading was renamed, update this script too.`,
     );
     return new Map();
   }
@@ -306,8 +308,14 @@ function checkLicenses(md) {
 // Rewrites only the version cell of rows in the direct-dependency section whose version drifted
 // from the lockfile; returns the new file text and the names that changed.
 function fixVersions(md, locked) {
-  const start = md.indexOf("## 直接依赖明细");
-  if (start === -1) return { text: md, changed: [] };
+  const start = md.indexOf(DIRECT_DEPS_HEADING);
+  // Fail loudly: returning "no drift" here would make the Dependabot workflow silently do nothing.
+  if (start === -1) {
+    console.error(
+      `Could not find the "${DIRECT_DEPS_HEADING}" section in ${NOTICES} — if the heading was renamed, update this script too.`,
+    );
+    process.exit(1);
+  }
   const changed = [];
   const row = /^(\|\s*`([^`]+)`\s*\|\s*)([^|]+?)(\s*\|\s*(?:prod|dev)\s*\|)/;
   const rest = md
