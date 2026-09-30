@@ -46,7 +46,7 @@ const PORTAL_RETURN_PATH = "/billing";
  * available for invoices finalized after 2019-03-15). That path would leak Stripe-specific
  * structure into the orders table and the revenue stats in src/core/admin/metrics.ts, so refund
  * events are always ignored (Creem reclaiming credits on refund is its own path; see the
- * "Payments" section of the README).
+ * "Payments (Creem / Stripe)" section of the README).
  *
  * Time: Stripe's created / current_period_* are Unix seconds; multiply by 1000 to get a Date.
  * Amounts: in the smallest currency unit (cents), consistent with events.ts.

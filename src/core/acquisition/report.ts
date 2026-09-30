@@ -29,9 +29,9 @@ import { campaignField, sourceField } from "./context";
 // Channel report aggregation for /admin/acquisition. The time basis reuses /admin/metrics
 // directly: UTC half-open ranges of 7 / 30 / 90 days. The revenue basis is shared with
 // /admin/metrics as well (see "revenue basis" at the top of metrics.ts; the buyer-facing
-// explanation is the revenue basis section of the README): revenue is attributed to the **order's
-// period** (orders created within the range), and refunds are deducted at their cumulative value as
-// of query time, so historical ranges change as later refunds come in.
+// explanation is the "Revenue definition" section of the README): revenue is attributed to the
+// **order's period** (orders created within the range), and refunds are deducted at their
+// cumulative value as of query time, so historical ranges change as later refunds come in.
 
 /**
  * Synthetic bucket for "no usable attribution". Users with no attribution row (existing users who

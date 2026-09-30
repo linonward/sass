@@ -1,224 +1,224 @@
-# 第三方组件与许可
+# Third-party components and licenses
 
-本文件列出模板用到的第三方组件及其许可。模板**自身的代码**不在这里，按根目录 [LICENSE](LICENSE) 的专有 EULA 授权。
+This file lists the third-party components the template uses and their licenses. The template's **own code** is not covered here; it is licensed under the proprietary EULA in [LICENSE](LICENSE) at the repository root.
 
-- 统计时间：2026-09-27。本版在基线 `3c59e36` 上重跑同一套命令：两张分布表的数字与上一版（基线 `358d00d`）**没有变化**，变的是「直接依赖明细」里 react / react-dom / `@types/react` / `@types/react-dom` / typescript 五行 —— dependabot 在本文件上次更新之后把它们升上去了，原来那五行写的是升级前的版本。上一版生产依赖树数字比更早的版本小，主要是 `shadcn` 那条链移进 `devDependencies` 所致。
-- 2026-09-28：「直接依赖明细」新增一行 `@vitest/coverage-v8`（5.0.2，dev，MIT）—— vitest 的覆盖率提供者，随 CI 覆盖率阈值一起加进来。当时写的是「其传递依赖都已在树里」，**这条不成立**：它的 `@bcoe/v8-coverage`、`ast-v8-to-istanbul`、`@vitest/istanbul-lib-coverage` / `@vitest/istanbul-lib-report` 等确实是新装进来的包，下面那条一并修正了数字。
-- 2026-09-28：「直接依赖明细」新增一行 `stripe`（22.6.2，prod，MIT）—— Stripe 官方 Node SDK，Stripe 收款用（Creem 之外新增的服务商，见 README 的「支付（Creem / Stripe）」）。它没有传递依赖。两张分布表这次按同一台 macOS 重跑并更新：生产树只多这 1 个 MIT 包（540 → 541 条），全量树多 8 个 MIT 包（+1 是 stripe，其余 7 个是上面那条漏算的 `@vitest/coverage-v8` 的传递依赖），其余各行的包数没变。
-- 统计方式：`pnpm licenses list`（全量）与 `pnpm licenses list --prod`（仅生产依赖），读的是仓库已安装的依赖和 `pnpm-lock.yaml` 锁定的版本。
-- 依赖升级后数字会变，本文件不会自动跟着变 —— 改依赖时重跑上面的命令并按需更新。**「直接依赖明细」那一节已经不用靠人记**：`pnpm notices:check`（`scripts/check-notices.mjs`）会拿 `pnpm-lock.yaml` 逐条比对版本和依赖类型，CI 每个 PR 都跑，对不上就失败。
-- 本文件是情况说明，**不是法律意见**；正式售卖前建议由律师过目（见 README 的「授权」一节）。
+- Counted on: 2026-09-27. This version reran the same commands on baseline `3c59e36`: the numbers in both distribution tables are **unchanged** from the previous version (baseline `358d00d`). What changed are five rows in "Direct dependencies" — react / react-dom / `@types/react` / `@types/react-dom` / typescript. Dependabot upgraded them after this file was last updated, and those five rows still showed the pre-upgrade versions. The previous version's production-tree numbers were smaller than earlier versions mainly because the `shadcn` chain moved into `devDependencies`.
+- 2026-09-28: added a row for `@vitest/coverage-v8` (5.0.2, dev, MIT) to "Direct dependencies" — vitest's coverage provider, added along with the CI coverage thresholds. The note at the time said "its transitive dependencies are already in the tree"; **that was wrong**: its `@bcoe/v8-coverage`, `ast-v8-to-istanbul`, `@vitest/istanbul-lib-coverage` / `@vitest/istanbul-lib-report` and others really are newly installed packages. The next entry corrects the numbers as well.
+- 2026-09-28: added a row for `stripe` (22.6.2, prod, MIT) to "Direct dependencies" — the official Stripe Node SDK, used for Stripe payments (a provider added alongside Creem; see the "Payments (Creem / Stripe)" section of the README). It has no transitive dependencies. Both distribution tables were rerun on the same macOS machine and updated this time: the production tree gained only this 1 MIT package (540 → 541 entries), and the full tree gained 8 MIT packages (+1 is stripe; the other 7 are the transitive dependencies of `@vitest/coverage-v8` that the previous entry missed). The package counts in every other row are unchanged.
+- Method: `pnpm licenses list` (full) and `pnpm licenses list --prod` (production dependencies only). Both read the dependencies installed in the repository at the versions locked in `pnpm-lock.yaml`.
+- The numbers change when dependencies are upgraded, and this file does not update itself — when you change dependencies, rerun the commands above and update as needed. **The "Direct dependencies" section no longer relies on anyone remembering**: `pnpm notices:check` (`scripts/check-notices.mjs`) compares every version and dependency type against `pnpm-lock.yaml`, CI runs it on every PR, and it fails on any mismatch.
+- This file describes the situation; it is **not legal advice**. Have a lawyer review it before you sell commercially (see the "License" section of the README).
 
-## 全量依赖树
+## Full dependency tree
 
-含 `dependencies`、`devDependencies` 及其全部传递依赖，按实际安装的平台可选依赖计入：
+Includes `dependencies`, `devDependencies` and all of their transitive dependencies, counting the platform-specific optional dependencies actually installed:
 
-| 许可（SPDX）              | 包数 |
-| ------------------------- | ---- |
-| MIT                       | 843  |
-| Apache-2.0                | 89   |
-| ISC                       | 35   |
-| BSD-2-Clause              | 16   |
-| BSD-3-Clause              | 12   |
-| BlueOak-1.0.0             | 6    |
-| MIT-0                     | 3    |
-| MPL-2.0                   | 3    |
-| CC0-1.0                   | 2    |
-| LGPL-3.0-or-later         | 1    |
-| Apache-2.0 AND MIT        | 1    |
-| Python-2.0                | 1    |
-| CC-BY-4.0                 | 1    |
-| Unlicense                 | 1    |
-| (AFL-2.1 OR BSD-3-Clause) | 1    |
-| FSL-1.1-Apache-2.0        | 1    |
-| 0BSD                      | 1    |
-| (MIT OR CC0-1.0)          | 1    |
-| **合计**                  | 1018 |
+| License (SPDX)            | Packages |
+| ------------------------- | -------- |
+| MIT                       | 843      |
+| Apache-2.0                | 89       |
+| ISC                       | 35       |
+| BSD-2-Clause              | 16       |
+| BSD-3-Clause              | 12       |
+| BlueOak-1.0.0             | 6        |
+| MIT-0                     | 3        |
+| MPL-2.0                   | 3        |
+| CC0-1.0                   | 2        |
+| LGPL-3.0-or-later         | 1        |
+| Apache-2.0 AND MIT        | 1        |
+| Python-2.0                | 1        |
+| CC-BY-4.0                 | 1        |
+| Unlicense                 | 1        |
+| (AFL-2.1 OR BSD-3-Clause) | 1        |
+| FSL-1.1-Apache-2.0        | 1        |
+| 0BSD                      | 1        |
+| (MIT OR CC0-1.0)          | 1        |
+| **Total**                 | 1018     |
 
-口径：1018 是「包名 × 许可」的条目数，落盘的是 1122 个「包名@版本」（同一个包有多个版本时会各占一行版本），去重到包名是 1014 个。
+How to read this: 1018 is the number of "package name × license" entries. On disk there are 1122 "package@version" entries (a package with several versions takes one line per version), and deduplicated by name there are 1014 packages.
 
-**没有 GPL、AGPL、SSPL 这类强 copyleft 许可。** 有 copyleft 性质的一共 4 个包：1 个 LGPL-3.0-or-later、3 个 MPL-2.0，逐个说明见下一节。其余全是宽松许可（MIT / Apache-2.0 / ISC / BSD / MIT-0 / 0BSD / BlueOak / Unlicense / CC0 / Python-2.0 / 二选一的双许可）。
+**There are no strong copyleft licenses such as GPL, AGPL or SSPL.** 4 packages have copyleft characteristics in total: 1 LGPL-3.0-or-later and 3 MPL-2.0, each explained in the next section. Everything else is permissive (MIT / Apache-2.0 / ISC / BSD / MIT-0 / 0BSD / BlueOak / Unlicense / CC0 / Python-2.0 / dual licenses where you pick one).
 
-## 生产依赖树
+## Production dependency tree
 
-`pnpm licenses list --prod`：541 条，539 个包名。
+`pnpm licenses list --prod`: 541 entries, 539 package names.
 
-| 许可（SPDX）              | 包数 |
-| ------------------------- | ---- |
-| MIT                       | 435  |
-| Apache-2.0                | 60   |
-| ISC                       | 18   |
-| BSD-3-Clause              | 7    |
-| BSD-2-Clause              | 7    |
-| BlueOak-1.0.0             | 5    |
-| Python-2.0                | 1    |
-| CC-BY-4.0                 | 1    |
-| Unlicense                 | 1    |
-| (AFL-2.1 OR BSD-3-Clause) | 1    |
-| CC0-1.0                   | 1    |
-| MIT-0                     | 1    |
-| FSL-1.1-Apache-2.0        | 1    |
-| 0BSD                      | 1    |
-| (MIT OR CC0-1.0)          | 1    |
-| **合计**                  | 541  |
+| License (SPDX)            | Packages |
+| ------------------------- | -------- |
+| MIT                       | 435      |
+| Apache-2.0                | 60       |
+| ISC                       | 18       |
+| BSD-3-Clause              | 7        |
+| BSD-2-Clause              | 7        |
+| BlueOak-1.0.0             | 5        |
+| Python-2.0                | 1        |
+| CC-BY-4.0                 | 1        |
+| Unlicense                 | 1        |
+| (AFL-2.1 OR BSD-3-Clause) | 1        |
+| CC0-1.0                   | 1        |
+| MIT-0                     | 1        |
+| FSL-1.1-Apache-2.0        | 1        |
+| 0BSD                      | 1        |
+| (MIT OR CC0-1.0)          | 1        |
+| **Total**                 | 541      |
 
-两点要注意：
+Two things to note:
 
-- **`--prod` 既不统计 devDependencies，也不统计可选依赖**，所以这三个有 copyleft 性质的包都不在这张表里，但原因不同：sharp / libvips（LGPL）是 `next` 的**可选依赖**（真实部署会装上：Vercel 上 Next 用 sharp 做图片优化）；lightningcss（MPL）经 Tailwind 和 vitest 的 devDependencies 进来；axe-core（MPL）来自 ESLint 插件，只在 lint 时用。只看这张表会漏掉前两条，所以逐个说明放在下一节。
-- 买家的 CI 若跑不带 `--prod` 的 `pnpm install`，装的是全量，两张表都适用。
+- **`--prod` counts neither devDependencies nor optional dependencies**, so none of the three packages with copyleft characteristics appear in this table, but for different reasons: sharp / libvips (LGPL) is an **optional dependency** of `next` (a real deployment installs it: on Vercel, Next uses sharp for image optimization); lightningcss (MPL) comes in through the devDependencies of Tailwind and vitest; axe-core (MPL) comes from an ESLint plugin and is only used during lint. Looking at this table alone would miss the first two, which is why each one is explained in the next section.
+- If your CI runs `pnpm install` without `--prod`, it installs the full tree, and both tables apply.
 
-## 需要单独说明的许可
+## Licenses that need a separate note
 
-### LGPL-3.0-or-later —— `@img/sharp-libvips-*`（1 个包）
+### LGPL-3.0-or-later — `@img/sharp-libvips-*` (1 package)
 
-依赖链：`next@16.3.6` →（可选依赖）`sharp@0.35.4` → `@img/sharp-darwin-arm64@0.35.4` → `@img/sharp-libvips-darwin-arm64@1.3.3`。
+Dependency chain: `next@16.3.6` → (optional dependency) `sharp@0.35.4` → `@img/sharp-darwin-arm64@0.35.4` → `@img/sharp-libvips-darwin-arm64@1.3.3`.
 
-- **`sharp` 包本身是 Apache-2.0**；LGPL 的是它依赖的**预编译 libvips 二进制** `@img/sharp-libvips-*`。本机装的是 `-darwin-arm64`，已另外核对 npm registry 上的 `@img/sharp-libvips-linux-x64` / `-linux-arm64`，同样是 `LGPL-3.0-or-later`。
-- 为什么在 SaaS / 自托管场景可接受：
-  - LGPL 的 copyleft 只覆盖这个库**自身**，不覆盖调用它的应用。模板没有修改它，也没有把它静态链接进自己的代码 —— 它由 sharp 以独立动态库的方式调用。
-  - LGPL 的义务落在**分发这个库的一方**：附上许可全文、并在被要求时提供该库的源码。SaaS 部署时二进制装在运营者自己的服务器上，不随产品分发给终端用户，这项义务不触发。
-  - 买家如果确实要分发（例如打一个 Docker 镜像交付给客户），保持二进制原样即可：许可全文就在该包内，源码需求指向该包的发布地址。
-  - 这段是通行实践的说明，不构成法律意见。
+- **The `sharp` package itself is Apache-2.0**; what is LGPL is the **prebuilt libvips binary** it depends on, `@img/sharp-libvips-*`. The machine this was counted on installs `-darwin-arm64`; `@img/sharp-libvips-linux-x64` / `-linux-arm64` on the npm registry were checked separately and are also `LGPL-3.0-or-later`.
+- Why this is acceptable for SaaS / self-hosted use:
+  - LGPL copyleft covers only the library **itself**, not the application that calls it. The template does not modify it and does not statically link it into its own code — sharp calls it as a separate dynamic library.
+  - LGPL obligations fall on **whoever distributes the library**: include the full license text and provide the library's source on request. In a SaaS deployment the binary is installed on the operator's own servers and is not distributed to end users with the product, so this obligation is not triggered.
+  - If you do need to distribute it (for example, shipping a Docker image to a customer), keep the binary unmodified: the full license text is inside the package, and source requests can point to the package's published location.
+  - This describes common practice and is not legal advice.
 
-### MPL-2.0 —— `lightningcss`、`lightningcss-darwin-arm64`、`axe-core`（3 个包）
+### MPL-2.0 — `lightningcss`, `lightningcss-darwin-arm64`, `axe-core` (3 packages)
 
-- `lightningcss` 经 devDependencies 进来，两条路径：`@tailwindcss/postcss` → `@tailwindcss/node`（构建时编译 CSS，Tailwind 4 的管线），以及 `vitest` → `vite`（测试与转译）。两个版本（1.32.0 / 1.33.0）分别来自这两条路径。
-- `axe-core` ← `eslint-plugin-jsx-a11y`，只在 `pnpm lint` 时用。
-- MPL-2.0 是**文件级** copyleft：只要求「被修改过的 MPL 文件」继续以 MPL 提供，不影响同一个项目里其他文件的许可，也不要求公开调用方的代码。模板没有修改这几个包，它们又都是构建 / lint 期工具，不进买家产品的产物。只有真去改这些包的源码（极少见）才需要把改动的那些文件按 MPL 公开。
+- `lightningcss` comes in through devDependencies, along two paths: `@tailwindcss/postcss` → `@tailwindcss/node` (compiles CSS at build time, the Tailwind 4 pipeline), and `vitest` → `vite` (testing and transpiling). The two versions (1.32.0 / 1.33.0) come from these two paths respectively.
+- `axe-core` ← `eslint-plugin-jsx-a11y`, only used during `pnpm lint`.
+- MPL-2.0 is a **file-level** copyleft: it only requires that "modified MPL files" stay available under the MPL. It does not affect the license of other files in the same project and does not require publishing the calling code. The template does not modify these packages, and they are all build / lint-time tools that don't end up in the build output of your product. Only if you actually modify these packages' source (rare) do you need to publish the modified files under the MPL.
 
-### FSL-1.1-Apache-2.0 —— `sentry@0.44.1`（Sentry CLI，1 个包）
+### FSL-1.1-Apache-2.0 — `sentry@0.44.1` (Sentry CLI, 1 package)
 
-依赖链：`@sentry/nextjs@11.0.0` → `@sentry/bundler-plugins@11.0.0` → `sentry@0.44.1`。
+Dependency chain: `@sentry/nextjs@11.0.0` → `@sentry/bundler-plugins@11.0.0` → `sentry@0.44.1`.
 
-- FSL **不是 OSI 认可的开源许可**，是 source-available：允许使用、复制、修改、再分发，唯独不允许拿它做**与之竞争的商业产品或服务**（该包 `LICENSE.md` 的 "Competing Use" 定义）；每个版本发布满两周年后自动转为 Apache-2.0。
-- 本模板的用法完全落在允许范围：只在**构建时**上传 source map，而且只有买家配了 `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` 三项才会执行（见 `next.config.ts` 的 `canUploadSourceMaps`）。这属于许可里明列的 "your internal use and access"；模板不改它、不把它作为产品的一部分分发，也不提供与它竞争的服务。
-- 不使用 Sentry 时这条链路不会执行。
+- FSL is **not an OSI-approved open source license**; it is source-available: it allows use, copying, modification and redistribution, except for building a **competing commercial product or service** (the "Competing Use" definition in the package's `LICENSE.md`). Each version automatically converts to Apache-2.0 two years after its release.
+- The template's usage is entirely within what's allowed: it only uploads source maps **at build time**, and only when you have set all three of `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` (see `canUploadSourceMaps` in `next.config.ts`). That falls under "your internal use and access", which the license lists explicitly; the template does not modify it, does not distribute it as part of the product, and does not offer a service that competes with it.
+- If you don't use Sentry, this chain never runs.
 
-### 其余需要点名但不构成义务的
+### Others worth naming that create no obligations
 
-| 许可                                                             | 包                                     | 说明                                                                                                                                              |
-| ---------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CC-BY-4.0                                                        | `caniuse-lite`                         | 浏览器支持情况的数据集，构建时经 `browserslist` / `next` 读取，用来决定 CSS / JS 的兼容目标。CC-BY 要求署名，本条即为署名；数据不随买家产物分发。 |
-| Python-2.0                                                       | `argparse`                             | PSF 许可（宽松），来自 `js-yaml`（构建期解析配置）。                                                                                              |
-| (AFL-2.1 OR BSD-3-Clause)                                        | `json-schema`                          | 双许可，实际适用 BSD-3-Clause（来自 `@ai-sdk/provider`）。                                                                                        |
-| Unlicense                                                        | `fast-sha256`                          | 公有领域声明（来自 `standardwebhooks`，Creem webhook 验签用）。                                                                                   |
-| CC0-1.0                                                          | `language-subtag-registry`、`mdn-data` | 公有领域贡献（语言子标签数据、MDN 的 CSS 数据），无署名义务。                                                                                     |
-| 0BSD / BlueOak-1.0.0 / MIT-0 / ISC / BSD-2-Clause / BSD-3-Clause | 见上表                                 | 均为宽松许可，要求保留版权与许可声明，无其他义务。                                                                                                |
+| License                                                          | Package                                | Notes                                                                                                                                                                                                                                 |
+| ---------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CC-BY-4.0                                                        | `caniuse-lite`                         | Browser support dataset, read at build time via `browserslist` / `next` to decide CSS / JS compatibility targets. CC-BY requires attribution, and this entry is that attribution; the data is not distributed with your build output. |
+| Python-2.0                                                       | `argparse`                             | PSF license (permissive), from `js-yaml` (parses configuration at build time).                                                                                                                                                        |
+| (AFL-2.1 OR BSD-3-Clause)                                        | `json-schema`                          | Dual license; BSD-3-Clause is the one that applies (from `@ai-sdk/provider`).                                                                                                                                                         |
+| Unlicense                                                        | `fast-sha256`                          | Public domain dedication (from `standardwebhooks`, used to verify Creem webhook signatures).                                                                                                                                          |
+| CC0-1.0                                                          | `language-subtag-registry`, `mdn-data` | Public domain dedication (language subtag data, MDN's CSS data); no attribution required.                                                                                                                                             |
+| 0BSD / BlueOak-1.0.0 / MIT-0 / ISC / BSD-2-Clause / BSD-3-Clause | See the tables above                   | All permissive; they require keeping the copyright and license notices and impose no other obligations.                                                                                                                               |
 
-## 直接依赖明细
+## Direct dependencies
 
-`package.json` 里 46 个 `dependencies` + 32 个 `devDependencies`，共 78 个。版本是本次统计时锁定的版本。
+`package.json` has 46 `dependencies` + 32 `devDependencies`, 78 in total. The versions are the ones locked when this was counted.
 
-### MIT（55）
+### MIT (55)
 
-| 包                                | 版本    | 依赖类型 |
-| --------------------------------- | ------- | -------- |
-| `@base-ui/react`                  | 1.8.0   | prod     |
-| `@commitlint/cli`                 | 21.2.3  | dev      |
-| `@commitlint/config-conventional` | 21.2.3  | dev      |
-| `@content-collections/cli`        | 0.1.9   | dev      |
-| `@content-collections/core`       | 0.15.3  | dev      |
-| `@content-collections/next`       | 0.2.11  | dev      |
-| `@neondatabase/serverless`        | 1.1.0   | prod     |
-| `@react-email/ui`                 | 6.11.0  | dev      |
-| `@sentry/nextjs`                  | 11.0.0  | prod     |
-| `@t3-oss/env-nextjs`              | 0.13.11 | prod     |
-| `@tailwindcss/postcss`            | 4.3.3   | dev      |
-| `@tailwindcss/typography`         | 0.5.20  | dev      |
-| `@testing-library/dom`            | 10.4.2  | dev      |
-| `@testing-library/react`          | 16.3.3  | dev      |
-| `@types/node`                     | 24.19.0 | dev      |
-| `@types/pg`                       | 8.23.1  | dev      |
-| `@types/react`                    | 19.3.0  | dev      |
-| `@types/react-dom`                | 19.3.0  | dev      |
-| `@types/ws`                       | 8.18.1  | dev      |
-| `@upstash/ratelimit`              | 2.2.0   | prod     |
-| `@upstash/redis`                  | 1.39.0  | prod     |
-| `@vercel/analytics`               | 2.0.1   | prod     |
-| `@vercel/otel`                    | 2.1.3   | prod     |
-| `@vitejs/plugin-react`            | 6.1.1   | dev      |
-| `@vitest/coverage-v8`             | 5.0.2   | dev      |
-| `@waffo/pancake-ts`               | 0.25.0  | prod     |
-| `auth`                            | 1.7.6   | dev      |
-| `better-auth`                     | 1.7.6   | prod     |
-| `cn`                              | 0.4.0   | prod     |
-| `creem`                           | 1.13.0  | prod     |
-| `drizzle-kit`                     | 0.31.11 | dev      |
-| `eslint`                          | 9.39.5  | dev      |
-| `eslint-config-next`              | 16.3.6  | dev      |
-| `eslint-config-prettier`          | 10.1.8  | dev      |
-| `husky`                           | 9.1.7   | dev      |
-| `jsdom`                           | 30.1.1  | dev      |
-| `lint-staged`                     | 17.6.0  | dev      |
-| `next`                            | 16.3.6  | prod     |
-| `next-intl`                       | 4.14.7  | prod     |
-| `next-themes`                     | 0.4.6   | prod     |
-| `pg`                              | 8.23.0  | prod     |
-| `prettier`                        | 3.9.9   | dev      |
-| `prettier-plugin-tailwindcss`     | 0.8.1   | dev      |
-| `react`                           | 19.3.0  | prod     |
-| `react-dom`                       | 19.3.0  | prod     |
-| `react-email`                     | 6.11.0  | prod     |
-| `resend`                          | 6.30.0  | prod     |
-| `shadcn`                          | 4.21.0  | dev      |
-| `sonner`                          | 2.0.8   | prod     |
-| `stripe`                          | 22.6.2  | prod     |
-| `tailwindcss`                     | 4.3.3   | dev      |
-| `tw-animate-css`                  | 1.4.0   | prod     |
-| `vitest`                          | 5.0.2   | dev      |
-| `ws`                              | 8.22.0  | prod     |
-| `zod`                             | 4.6.5   | prod     |
+| Package                           | Version | Type |
+| --------------------------------- | ------- | ---- |
+| `@base-ui/react`                  | 1.8.0   | prod |
+| `@commitlint/cli`                 | 21.2.3  | dev  |
+| `@commitlint/config-conventional` | 21.2.3  | dev  |
+| `@content-collections/cli`        | 0.1.9   | dev  |
+| `@content-collections/core`       | 0.15.3  | dev  |
+| `@content-collections/next`       | 0.2.11  | dev  |
+| `@neondatabase/serverless`        | 1.1.0   | prod |
+| `@react-email/ui`                 | 6.11.0  | dev  |
+| `@sentry/nextjs`                  | 11.0.0  | prod |
+| `@t3-oss/env-nextjs`              | 0.13.11 | prod |
+| `@tailwindcss/postcss`            | 4.3.3   | dev  |
+| `@tailwindcss/typography`         | 0.5.20  | dev  |
+| `@testing-library/dom`            | 10.4.2  | dev  |
+| `@testing-library/react`          | 16.3.3  | dev  |
+| `@types/node`                     | 24.19.0 | dev  |
+| `@types/pg`                       | 8.23.1  | dev  |
+| `@types/react`                    | 19.3.0  | dev  |
+| `@types/react-dom`                | 19.3.0  | dev  |
+| `@types/ws`                       | 8.18.1  | dev  |
+| `@upstash/ratelimit`              | 2.2.0   | prod |
+| `@upstash/redis`                  | 1.39.0  | prod |
+| `@vercel/analytics`               | 2.0.1   | prod |
+| `@vercel/otel`                    | 2.1.3   | prod |
+| `@vitejs/plugin-react`            | 6.1.1   | dev  |
+| `@vitest/coverage-v8`             | 5.0.2   | dev  |
+| `@waffo/pancake-ts`               | 0.25.0  | prod |
+| `auth`                            | 1.7.6   | dev  |
+| `better-auth`                     | 1.7.6   | prod |
+| `cn`                              | 0.4.0   | prod |
+| `creem`                           | 1.13.0  | prod |
+| `drizzle-kit`                     | 0.31.11 | dev  |
+| `eslint`                          | 9.39.5  | dev  |
+| `eslint-config-next`              | 16.3.6  | dev  |
+| `eslint-config-prettier`          | 10.1.8  | dev  |
+| `husky`                           | 9.1.7   | dev  |
+| `jsdom`                           | 30.1.1  | dev  |
+| `lint-staged`                     | 17.6.0  | dev  |
+| `next`                            | 16.3.6  | prod |
+| `next-intl`                       | 4.14.7  | prod |
+| `next-themes`                     | 0.4.6   | prod |
+| `pg`                              | 8.23.0  | prod |
+| `prettier`                        | 3.9.9   | dev  |
+| `prettier-plugin-tailwindcss`     | 0.8.1   | dev  |
+| `react`                           | 19.3.0  | prod |
+| `react-dom`                       | 19.3.0  | prod |
+| `react-email`                     | 6.11.0  | prod |
+| `resend`                          | 6.30.0  | prod |
+| `shadcn`                          | 4.21.0  | dev  |
+| `sonner`                          | 2.0.8   | prod |
+| `stripe`                          | 22.6.2  | prod |
+| `tailwindcss`                     | 4.3.3   | dev  |
+| `tw-animate-css`                  | 1.4.0   | prod |
+| `vitest`                          | 5.0.2   | dev  |
+| `ws`                              | 8.22.0  | prod |
+| `zod`                             | 4.6.5   | prod |
 
-### Apache-2.0（21）
+### Apache-2.0 (21)
 
-| 包                               | 版本     | 依赖类型 |
-| -------------------------------- | -------- | -------- |
-| `@ai-sdk/alibaba`                | 2.0.56   | prod     |
-| `@ai-sdk/anthropic`              | 4.0.65   | prod     |
-| `@ai-sdk/google`                 | 4.0.82   | prod     |
-| `@ai-sdk/openai`                 | 4.0.78   | prod     |
-| `@ai-sdk/provider`               | 4.0.18   | prod     |
-| `@ai-sdk/react`                  | 4.0.119  | prod     |
-| `@aws-sdk/client-s3`             | 3.1141.0 | prod     |
-| `@aws-sdk/s3-request-presigner`  | 3.1141.0 | prod     |
-| `@opentelemetry/api`             | 1.9.1    | prod     |
-| `@opentelemetry/api-logs`        | 0.222.0  | prod     |
-| `@opentelemetry/instrumentation` | 0.222.0  | prod     |
-| `@opentelemetry/resources`       | 2.11.0   | prod     |
-| `@opentelemetry/sdk-logs`        | 0.222.0  | prod     |
-| `@opentelemetry/sdk-metrics`     | 2.11.0   | prod     |
-| `@opentelemetry/sdk-trace-base`  | 2.11.0   | prod     |
-| `@playwright/test`               | 1.63.0   | dev      |
-| `@vercel/speed-insights`         | 2.0.0    | prod     |
-| `ai`                             | 7.0.116  | prod     |
-| `class-variance-authority`       | 0.7.1    | prod     |
-| `drizzle-orm`                    | 0.45.3   | prod     |
-| `typescript`                     | 6.0.3    | dev      |
+| Package                          | Version  | Type |
+| -------------------------------- | -------- | ---- |
+| `@ai-sdk/alibaba`                | 2.0.56   | prod |
+| `@ai-sdk/anthropic`              | 4.0.65   | prod |
+| `@ai-sdk/google`                 | 4.0.82   | prod |
+| `@ai-sdk/openai`                 | 4.0.78   | prod |
+| `@ai-sdk/provider`               | 4.0.18   | prod |
+| `@ai-sdk/react`                  | 4.0.119  | prod |
+| `@aws-sdk/client-s3`             | 3.1141.0 | prod |
+| `@aws-sdk/s3-request-presigner`  | 3.1141.0 | prod |
+| `@opentelemetry/api`             | 1.9.1    | prod |
+| `@opentelemetry/api-logs`        | 0.222.0  | prod |
+| `@opentelemetry/instrumentation` | 0.222.0  | prod |
+| `@opentelemetry/resources`       | 2.11.0   | prod |
+| `@opentelemetry/sdk-logs`        | 0.222.0  | prod |
+| `@opentelemetry/sdk-metrics`     | 2.11.0   | prod |
+| `@opentelemetry/sdk-trace-base`  | 2.11.0   | prod |
+| `@playwright/test`               | 1.63.0   | dev  |
+| `@vercel/speed-insights`         | 2.0.0    | prod |
+| `ai`                             | 7.0.116  | prod |
+| `class-variance-authority`       | 0.7.1    | prod |
+| `drizzle-orm`                    | 0.45.3   | prod |
+| `typescript`                     | 6.0.3    | dev  |
 
-### ISC（1）
+### ISC (1)
 
-| 包             | 版本   | 依赖类型 |
-| -------------- | ------ | -------- |
-| `lucide-react` | 1.48.0 | prod     |
+| Package        | Version | Type |
+| -------------- | ------- | ---- |
+| `lucide-react` | 1.48.0  | prod |
 
-### 没有 `license` 字段（1）
+### No `license` field (1)
 
-| 包                         | 版本  | 依赖类型 | 实际许可                                                                                                                                       |
-| -------------------------- | ----- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@content-collections/mdx` | 0.2.2 | prod     | `package.json` 里没有 `license` 字段，但包内附了 MIT 的 `LICENSE`（Copyright (c) 2024 Sebastian Sdorra），`pnpm licenses list` 也按 MIT 统计。 |
+| Package                    | Version | Type | Actual license                                                                                                                                                           |
+| -------------------------- | ------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@content-collections/mdx` | 0.2.2   | prod | Its `package.json` has no `license` field, but the package ships an MIT `LICENSE` (Copyright (c) 2024 Sebastian Sdorra), and `pnpm licenses list` also counts it as MIT. |
 
-## 复现与维护
+## Reproducing and maintaining this file
 
 ```bash
-pnpm install --frozen-lockfile   # 保证装的是锁文件里的版本
-pnpm notices:check               # 检查本文件有没有和锁文件漂移（CI 也跑这个）
-pnpm licenses list               # 全量分布（本文件第一张表）
-pnpm licenses list --prod        # 仅生产依赖（第二张表）
-pnpm licenses list --json        # 机器可读，便于自己算分布
+pnpm install --frozen-lockfile   # make sure the lockfile versions are installed
+pnpm notices:check               # check whether this file has drifted from the lockfile (CI runs this too)
+pnpm licenses list               # full distribution (the first table in this file)
+pnpm licenses list --prod        # production dependencies only (the second table)
+pnpm licenses list --json        # machine-readable, for computing the distribution yourself
 ```
 
-每个包的许可全文都随 `node_modules` 一起装到本地，路径是 `node_modules/<包名>/LICENSE*`。改动依赖后重跑上面的命令、核对这两张表的数字，再决定是否需要更新本节。
+The full license text of every package is installed locally along with `node_modules`, at `node_modules/<package-name>/LICENSE*`. After changing dependencies, rerun the commands above, check the numbers in the two tables, and then decide whether this section needs updating.
 
-`pnpm notices:check` 管两件事：把「直接依赖明细」逐条按 `pnpm-lock.yaml` 校验（版本、prod / dev 类型、有没有多写或漏写），以及确认 `pnpm licenses list` 报出的许可都在本文件里出现过、且没有 GPL / AGPL / SSPL 这类强 copyleft。它**不比对两张分布表的包数**：那个数字按当前平台装上的可选依赖计（`@swc/core-*`、`@img/sharp-libvips-*`、`lightningcss-*` ……），在 macOS 上算出来的数字在 Linux CI 上必然对不上，所以包数只由脚本打印出来供人核对。改依赖时如果脚本报出没见过的许可，就在本节的两张表里补一行，并在「需要单独说明的许可」里交代它有没有义务。
+`pnpm notices:check` covers two things: it checks every row of "Direct dependencies" against `pnpm-lock.yaml` (version, prod / dev type, and any extra or missing rows), and it confirms that every license reported by `pnpm licenses list` appears in this file and that there is no strong copyleft such as GPL / AGPL / SSPL. It **does not compare the package counts in the two distribution tables**: those numbers depend on the optional dependencies installed for the current platform (`@swc/core-*`, `@img/sharp-libvips-*`, `lightningcss-*` …), so numbers computed on macOS will never match on Linux CI, and the script only prints the counts for a person to check. If the script reports a license it hasn't seen before when you change dependencies, add a row to both distribution tables and explain under "Licenses that need a separate note" whether it carries obligations.
 
-买家侧的义务不受模板 EULA 影响：第三方组件由各自的作者按各自的许可直接授权给买家，见 [LICENSE](LICENSE) 第 7 节。
+Your obligations as a buyer are not affected by the template EULA: third-party components are licensed to you directly by their respective authors under their own licenses; see section 7 of [LICENSE](LICENSE).

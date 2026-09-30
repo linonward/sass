@@ -52,8 +52,8 @@ export const protectedPrefixes: readonly string[] = [
  * proxy returns 404 for them directly: the (app) layout and page render in parallel, but the
  * layout finishes first and sends signed-out visitors to sign-in, so the same URL would be a 307
  * when signed out and a 404 when signed in. Moving the check before rendering makes both cases
- * consistent (the same reasoning as `/admin` returning 404 for every non-admin; see the README
- * section on error and permission boundaries).
+ * consistent (the same reasoning as `/admin` returning 404 for every non-admin; see the
+ * "Error and permission boundaries" section of the README).
  */
 export const disabledPrefixes: readonly string[] = moduleGatedPages
   .filter((page) => !page.enabled)

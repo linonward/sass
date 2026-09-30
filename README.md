@@ -1,614 +1,614 @@
 # OnwardKit
 
-**AI 产品出海启动套件 · The starter kit for your AI business.**
+**The starter kit for your AI business.**
 
-把你的 AI 产品，做成可以收费的生意。登录、支付、积分与 AI 已接好，把时间留给你的产品。
+Turn your AI product into a business that gets paid. Sign-in, payments, credits and AI are already wired up, so your time goes into your product.
 
-可复用的出海 SaaS 模板：改配置即可得到登录、支付（Creem / Stripe / Lemon Squeezy）、积分、AI、多语言、SEO 等基础设施，只需编写业务功能。
+A reusable SaaS template for selling worldwide: change the config and you get sign-in, payments (Creem / Stripe / Lemon Squeezy), credits, AI, internationalization, SEO and the rest of the infrastructure. You only write your product features.
 
-v1 包含：邮箱验证码和 Google 登录、Creem / Stripe / Lemon Squeezy 收款（订阅和一次性购买）、积分账本、AI（文字、图片、视频，按次扣积分）、文件上传（R2）、多语言、SEO、法律页、MDX 博客、后台。
+v1 includes: email one-time code and Google sign-in, payments through Creem / Stripe / Lemon Squeezy (subscriptions and one-time purchases), a credits ledger, AI (text, image and video, charged in credits per call), file uploads (R2), internationalization, SEO, legal pages, an MDX blog, and an admin area.
 
-- 🚀 10 分钟上线：[从零到上线 checklist](docs/starter-guide.md#10-分钟从零到上线)（克隆 → 本地跑通 → 登录看到仪表盘）
-- 升级到模板的新版本：[UPGRADING.md](UPGRADING.md)
-- 设计系统：[docs/design.md](docs/design.md) · 多语言：[docs/i18n.md](docs/i18n.md) · 支付服务商（选型 / 切换）：[docs/billing.md](docs/billing.md)
-- 模板仓库自己的开发文档（**不在买家分发包里**）：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`docs/go-to-market.md`、`docs/competitive-landscape.md`、`AGENTS.md`、`CLAUDE.md` —— 走 GitHub「Use this template」拿到仓库的话，按[第 1 步](#1-用模板建仓库)的清单删掉
+- 🚀 Live in 10 minutes: [the zero-to-live checklist](docs/starter-guide.md#from-zero-to-live-in-10-minutes) (clone → run locally → sign in and see the dashboard)
+- Upgrading to a new template version: [UPGRADING.md](UPGRADING.md)
+- Design system: [docs/design.md](docs/design.md) · Internationalization: [docs/i18n.md](docs/i18n.md) · Payment providers (choosing / switching): [docs/billing.md](docs/billing.md)
+- The template repository's own development docs (**not in the buyer release package**): `docs/plan.md`, `docs/tasks/`, `docs/workflow.md`, `docs/go-to-market.md`, `docs/competitive-landscape.md`, `AGENTS.md`, `CLAUDE.md` — if you got the repository through GitHub's "Use this template", delete them using the list in [step 1](#1-create-a-repository-from-the-template)
 
-## 授权
+## License
 
-本模板按**专有许可**售卖，不是开源项目。一份授权对应一个买家实体（公司或个人），条款全文见 [LICENSE](LICENSE)：
+This template is sold under a **proprietary license**; it is not an open-source project. One license covers one buyer entity (a company or an individual). The full terms are in [LICENSE](LICENSE):
 
-- **可以**：用模板构建并运营**不限数量**的自有产品 —— 商用、闭源、改模板代码都可以，不再另外收费。
-- **不可以**：把模板本身或它的修改版再分发、转售、开源（包括放进公开仓库、包市场、模板站）、出租；授权也不能转给别的公司或客户。
+- **You may**: build and run an **unlimited number** of your own products with the template — commercial, closed-source, and with the template code modified — at no extra charge.
+- **You may not**: redistribute, resell, open-source (including putting it in a public repository, a package registry or a template marketplace) or rent out the template itself or a modified version of it; the license also can't be transferred to another company or to a client.
 
-完整的授权范围、禁止事项、免责声明和责任上限（不超过购买金额）都在 `LICENSE` 里。第三方依赖各自的许可见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+The full scope of the license, what's prohibited, the disclaimer and the liability cap (no more than the purchase price) are all in `LICENSE`. Licenses of third-party dependencies are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-`LICENSE` 里的方括号（授权方名称、管辖法域与法院、联系邮箱）是占位符，正式售卖前替换成实际信息。
+The square brackets in `LICENSE` (licensor name, governing jurisdiction and courts, contact email) are placeholders. Replace them with the real details before you start selling.
 
-> 上面这段说明和 `LICENSE` 的文本**仅供参考，不构成法律意见**：正式售卖前建议请律师按你的主体、销售方式和目标市场过目一遍。
+> The summary above and the text of `LICENSE` are **for reference only and do not constitute legal advice**: before you start selling, have a lawyer review them against your legal entity, how you sell, and your target markets.
 
-## 买家分发包包含什么
+## What's in the release package
 
-不是从 GitHub 拿到模板时（比如购买后收到的 zip），包里是 `scripts/release-package.sh` 从仓库某次提交（`git archive`）导出的：
+If you didn't get the template from GitHub (for example, the zip you receive after purchase), the package was exported by `scripts/release-package.sh` from one commit of the repository (`git archive`):
 
-**包含**
+**Included**
 
-- 全部源码与配置：`src/`、`content/`、`messages/`、`e2e/`、`drizzle/`（数据库迁移）、`scripts/`、`site.config.ts`、`package.json` + `pnpm-lock.yaml`
-- 上手与运维文档：`README.md`（本文）、`docs/starter-guide.md`（模板使用指南）、`docs/agent-guide.md`（给 AI 编码助手的项目指引）、`UPGRADING.md`、`docs/design.md`、`docs/i18n.md`、`docs/billing.md`
-- 授权与依赖许可：`LICENSE`、`THIRD-PARTY-NOTICES.md`
-- 环境变量样例 `.env.example`、CI 与 git 钩子：`.github/`、`.husky/`
-- `template.json`：这份包对应的版本与每个文件的 sha256。**别删、别改** —— 以后应用差量更新时靠它确认起点版本（见 [UPGRADING.md](UPGRADING.md)）
+- All source code and configuration: `src/`, `content/`, `messages/`, `e2e/`, `drizzle/` (database migrations), `scripts/`, `site.config.ts`, `package.json` + `pnpm-lock.yaml`
+- Getting-started and operations docs: `README.md` (this file), `docs/starter-guide.md` (template guide), `docs/agent-guide.md` (project guide for AI coding assistants), `UPGRADING.md`, `docs/design.md`, `docs/i18n.md`, `docs/billing.md`, `docs/testimonials.md`
+- License and dependency licenses: `LICENSE`, `THIRD-PARTY-NOTICES.md`
+- The environment variable example `.env.example`, CI and git hooks: `.github/`, `.husky/`
+- `template.json`: the version this package corresponds to and the sha256 of every file. **Don't delete or edit it** — when you apply an update package later, it's how the script confirms which version you're starting from (see [UPGRADING.md](UPGRADING.md))
 
-**不包含**
+**Not included**
 
-- 模板自己的开发过程文档：`docs/plan.md`、`docs/tasks/`、`docs/workflow.md`、`docs/go-to-market.md`、`docs/competitive-landscape.md`、`AGENTS.md`、`CLAUDE.md`
-- 任何**未跟踪**的文件：`.env.local`（真实凭据）、`.vercel/`、`node_modules/`、`.next/`、`.content-collections/`、测试产物
+- The template's own development-process docs: `docs/plan.md`, `docs/tasks/`, `docs/workflow.md`, `docs/go-to-market.md`, `docs/competitive-landscape.md`, `AGENTS.md`, `CLAUDE.md`
+- Any **untracked** files: `.env.local` (real credentials), `.vercel/`, `node_modules/`, `.next/`, `.content-collections/`, test artifacts
 
-包由 `git archive` 导出，未跟踪的文件天然进不去；导出后脚本会解压自检一遍（`README`/`LICENSE`/`package.json` 等在不在、凭据与卖家域名是否零命中），自检不过就不出包。自己验证或重新打包：
+The package is exported with `git archive`, so untracked files can't get in to begin with. After exporting, the script unpacks the package and self-checks it (whether `README`/`LICENSE`/`package.json` and so on are present, and that credentials and the seller's domains have zero hits); if the self-check fails, no package is produced. To verify it yourself or rebuild the package:
 
 ```bash
-scripts/release-package.sh                            # 打 HEAD，产物在 dist/（已 gitignore）
-scripts/release-package.sh v1.0.0                     # 打某个 tag
-scripts/release-package.sh --update v1.0.0 v1.1.0     # 打两个版本之间的差量更新包（发给已有买家）
+scripts/release-package.sh                            # package HEAD; output goes to dist/ (gitignored)
+scripts/release-package.sh v1.0.0                     # package a tag
+scripts/release-package.sh --update v1.0.0 v1.1.0     # build an update package between two versions (for existing buyers)
 ```
 
-买家拿到新版本后怎么应用（`scripts/apply-template-update.sh`，含冲突与迁移的处理）：[UPGRADING.md](UPGRADING.md)。
+How buyers apply a new version once they have it (`scripts/apply-template-update.sh`, including handling conflicts and migrations): [UPGRADING.md](UPGRADING.md).
 
-解压后 `pnpm install && pnpm test` 应当直接跑通（没配 `.env.local` 时数据库相关的用例会跳过，`pnpm test` 的输出里会写明）。
+After unpacking, `pnpm install && pnpm test` should pass right away (without `.env.local`, the database tests are skipped, and the `pnpm test` output says so).
 
-## 快速开始：从拿到模板到上线
+## Quick start: from template to launch
 
-按顺序做，每一步都能单独验证。预计耗时是熟悉流程后的参考值，第一次做可以在"实际"一栏记下来。第 1–2 步就是[模板使用指南的「10 分钟从零到上线」](docs/starter-guide.md#10-分钟从零到上线) —— 那里的每一步都写了命令和验证方式，时间也按那里估；卡住的地方补进那份指南。
+Do these in order; each step can be verified on its own. The time estimates assume you already know the flow; the first time through, you can note your own time in the "Actual" column. Steps 1–2 are the [template guide's "From zero to live in 10 minutes"](docs/starter-guide.md#from-zero-to-live-in-10-minutes) — every step there has the commands and how to verify it, and the times are estimated from there. If you get stuck somewhere, add it to that guide.
 
-| #   | 步骤                                                          | 预计     | 实际 |
-| --- | ------------------------------------------------------------- | -------- | ---- |
-| 1   | [用模板建仓库](#1-用模板建仓库)                               | 3 分钟   |      |
-| 2   | [本地跑起来](#2-本地跑起来)                                   | 7 分钟   |      |
-| 3   | [改成自己的站点](#3-改成自己的站点)                           | 1 小时   |      |
-| 4   | [准备外部账号](#4-准备外部账号)                               | 1–2 小时 |      |
-| 5   | [部署到 Vercel](#5-部署到-vercel)                             | 30 分钟  |      |
-| 6   | [走一遍上线清单，打开真实收款](#6-走一遍上线清单打开真实收款) | 30 分钟  |      |
+| #   | Step                                                                                                                      | Estimate   | Actual |
+| --- | ------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ |
+| 1   | [Create a repository from the template](#1-create-a-repository-from-the-template)                                         | 3 minutes  |        |
+| 2   | [Run it locally](#2-run-it-locally)                                                                                       | 7 minutes  |        |
+| 3   | [Make it your own site](#3-make-it-your-own-site)                                                                         | 1 hour     |        |
+| 4   | [Prepare external accounts](#4-prepare-external-accounts)                                                                 | 1–2 hours  |        |
+| 5   | [Deploy to Vercel](#5-deploy-to-vercel)                                                                                   | 30 minutes |        |
+| 6   | [Go through the launch checklist and turn on real payments](#6-go-through-the-launch-checklist-and-turn-on-real-payments) | 30 minutes |        |
 
-### 1. 用模板建仓库
+### 1. Create a repository from the template
 
-在自己 GitHub 上建一个仓库并克隆到本地（点哪个按钮、会看到什么见指南的[建仓库并克隆](docs/starter-guide.md#建仓库并克隆)），然后添加模板为 `upstream`，以后用它合并模板更新 —— 这条路走 `git merge`（见 [UPGRADING.md](UPGRADING.md)）：
+Create a repository on your own GitHub account and clone it locally (which button to click and what you'll see are in the guide's [Create the repository and clone it](docs/starter-guide.md#create-the-repository-and-clone-it)), then add the template as `upstream` so you can merge template updates from it later — this path uses `git merge` (see [UPGRADING.md](UPGRADING.md)):
 
 ```bash
 git remote add upstream https://github.com/linonward/sass.git
 ```
 
-购买后收到 zip 的话不用建仓库、也不用加 `upstream`（包里没有模板作者的内部文档，也没有可与模板合并的共同 Git 历史）：解压后在目录里建一个仓库、把当前内容提交一次，作为以后应用差量更新的基线。
+If you received a zip after purchase, you don't need to create a repository from the template or add `upstream` (the package has neither the template author's internal docs nor a shared Git history you could merge with the template): unpack it, create a repository in that directory and commit the current contents once, as the baseline for applying update packages later.
 
 ```bash
 git init && git add -A && git commit -m "chore: import template"
 ```
 
-**接着删掉模板自己的开发文档。** 走 GitHub 这条路这些文件会原样留在你的仓库里（购买后收到的 zip 里没有它们，脚本已经剔掉了），留着会带来实际麻烦：
+**Next, delete the template's own development docs.** On the GitHub path these files stay in your repository as-is (the zip you receive after purchase doesn't have them; the script already stripped them out), and keeping them causes real trouble:
 
 ```bash
 git rm -r docs/plan.md docs/workflow.md docs/tasks docs/go-to-market.md docs/competitive-landscape.md AGENTS.md CLAUDE.md
 git commit -m "chore: remove template author's internal docs"
 ```
 
-| 删掉                            | 为什么                                                                                                                                                                                                                                                                                         |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AGENTS.md`                     | 模板作者写给 **AI 编码助手**的仓库说明。Claude Code 这类工具打开仓库时会**自动加载**它，把模板作者的工作流当成你的项目规则执行 —— 「不在 `main` 上提交」「一个任务 = 一个分支 = 一个 worktree = 一个 PR」「PR 内同步更新任务表状态」。在你的产品仓库里这些既没有意义，又会挡住正常的提交流程。 |
-| `CLAUDE.md`                     | 只有一行 `@AGENTS.md`，把上面那份说明喂给 Claude Code。                                                                                                                                                                                                                                        |
-| `docs/plan.md`                  | 模板的方案与关键决策记录，上面那些规则的出处。                                                                                                                                                                                                                                                 |
-| `docs/workflow.md`              | 模板的分支 / worktree / PR 流程，就是 AGENTS.md 里硬规则的展开。                                                                                                                                                                                                                               |
-| `docs/tasks/`                   | 模板的任务表（每个阶段一份）。AGENTS.md 要求「PR 内同步更新任务表状态」，指的就是这里。                                                                                                                                                                                                        |
-| `docs/go-to-market.md`          | 模板作者的市场策略：卖给谁、怎么定价、渠道怎么铺。写作时默认读者是作者本人，里面是作者的站点、定价与投放计划。                                                                                                                                                                                 |
-| `docs/competitive-landscape.md` | 模板作者对同类产品的调研与差异定位。同一个市场里的同行看到这份东西只会尴尬。                                                                                                                                                                                                                   |
+| Delete                          | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`                     | The repository instructions the template author wrote for **AI coding assistants**. Tools like Claude Code **load it automatically** when they open the repository and follow the template author's workflow as if it were your project's rules — "don't commit on `main`", "one task = one branch = one worktree = one PR", "update the task table status in the same PR". In your product repository none of this makes sense, and it gets in the way of committing normally. |
+| `CLAUDE.md`                     | A single line, `@AGENTS.md`, which feeds the file above to Claude Code.                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `docs/plan.md`                  | The template's plan and record of key decisions — where the rules above come from.                                                                                                                                                                                                                                                                                                                                                                                              |
+| `docs/workflow.md`              | The template's branch / worktree / PR process, i.e. the hard rules in AGENTS.md spelled out.                                                                                                                                                                                                                                                                                                                                                                                    |
+| `docs/tasks/`                   | The template's task tables (one per phase). This is what AGENTS.md means by "update the task table status in the same PR".                                                                                                                                                                                                                                                                                                                                                      |
+| `docs/go-to-market.md`          | The template author's go-to-market strategy: who to sell to, how to price, which channels to use. It was written with the author as the reader and contains the author's sites, pricing and marketing plans.                                                                                                                                                                                                                                                                    |
+| `docs/competitive-landscape.md` | The template author's research on similar products and how the template is positioned against them. Competitors in the same market seeing this would only be awkward.                                                                                                                                                                                                                                                                                                           |
 
-这些文件都是文档和 AI 指令：**没有任何代码、脚本或测试读取它们**，删掉不影响 `pnpm install` / `pnpm dev` / `pnpm test` / `pnpm build` 和部署（`src/` 里有几处注释指向它们，注释不影响运行）。
+These files are all docs and AI instructions: **no code, script or test reads them**, so deleting them doesn't affect `pnpm install` / `pnpm dev` / `pnpm test` / `pnpm build` or deployment (a comment in `e2e/` points to one of them; comments don't affect anything at runtime).
 
-补充两点：
+Two more notes:
 
-- 如果在 Claude Code 里跑 `pnpm dev`，Next.js 会**重新生成** `AGENTS.md` 和 `CLAUDE.md`，里面只有它自己那段「This is NOT the Next.js you know」的 Next.js 版本提示（由 `next dev` 写入，与模板作者无关）。看到它们回来是正常的，留着或再删都可以。想让助手按这个项目的规矩写代码（目录边界、迁移、测试），在你自己的 `AGENTS.md` 里指向 [docs/agent-guide.md](docs/agent-guide.md)，做法见它的第一节。
-- `docs/design.md`（视觉系统）、`docs/i18n.md`（多语言）和 `docs/billing.md`（支付服务商）是**面向买家**的，两条交付路径里都有，不要删。
+- If you run `pnpm dev` inside Claude Code, Next.js **regenerates** `AGENTS.md` and `CLAUDE.md`, containing only its own "This is NOT the Next.js you know" note about the Next.js version (written by `next dev`, unrelated to the template author). Seeing them come back is normal; keep them or delete them again. If you want your assistant to write code by this project's rules (directory boundaries, migrations, tests), point to [docs/agent-guide.md](docs/agent-guide.md) from your own `AGENTS.md`; how to do that is in its first section.
+- `docs/design.md` (visual system), `docs/i18n.md` (internationalization) and `docs/billing.md` (payment providers) are **for buyers**, are included on both delivery paths, and should not be deleted.
 
-### 2. 本地跑起来
+### 2. Run it locally
 
-需要 Node 24（`.nvmrc`）、pnpm（版本见 `package.json` 的 `packageManager`）和 Docker。命令级的步骤在 [10 分钟从零到上线](docs/starter-guide.md#10-分钟从零到上线)：起一个本地 Postgres、把 `.env.example` 复制成 `.env.local`、`pnpm install`、`pnpm db:migrate`、`pnpm dev`，最后用 `/sign-in` 登录：第一次登录先落到 `/onboarding` 的上手清单，点 **Mark as done** 进 `/dashboard`。
+You need Node 24 (`.nvmrc`), pnpm (version in `packageManager` in `package.json`) and Docker. The command-level steps are in [From zero to live in 10 minutes](docs/starter-guide.md#from-zero-to-live-in-10-minutes): start a local Postgres, copy `.env.example` to `.env.local`, `pnpm install`, `pnpm db:migrate`, `pnpm dev`, and finally sign in at `/sign-in`: your first sign-in lands on the getting-started checklist at `/onboarding`; click **Mark as done** to get to `/dashboard`.
 
-**本地不需要任何外部账号**，那一步不用注册任何服务 —— 理由和每步的验证方式见同一节。
+**You don't need any external accounts locally**; that step doesn't require signing up for any service — the reasons and how to verify each step are in the same section.
 
-### 3. 改成自己的站点
+### 3. Make it your own site
 
-- `site.config.ts`（写错时 `dev` / `build` 直接报出字段名）。出厂值都是占位的（`domain` 是 `example.com`，付费套餐的产品 ID 是 `prod_placeholder_*`），换成自己的值就行，测试不用跟着改 —— **没改完之前生产构建会直接失败并列出是哪几个字段**（dev 只警告，见 `src/core/config/sentinels.ts`）：
-  - `name`、`domain`（不带协议，比如 `acme.com`）、`description`
-  - `brand.primaryColor`：**一个 hex 推导整站配色** —— 按钮、色带、链接文字、顶栏的内置 logo 标记、标签页图标（favicon）、图表第一档都跟着它变，不用改任何 SVG 文件。想用自己的 logo：把文件放进 `public/`，再在 `brand` 里加 `logo: "/your-logo.svg"`（顶栏、侧边栏和结构化数据都会用它）；不配就一直是内置标记。
-  - `features`：用不到的模块关掉，对应的环境变量就不再要求
-  - `legal`：公司或个人名称、联系邮箱、适用法域、生效日期
-- `landing`、`billing.plans`：首页区块、定价和每个套餐发放的积分。`providerProductId` 还是占位值时该套餐不能结账（接口返回 `plan_not_configured`）；它的含义跟着 `billing.provider` 走 —— Creem 填产品 ID（`prod_*`），Stripe 填 Price 的 `price_*`，Lemon Squeezy 填变体 ID（variant，在产品的「Variants」里建），在对应后台建好后替换成真实 ID
-  - `email`：发件人名称和地址（域名要在 Resend 验证）
-  - `ai.models`：开启 AI 时的模型和每次调用的积分成本
-- `messages/en.json`：页面文案；`content/legal/`：法律页正文；`content/blog/`：博客文章；`content/changelog/`：更新日志条目（`changelog.enabled` 开启时）；`public/`：你自己的 logo 图与 Hero 图（Hero 图要配 `landing.hero.image` 才用得上）。
-- 标签页图标：出厂的内置标记跟上面的 `brand.primaryColor` 走，在构建期生成（几何和顶栏的内置标记共用一份，见 `src/core/seo/favicon.tsx`），换主色就跟着变，不用管。想换成自己的图标：把 `icon.svg`（或 `icon.png`）放进 `src/app/`，并**删掉 `src/app/icon.tsx`** —— 换完就按你自己的文件来：地址变成那个文件的路径（`/icon.svg`），也不再跟主色走，颜色得画在文件里。两个同名的 icon 文件会各生成一个 `<link rel="icon">`，浏览器挑哪个不保证。
-- 示例业务模块 `src/features/example/`（一个扣积分的宣传语生成器）演示了业务代码怎么调用 `runAI`、`deductCredits`，以及怎么在 `dashboard.nav` 里加菜单。看完后删掉：`src/features/example/`、`src/app/[locale]/(app)/example/`、`e2e/example.spec.ts`，以及 `site.config.ts` 里 `dashboard.nav` 的那一项。
-- 改完运行 `pnpm test` 和 `pnpm build` 确认没漏改。测试直接读 `site.config.ts` 和 `messages/*.json`，改域名、主色和文案都不用 `-u` 更新快照。
+- `site.config.ts` (if you get something wrong, `dev` / `build` report the field name right away). All the shipped values are placeholders (`domain` is `example.com`, paid plan product IDs are `prod_placeholder_*`); just replace them with your own, and the tests don't need to change — **until you've replaced them, the production build fails outright and lists which fields** (dev only warns; see `src/core/config/sentinels.ts`):
+  - `name`, `domain` (no protocol, e.g. `acme.com`), `description`
+  - `brand.primaryColor`: **one hex value drives the whole site's color scheme** — buttons, bands, link text, the built-in logo mark in the header, the browser tab icon (favicon) and the first chart series all follow it, without editing any SVG file. To use your own logo: put the file in `public/`, then add `logo: "/your-logo.svg"` to `brand` (the header, sidebar and structured data all use it); without it, the built-in mark is used.
+  - `features`: turn off the modules you don't need, and their environment variables are no longer required
+  - `legal`: company or individual name, contact email, governing jurisdiction, effective date
+- `landing`, `billing.plans`: the homepage sections, pricing, and the credits each plan grants. While `providerProductId` is still a placeholder, that plan can't be checked out (the API returns `plan_not_configured`); what it means depends on `billing.provider` — for Creem it's the product ID (`prod_*`), for Stripe the Price's `price_*`, for Lemon Squeezy the variant ID (created under the product's "Variants"), for Waffo Pancake the product ID (`PROD_…`). Create them in the matching dashboard, then replace the placeholders with the real IDs
+  - `email`: sender name and address (the domain must be verified in Resend)
+  - `ai.models`: the models to use when AI is on, and the credit cost per call
+- `messages/en.json`: page copy; `content/legal/`: legal page text; `content/blog/`: blog posts; `content/changelog/`: changelog entries (when `changelog.enabled` is on); `public/`: your own logo image and hero image (the hero image is only used once you set `landing.hero.image`).
+- Browser tab icon: the shipped built-in mark follows `brand.primaryColor` above and is generated at build time (its geometry is shared with the built-in mark in the header; see `src/core/seo/favicon.tsx`), so it changes when you change the primary color; nothing to do. To use your own icon: put `icon.svg` (or `icon.png`) in `src/app/` and **delete `src/app/icon.tsx`** — from then on your own file is used: the URL becomes that file's path (`/icon.svg`), and it no longer follows the primary color, so the colors have to be in the file itself. Two icon files with the same name each generate a `<link rel="icon">`, and which one the browser picks isn't guaranteed.
+- The example feature module `src/features/example/` (a tagline generator that spends credits) shows how product code calls `runAI` and `deductCredits`, and how to add a menu item in `dashboard.nav`. Once you've read it, delete it: `src/features/example/`, `src/app/[locale]/(app)/example/`, `e2e/example.spec.ts`, and its entry in `dashboard.nav` in `site.config.ts`.
+- When you're done, run `pnpm test` and `pnpm build` to make sure you didn't miss anything. The tests read `site.config.ts` and `messages/*.json` directly, so changing the domain, primary color or copy doesn't require updating snapshots with `-u`.
 
-写业务功能前先看一眼 [UPGRADING.md](UPGRADING.md) 的目录边界：业务代码放 `src/features/`，尽量不改 `src/core/`。
+Before writing product features, take a look at the directory boundaries in [UPGRADING.md](UPGRADING.md): product code goes in `src/features/`; avoid changing `src/core/` where you can.
 
-### 4. 准备外部账号
+### 4. Prepare external accounts
 
-按[上线清单](#上线清单)第 4 节，只准备已开启模块需要的服务：Neon（数据库）、Resend（邮件，配好 SPF / DKIM）、Google OAuth（登录）、收款服务商（Creem、Stripe 或 Lemon Squeezy，先在测试模式建好产品 / 变体，把 ID 填进 `billing.plans`）；开启 AI、上传时还有 Upstash、R2 和模型服务商。
+Following section 4 of the [launch checklist](#launch-checklist), prepare only the services the modules you enabled need: Neon (database), Resend (email, with SPF / DKIM set up), Google OAuth (sign-in), a payment provider (Creem, Stripe or Lemon Squeezy — create the products / variants in test mode first and put their IDs in `billing.plans`); with AI and uploads on, also Upstash, R2 and your model providers.
 
-### 5. 部署到 Vercel
+### 5. Deploy to Vercel
 
-按上线清单第 1–3 节：导入仓库、接入 Neon 集成、绑定域名、填写环境变量。Vercel 构建时会先执行 `pnpm db:migrate`，缺少必需的变量时构建直接失败并列出变量名。开启后台（`features.admin`）时记得填 `ADMIN_EMAILS`。
+Follow sections 1–3 of the launch checklist: import the repository, add the Neon integration, attach your domain, fill in the environment variables. Vercel runs `pnpm db:migrate` first during the build, and if a required variable is missing, the build fails and lists the variable names. If you enable the admin area (`features.admin`), remember to set `ADMIN_EMAILS`.
 
-### 6. 走一遍上线清单，打开真实收款
+### 6. Go through the launch checklist and turn on real payments
 
-在线上环境依次确认：
+On the live site, confirm in order:
 
-1. 首页、`/pricing`、法律页、`/sitemap.xml`、`/robots.txt` 能打开，证书有效。
-2. 用邮箱验证码和 Google 各登录一次，收到欢迎邮件。
-3. 用收款服务商的测试模式买一次付费套餐（Creem 用测试卡；Stripe 用 `sk_test_*` 和测试卡；Lemon Squeezy 用测试模式的店铺）：成功页显示完成，`/billing` 里套餐和积分正确，收到付款邮件。
-4. 用 `ADMIN_EMAILS` 里的邮箱登录，打开 `/admin` 能看到这笔订单。
-5. 一切正常后切到生产模式（真实收款）：换生产的 API key、webhook secret 和产品 ID —— Creem 还要设 `CREEM_MODE=live`，Stripe 换成 `sk_live_*` 并在 Stripe 后台重建 webhook 端点，Lemon Squeezy 在后台关掉测试模式、换成生产店铺的 API key、webhook secret、store ID 和变体 ID。改完重新部署。
+1. The homepage, `/pricing`, the legal pages, `/sitemap.xml` and `/robots.txt` load, and the certificate is valid.
+2. Sign in once with an email one-time code and once with Google, and receive the welcome email.
+3. Buy a paid plan once in the payment provider's test mode (Creem with a test card; Stripe with `sk_test_*` and a test card; Lemon Squeezy with a test-mode store): the success page shows completion, the plan and credits in `/billing` are correct, and you receive the payment email.
+4. Sign in with an email from `ADMIN_EMAILS` and open `/admin`; you can see the order.
+5. Once everything works, switch to production mode (real payments): swap in the production API key, webhook secret and product IDs — for Creem also set `CREEM_MODE=live`; for Stripe switch to `sk_live_*` and recreate the webhook endpoint in the Stripe dashboard; for Lemon Squeezy turn off test mode in the dashboard and switch to the live store's API key, webhook secret, store ID and variant IDs. Redeploy when you're done.
 
-## 本地开发
+## Local development
 
-需要 Node 24（见 `.nvmrc`）和 pnpm（版本见 `package.json` 的 `packageManager`）。
+You need Node 24 (see `.nvmrc`) and pnpm (version in `packageManager` in `package.json`).
 
 ```bash
 pnpm install
 pnpm dev              # http://localhost:3000
 ```
 
-| 命令                                | 作用                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------ |
-| `pnpm lint`                         | ESLint                                                                   |
-| `pnpm format` / `pnpm format:check` | Prettier 格式化 / 检查                                                   |
-| `pnpm typecheck`                    | 生成路由类型并执行 `tsc`（不需要 `.env.local`）                          |
-| `pnpm test`                         | Vitest 单测（`src/**/*.test.{ts,tsx}`）                                  |
-| `pnpm test:e2e`                     | Playwright e2e（`e2e/`，首次需 `pnpm exec playwright install chromium`） |
-| `pnpm build`                        | 生产构建                                                                 |
-| `pnpm db:generate`                  | 根据 schema 生成迁移文件（`drizzle/`，需提交）                           |
-| `pnpm db:migrate`                   | 对 `DATABASE_URL` 执行迁移                                               |
-| `pnpm db:studio`                    | 打开 Drizzle Studio 浏览数据                                             |
-| `ALLOW_DB_SEED=1 pnpm db:seed`      | 灌一批演示数据（示例用户、订阅、订单、积分流水），幂等；默认拒绝，见下文 |
-| `pnpm email:dev`                    | 预览邮件模板（http://localhost:3030）                                    |
+| Command                             | What it does                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`                         | ESLint                                                                                                                 |
+| `pnpm format` / `pnpm format:check` | Prettier format / check                                                                                                |
+| `pnpm typecheck`                    | Generates route types and runs `tsc` (doesn't need `.env.local`)                                                       |
+| `pnpm test`                         | Vitest unit tests (`src/**/*.test.{ts,tsx}`)                                                                           |
+| `pnpm test:e2e`                     | Playwright e2e (`e2e/`; the first time, run `pnpm exec playwright install chromium`)                                   |
+| `pnpm build`                        | Production build                                                                                                       |
+| `pnpm db:generate`                  | Generates migration files from the schema (`drizzle/`; commit them)                                                    |
+| `pnpm db:migrate`                   | Runs migrations against `DATABASE_URL`                                                                                 |
+| `pnpm db:studio`                    | Opens Drizzle Studio to browse data                                                                                    |
+| `ALLOW_DB_SEED=1 pnpm db:seed`      | Loads demo data (example users, subscriptions, orders, credit transactions); idempotent; refuses by default, see below |
+| `pnpm email:dev`                    | Previews email templates (http://localhost:3030)                                                                       |
 
-`pnpm install` 同时装好 git 钩子：提交时自动用 ESLint 和 Prettier 处理暂存的文件，并用 commitlint 检查提交信息（Conventional Commits）。
+`pnpm install` also installs the git hooks: on commit, staged files are run through ESLint and Prettier, and the commit message is checked with commitlint (Conventional Commits).
 
-数据库：`DATABASE_URL` 必填（见 `.env.example`）。本地可以用 Docker 起一个 Postgres，再执行 `pnpm db:migrate`。设置了 `DATABASE_URL_TEST` 时，`pnpm test` 会运行数据库测试；未设置时跳过（CI 中必须设置）。
+Database: `DATABASE_URL` is required (see `.env.example`). Locally you can start a Postgres with Docker and then run `pnpm db:migrate`. When `DATABASE_URL_TEST` is set, `pnpm test` runs the database tests; when it isn't, they're skipped (in CI it must be set).
 
-### 先看看有数据长什么样
+### See what it looks like with data
 
-空库跑起来 dashboard 全是空状态，看不出这个模板能干什么。灌一批演示数据：
+On an empty database the dashboard is all empty states, and you can't tell what the template can do. Load some demo data:
 
 ```bash
-pnpm db:migrate                # 先建表
-ALLOW_DB_SEED=1 pnpm db:seed   # 幂等，重复执行不会重复插入
+pnpm db:migrate                # create the tables first
+ALLOW_DB_SEED=1 pnpm db:seed   # idempotent; running it again doesn't insert duplicates
 ```
 
-`db:seed` 默认拒绝执行：`NODE_ENV` 未设置时按生产处理（和站点里 fake 支付那道闸门同一套口径），只有 `NODE_ENV=development` / `test` 或显式 `ALLOW_DB_SEED=1` 才放行。示例用户是 `email_verified=true` 的 `example.com` 保留域邮箱（收不到验证码、也接管不了），订阅/订单/积分流水却会真实计入后台和收入统计，所以演示数据只该灌进独立的库 —— 放行前先确认 `DATABASE_URL` 指向的不是生产库。
+`db:seed` refuses to run by default: an unset `NODE_ENV` counts as production (the same rule as the site's fake-payments gate), and only `NODE_ENV=development` / `test` or an explicit `ALLOW_DB_SEED=1` lets it through. The example users have `email_verified=true` addresses on the reserved `example.com` domain (they can't receive codes and can't be taken over), but their subscriptions, orders and credit transactions really do count toward the admin area and revenue figures, so demo data should only go into a separate database — before letting it through, make sure `DATABASE_URL` doesn't point at your production database.
 
-跑完会有两个示例用户（`demo@example.com`、`demo-churn@example.com`）、两条订阅（一条 active、一条已取消但还没到期）、两笔订单，以及一份自洽的积分流水（余额等于流水之和）：
+Afterwards you'll have two example users (`demo@example.com`, `demo-churn@example.com`), two subscriptions (one active, one canceled but not yet expired), two orders, and a self-consistent credit ledger (the balance equals the sum of the transactions):
 
-- **看 dashboard**：用 `demo@example.com` 登录 —— 邮箱验证码会打到本地终端（`EMAIL_TRANSPORT=console` 时）或 `.tmp/emails/`（`file` 时），填进去就能看到有订阅、有积分余额、有流水和用量的首页。
-- **看后台**：用你自己的管理员邮箱登录（`ADMIN_EMAILS`）打开 `/admin`，用户列表、订单、订阅、指标都有数据；点进示例用户能看到它的积分流水和调整表单。
+- **To see the dashboard**: sign in as `demo@example.com` — the email code is printed to your local terminal (with `EMAIL_TRANSPORT=console`) or written to `.tmp/emails/` (with `file`). Enter it and you'll see a home page with a subscription, a credit balance, transactions and usage.
+- **To see the admin area**: sign in with your own admin email (`ADMIN_EMAILS`) and open `/admin`; the user list, orders, subscriptions and metrics all have data. Open an example user to see their credit transactions and the adjustment form.
 
-想清掉：`delete from "user" where email like 'demo-%@example.com';`（订阅、订单、积分流水都挂在这个用户上，外键 cascade 一起删）。
+To clear it: `delete from "user" where email like 'demo-%@example.com';` (subscriptions, orders and credit transactions all hang off the user, and the foreign keys cascade the delete).
 
-### 依赖与 audit
+### Dependencies and audit
 
-依赖覆盖写在 `pnpm-workspace.yaml` 的 `overrides`，**不是** `package.json` 的 `pnpm` 字段：pnpm 12 起不再读取后者（会打印警告并忽略），`overrides` 属于依赖解析设置，只能放在工作区文件里。
+Dependency overrides live in `overrides` in `pnpm-workspace.yaml`, **not** in the `pnpm` field of `package.json`: starting with pnpm 12, the latter is no longer read (pnpm prints a warning and ignores it). `overrides` is a dependency-resolution setting and can only go in the workspace file.
 
-目前强制两条传递依赖，都来自 `@content-collections/mdx > mdx-bundler`，都只在编译 MDX 时用到：
+Two transitive dependencies are currently forced, both coming from `@content-collections/mdx > mdx-bundler`, and both used only when compiling MDX:
 
-| override           | 实际解析 | 修的 advisory                                                                  |
-| ------------------ | -------- | ------------------------------------------------------------------------------ |
-| `toml: ">=4.2.0"`  | 5.0.0    | GHSA-82x6-q7mm-w9cf（不受控递归）、GHSA-v5mp-jgw5-2x6j（`__proto__` 原型污染） |
-| `uuid: ">=11.1.1"` | 14.0.2   | GHSA-w5hq-g745-h8pq（v3/v5/v6 传入 `buf` 时缺少边界检查）                      |
+| override           | Resolves to | Advisory fixed                                                                                      |
+| ------------------ | ----------- | --------------------------------------------------------------------------------------------------- |
+| `toml: ">=4.2.0"`  | 5.0.0       | GHSA-82x6-q7mm-w9cf (uncontrolled recursion), GHSA-v5mp-jgw5-2x6j (`__proto__` prototype pollution) |
+| `uuid: ">=11.1.1"` | 14.0.2      | GHSA-w5hq-g745-h8pq (missing bounds check when `buf` is passed to v3/v5/v6)                         |
 
-- 博客 frontmatter 是 YAML（`---`），由 gray-matter 解析；`toml` 只在文章以 `+++` 写 TOML frontmatter 时才会被调用，`uuid` 只用来给 mdx-bundler 的临时入口文件起名。升级前后同一篇文章解析出的 frontmatter 字段完全一致。
-- `uuid` 14 已是纯 ESM 包，而 mdx-bundler 是 CJS、用 `require("uuid")` 取 `v4`：能跑通是因为 Node 24 支持 `require(esm)`，换更低的 Node 会在这里失败（`engines.node` 已经要求 24.x）。
-- `pnpm audit` 目前只剩一条 moderate：`esbuild` 的 GHSA-67mh-4wv8-2f99（<= 0.24.2 的 dev server 允许任意网站发请求并读到响应）。它经 `drizzle-kit > @esbuild-kit/esm-loader > @esbuild-kit/core-utils > esbuild@0.18.20` 进来，`@esbuild-kit/*` 已归档、上游不再修；这条路径只调用 `esbuild.transform()`（加载 `drizzle.config.ts` 用），从不调用 `esbuild.serve()`，起不了那个 dev server，所以在本项目不可利用。drizzle-kit 是 devDependency（也是 better-auth 的可选 peer），不进运行时产物。不要用 overrides 强升这个 esbuild：`@esbuild-kit/core-utils` 按 `~0.18.20` 写死 API，且已归档。
+- Blog frontmatter is YAML (`---`), parsed by gray-matter; `toml` is only called when a post uses TOML frontmatter written with `+++`, and `uuid` is only used to name mdx-bundler's temporary entry file. The same post parses to exactly the same frontmatter fields before and after the upgrade.
+- `uuid` 14 is ESM-only, while mdx-bundler is CJS and gets `v4` via `require("uuid")`: this works because Node 24 supports `require(esm)`; an older Node would fail here (`engines.node` already requires 24.x).
+- `pnpm audit` currently reports only one moderate issue: `esbuild`'s GHSA-67mh-4wv8-2f99 (the dev server in <= 0.24.2 lets any website send requests to it and read the responses). It comes in via `drizzle-kit > @esbuild-kit/esm-loader > @esbuild-kit/core-utils > esbuild@0.18.20`; `@esbuild-kit/*` is archived and won't be fixed upstream. This path only calls `esbuild.transform()` (to load `drizzle.config.ts`) and never calls `esbuild.serve()`, so that dev server can't be started, and the issue isn't exploitable in this project. drizzle-kit is a devDependency (and an optional peer of better-auth) and doesn't end up in the runtime output. Don't force-upgrade this esbuild with overrides: `@esbuild-kit/core-utils` pins the API to `~0.18.20` and is archived.
 
-#### 绑定在一起的版本
+#### Versions that move together
 
-下面这些包不能单独升，改之前先看这一节（`.github/dependabot.yml` 里已经按这些约束分好组）：
+The packages below can't be upgraded on their own; read this section before changing them (`.github/dependabot.yml` already groups them according to these constraints):
 
-| 包                                 | 版本               | 为什么要一起动                                                                                                                                                                                            |
-| ---------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `react` / `react-dom`              | `19.3.0`（精确）   | `@types/react` / `@types/react-dom` 钉在同一 minor（`~19.3.0` / `~19.3.0`）。类型比运行时新，代码会用上运行时不存在的 API；升 react 时四个包一起升。                                                      |
-| `better-auth` / `auth`             | `1.7.6`（都精确）  | `auth` 是 better-auth 的 CLI，它自己依赖的 better-auth 是**精确**版本（`node_modules/auth/package.json`）。项目里的 better-auth 飘到别的版本时，`pnpm auth:generate` 生成的 schema 可能和运行时库对不上。 |
-| `next` / `eslint-config-next`      | `16.3.6`（都精确） | ESLint 配置随 Next 版本走，两者不同版本时 lint 规则和框架不匹配。                                                                                                                                         |
-| `@opentelemetry/*`、`@vercel/otel` | 一组精确版本       | `@vercel/otel` 对 `@opentelemetry/*` 的版本有要求，混版本会在运行时初始化失败。                                                                                                                           |
+| Package                            | Version                 | Why they move together                                                                                                                                                                                                                                                 |
+| ---------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `react` / `react-dom`              | `19.3.0` (exact)        | `@types/react` / `@types/react-dom` are pinned to the same minor (`~19.3.0` / `~19.3.0`). If the types are newer than the runtime, code will use APIs that don't exist at runtime; upgrade all four packages together when you upgrade react.                          |
+| `better-auth` / `auth`             | `1.7.6` (both exact)    | `auth` is better-auth's CLI, and it depends on an **exact** better-auth version itself (`node_modules/auth/package.json`). If the project's better-auth drifts to a different version, the schema generated by `pnpm auth:generate` may not match the runtime library. |
+| `next` / `eslint-config-next`      | `16.3.6` (both exact)   | The ESLint config follows the Next version; with mismatched versions, the lint rules don't match the framework.                                                                                                                                                        |
+| `@opentelemetry/*`, `@vercel/otel` | A set of exact versions | `@vercel/otel` has version requirements for `@opentelemetry/*`; mixing versions makes initialization fail at runtime.                                                                                                                                                  |
 
-`shadcn` 是脚手架 CLI，只在 `devDependencies`：全仓没有运行时 import（`components.json` 只是它读的配置），放进 `dependencies` 会让买家 `pnpm install --prod` 多装一整棵 MCP SDK 树。
+`shadcn` is a scaffolding CLI and lives only in `devDependencies`: nothing in the repository imports it at runtime (`components.json` is just the config it reads), and putting it in `dependencies` would make buyers' `pnpm install --prod` install an entire MCP SDK tree.
 
-#### 已验证的版本；暂缓的大版本
+#### Verified versions; major versions on hold
 
-- `@sentry/nextjs` 本仓库验证的是 **11.0.0**（`^11.0.0`）：服务端 / 浏览器 / edge 三条初始化路径、`onRequestError`、source map 上传都在 `src/core/observability/` 与 `next.config.ts`，换 major 前先读 Sentry 的迁移说明、再重跑 `pnpm test` 和 e2e。关闭功能时 SDK 不进构建产物这一点也依赖它的 `config` 子路径导出。
-- `resend` 验证的是 **6.30.0**（`^6.30.0`）：单测用 mock 覆盖 `resend` transport 的调用形状（`src/core/email/email.test.ts`），真实发送只在生产环境发生，升级后建议手动发一封确认。
-- `typescript` 停在 `^6`（当前 6.0.3），**暂不升 7**：`eslint-config-next@16.3.6` 依赖 `typescript-eslint@8.x`，它的 peer 是 `typescript >=4.8.4 <6.1.0` —— 6.0.x 在区间内（2026-09-26 从 5.9.3 升到 6.0.3，`pnpm typecheck` / `pnpm build` / 全部单测通过），**6.1+ 会被这个 peer 卡住**。等 eslint-config-next 换成支持更高版本的 typescript-eslint 大版本再升。
-- `eslint` 停在 `^9`（当前 9.39.5），**暂不升 10**：同样来自 eslint-config-next 的依赖 —— `eslint-plugin-react@7.x`（peer `eslint ^3…^9.7`）、`eslint-plugin-import@2.x`（`^2…^9`）、`eslint-plugin-jsx-a11y@6.x`（`^3…^9`）都还没放开 10。
+- `@sentry/nextjs`: this repository is verified on **11.0.0** (`^11.0.0`). The server / browser / edge initialization paths, `onRequestError` and source map upload are all in `src/core/observability/` and `next.config.ts`; before changing the major version, read Sentry's migration guide, then rerun `pnpm test` and e2e. Keeping the SDK out of the build output when the feature is off also depends on its `config` subpath export.
+- `resend` is verified on **6.30.0** (`^6.30.0`): unit tests use a mock to cover the shape of the `resend` transport's calls (`src/core/email/email.test.ts`). Real sending only happens in production, so after upgrading, send one email by hand to confirm.
+- `typescript` stays on `^6` (currently 6.0.3), **not upgrading to 7 yet**: `eslint-config-next@16.3.6` depends on `typescript-eslint@8.x`, whose peer range is `typescript >=4.8.4 <6.1.0` — 6.0.x is within the range (upgraded from 5.9.3 to 6.0.3 on 2026-09-26; `pnpm typecheck` / `pnpm build` / all unit tests pass), and **6.1+ will be blocked by this peer range**. Upgrade once eslint-config-next moves to a typescript-eslint major that supports higher versions.
+- `eslint` stays on `^9` (currently 9.39.5), **not upgrading to 10 yet**: this also comes from eslint-config-next's dependencies — `eslint-plugin-react@7.x` (peer `eslint ^3…^9.7`), `eslint-plugin-import@2.x` (`^2…^9`) and `eslint-plugin-jsx-a11y@6.x` (`^3…^9`) haven't opened up to 10 yet.
 
-#### 依赖更新
+#### Dependency updates
 
-`.github/dependabot.yml` 每周检查 npm（含 pnpm 锁文件）和 `github-actions` 的更新并开 PR：上面「绑定在一起的版本」各成一组、整组一起动，其余 minor / patch 合成一个 PR，major 不进组、单独开 PR 逐个评估。
+`.github/dependabot.yml` checks for npm updates (including the pnpm lockfile) and `github-actions` updates weekly and opens PRs: each group from "Versions that move together" above is its own group and moves as a whole; all other minor / patch updates are combined into one PR; major updates aren't grouped and get their own PRs to evaluate one by one.
 
-## 配置
+## Configuration
 
-- `site.config.ts`：站点名称、域名、品牌色、语言、功能开关（`features`）。由 `defineConfig()` 校验，写错时 `dev` / `build` 直接失败，并指出出错字段。
-  - 直接改文件里的字面量就行。另有 8 个环境变量可以覆盖其中 6 个字段（`SITE_NAME`、`SITE_DOMAIN`、`SITE_LEGAL_NAME`、`SITE_EMAIL_FROM`，以及两个套餐的产品 ID：Creem 用 `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME`，Stripe 用 `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`，见 `.env.example`），给「一套代码、多个环境」用 —— 演示站就是靠它们保持真值、又不必把真实名称写进仓库。另外 `SITE_PRICE_<套餐 id>`（如 `SITE_PRICE_LIFETIME=99`）覆盖套餐标价，`SITE_HIDDEN_PLANS`（逗号分隔的套餐 id，如 `pro`）隐藏套餐：不在定价页、Landing、`llms.txt` 展示，结账拒绝新购，已有订阅照常生效。Landing 交付区块的购买卡片卖 `landing.purchasePlan` 指定的套餐，它被隐藏或不存在时退回「即将公布」，首屏和结尾的主按钮也随之退回「体验演示」；`landing.showcaseUrl` 配了真实案例站点时，次按钮换成「看真实案例」。`landing.timeSaved` 是「省掉的工时」区块的清单（key + 估算工时，合计自动算）。不设置时以文件里的字面量为准；产品 ID 只读**生效服务商**那一组（`BILLING_PROVIDER` 覆盖 `billing.provider`，见下），选 Creem 时 `STRIPE_PRICE_ID_*` 会被忽略，反之亦然。
-  - **占位哨兵**：`name`、`domain`、`legal.companyName`、`email.fromAddress` 还是出厂占位值时，开发环境启动会打一行警告，**生产构建直接失败**。买家忘了改就上线，站上挂着的是 Acme 和 example.com。
-  - `brand.primaryColor` 生成 shadcn 主题的 `--primary` 等变量，亮色、暗色共用；按钮、链接悬停色随之变化。
-  - `nav.header` / `nav.footer` 决定营销页 Header 导航和 Footer 链接，`key` 对应 `messages/*.json` 中 `Nav` 下的文案。
-  - `landing` 决定首页区块及顺序（`sections`）、Hero 图片、特性、用户故事与 FAQ 条目；`billing.plans` 是 `/pricing` 定价页展示的演示 SaaS 套餐。首页默认增加独立 `delivery` 交付区，不把演示套餐当作模板售价。文案在 `messages/*.json` 的 `Landing` 下，交互预览文案在 `LandingPreview` 下。
-- 收款核心（`src/core/billing/`）：`PaymentProvider` 接口屏蔽具体服务商，实现有 Creem、Stripe、Lemon Squeezy 和测试用的 fake（`src/core/billing/providers/`），由 `BILLING_PROVIDER` 分派（注册表在 `providers/index.ts`）；每个服务商一个 webhook 路由（`src/app/api/webhooks/creem|stripe|lemonsqueezy/route.ts`），路由先确认 `BILLING_PROVIDER` 选中的就是自己（对不上返回 503），再调用 `processWebhook(provider, request)`，由 `handleBillingEvent` 在一个事务里完成幂等检查、更新 `subscriptions` / `orders`、触发 `onBillingEvent` 钩子。`billing.plans` 的交易字段：`providerProductId`（付费套餐必填、免费套餐不填，含义跟着 `billing.provider`：Creem 是产品 ID，Stripe 是 Price ID，Lemon Squeezy 是变体 ID）、`credits`（每次购买或每个计费周期发放的积分），`type` 按 `interval` 推导。钩子在 `src/core/billing/hooks.ts` 汇总注册。
-- 购买流程：落地页的定价区块和 `/pricing` 共用购买按钮，未登录时先登录，登录后回到 `/pricing?plan=<id>` 自动继续结账；已订阅显示"管理订阅"（客户门户）。结账回跳 `/billing/success`，按回跳附带的订阅或订单 ID 轮询 `/api/billing/status`，webhook 未到时显示"处理中"，超过 `BILLING_SUCCESS_TIMEOUT_MS`（默认 60 秒）提示联系支持。账单页 `/billing` 显示当前套餐、续费日期、积分余额和最近 20 条流水。
-- 退款回收积分（`src/core/billing/reclaim-credits.ts`，`features.credits` 关闭时不生效）：`refund.created` 以及付款完成后的补偿钩子按**已退金额占订单金额的比例**回收该订单实际发放过的积分，比例用累计口径（`floor(发放积分 × 累计已退 / 订单金额) − 已回收`），所以分几次部分退款加起来正好等于一次全额退款，不会因为逐次取整漏积分。回收走 `reclaimCredits`：余额不够时扣到 0，应扣未扣的差额在同一事务里开一张异常单（`refund_reclaim_shortfall`，见下文后台的「异常单」），同时记一行 `billing.refund_reclaim_shortfall` 日志（流水 `amount` 有非零约束，且扣不动时根本没有流水可写，所以差额只能记在流水之外）。流水是 `deduct` 类型、来源 `billing-refund`（`refund` 这个来源另有所指：退还一笔扣减），后台用户详情里能看到带原因的记录；重复推送由 `(source, sourceId)`（`provider:order:<订单>:refund:<退款>`，付款补偿使用稳定的 `provider:order:<订单>:payment`）挡住。**Stripe 退款不走这条路**：Stripe 的退款对象上没有发票字段，无法把它对应回订单，v1 直接忽略退款事件（细节见「支付（Creem / Stripe）」一节）。Lemon Squeezy 的 adapter 只在能证明是全额退款时才发 `refund.created`，部分退款不回收（原因见上文"支付（Lemon Squeezy）"第 6 条）。
-- e2e 用 `BILLING_PROVIDER=fake`：结账页和 webhook 由站内的测试路由（`/api/billing/fake/*`、`/api/webhooks/fake`）模拟，可设置 webhook 延迟或不发送。fake 是测试替身，生产运行时（`next build` / `next start` / Docker）、Vercel 上（任何环境）、`CREEM_MODE=live` 或配了 live 的 Stripe 密钥（`sk_live_` / `rk_live_`）时设成 `fake` 会启动失败，fake 路由在非 fake 模式下返回 404；CI 的 e2e 跑在生产构建上，靠 `ALLOW_FAKE_BILLING=1` 显式放行。Lemon Squeezy 没有对应的硬锁：它没有 test / live 环境变量，key 也不带模式标记，造不出可靠判据就不写假判据（见 `src/core/billing/env.ts` 的注释）。
-- 接口限流（`src/core/ratelimit/`）：`checkRateLimit(policy, { userId, ip })` 按 `site.config.ts` 的 `rateLimit.policies` 做滑动窗口计数，用户和 IP 各计一次，任一超限即拒绝；被拒绝时 `return rateLimitResponse(result)`（超限 429、Redis 不可用 503，都带 `Retry-After`）。IP 用 `getClientIp(request.headers)` 取。本地没配 Upstash 时跳过限流并警告一次；Redis 出错或超时（1 秒）时按 `rateLimit.failMode` 处理：`open`（默认）放行并记录错误，`closed` 返回 503。登录限流由 Better Auth 负责，不走这里。
-- API Key（`src/core/api-keys/`，`apiKeys.enabled` 控制）：给脚本和第三方服务用的机器身份。用户在 `/api-keys` 新建、命名、撤销 key；明文只在创建时的弹层里出现一次，库里存的是 SHA-256（`hashedKey`）和一个用来辨认的前缀（`sk_` + 明文的头 8 位），所以**明文连管理员都看不到**，丢了就撤销重建。同一用户名下不能重名（唯一约束 `(userId, name)`）。
-  - 鉴权：`createApiKeyMiddleware({ enabled, findKeyByHash, touchLastUsed, checkRateLimit })` 解析 `Authorization: Bearer sk_...` → 按 `hashedKey` 查库 → 校验未撤销、未过期 → 返回 `{ userId, keyId, name, prefix }`。路由里用 `withApiKey(middleware, handler)` 挂上，处理函数读 `request.apiKey.userId`；中间件不会自动作用到套件的任何路由，要保护哪个接口就包哪个。失败一律 401（缺失、不是 Bearer、格式不对、查不到、已撤销、已过期都不区分），`apiKeys.enabled: false` 时一律 404 且不查库，响应带 `Cache-Control: no-store`。示例路由 `GET /api/api-keys/me` 返回 `{ userId, keyId, name, prefix }`，新接口照抄它的接线。
-  - 校验规则只有一处（`status.ts` 的 `apiKeyStatus`：撤销优先于过期），中间件和界面都用它，不会两边漂移。撤销写 `revokedAt`、不删行（列表里留痕）、幂等；每次鉴权都查库，所以撤销后立刻失效，没有缓存窗口。
-  - 使用时间：中间件在放行后调 `touchLastUsed`，示例路由用 `runAfterResponse` 包一层，不阻塞响应；写失败只记一条日志，不影响鉴权。
-  - 限流（可选）：`site.config.ts` 的 `apiKeys.rateLimitPerKey`（`{ limit, window }`，默认不设 = 不限流）按 `api_key:<keyId>` 计数，复用 `src/core/ratelimit/` 的滑动窗口；超限 429、Redis 不可用按 `rateLimit.failMode` 返回 503，都带 `Retry-After`。
-  - 后台入口 `/admin/api-keys`（同时要求 `features.admin`）：列出有 key 的用户、key 总数、仍有效的数量和最后使用时间，明文和哈希都不出库。
-  - 关闭 `apiKeys.enabled` 时，`/api-keys`、`/admin/api-keys` 和示例接口都返回 404。
-- 文件上传（`src/core/upload/`，`features.upload`）：浏览器直传 Cloudflare R2。`POST /api/upload/presign`（body `{ mime, size }`，需要登录，走 `upload` 限流）按 `site.config.ts` 的 `upload.allowedMimeTypes` / `maxFileSize` 校验，登记一条 `pending` 的 `files` 记录，返回预签名 PUT 地址（10 分钟有效，签名覆盖 Content-Type 和 Content-Length，类型或大小不同时 R2 返回 403）；上传后 `POST /api/upload/complete`（body `{ fileId }`）用 HeadObject 确认对象存在、大小和类型一致，改为 `uploaded`。对象 key 为 `<userId>/<yyyy-mm>/<uuid>.<ext>`，扩展名由类型决定。`upload.public` 为 false（**默认**）时通过 1 小时有效的签名 GET 地址访问，`GET /api/upload/files/<id>` 会跳转过去，可以直接用作 `<img src>`；为 true 时用 `R2_PUBLIC_URL` 下的地址 —— 代价是**拿到 URL 的人都能访问，而且撤不回**（改了配置对象也还在），用户上传的东西不该默认公开。前端用 `uploadFile(file)`（`src/core/upload/client.ts`）；开启后 Dashboard 首页有一个上传示例。删除账户时 `files` 记录随之删除，R2 上的对象和一直是 `pending` 的记录 v1 不清理。
-  - 先执行 `pnpm db:migrate`：`orders.credit_grant_source_id` 保存实际发放流水的幂等键。退款先到时保留占位订单及累计退款，后到的 `checkout.completed` / `subscription.renewed` 在同一事务内先发放再回收；任一步失败整体回滚，由原 webhook 重试。额度从 `credit_transactions` 的 `billing` 发放记录读取，不读取当前套餐积分，所以套餐改价/下线也不会改变回收额度。
-  - 旧一次性订单按原订单键定位流水；旧 Creem 订阅订单从已验证、已保存的 `subscription.paid` 原文恢复对应账期，而非使用订阅当前账期。原文缺失/冲突且无法定位流水时不猜测扣款；自定义支付服务商若历史使用账期键，需要补充 `historical-grant.ts` 适配。已消费且之后不再收到付款/退款事件的历史漏回收订单不会自动扫描修复，需核对后单独补偿。余额已花掉的差额仍沿用日志记录，不新增欠款机制。
-- AI（`src/core/ai/`，`features.ai` 控制）：`site.config.ts` 的 `ai.models` 列出可用模型（`id`、`provider`（`openai` / `anthropic` / `google`）、`model`、`creditCost`，可选 `maxOutputTokens`），`ai.defaultModel` 是默认模型。env 里配了哪家的 key 就启用哪家，没配 key 的模型调用返回 503。服务端调用 `runAI({ userId, ip, modelId, prompt | messages, ... })`：检查登录 → `ai` 策略限流（429）→ 在一个事务里预扣 `creditCost` 并写入 `ai_usage`（余额不足 402）→ 流式调用模型；模型报错时按 `ai_usage.id` 退回积分（流水里是一条 `refund`），成功时记录 token 用量和耗时。返回的 `result` 是 AI SDK 的 `streamText` 结果；路由里用 `after(() => run.settled)` 保证响应结束后记账跑完。示例接口 `POST /api/ai/chat`（useChat 的 UI message 流，请求体上限 64 KB），示例页 `/playground`。v1 按次固定扣费，不存对话历史。开启收费模型（`creditCost > 0`）需要同时开启 `features.credits`。
-- 卖可下载文件（`src/features/downloads/`，`downloads.enabled`，也可用 `SITE_DOWNLOADS=1` 打开，出厂关闭）：`downloads.products` 把一次性套餐对应到一个产品（`{ id, planId, updateMonths }`）。付款成功（`checkout.completed`）时记一条授权 `download_entitlements`，更新期 = 购买时间 + `updateMonths` 个月；(服务商, 订单, 产品) 唯一，webhook 重放不会多授权。第一次记下授权时经 outbox 发 `download-ready` 邮件，链接指向站内 `/downloads`，没发出去由恢复扫描补发。`/downloads` 列出每份授权能下的版本（更新期内发布的，更新期过后已有版本照常可下）；下载按钮走 `GET /api/downloads/<版本 id>`，校验登录和授权后现签一个 5 分钟的 R2 地址并跳转，所以页面和邮件里的链接永远有效。订单**全额退款**时收回授权，部分退款不动。结账成功页对这些套餐显示「下载链接已发到邮箱」，主按钮换成下载页。
-  - 发布版本：`pnpm downloads:publish <产品 id> <版本> <文件>`（例如先用 `scripts/release-package.sh` 打包，再 `pnpm downloads:publish template 1.0.0 dist/onwardkit-1.0.0.zip`）。脚本读 `DATABASE_URL` 和 `R2_*`，先传文件、后写 `download_releases`；同一版本重发会覆盖文件，发布时间不变。bucket 必须私有（`upload.public: false`）。
-  - 产品名称在 `messages/*.json` 的 `Downloads.products.<id>.name`；不卖文件就保持关闭，或删掉整个目录、`src/core/billing/hooks.ts` 里那行 import、`src/core/email/templates.ts` 里的 `download-ready` 登记和 `drizzle` 里对应的迁移。
-- 法律页：`/privacy`、`/terms`、`/refund`，正文模板在 `content/legal/`（归业务方所有），主体信息取自 `site.config.ts` 的 `legal`。**模板仅供参考，不构成法律意见**，上线前请结合业务和适用法律自行审阅，必要时咨询律师。
-- 博客（`src/core/blog/`，`features.blog`）：文章是 `content/blog/<locale>/<slug>.mdx`，由 content-collections 在 `dev` / `build` 时编译（配置和 frontmatter schema 在 `content-collections.ts`）。frontmatter：`title`、`description`、`date`（`2026-01-31`）、`tags`（小写 kebab-case）、`cover`（`public/` 下的图片，可选）、`draft`（可选）。页面：`/blog`（每页 12 篇，第 2 页起是 `/blog/page/<n>`）、`/blog/<slug>`、`/blog/tags/<tag>`（第 2 页起是 `/blog/tags/<tag>/page/<n>`）；RSS 在 `/blog/rss.xml`（其他语言 `/<locale>/blog/rss.xml`）。列表页、标签页（各自的翻页也算）和文章都自动进入 sitemap，文章页带 `BlogPosting` JSON-LD 和生成的分享图（`/blog/<slug>/og`）。
-  - `draft: true` 的文章只在 `pnpm dev` 里可见，生产构建里访问返回 404，也不进 sitemap 和 RSS。
-  - 各语言的文章相互独立，同名文件视为同一篇的翻译（hreflang 只列出有翻译的语言）；没有文章的语言，列表页为空且 noindex。
-  - frontmatter 必须是合法 YAML，值里有 `: ` 时加引号。写错的文件会让 `build` 失败并指出文件名；`dev` 里只打印错误。
-  - 关闭 `features.blog` 时，把 `nav` 里的 Blog 链接一起删掉。
-- 更新日志（`src/core/changelog/`，`changelog.enabled` 默认关）：`/changelog` 一页放全部条目，按日期倒序、按月份分组，每条带一个类别徽章（`feature` 绿 / `improvement` 蓝 / `fix` 中性）。条目是 `content/changelog/<slug>.mdx`，frontmatter：`title`、`date`（`2026-01-31`）、`category`（`feature` / `improvement` / `fix`）、`description`（可选，不填就从正文首段取一句），编译和博客同一套（见 `content-collections.ts`）。
-  - RSS 在 `/changelog/rss.xml`（其他语言 `/<locale>/changelog/rss.xml`），入口在页面右上角，页面 head 里也有 `<link rel="alternate">`。更新日志是单页，每条在页面上的锚点（`/changelog#<slug>`）就是它在 RSS 里的地址。
-  - 条目不分语言：内容只有一份，页面外框跟着当前语言走（和法律页同一个取舍）。想按语言分开写，就把 `content-collections.ts` 里的 `changelog` 集合改成 `posts` 那样按语言分目录。
-  - 关掉 `changelog.enabled` 时 `/changelog` 和它的 RSS 返回 404，sitemap 和页脚入口一起消失（页脚那一支见 `src/core/layout/footer-nav.ts`）；`content/changelog/` 里的文件留着不删也没关系。
-- 后台（`src/core/admin/`，`features.admin`）：`/admin` 是概览，下面常驻指标、用户、订单、异常单、订阅五页，列表都在服务端分页；其余页面各按自己的开关出现 —— 渠道报表、留资、邀请（见「渠道归因」「邮箱留资」「邀请链接」三节）、Feature Flags（见「灰度开关」一节）、系统状态（`statusPage.enabled`）和 API Keys（见上一节）。不是管理员（包括未登录）访问 `/admin` 下任何页面都返回 404，不跳转登录页（**这是设计，不是 bug**，理由和整套状态码约定见[错误与权限的边界](#错误与权限的边界)）。
-  - 角色和封禁由 Better Auth 的 admin 插件提供（插件一直启用，`user` 表多了 `role`、`banned` 等字段）。v1 去掉了模拟登录（impersonate）权限。
-  - 首个管理员：把邮箱写进 `ADMIN_EMAILS`，用这个邮箱登录（邮箱已验证）时自动获得 `admin` 角色。**只提升不降级** —— 从名单里删掉邮箱不会收回已经拿到的角色，要撤销用 `pnpm admin:demote <email>`（只摘 admin，其他角色保留；还在 `ADMIN_EMAILS` 里时脚本会提醒下次登录会被重新提上来）。管理员在 dashboard 侧边栏里会看到 Admin 入口。
-  - 用户：按邮箱或名称搜索；详情页可以封禁 / 解封（封禁会让用户所有 session 失效，之后无法登录），调整积分（必须填原因，写一条 `adjust` 流水，`actor_id` 记录操作的管理员，同一次提交重复发送只生效一次），并查看该用户的订阅和订单。
-  - 订单、订阅：可按状态筛选。
-  - 指标（`/admin/metrics`，查询在 `src/core/admin/metrics.ts`）：最近 7 / 30 / 90 天（按 UTC 日期）的新注册、累计和被封禁用户；净收入（按币种，口径见「收入口径」一节）、付费用户、活跃订阅和 MRR（`active` 订阅按 `site.config.ts` 里的套餐原价折算，年付 ÷ 12）；积分发放、消耗、退款；AI 按类型和模型的调用次数与失败率（失败 ÷ 已结束的调用，进行中的不计）。没有付费套餐时不显示收入区块（`/admin/acquisition` 的收入两列用同一个判定），关闭 `features.credits` / `features.ai` 时不显示对应区块。
-  - 异常单（`/admin/exceptions`，代码在 `src/core/exceptions/`）：钱或结果需要人看的地方，侧边栏的「Exceptions」上显示待处理的数量，清零后计数消失。目前两种：
-    - **回收差额**（`refund_reclaim_shortfall`）：用户花掉积分后退款，余额不够回收。行内显示订单号、应回收 / 已回收 / 还欠多少。「重试回收」锁住订单、按账本重算这个订单**现在**还欠多少再扣（和 webhook 回收同一个公式、同一个已回收口径），扣够了关单，不够就扣能扣的、单子留着；连点或并发只扣一次。
-    - **AI 任务待核对**（`ai_job_needs_review`）：视频任务按「服务商一直没给结果」退了款（服务商后来可能其实成功了），或者过了出结果的时间还查不到服务商状态。「重新核对」再问一次服务商：任务还在等就按恢复扫描的路径推进，已经退了款的只把服务商现在的状态记进单子，不动钱 —— 追回还是补发由人决定。
-    - 每个动作（重试回收 / 重新核对 / 标记已处理 / 忽略）都要填理由，写进 `admin_actions`（谁、什么时候、对哪张单、理由、结果），行内的「处理历史」能看到。不做批量操作，也不自动关单。
-    - 唯一键是 `(kind, source, source_id)`：webhook 重放、扫描重跑都开不出第二张。本功能上线之前的回收差额只在日志里，不回填。
-  - 新增后台页面放在 `src/app/[locale]/(admin)/admin/` 下，页面开头调用 `await requireAdmin()`（`src/core/admin/session.ts`）；Server Action 里用 `getAdminSession()` 再校验一次。layout 和 page 并行渲染，只在 layout 里检查挡不住 page。
-- 可观测性（`src/core/observability/`，`features.observability`）：细项在 `site.config.ts` 的 `observability`（`logLevel`、`otel`、`sentry`、`sentryTracesSampleRate`、`analytics`、`speedInsights`）。
-  - 日志：`src/core` 里统一用 `logger.info/warn/error(event, fields)`，不直接 `console.error` / `console.warn`（ESLint 会报错）。事件名用 `模块.动作`，例如 `ai.usage`、`billing.webhook`。`logger.error("x.failed", error)` 或 `logger.error("x.failed", { error, userId })` 都可以。
-  - 开启后生产环境每条日志是一行 JSON（`level`、`event`、`time`、`traceId`、字段），可以在 Vercel Logs 里按 `event` 或 `traceId` 搜索；开发环境是易读格式。字段名是 `email`、`token`、`password`、`secret`、`apiKey`、`authorization`、`cookie`（或以它们结尾）时替换为 `[redacted]`，用户只记 ID。关闭时和以前一样，只输出 warn 和 error。
-  - 追踪：`observability.otel` 开启时 `src/instrumentation.ts` 用 `@vercel/otel` 注册 OpenTelemetry，服务名是 `site.config.ts` 的 `name`。AI 调用（`ai.text` / `ai.image` / `ai.video.*`）、billing webhook（`billing.webhook`）和积分写操作（`credits.<type>`）各有一个 span。业务代码用 `withSpan(name, attributes, fn)`（`src/core/observability/trace.ts`）加自己的 span。
-  - 未捕获的请求错误由 `onRequestError` 记一条 `request.error`（带路由和方法，不带 query）。
-  - `logger.setErrorReporter(fn)` 是错误上报的挂载点：`logger.error` 会同时调用它。
-  - 错误追踪：`observability.sentry` 开启时接入 Sentry（`@sentry/nextjs`）。服务端抛错（`onRequestError`）、浏览器抛错（`error.tsx` / `global-error.tsx` 和全局未捕获错误）、`logger.error` 都会上报，事件名在 tag `event` 里，其余字段（已脱敏）在 extra 里。登录用户只带 ID；cookie、IP、query、请求体、AI 输入输出、数据库参数和堆栈局部变量都不收集（`src/core/observability/sentry.ts`）。关闭时 Sentry SDK 不会打进构建产物。
-  - 流量与性能：`observability.analytics` 开启时根布局挂 Vercel Analytics（页面浏览，不用 cookie），`observability.speedInsights` 开启时挂 Speed Insights（Web Vitals）。关闭时页面不加载任何分析脚本。
-  - 转化事件（`src/core/observability/events.ts`）：`sign_up`（服务端，新用户创建后）、`checkout_started`（客户端，跳转到支付页之前，带 `plan`）、`purchase`（服务端，billing 的 `checkout.completed` 提交后，带 `plan`；续费不算）。只带套餐 ID，不带邮箱或支付信息。业务在浏览器里用 `track(name, props)`（`src/core/observability/track.ts`），在服务端用 `trackServer(name, props)`（`track-server.ts`）；开关关闭时都是空操作，服务端发送失败只记 warn。
-- 安全响应头（`src/core/security/headers.ts`，由 `next.config.ts` 的 `headers()` 覆盖所有路径，含 `/api`、`/_next` 和带扩展名的静态文件）：`X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`、`X-Frame-Options: DENY`、`Permissions-Policy` 和 CSP。CSP 用**静态策略**（不带 nonce）：nonce 每个请求都不同，而 Next 只在动态渲染时才把它写进行内脚本，所以开 nonce 等于全站放弃静态预渲染和 CDN 缓存；代价是 `script-src` 必须留 `'unsafe-inline'`。取舍和理由写在文件头部注释里。
-  - 加第三方脚本、图片域或接口域时，把域名加进同一个文件的对应指令，**漏一项就是对应资源被浏览器直接拦掉**（被拦的资源常常只是静默失败）。当前白名单：Vercel Analytics / Speed Insights 的脚本域、R2 的接口域和 `R2_PUBLIC_URL`；Sentry 的 `/monitoring` 转发是本站在 `connect-src` 里的 `'self'`，改掉 `tunnelRoute` 就要补 Sentry 的 ingest 域。内嵌第三方 iframe（视频、验证码、支付组件）要加 `frame-src`（现在没有这一项，回落到 `default-src 'self'`，即只能嵌自己的页面）。
-  - HSTS 不在模板里下发（域名定下来之前开会被浏览器记住），开启方法在上线清单第 2 步。
-  - `frame-ancestors 'none'` 是整站的：页面不能被任何站点嵌套，**包括本站自己**。要嵌自己的页面就得放宽这一条。
-  - 生产还下发 `upgrade-insecure-requests`：所有 http 子资源会被浏览器顶成 https。Vercel 和本地开发都不受影响（开发环境不下发，`http://localhost` 属于可信来源），但如果要部署在只有 http 的环境，这条会把资源顶掉 —— 那种环境本来也不该跑生产。
-- 多语言：next-intl，文案在 `messages/<locale>.json`。新增语言见 [docs/i18n.md](docs/i18n.md)。
-- SEO：页面 metadata 用 `buildMetadata()`（`src/core/seo/metadata.ts`）生成 canonical、hreflang、Open Graph 和 Twitter；新增营销页时在 `src/core/seo/routes.ts` 登记，sitemap 会自动收录。站点 URL 取自 `domain`。
-- `/llms.txt`：给 AI agent 和答案引擎的站点索引（约定见 [llmstxt.org](https://llmstxt.org)）。内容全部从 `site.config.ts`、`messages/*.json` 和博客文章生成，改配置就会跟着变；公开页面、套餐价格、博客、法律页、sitemap/robots/RSS，以及需要登录的路径各一节。排版在 `src/core/seo/llms.ts`（可单测），内容组装在 `src/app/llms.txt/route.ts`。多语言站点只出一份，固定用默认语言的 URL。
-- 邮件：`sendEmail({ to, template, props, locale })`（`src/core/email/`），模板在 `src/core/email/templates/`，文案在 `messages/*.json` 的 `Email` 下，发件人取自 `site.config.ts` 的 `email`。发送方式由 `EMAIL_TRANSPORT` 决定：`resend` 真实发送，`console` 打印到终端（本地默认），`file` 写入 `.tmp/emails/`（CI 和 e2e 使用）。生产运行时只允许 `resend`：`console` / `file` 会把登录验证码写进服务端日志或磁盘，设了会启动失败；CI 的 e2e 跑在生产构建上，靠 `ALLOW_NON_RESEND_EMAIL=1` 放行。
-  - 账单邮件：付款成功、付款失败、订阅取消由 `onBillingEvent` 钩子触发（`src/core/billing/emails.ts`），余额跌破 `credits.lowBalanceThreshold` 时发 `credits-low`（同一用户 24 小时内最多一封）。同一笔付款、同一订阅的取消只通知一次（`notification_log` 表去重）。发信失败不影响 webhook 和扣减。投递方式见下一条。
-  - 关键事务邮件走 **outbox**（`src/core/email/outbox.ts`，表 `pending_notifications`）：付款成功 / 付款失败 / 订阅取消 / 余额不足，加上登录验证码和改邮箱验证码。
-    - **入队**：在业务事务里写一行（和去重名额、订单更新一起提交或一起回滚）；**提交后立即发一次**（带 3 次快速重试）。
-    - **补发**：还没发出去的留在库里，由恢复扫描（同一个 `/api/cron/recovery` 入口和机会式触发，见上线清单「恢复扫描」）按退避补发 —— 1 分钟、5 分钟、15 分钟……累计约 7 小时、共 8 次。应用重启、函数被回收都不会丢信。
-    - **只发一次**：发送前用状态转换抢占（pending → sending），并发的扫描只有一个能发；发送时带 Resend 的幂等键 `notification/<行 id>`（Resend 保留 24 小时），进程在「服务商已收下、我们还没记下」之间死掉时，重发会被服务商认出来。
-    - **去重名额**：入队时占，发出后保留（窗口内不会重复发）；重试用完记终态 `failed` 才释放，之后同一事件再触发（服务商重放、下一个窗口）还能发。
-    - **终态失败**：行保留，日志里有 `email.delivery_failed`，后台异常单（`/admin/exceptions` 的「邮件没发出」）可以一键**补发**（要填理由，写审计）。直接查库：`select * from pending_notifications where status = 'failed' order by updated_at desc`。
-    - **验证码**：库里的验证码只存哈希，所以 outbox 里的验证码也**加密**存放（密钥从 `BETTER_AUTH_SECRET` 派生，只读得到数据库拿不到可用的码），发出或作废后清空；过了有效期不再发；重新请求时新码取代还没发出的旧码。立即发送失败时用户看到「发不出邮件，请稍后重试或用 Google 登录」，冷却照旧清掉可以马上重试；数据库不可用导致入队失败也是同一个提示，不是 500。
-    - **没迁进来的**：欢迎邮件、状态页通知、留资确认邮件仍是直接发送 —— 它们不涉及钱和登录，失败时用户可以自己重新触发（留资可以重新提交、状态页订阅者会收到下一条更新），不值得为它们多占一张表的行。
-  - 生产构建（`next build` / `next start`）默认使用 `resend` 并要求 `RESEND_API_KEY`；本地没有 key 又想跑一次构建时用 `ALLOW_NON_RESEND_EMAIL=1 EMAIL_TRANSPORT=console pnpm build`。
-- 登录：Better Auth（`src/core/auth/`），Google 登录和邮箱验证码登录，路由 `/sign-in`、`/api/auth/*`。验证码参数在 `site.config.ts` 的 `auth.emailOtp`。
-  - 需要登录的页面放在 `src/app/[locale]/(app)/` 下：(app) 的 layout 校验 session，未登录时跳转登录页（307，见[错误与权限的边界](#错误与权限的边界)）。写进 `site.config.ts` 的 `dashboard.nav` 的路径，proxy 还会按 cookie 提前拦截并带上回跳地址（`src/core/auth/routes.ts` 的 `protectedPrefixes`）。
-  - 服务端取当前用户：`getSession()`（`src/core/auth/session.ts`）；客户端：`authClient`（`src/core/auth/client.ts`）。
-  - auth 相关的表由 `pnpm auth:generate` 生成到 `src/core/db/schema/auth.ts`，再 `pnpm db:generate` 生成迁移。
-- 登录后的外框：`src/core/dashboard/`，侧边栏 + 用户菜单（头像、邮箱、切换语言、退出登录）。
-  - 业务的菜单项写在 `site.config.ts` 的 `dashboard.nav`（`key`、`href`、`icon`），文案在 `messages/*.json` 的 `Dashboard.nav.<key>`；套件自带 Dashboard 和 Settings 两项。
-  - 设置页 `/settings`：修改名称、偏好语言（`user.locale`，给用户发事务邮件时用 `preferredLocale()` 取）、删除账户。
-  - 删除账户会先依次执行 `onUserDelete` 钩子（`src/core/account/on-user-delete.ts`），任何一个失败就中止删除；然后删除用户，session、account 由外键级联删除。业务表引用 `user.id` 时设 `onDelete: "cascade"`，或者注册钩子自行清理（在 `src/core/account/hooks.ts` 里 import 注册文件）。
-- 积分：`src/core/credits/`，由 `features.credits` 开启（关闭时 API 抛 `CreditsDisabledError`，调用方先判断 `creditsEnabled`）。`user_credits` 存余额，`credit_transactions` 记流水（`amount` 带符号，余额恒等于流水之和）。
-  - API：`getBalance`、`grantCredits`、`deductCredits`（余额不足抛 `InsufficientCreditsError`）、`reclaimCredits`（回收集分：最多扣到余额为 0，差额原样返回，不抛错；支付退款回收用它）、`refundCredits`（按扣减的 `source` / `sourceId` 退还，每笔只能退一次）、`adjustCredits`、`listTransactions`。
-  - 幂等：同一 `(source, sourceId)` 只生效一次，重复调用返回 `{ status: "duplicate" }`，不抛错。`refund` 是保留的来源名。
-  - 写操作都接受 `{ tx }`：传入外部事务时作为它的一部分提交或回滚；余额不足等错误只回滚这一步。
-- UI 组件：shadcn/ui（Base UI），生成到 `src/core/ui/`。新增组件用 `pnpm dlx shadcn@latest add <name>`。
-- 环境变量：复制 `.env.example` 为 `.env.local` 后填写，由 `src/core/env.ts` 校验。关闭的 feature 不要求对应变量。设置 `SKIP_ENV_VALIDATION=1` 可跳过校验，但只在非生产运行时生效：`next build` / `next start` / Docker 里 `NODE_ENV` 是 production，一律强制校验（否则一个环境变量就能跳过必填项和各模块的生产闸门）。
-  - `pnpm typecheck` 与 `pnpm auth:generate` 是例外：它们在脚本里显式用 `NODE_ENV=development` 跑，所以没有 `.env.local` 也能过。原因是 Next 的 CLI 会把没设过的 `NODE_ENV` 补成该命令的默认值（`next typegen` 是 production），只带 `SKIP_ENV_VALIDATION=1` 会被生产闸门拦下 —— 见 `src/core/create-env.ts` 的注释。
+- `site.config.ts`: site name, domain, brand color, languages, feature toggles (`features`). It's validated by `defineConfig()`; a mistake makes `dev` / `build` fail immediately and names the offending field.
+  - Just edit the literals in the file. In addition, 12 environment variables can override 6 of its fields (`SITE_NAME`, `SITE_DOMAIN`, `SITE_LEGAL_NAME`, `SITE_EMAIL_FROM`, plus the product IDs of the two plans: `CREEM_PRODUCT_ID_PRO` / `CREEM_PRODUCT_ID_LIFETIME` for Creem, `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME` for Stripe, `LEMONSQUEEZY_VARIANT_ID_PRO` / `LEMONSQUEEZY_VARIANT_ID_LIFETIME` for Lemon Squeezy, `WAFFO_PRODUCT_ID_PRO` / `WAFFO_PRODUCT_ID_LIFETIME` for Waffo Pancake; see `.env.example`). They exist for "one codebase, several environments" — the demo site uses them to keep real values without writing the real names into the repository. On top of that, `SITE_PRICE_<plan id>` (e.g. `SITE_PRICE_LIFETIME=99`) overrides a plan's list price, and `SITE_HIDDEN_PLANS` (comma-separated plan ids, e.g. `pro`) hides plans: they don't appear on the pricing page, the landing page or `llms.txt`, checkout refuses new purchases, and existing subscriptions keep working. The purchase card in the landing page's delivery section sells the plan named by `landing.purchasePlan`; when that plan is hidden or doesn't exist, the card falls back to "Coming soon", and the primary buttons in the hero and the closing section fall back to "Explore demo". When `landing.showcaseUrl` points to a real live site, the secondary button becomes "See a live product". `landing.timeSaved` is the list for the "hours saved" section (key + estimated hours; the total is computed for you). When unset, the literals in the file win. Product IDs are read only for the **active provider** (`BILLING_PROVIDER` overrides `billing.provider`, see below): with Creem selected, `STRIPE_PRICE_ID_*` is ignored, and vice versa.
+  - **Placeholder sentinels**: while `name`, `domain`, `legal.companyName` or `email.fromAddress` still hold the shipped placeholder values, the dev server prints a warning on startup and **the production build fails**. Otherwise a buyer who forgets to change them goes live with Acme and example.com on the site.
+  - `brand.primaryColor` generates the shadcn theme's `--primary` and related variables, shared by light and dark mode; buttons and link hover colors follow it.
+  - `nav.header` / `nav.footer` define the marketing pages' header navigation and footer links; `key` maps to the copy under `Nav` in `messages/*.json`.
+  - `landing` defines the home page sections and their order (`sections`), the hero image, features, testimonials and FAQ entries; `billing.plans` are the demo SaaS plans shown on the `/pricing` page. The home page adds a separate `delivery` section by default, so the demo plans are never presented as the template's own price. Copy lives under `Landing` in `messages/*.json`; the interactive preview's copy lives under `LandingPreview`.
+- Billing core (`src/core/billing/`): the `PaymentProvider` interface hides the concrete provider. Implementations are Creem, Stripe, Lemon Squeezy, Waffo Pancake and a fake one for tests (`src/core/billing/providers/`), dispatched by `BILLING_PROVIDER` (the registry is `providers/index.ts`). Each provider has its own webhook route (`src/app/api/webhooks/creem|stripe|lemonsqueezy|waffo/route.ts`). The route first checks that `BILLING_PROVIDER` actually selects it (returning 503 if not), then calls `processWebhook(provider, request)`; `handleBillingEvent` does the idempotency check, updates `subscriptions` / `orders` and fires the `onBillingEvent` hooks, all in one transaction. Transaction fields in `billing.plans`: `providerProductId` (required for paid plans, omitted for free ones; its meaning follows `billing.provider`: a product ID for Creem, a Price ID for Stripe, a variant ID for Lemon Squeezy, a product ID (`PROD_…`) for Waffo Pancake) and `credits` (credits granted per purchase or per billing period); `type` is derived from `interval`. Hooks are registered in one place, `src/core/billing/hooks.ts`.
+- Purchase flow: the pricing section on the landing page and `/pricing` share the same purchase button. Signed-out users sign in first and then land back on `/pricing?plan=<id>`, where checkout continues automatically; subscribed users see "Manage subscription" (the customer portal). Checkout returns to `/billing/success`, which polls `/api/billing/status` with the subscription or order ID from the return URL. While the webhook hasn't arrived it shows "Processing"; after `BILLING_SUCCESS_TIMEOUT_MS` (60 seconds by default) it tells the user to contact support. The billing page `/billing` shows the current plan, renewal date, credit balance and the 20 most recent credit transactions.
+- Reclaiming credits on refund (`src/core/billing/reclaim-credits.ts`; no effect when `features.credits` is off): `refund.created`, and the compensating hook that runs after a payment completes, reclaim the credits that order actually granted **in proportion to the refunded share of the order amount**. The ratio is cumulative (`floor(credits granted × total refunded / order amount) − already reclaimed`), so several partial refunds add up to exactly one full refund and no credits leak through per-refund rounding. Reclaiming goes through `reclaimCredits`: if the balance is too low it deducts down to 0, and the shortfall opens an exception in the same transaction (`refund_reclaim_shortfall`, see the admin exceptions page below), plus a `billing.refund_reclaim_shortfall` log line (the ledger's `amount` has a non-zero constraint, and when nothing can be deducted there is no transaction to write at all, so the shortfall can only be recorded outside the ledger). The transaction is of type `deduct` with source `billing-refund` (the `refund` source means something else: giving back a deduction), and the admin user detail page shows it with its reason. Duplicate deliveries are blocked by `(source, sourceId)` (`provider:order:<order>:refund:<refund>`; the payment compensation uses the stable `provider:order:<order>:payment`). **Stripe refunds don't take this path**: Stripe's refund object has no invoice field, so it can't be mapped back to an order, and v1 simply ignores refund events (details in the "Payments (Creem / Stripe)" section). The Lemon Squeezy adapter only emits `refund.created` when it can prove a refund is full; partial refunds reclaim nothing (why: item 6 of "Payments (Lemon Squeezy)" above).
+- e2e uses `BILLING_PROVIDER=fake`: the checkout page and webhooks are simulated by in-app test routes (`/api/billing/fake/*`, `/api/webhooks/fake`), where you can delay the webhook or not send it at all. fake is a test double: setting it to `fake` fails at startup in a production runtime (`next build` / `next start` / Docker), on Vercel (any environment), with `CREEM_MODE=live`, or with a live Stripe key configured (`sk_live_` / `rk_live_`), and the fake routes return 404 outside fake mode. CI's e2e runs against a production build and is explicitly allowed through with `ALLOW_FAKE_BILLING=1`. Lemon Squeezy has no equivalent hard lock: it has no test / live environment variable and its keys carry no mode marker, and without a reliable signal we don't write a fake one (see the comment in `src/core/billing/env.ts`).
+- API rate limiting (`src/core/ratelimit/`): `checkRateLimit(policy, { userId, ip })` counts in a sliding window per `rateLimit.policies` in `site.config.ts`, once for the user and once for the IP; exceeding either one rejects the request. On rejection, `return rateLimitResponse(result)` (429 when over the limit, 503 when Redis is unavailable, both with `Retry-After`). Get the IP with `getClientIp(request.headers)`. Locally, without Upstash configured, rate limiting is skipped with a one-time warning; when Redis errors or times out (1 second), `rateLimit.failMode` decides: `open` (default) lets the request through and logs the error, `closed` returns 503. Sign-in rate limiting is handled by Better Auth, not here.
+- API keys (`src/core/api-keys/`, controlled by `apiKeys.enabled`): machine identities for scripts and third-party services. Users create, name and revoke keys at `/api-keys`. The plaintext appears exactly once, in the dialog shown at creation; the database stores the SHA-256 (`hashedKey`) and a recognizable prefix (`sk_` + the first 8 characters of the plaintext), so **not even an admin can see the plaintext** — if it's lost, revoke it and create a new one. Names are unique per user (unique constraint `(userId, name)`).
+  - Authentication: `createApiKeyMiddleware({ enabled, findKeyByHash, touchLastUsed, checkRateLimit })` parses `Authorization: Bearer sk_...` → looks up `hashedKey` → checks the key is neither revoked nor expired → returns `{ userId, keyId, name, prefix }`. Attach it in a route with `withApiKey(middleware, handler)`; the handler reads `request.apiKey.userId`. The middleware is not applied to any kit route automatically — wrap each endpoint you want to protect. Every failure is a 401 (missing, not Bearer, malformed, not found, revoked and expired are indistinguishable); with `apiKeys.enabled: false` everything is a 404 without touching the database. Responses carry `Cache-Control: no-store`. The example route `GET /api/api-keys/me` returns `{ userId, keyId, name, prefix }`; copy its wiring for new endpoints.
+  - The validation rule lives in exactly one place (`apiKeyStatus` in `status.ts`: revoked takes precedence over expired), and both the middleware and the UI use it, so they can't drift apart. Revoking writes `revokedAt` instead of deleting the row (it stays visible in the list) and is idempotent. Every authentication hits the database, so a revoked key stops working immediately, with no cache window.
+  - Last-used time: the middleware calls `touchLastUsed` after letting the request through, and the example route wraps it in `runAfterResponse` so it doesn't block the response; a failed write only logs a line and doesn't affect authentication.
+  - Rate limiting (optional): `apiKeys.rateLimitPerKey` in `site.config.ts` (`{ limit, window }`; unset by default = no limit) counts per `api_key:<keyId>`, reusing the sliding window in `src/core/ratelimit/`. Over the limit returns 429; Redis unavailable returns 503 according to `rateLimit.failMode`; both carry `Retry-After`.
+  - The admin page `/admin/api-keys` (also requires `features.admin`) lists users who have keys, the total number of keys, how many are still valid and the last-used time; neither plaintext nor hashes leave the database.
+  - With `apiKeys.enabled` off, `/api-keys`, `/admin/api-keys` and the example endpoint all return 404.
+- File uploads (`src/core/upload/`, `features.upload`): the browser uploads directly to Cloudflare R2. `POST /api/upload/presign` (body `{ mime, size }`, requires sign-in, uses the `upload` rate limit) validates against `upload.allowedMimeTypes` / `maxFileSize` in `site.config.ts`, records a `pending` row in `files` and returns a presigned PUT URL (valid for 10 minutes; the signature covers Content-Type and Content-Length, so R2 returns 403 if the type or size differs). After uploading, `POST /api/upload/complete` (body `{ fileId }`) uses HeadObject to confirm the object exists with matching size and type, and marks it `uploaded`. Object keys are `<userId>/<yyyy-mm>/<uuid>.<ext>`, with the extension determined by the type. When `upload.public` is false (**the default**), files are accessed through signed GET URLs valid for 1 hour; `GET /api/upload/files/<id>` redirects to one, so you can use it directly as `<img src>`. When true, files use URLs under `R2_PUBLIC_URL` — the cost is that **anyone with the URL can access the file, and that can't be undone** (the objects stay even if you change the setting); user uploads shouldn't be public by default. On the frontend use `uploadFile(file)` (`src/core/upload/client.ts`); when enabled, the dashboard home page has an upload example. Deleting an account deletes its `files` rows; v1 doesn't clean up the objects on R2 or rows stuck in `pending`.
+  - Run `pnpm db:migrate` first: `orders.credit_grant_source_id` stores the idempotency key of the transaction that actually granted the credits. If a refund arrives first, a placeholder order keeps the cumulative refund, and a later `checkout.completed` / `subscription.renewed` grants and then reclaims within one transaction; if any step fails, the whole thing rolls back and the original webhook retries. The amount comes from the `billing` grant records in `credit_transactions`, not from the plan's current credits, so repricing or retiring a plan doesn't change how much is reclaimed.
+  - Old one-time orders locate their transaction by the original order key; old Creem subscription orders recover the matching billing period from the verified, stored raw `subscription.paid` payload rather than using the subscription's current period. When the raw payload is missing or conflicting and no transaction can be located, nothing is deducted by guesswork; a custom payment provider that historically used period keys needs its own adapter in `historical-grant.ts`. Historical orders whose credits were already spent and that never receive another payment/refund event are not scanned and fixed automatically; reconcile them and compensate separately. A shortfall where the balance was already spent is still only logged; there is no debt mechanism.
+- AI (`src/core/ai/`, controlled by `features.ai`): `ai.models` in `site.config.ts` lists the available models (`id`, `provider` (`openai` / `anthropic` / `google`), `model`, `creditCost`, optional `maxOutputTokens`); `ai.defaultModel` is the default. A provider is enabled when its key is set in env; calls to a model without a key return 503. On the server, call `runAI({ userId, ip, modelId, prompt | messages, ... })`: check sign-in → rate limit with the `ai` policy (429) → in one transaction, pre-deduct `creditCost` and write `ai_usage` (402 if the balance is too low) → stream from the model. If the model errors, the credits are refunded by `ai_usage.id` (a `refund` entry in the ledger); on success, token usage and duration are recorded. The returned `result` is the AI SDK's `streamText` result; in a route, use `after(() => run.settled)` so the bookkeeping finishes after the response ends. Example endpoint: `POST /api/ai/chat` (useChat's UI message stream, 64 KB request body limit); example page: `/playground`. v1 charges a fixed amount per call and doesn't store conversation history. Enabling paid models (`creditCost > 0`) also requires `features.credits`.
+- Selling downloadable files (`src/features/downloads/`, `downloads.enabled`, or turn it on with `SITE_DOWNLOADS=1`; off by default): `downloads.products` maps a one-time plan to a product (`{ id, planId, updateMonths }`). A successful payment (`checkout.completed`) records an entitlement in `download_entitlements`, with an update period of purchase time + `updateMonths` months; (provider, order, product) is unique, so webhook replays don't grant twice. When the entitlement is first recorded, a `download-ready` email goes out through the outbox, linking to `/downloads` on the site; if it isn't sent, the recovery sweep resends it. `/downloads` lists the versions each entitlement can download (those released within the update period; after it ends, versions already available stay downloadable). Download buttons go through `GET /api/downloads/<release id>`, which checks sign-in and entitlement, then signs a fresh 5-minute R2 URL and redirects to it, so links on the page and in the email never expire. A **full refund** of the order revokes the entitlement; partial refunds leave it alone. For these plans the checkout success page says "We’ve emailed you a link to your downloads — or head there now." and the primary button points to the downloads page.
+  - Publishing a release: `pnpm downloads:publish <product id> <version> <file>` (for example, package with `scripts/release-package.sh` first, then `pnpm downloads:publish template 1.0.0 dist/onwardkit-1.0.0.zip`). The script reads `DATABASE_URL` and `R2_*`, uploads the file first and then writes `download_releases`; republishing the same version overwrites the file and keeps the release time. The bucket must be private (`upload.public: false`).
+  - Product names live in `Downloads.products.<id>.name` in `messages/*.json`. If you don't sell files, keep it off, or delete the whole directory, the import line in `src/core/billing/hooks.ts`, the `download-ready` registration in `src/core/email/templates.ts` and the corresponding migration in `drizzle`.
+- Legal pages: `/privacy`, `/terms`, `/refund`. The body templates are in `content/legal/` (owned by your app), and the entity details come from `legal` in `site.config.ts`. **The templates are for reference only and are not legal advice**; review them against your business and applicable law before launch, and consult a lawyer if needed.
+- Blog (`src/core/blog/`, `features.blog`): posts are `content/blog/<locale>/<slug>.mdx`, compiled by content-collections during `dev` / `build` (the configuration and frontmatter schema are in `content-collections.ts`). Frontmatter: `title`, `description`, `date` (`2026-01-31`), `tags` (lowercase kebab-case), `cover` (an image under `public/`, optional), `draft` (optional). Pages: `/blog` (12 posts per page; from page 2 on, `/blog/page/<n>`), `/blog/<slug>`, `/blog/tags/<tag>` (from page 2 on, `/blog/tags/<tag>/page/<n>`); RSS at `/blog/rss.xml` (other languages: `/<locale>/blog/rss.xml`). List pages, tag pages (including their pagination) and posts are added to the sitemap automatically; post pages carry `BlogPosting` JSON-LD and a generated share image (`/blog/<slug>/og`).
+  - Posts with `draft: true` are only visible in `pnpm dev`; in a production build they return 404 and stay out of the sitemap and RSS.
+  - Each language's posts are independent; files with the same name are treated as translations of the same post (hreflang lists only languages that have a translation). For a language with no posts, the list page is empty and noindex.
+  - Frontmatter must be valid YAML; quote values that contain `: `. A broken file makes `build` fail and names the file; `dev` only prints the error.
+  - When you turn off `features.blog`, remove the Blog link from `nav` too.
+- Changelog (`src/core/changelog/`, `changelog.enabled`, off by default): `/changelog` puts all entries on one page, newest first, grouped by month, each with a category badge (`feature` green / `improvement` blue / `fix` neutral). Entries are `content/changelog/<slug>.mdx`; frontmatter: `title`, `date` (`2026-01-31`), `category` (`feature` / `improvement` / `fix`), `description` (optional; if omitted, a sentence is taken from the first paragraph). Compilation works the same way as the blog (see `content-collections.ts`).
+  - RSS at `/changelog/rss.xml` (other languages: `/<locale>/changelog/rss.xml`), linked from the top right of the page, with a `<link rel="alternate">` in the page head as well. The changelog is a single page, so each entry's anchor on the page (`/changelog#<slug>`) is its URL in the RSS feed.
+  - Entries aren't per language: there's one copy of the content, and the page chrome follows the current language (the same trade-off as the legal pages). To write per-language entries, change the `changelog` collection in `content-collections.ts` to use per-language directories like `posts`.
+  - With `changelog.enabled` off, `/changelog` and its RSS return 404, and the sitemap entry and footer link disappear with them (the footer part is in `src/core/layout/footer-nav.ts`); files left in `content/changelog/` do no harm.
+- Admin (`src/core/admin/`, `features.admin`): `/admin` is the overview, with five permanent pages below it: metrics, users, orders, exceptions and subscriptions, all paginated on the server. The remaining pages appear according to their own toggles: the channel report, leads and referrals (see the "Channel attribution", "Email lead capture" and "Referral links" sections), Feature Flags (see the "Feature flags" section), system status (`statusPage.enabled`) and API Keys (see the previous item). Non-admins (including signed-out visitors) get a 404 for every page under `/admin`, with no redirect to sign-in (**this is by design, not a bug**; the reasoning and the full status-code conventions are in [Error and permission boundaries](#error-and-permission-boundaries)).
+  - Roles and bans come from Better Auth's admin plugin (the plugin is always enabled; the `user` table gains `role`, `banned` and other fields). v1 removes the impersonate permission.
+  - First admin: put the email in `ADMIN_EMAILS`, and signing in with that email (verified) automatically grants the `admin` role. **Promotion only, never demotion** — removing an email from the list doesn't take back a role already granted. To revoke, use `pnpm admin:demote <email>` (it removes only admin and keeps other roles; if the email is still in `ADMIN_EMAILS`, the script warns that the next sign-in will promote it again). Admins see an Admin entry in the dashboard sidebar.
+  - Users: search by email or name. The detail page lets you ban / unban (banning invalidates all of the user's sessions, and they can no longer sign in), adjust credits (a reason is required; it writes an `adjust` transaction, `actor_id` records the admin who did it, and resending the same submission only takes effect once), and view the user's subscriptions and orders.
+  - Orders, subscriptions: filterable by status.
+  - Metrics (`/admin/metrics`, queries in `src/core/admin/metrics.ts`): new sign-ups, total users and banned users over the last 7 / 30 / 90 days (by UTC date); net revenue (per currency; definition in the "Revenue definition" section), paying users, active subscriptions and MRR (`active` subscriptions valued at the plan's list price in `site.config.ts`, annual ÷ 12); credits granted, consumed and refunded; AI calls and failure rate by type and model (failures ÷ finished calls; calls still in progress don't count). With no paid plans the revenue block is hidden (the two revenue columns in `/admin/acquisition` use the same check); with `features.credits` / `features.ai` off, the matching blocks are hidden.
+  - Exceptions (`/admin/exceptions`, code in `src/core/exceptions/`): places where money or an outcome needs a human to look at it. The "Exceptions" item in the sidebar shows the number of open exceptions; the count disappears once it reaches zero. Currently two kinds:
+    - **Reclaim shortfall** (`refund_reclaim_shortfall`): the user spent credits and then got a refund, and the balance wasn't enough to reclaim them. The row shows the order number and how much should be reclaimed / has been reclaimed / is still owed. "Retry reclaim" locks the order, recomputes from the ledger how much this order owes **now** and deducts that (the same formula and the same already-reclaimed basis as the webhook reclaim). If it covers the amount, the exception closes; if not, it deducts what it can and the exception stays open. Repeated or concurrent clicks deduct only once.
+    - **AI job to review** (`ai_job_needs_review`): a video job was refunded because "the provider never returned a result" (the provider may later have succeeded after all), or the result deadline passed and the provider's status still couldn't be retrieved. "Recheck provider" asks the provider again: if the job is still waiting, it's advanced along the recovery sweep path; if it was already refunded, the provider's current status is only recorded on the exception and no money moves — whether to claw back or re-deliver is a human decision.
+    - Every action (Retry reclaim / Recheck provider / Mark resolved / Ignore) requires a reason and is written to `admin_actions` (who, when, which exception, reason, result), visible in the row's "History". There are no bulk actions and nothing closes automatically.
+    - The unique key is `(kind, source, source_id)`: webhook replays and sweep reruns can't open a second one. Reclaim shortfalls from before this feature shipped exist only in the logs and aren't backfilled.
+  - New admin pages go under `src/app/[locale]/(admin)/admin/` and call `await requireAdmin()` (`src/core/admin/session.ts`) at the top; Server Actions check again with `getAdminSession()`. Layout and page render in parallel, so a check in the layout alone doesn't protect the page.
+- Observability (`src/core/observability/`, `features.observability`): details are under `observability` in `site.config.ts` (`logLevel`, `otel`, `sentry`, `sentryTracesSampleRate`, `analytics`, `speedInsights`).
+  - Logs: `src/core` uses `logger.info/warn/error(event, fields)` throughout, never `console.error` / `console.warn` directly (ESLint reports it). Event names are `module.action`, e.g. `ai.usage`, `billing.webhook`. Both `logger.error("x.failed", error)` and `logger.error("x.failed", { error, userId })` work.
+  - When enabled, every log line in production is one line of JSON (`level`, `event`, `time`, `traceId`, fields), searchable in Vercel Logs by `event` or `traceId`; in development it's a readable format. Fields named `email`, `token`, `password`, `secret`, `apiKey`, `authorization` or `cookie` (or ending in them) are replaced with `[redacted]`, and users are logged only by ID. When disabled, it behaves as before and only prints warn and error.
+  - Tracing: with `observability.otel` on, `src/instrumentation.ts` registers OpenTelemetry through `@vercel/otel`, with the service name taken from `name` in `site.config.ts`. AI calls (`ai.text` / `ai.image` / `ai.video.*`), billing webhooks (`billing.webhook`) and credit writes (`credits.<type>`) each get a span. App code adds its own spans with `withSpan(name, attributes, fn)` (`src/core/observability/trace.ts`).
+  - Uncaught request errors are logged by `onRequestError` as a `request.error` (with route and method, without the query).
+  - `logger.setErrorReporter(fn)` is the hook for error reporting: `logger.error` calls it as well.
+  - Error tracking: with `observability.sentry` on, Sentry (`@sentry/nextjs`) is wired in. Server errors (`onRequestError`), browser errors (`error.tsx` / `global-error.tsx` and global uncaught errors) and `logger.error` are all reported, with the event name in the `event` tag and the remaining (redacted) fields in extra. Signed-in users are identified by ID only; cookies, IP, query, request bodies, AI input and output, database parameters and stack-frame local variables are never collected (`src/core/observability/sentry.ts`). When disabled, the Sentry SDK isn't included in the build output.
+  - Traffic and performance: with `observability.analytics` on, the root layout mounts Vercel Analytics (page views, no cookies); with `observability.speedInsights` on, it mounts Speed Insights (Web Vitals). When off, pages load no analytics scripts at all.
+  - Conversion events (`src/core/observability/events.ts`): `sign_up` (server, after a new user is created), `checkout_started` (client, before redirecting to the payment page, with `plan`), `purchase` (server, after billing's `checkout.completed` commits, with `plan`; renewals don't count). They carry only the plan ID, never email or payment details. App code uses `track(name, props)` (`src/core/observability/track.ts`) in the browser and `trackServer(name, props)` (`track-server.ts`) on the server; with the toggle off both are no-ops, and a failed server-side send only logs a warn.
+- Security response headers (`src/core/security/headers.ts`, applied to every path by `headers()` in `next.config.ts`, including `/api`, `/_next` and static files with extensions): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy` and CSP. The CSP is a **static policy** (no nonce): a nonce differs on every request, and Next only writes it into inline scripts during dynamic rendering, so enabling nonces means giving up static prerendering and CDN caching across the whole site; the cost is that `script-src` must keep `'unsafe-inline'`. The trade-off and reasoning are in the comment at the top of the file.
+  - When you add a third-party script, image domain or API domain, add the domain to the matching directive in the same file. **Miss one and the browser blocks that resource outright** (blocked resources often just fail silently). Current allowlist: the script domains for Vercel Analytics / Speed Insights, R2's API domain and `R2_PUBLIC_URL`; Sentry's `/monitoring` tunnel is covered by this site's `'self'` in `connect-src` — if you change `tunnelRoute`, add Sentry's ingest domain. Embedding third-party iframes (videos, CAPTCHAs, payment widgets) needs `frame-src` (there is none now, so it falls back to `default-src 'self'`, i.e. only your own pages can be embedded).
+  - HSTS isn't sent by the template (turning it on before the domain is settled gets it remembered by browsers); how to enable it is in step 2 of the launch checklist.
+  - `frame-ancestors 'none'` applies site-wide: no site can embed your pages, **including your own site**. To embed your own pages, relax this directive.
+  - Production also sends `upgrade-insecure-requests`: browsers upgrade every http subresource to https. Vercel and local development aren't affected (it isn't sent in development, and `http://localhost` is a trusted origin), but if you deploy somewhere that only serves http, this directive breaks those resources — and such an environment shouldn't be running production anyway.
+- Internationalization: next-intl, with copy in `messages/<locale>.json`. To add a language, see [docs/i18n.md](docs/i18n.md).
+- SEO: page metadata is generated with `buildMetadata()` (`src/core/seo/metadata.ts`): canonical, hreflang, Open Graph and Twitter. When you add a marketing page, register it in `src/core/seo/routes.ts` and the sitemap picks it up automatically. The site URL comes from `domain`.
+- `/llms.txt`: a site index for AI agents and answer engines (convention at [llmstxt.org](https://llmstxt.org)). Everything in it is generated from `site.config.ts`, `messages/*.json` and blog posts, so it follows your configuration; it has one section each for public pages, plan prices, the blog, legal pages, sitemap/robots/RSS, and paths that require sign-in. Formatting is in `src/core/seo/llms.ts` (unit-testable); content assembly is in `src/app/llms.txt/route.ts`. Multilingual sites get a single file, always using the default language's URLs.
+- Email: `sendEmail({ to, template, props, locale })` (`src/core/email/`). Templates are in `src/core/email/templates/`, copy is under `Email` in `messages/*.json`, and the sender comes from `email` in `site.config.ts`. `EMAIL_TRANSPORT` decides how mail is sent: `resend` sends for real, `console` prints to the terminal (the local default), `file` writes to `.tmp/emails/` (used by CI and e2e). The production runtime only allows `resend`: `console` / `file` would put sign-in codes into server logs or onto disk, so setting them fails at startup. CI's e2e runs against a production build and is allowed through with `ALLOW_NON_RESEND_EMAIL=1`.
+  - Billing emails: payment succeeded, payment failed and subscription canceled are triggered by the `onBillingEvent` hook (`src/core/billing/emails.ts`); when the balance drops below `credits.lowBalanceThreshold`, `credits-low` is sent (at most one per user per 24 hours). The same payment, or the same subscription's cancellation, is notified only once (deduplicated by the `notification_log` table). A failed send doesn't affect the webhook or the deduction. For delivery, see the next item.
+  - Critical transactional emails go through an **outbox** (`src/core/email/outbox.ts`, table `pending_notifications`): payment succeeded / payment failed / subscription canceled / low balance, plus sign-in codes and email-change codes.
+    - **Enqueue**: a row is written inside the business transaction (committed or rolled back together with the dedup slot and the order update); **right after commit it's sent once** (with 3 quick retries).
+    - **Resend**: anything not yet sent stays in the database and is resent with backoff by the recovery sweep (the same `/api/cron/recovery` entry point and opportunistic trigger; see "Recovery sweep" in the launch checklist) — 1 minute, 5 minutes, 15 minutes… 8 attempts over about 7 hours in total. App restarts and recycled functions don't lose mail.
+    - **Sent only once**: before sending, a state transition (pending → sending) claims the row, so only one of several concurrent sweeps can send it; sends carry the Resend idempotency key `notification/<row id>` (Resend keeps it for 24 hours), so if the process dies between "the provider accepted it" and "we recorded it", the provider recognizes the resend.
+    - **Dedup slot**: taken on enqueue and kept after sending (no duplicate within the window); only when retries are exhausted and the row reaches the terminal `failed` state is it released, so a later trigger of the same event (a provider replay, the next window) can still send.
+    - **Terminal failure**: the row is kept, the logs have `email.delivery_failed`, and the admin exceptions page (the "Email not delivered" kind in `/admin/exceptions`) can **resend** it in one click (a reason is required and it's audited). To query the database directly: `select * from pending_notifications where status = 'failed' order by updated_at desc`.
+    - **Verification codes**: the database stores only hashes of verification codes, so codes in the outbox are also stored **encrypted** (the key is derived from `BETTER_AUTH_SECRET`, so read access to the database alone doesn't yield a usable code), and they're cleared once sent or invalidated. Expired codes are not sent; a new request replaces an older code that hasn't gone out yet. If the immediate send fails, the user sees "We couldn't send the email. Please try again later, or continue with Google.", and the cooldown is cleared as usual so they can retry right away; an enqueue failure because the database is down shows the same message, not a 500.
+    - **Not moved over**: welcome emails, status page notifications and lead-capture confirmation emails are still sent directly. They involve neither money nor sign-in, and on failure users can trigger them again themselves (resubmit the lead form; status page subscribers get the next update), so they aren't worth rows in another table.
+  - Production builds (`next build` / `next start`) use `resend` by default and require `RESEND_API_KEY`. To run a build locally without a key, use `ALLOW_NON_RESEND_EMAIL=1 EMAIL_TRANSPORT=console pnpm build`.
+- Sign-in: Better Auth (`src/core/auth/`), with Google sign-in and email one-time codes; routes `/sign-in`, `/api/auth/*`. Code parameters are in `auth.emailOtp` in `site.config.ts`.
+  - Pages that require sign-in go under `src/app/[locale]/(app)/`: the (app) layout checks the session and redirects signed-out visitors to sign-in (307, see [Error and permission boundaries](#error-and-permission-boundaries)). For paths listed in `dashboard.nav` in `site.config.ts`, the proxy also intercepts early based on the cookie and adds the return URL (`protectedPrefixes` in `src/core/auth/routes.ts`).
+  - Current user on the server: `getSession()` (`src/core/auth/session.ts`); on the client: `authClient` (`src/core/auth/client.ts`).
+  - Auth tables are generated by `pnpm auth:generate` into `src/core/db/schema/auth.ts`, then `pnpm db:generate` generates the migration.
+- Signed-in shell: `src/core/dashboard/`, a sidebar plus a user menu (avatar, email, language switcher, sign out).
+  - Your app's menu items go in `dashboard.nav` in `site.config.ts` (`key`, `href`, `icon`), with copy in `Dashboard.nav.<key>` in `messages/*.json`; the kit ships two items, Dashboard and Settings.
+  - Settings page `/settings`: change name and preferred language (`user.locale`; read it with `preferredLocale()` when sending transactional email to the user), delete account.
+  - Deleting an account first runs the `onUserDelete` hooks in order (`src/core/account/on-user-delete.ts`); if any of them fails, the deletion is aborted. Then the user is deleted, and sessions and accounts cascade through foreign keys. When your app tables reference `user.id`, set `onDelete: "cascade"`, or register a hook to clean up (import the registration file in `src/core/account/hooks.ts`).
+- Credits: `src/core/credits/`, enabled by `features.credits` (when off, the API throws `CreditsDisabledError`; callers check `creditsEnabled` first). `user_credits` stores the balance and `credit_transactions` is the ledger (`amount` is signed; the balance always equals the sum of the ledger).
+  - API: `getBalance`, `grantCredits`, `deductCredits` (throws `InsufficientCreditsError` when the balance is too low), `reclaimCredits` (reclaims credits: deducts down to a balance of 0 at most and returns the shortfall as-is without throwing; used for refund reclaims), `refundCredits` (gives back a deduction by its `source` / `sourceId`, at most once per deduction), `adjustCredits`, `listTransactions`.
+  - Idempotency: the same `(source, sourceId)` takes effect only once; repeat calls return `{ status: "duplicate" }` instead of throwing. `refund` is a reserved source name.
+  - Every write accepts `{ tx }`: when given an outer transaction, it commits or rolls back as part of it; errors like an insufficient balance roll back only that step.
+- UI components: shadcn/ui (Base UI), generated into `src/core/ui/`. Add components with `pnpm dlx shadcn@latest add <name>`.
+- Environment variables: copy `.env.example` to `.env.local` and fill it in; `src/core/env.ts` validates it. Disabled features don't require their variables. `SKIP_ENV_VALIDATION=1` skips validation, but only outside a production runtime: in `next build` / `next start` / Docker, `NODE_ENV` is production and validation is always enforced (otherwise a single environment variable could bypass required variables and every module's production gate).
+  - `pnpm typecheck` and `pnpm auth:generate` are exceptions: their scripts run them explicitly with `NODE_ENV=development`, so they pass without a `.env.local`. The reason is that Next's CLI fills in an unset `NODE_ENV` with the command's default (production for `next typegen`), and `SKIP_ENV_VALIDATION=1` alone would be stopped by the production gate — see the comment in `src/core/create-env.ts`.
 
-CI（`.github/workflows/ci.yml`）拆成四条并行：`static`（audit → lint → format → notices → 发行物自检 → typecheck → 迁移元数据自检，只读文件）、`unit`（迁移 + 带覆盖率的单元测试）、`e2e`（四套 Playwright 各一条腿，matrix 并行 —— 主套件跑在生产构建上，另外三套的 `serve.ts` 会拷一份补丁副本自己构建），以及末尾的 `ci` 汇总闸门。闸门本身不做检查，只汇总上游结果，任一上游失败或被取消它就失败 —— PR 上看这一个 `ci` 就够了。
+CI (`.github/workflows/ci.yml`) is split into four parallel parts: `static` (audit → lint → format → notices → release self-check → typecheck → migration metadata self-check, read-only on files), `unit` (migrations + unit tests with coverage), `e2e` (one leg per Playwright suite, four in a parallel matrix — the main suite runs against a production build, while the other three suites' `serve.ts` copies a patched version and builds it itself), and the final `ci` aggregate gate. The gate does no checking of its own; it only aggregates upstream results and fails if any upstream job fails or is canceled — on a PR, this one `ci` check is all you need to watch.
 
-### 收入口径
+### Revenue definition
 
-`/admin/metrics` 和 `/admin/acquisition` 用同一份收入口径：条件只有一处定义，在 `src/core/admin/metrics.ts` 顶部（`collectedStatuses` / `recognizedOrder` / `orderNet` / `hasPositiveNet`），两个模块都从那里取，不各自再写一遍。
+`/admin/metrics` and `/admin/acquisition` use the same revenue definition. The conditions are defined in one place, at the top of `src/core/admin/metrics.ts` (`collectedStatuses` / `recognizedOrder` / `orderNet` / `hasPositiveNet`), and both modules take them from there instead of writing their own.
 
-- **计入收入**：状态是 `paid` / `partially_refunded` / `refunded`（有过实际收款）**且金额已知**（`orders.amount` 不为空）。金额未知的是「付款事件还没补齐」的占位订单（典型是退款先到），金额不可信，既不算收入也不算付费人数。
-- **净收入**：计入收入的订单按币种累计 `amount − refunded_amount`；退款按查询时的累计值扣，所以历史区间的数字会随后续退款变化。全额退款后净收入为 0 的币种不列出来。
-- **付费人数**：区间内至少有一笔净收入为正的订单的用户数（去重）。全额退款的不算付费；同一用户多笔（含续费）只算一个。
-- **待核对**（只有报表有这一列）：状态是收款、但金额未知的订单，按币种列出已经退掉的金额；金额未知又还没退款的订单列 0 —— 0 表示「还没有退款」，不表示这笔订单已经结清。这些金额不进收入。
+- **Counts as revenue**: status is `paid` / `partially_refunded` / `refunded` (money was actually collected) **and the amount is known** (`orders.amount` is not null). Orders with an unknown amount are placeholders whose "payment event hasn't filled them in yet" (typically because the refund arrived first); their amounts can't be trusted, so they count toward neither revenue nor paying users.
+- **Net revenue**: `amount − refunded_amount` summed per currency over orders that count as revenue. Refunds are subtracted at their cumulative value at query time, so figures for past periods change as later refunds come in. Currencies whose net revenue is 0 after full refunds aren't listed.
+- **Paying users**: the number of distinct users with at least one order in the period whose net revenue is positive. Fully refunded users don't count as paying; one user with several orders (including renewals) counts once.
+- **Pending reconciliation** (only the report has this column): orders whose status says collected but whose amount is unknown, listing the refunded amount per currency; such orders not yet refunded show 0 — 0 means "no refund yet", not that the order is settled. These amounts don't go into revenue.
 
-同一区间上两页的净收入和付费人数因此相等：报表按注册时冻结的来源分行，逐行相加就是 metrics 的总数（这条对照写在库集成测试里）。唯一的差异是币种分组 —— 报表按订单里存的原样分组（`usd` 和 `USD` 会是两行），metrics 统一成大写、NULL 回退到 `site.config.ts` 的 `billing.currency`。
+As a result, net revenue and paying users are equal on both pages for the same period: the report has one row per source, frozen at sign-up, and adding the rows gives the metrics total (this check is in a database integration test). The only difference is currency grouping — the report groups by the currency exactly as stored on the order (`usd` and `USD` are two rows), while metrics uppercases it and falls back to `billing.currency` in `site.config.ts` for NULL.
 
-累计金额超过 `int4` 上限（21 亿分）时照常显示：聚合在 SQL 里按 `bigint` 读出，不会让后台整页 500。
+Totals above the `int4` limit (2.1 billion cents) still display normally: aggregates are read out of SQL as `bigint`, so they don't turn the whole admin page into a 500.
 
-## 错误与权限的边界
+## Error and permission boundaries
 
-四条容易被当成 bug 的边界：前两条是刻意的设计，后两个是改一行就可能静默改变状态码的陷阱。依据都写在里面，可以自己验证。
+Four boundaries that are easy to mistake for bugs: the first two are deliberate design, and the last two are traps where changing one line can silently change a status code. The evidence is included in each, so you can verify it yourself.
 
-### `forbidden()` / `unauthorized()` 在本模板不可用
+### `forbidden()` / `unauthorized()` are not available in this template
 
-`next/navigation` 的 `forbidden()` / `unauthorized()` 在 Next 16 是 experimental，**必须开开关才能用**。本仓库没开：`next.config.ts` 里连 `experimental` 这个键都没有（当前只有 `env`），所以 `experimental.authInterrupts` 是关的。文档 `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/authInterrupts.md` 说得很直接：要「enable the `authInterrupts` option in your `next.config.js` file to use them」。
+`forbidden()` / `unauthorized()` from `next/navigation` are experimental in Next 16 and **only work behind a flag**. This repository doesn't turn it on: `next.config.ts` doesn't even have an `experimental` key (it currently has only `env` and `headers()`), so `experimental.authInterrupts` is off. The doc `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/authInterrupts.md` says it plainly: you must "enable the `authInterrupts` option in your `next.config.js` file to use them".
 
-所以这**不是「少两个文件」**。开关不开时调用它会直接抛错，实现见 `node_modules/next/dist/client/components/forbidden.js`：
+So this is **not "two files missing"**. Without the flag, calling them throws immediately; see the implementation in `node_modules/next/dist/client/components/forbidden.js`:
 
 ```
 `forbidden()` is experimental and only allowed to be enabled when
 `experimental.authInterrupts` is enabled.
 ```
 
-（`unauthorized()` 同形，在 `unauthorized.js`；两个错误码分别是 `E488` / `E411`。）关键是它抛的是**普通 Error，不是 403 / 401 的 fallback digest**，所以不会被 HTTP access fallback 接住，而是被最近的 `error.tsx` 接住 —— 你得到的是**一个 500，不是一个 403**，跟「写了就能用」的直觉正好相反。
+(`unauthorized()` is identical, in `unauthorized.js`; the error codes are `E488` / `E411` respectively.) The key point is that it throws a **plain Error, not a 403 / 401 fallback digest**, so the HTTP access fallback doesn't catch it; the nearest `error.tsx` does — you get **a 500, not a 403**, exactly the opposite of the intuition that "if you write it, it works".
 
-要用得同时做两件事：
+To use them you have to do both:
 
-1. `next.config.ts` 开 `experimental.authInterrupts: true`；
-2. 建 `forbidden.tsx` / `unauthorized.tsx`，否则渲染的是框架默认的 403 / 401 页。
+1. Turn on `experimental.authInterrupts: true` in `next.config.ts`;
+2. Create `forbidden.tsx` / `unauthorized.tsx`; otherwise the framework's default 403 / 401 page is rendered.
 
-另外三个约束：
+Three more constraints:
 
-- **不能在 root layout 里调用**。本仓库没有 `src/app/layout.tsx`，root layout 是 `src/app/[locale]/layout.tsx` —— 文档 `.../file-conventions/layout.md` 说「Any layout without a `layout.js` above it is a root layout」，并明确 root layout 可以落在动态段下（`app/[lang]/layout.js`）。
-- 它靠**抛异常**工作：要 `await` 到那一层；`try/catch` 会把它吞掉；留在未 await 的 promise 里则什么都不渲染，开发环境只在服务端日志里留一条 `unhandledRejection`。
-- 放进 `<Suspense>` 边界里就拿不到真 403 / 401（响应已开始流式，见第 3 条）。
+- **They can't be called in the root layout**. This repository has no `src/app/layout.tsx`; the root layout is `src/app/[locale]/layout.tsx` — the doc `.../file-conventions/layout.md` says "Any layout without a `layout.js` above it is a root layout", and states explicitly that a root layout can sit under a dynamic segment (`app/[lang]/layout.js`).
+- They work by **throwing**: the call has to be `await`ed all the way up; a `try/catch` swallows it; left inside an un-awaited promise it renders nothing, and in development it only leaves an `unhandledRejection` in the server log.
+- Inside a `<Suspense>` boundary you can't get a real 403 / 401 (the response has already started streaming; see item 3).
 
-`forbidden.tsx` / `unauthorized.tsx` 在 Next 16.3.6 仍是 experimental（两份 file-conventions 文档的 frontmatter 都是 `version: experimental`）。本模板没有这两个文件：`find src -iname "forbidden*" -o -iname "unauthorized*"` 无输出。
+`forbidden.tsx` / `unauthorized.tsx` are still experimental in Next 16.3.6 (both file-conventions docs have `version: experimental` in their frontmatter). This template has neither file: `find src -iname "forbidden*" -o -iname "unauthorized*"` prints nothing.
 
-需要权限拒绝时用现成的路子：页面 `notFound()` 或跳登录页，API 返回 JSON 401，Server Action 返回状态对象 —— 见下一条。
+When you need to deny access, use the existing patterns: `notFound()` or a redirect to sign-in for pages, a JSON 401 for APIs, a state object for Server Actions — see the next item.
 
-### 权限模型的分野是有意的
+### The split in the permission model is intentional
 
-| 场景             | 现状                                        | 在哪                                                                                         |
-| ---------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 页面：不是管理员 | **404**，不跳登录页                         | `requireAdmin()`（`src/core/admin/session.ts`）                                              |
-| 页面：未登录     | **307** 跳 `/sign-in`，带 `callbackURL`     | `src/proxy.ts` 按 cookie 先拦一次；`(app)` 的 layout 再用 `getSession()` 校验一次            |
-| API：未登录      | **401** + JSON `{ error: "unauthorized" }`  | `src/app/api/billing/checkout/route.ts`、`portal/route.ts`、`status/route.ts`                |
-| Server Action    | **返回状态对象**，不抛错                    | `AdminActionState`（`src/core/admin/actions.ts`）：`{ status: "error", error: "forbidden" }` |
-| 错方法           | **405**（框架给的，空 body、无 `Allow` 头） | 见下                                                                                         |
+| Scenario           | Current behavior                                            | Where                                                                                                    |
+| ------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Page: not an admin | **404**, no redirect to sign-in                             | `requireAdmin()` (`src/core/admin/session.ts`)                                                           |
+| Page: signed out   | **307** to `/sign-in`, with `callbackURL`                   | `src/proxy.ts` intercepts first based on the cookie; the `(app)` layout checks again with `getSession()` |
+| API: signed out    | **401** + JSON `{ error: "unauthorized" }`                  | `src/app/api/billing/checkout/route.ts`, `portal/route.ts`, `status/route.ts`                            |
+| Server Action      | **Returns a state object**, doesn't throw                   | `AdminActionState` (`src/core/admin/actions.ts`): `{ status: "error", error: "forbidden" }`              |
+| Wrong method       | **405** (from the framework, empty body, no `Allow` header) | See below                                                                                                |
 
-**`/admin` 对非管理员返回 404 而不是跳登录页，这是设计，不是 bug。** 后台不想让人知道它存在，所以未登录和已登录的非管理员拿到的是同一种响应。`e2e/admin.spec.ts` 锁着这个行为（两条用例都断言 404 且 URL 不变）。
+**`/admin` returning 404 to non-admins instead of redirecting to sign-in is by design, not a bug.** The admin area doesn't want anyone to know it exists, so signed-out visitors and signed-in non-admins get the same response. `e2e/admin.spec.ts` locks this behavior in (both tests assert a 404 with the URL unchanged).
 
-- **页面要 UX，API 要机器可读，所以两种形态并存是故意的。** 浏览器能从 404 页里拿到品牌化和「回首页」的出路；`curl` 一个接口的人要的是能解析的 JSON，不是一整页 HTML。
-- **307 不是随便挑的**：Next 的 `redirect()` 默认就是 307（文档 `.../functions/redirect.md`：「The `redirect()` method uses a `307` by default」，会保留请求方法）。站内跳转统一走 `src/core/i18n/navigation.ts` 的 `redirect`（next-intl 包装）。
-- **405 是框架行为，模板没写**：`src/app/api/**` 里 `route.ts` 没导出的方法，由 Next 自动补上 `new Response(null, { status: 405 })`（`node_modules/next/dist/server/route-modules/app-route/helpers/auto-implement-methods.js`）。它是**空 body、没有 `Allow` 头**，不像 `{ error }` 那样可解析；`OPTIONS` 自动实现为 204 + `Allow`，`HEAD` 自动复用 `GET`。全仓库（代码和 e2e）没有任何一处碰过 405 —— 想要 JSON 405 得自己写。
-- 顺带说明 404 为什么有两种形态：`src/proxy.ts` 的 matcher 排除了 `api|trpc|_next|_vercel|opengraph-image|icon|monitoring|.*\..*`，所以 `/api/*` 和带点的路径（`/missing.png`）不经 proxy，走的是 `src/app/api/[...rest]/route.ts` 的 JSON 404（用 `X-Robots-Tag` 代替 HTML 里的 `noindex`）和根级 `src/app/not-found.tsx`。更具体的路由优先匹配（`/opengraph-image`、`/icon` 在被排除的路径里，但它们自己是真实路由，正常返回图片）。
+- **Pages need UX and APIs need to be machine-readable, so having both forms is deliberate.** A browser gets branding and a "back to home" way out from the 404 page; someone `curl`ing an endpoint wants parseable JSON, not a full page of HTML.
+- **307 isn't an arbitrary pick**: Next's `redirect()` uses 307 by default (doc `.../functions/redirect.md`: "The `redirect()` method uses a `307` by default", which preserves the request method). In-app redirects all go through `redirect` from `src/core/i18n/navigation.ts` (a next-intl wrapper).
+- **405 is framework behavior; the template doesn't implement it**: for methods a `route.ts` under `src/app/api/**` doesn't export, Next automatically fills in `new Response(null, { status: 405 })` (`node_modules/next/dist/server/route-modules/app-route/helpers/auto-implement-methods.js`). It has an **empty body and no `Allow` header**, so it isn't parseable like `{ error }`; `OPTIONS` is auto-implemented as 204 + `Allow`, and `HEAD` automatically reuses `GET`. Nothing in the repository (code or e2e) touches 405 — if you want a JSON 405, write it yourself.
+- While we're here, why 404 comes in two forms: the matcher in `src/proxy.ts` excludes `api|trpc|_next|_vercel|opengraph-image|icon|monitoring|.*\..*`, so `/api/*` and paths with a dot (`/missing.png`) bypass the proxy and get the JSON 404 from `src/app/api/[...rest]/route.ts` (with `X-Robots-Tag` instead of the HTML `noindex`) and the root-level `src/app/not-found.tsx`. More specific routes match first (`/opengraph-image` and `/icon` are among the excluded paths, but they are real routes themselves and return images normally).
 
-### 陷阱：在 `notFound()` 上方加流式边界，会把真 404 变成 200
+### Pitfall: a streaming boundary above `notFound()` turns a real 404 into a 200
 
-**现在全站 404 都是真 404，唯一的原因就是没有任何东西在流式：**
+**Every 404 on the site is a real 404 today, and the only reason is that nothing streams:**
 
 ```bash
 find src -name "loading.tsx" | wc -l   # 0
-grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提到 Suspense 不算）
+grep -rn "<Suspense" src/ | wc -l      # 0 (hand-written JSX boundaries; comments mentioning Suspense don't count)
 ```
 
-`src/` 里唯一提到 Suspense 的就是上面那条注释：`src/core/ai/playground-tabs.tsx` 用 `next/dynamic` + `loading` 给每个标签做客户端懒加载，所以上面的 grep 数的是手写的 JSX 标签。这条边界只跟 `/playground` 自己有关（它自己的 `notFound()` 在 `aiEnabled` 为 false 时抛，`src/app/[locale]/(app)/playground/page.tsx:40`，在渲染这个组件之前）；本节说的 `/does-not-exist` 路径上没有 `<Suspense>`。
+The only mention of Suspense in `src/` is the one that comment refers to: `src/core/ai/playground-tabs.tsx` uses `next/dynamic` + `loading` to lazy-load each tab on the client, which is why the grep above counts hand-written JSX tags. That boundary only concerns `/playground` itself (its own `notFound()` throws when `aiEnabled` is false, at `src/app/[locale]/(app)/playground/page.tsx:40`, before this component renders); there's no `<Suspense>` on the `/does-not-exist` path this section talks about.
 
-在 `notFound()` 调用点的**上方**加 `loading.tsx` 或 `<Suspense>`，那条路径的 404 就变成 **200 软 404**：响应头已经发出去了，状态码改不了。文档（`.../file-conventions/loading.md`）：「The response body starts streaming when a Suspense fallback renders (for example, a `loading.tsx`) or when a Server Component suspends under a `Suspense` boundary. Place `notFound()` before those boundaries and before any `await` that may suspend.」之后只剩 Next 注入的 `<meta name="robots" content="noindex">` 兜底，爬虫会把它记成 soft 404。
+Add a `loading.tsx` or `<Suspense>` **above** a `notFound()` call and that path's 404 becomes a **200 soft 404**: the response headers have already gone out, and the status code can't change. The doc (`.../file-conventions/loading.md`): "The response body starts streaming when a Suspense fallback renders (for example, a `loading.tsx`) or when a Server Component suspends under a `Suspense` boundary. Place `notFound()` before those boundaries and before any `await` that may suspend." After that, the only safety net left is the `<meta name="robots" content="noindex">` Next injects, and crawlers will record it as a soft 404.
 
-具体到这个仓库：买家访问 `/does-not-exist` 时渲染的是 `src/app/[locale]/not-found.tsx`。按文档，同段的 `loading.tsx` **会**把 `not-found.tsx` 和 `page.js` 一起包进 `<Suspense>`（「`loading.js` wraps `not-found.js`, `page.js`, and nested `layout.js` files in a `<Suspense>` boundary」）—— 也就是说这个边界一旦建立，那条 404 就在它的下方。
+Concretely in this repository: when a buyer visits `/does-not-exist`, what renders is `src/app/[locale]/not-found.tsx`. Per the docs, a `loading.tsx` in the same segment **does** wrap `not-found.tsx` together with `page.js` in `<Suspense>` ("`loading.js` wraps `not-found.js`, `page.js`, and nested `layout.js` files in a `<Suspense>` boundary") — so once that boundary exists, that 404 sits below it.
 
-**哪条路径真的会变成 200，取决于那个页面的实现**：先刷出 fallback、或页面先 `await` 到挂起，状态码就锁定在 200；同步渲染、还没等就抛 `notFound()` 的，可能仍是 404。所以别把它当成「加个骨架屏没副作用」—— 文档给的判据就一句：「Place `notFound()` before those boundaries and before any `await` that may suspend.」改完要**逐条实测状态码**，别只看界面渲染对不对。
+**Which paths actually become 200 depends on how each page is implemented**: if the fallback flushes first, or the page `await`s until it suspends, the status is locked at 200; a page that renders synchronously and throws `notFound()` before waiting on anything may still be a 404. So don't treat it as "a skeleton screen with no side effects" — the docs give a single rule: "Place `notFound()` before those boundaries and before any `await` that may suspend." After a change, **test the status code of each path for real**, not just whether the UI renders correctly.
 
-（本节写的是机制，没有逐条实测本仓库加 `loading.tsx` 之后的状态码 —— 那要起服务跑一遍。）
+(This section describes the mechanism; it hasn't tested, path by path, what status codes this repository returns after adding a `loading.tsx` — that requires starting the server and running through them.)
 
-「体验更好」和「真 404」在这里是有代价的：流式一旦开始，状态码就锁死。想两者都要，就得让 `notFound()` 在流式开始前跑完（文档给的办法是把存在性检查挪进 `proxy`）。真要加 instant loading，先掂量代价。
+"Better experience" and "real 404" come at a cost here: once streaming starts, the status code is locked. To have both, `notFound()` has to finish before streaming starts (the docs' approach is to move the existence check into `proxy`). If you really want instant loading, weigh the cost first.
 
-### `loading.tsx` 在 `(app)` / `(admin)` 里不会生效
+### `loading.tsx` has no effect in `(app)` / `(admin)`
 
-`(app)` / `(admin)` 的 layout 都要读请求数据：`(app)` 的 layout 调 `getSession()`，`(admin)` 的调 `requireAdmin()`，两者最终都落到 `src/core/auth/session.ts` 里的 `auth.api.getSession({ headers: await headers() })`。文档（`.../file-conventions/loading.md`）：「If the layout accesses uncached or runtime data (e.g. `cookies()`, `headers()`, or uncached fetches), `loading.js` will not show a fallback for it.」没有 Cache Components 时「Navigation blocks until the layout finishes rendering」。
+The `(app)` / `(admin)` layouts both read request data: the `(app)` layout calls `getSession()` and the `(admin)` one calls `requireAdmin()`, and both end up at `auth.api.getSession({ headers: await headers() })` in `src/core/auth/session.ts`. The doc (`.../file-conventions/loading.md`): "If the layout accesses uncached or runtime data (e.g. `cookies()`, `headers()`, or uncached fetches), `loading.js` will not show a fallback for it." Without Cache Components, "Navigation blocks until the layout finishes rendering".
 
-本模板没开 Cache Components（`next.config.ts` 里没有 `experimental` 键），所以 `src/app/[locale]/(app)/loading.tsx` 不会显示骨架屏 —— 导航会一直等到 layout 渲染完，加了等于没加。
+This template doesn't enable Cache Components (there's no `experimental` key in `next.config.ts`), so `src/app/[locale]/(app)/loading.tsx` wouldn't show a skeleton — navigation waits until the layout finishes rendering, and adding it does nothing.
 
-想加 instant loading，按文档做两件事之一：**把取数从 layout 下移到 page**（`loading.tsx` 包的是 page），或把 layout 里读请求数据的那部分**单独**包一个 `<Suspense>`。**但先回头看上一条**：`<Suspense>` 会开始流式，会连带改变该路径 404 的状态码。
+To get instant loading, the docs offer two options: **move data fetching from the layout down into the page** (`loading.tsx` wraps the page), or wrap the part of the layout that reads request data in its **own** `<Suspense>`. **But look back at the previous item first**: `<Suspense>` starts streaming, which also changes the status code of that path's 404.
 
-## 上线清单
+## Launch checklist
 
 ### 1. Vercel
 
-- 在 Vercel 导入 GitHub 仓库。仓库根目录的 `vercel.json` 已把 Framework 设为 Next.js，其他保持默认；Node 版本取自 `package.json` 的 `engines`（24.x），pnpm 版本取自 `packageManager`。
-- 导入后，只有 `main` 自动部署到生产环境：`vercel.json` 的 `git.deploymentEnabled` 关掉了其他分支和 PR 的自动预览部署，省 Hobby 套餐的部署额度（每天有上限，超了要等 24 小时）。需要预览时在本地运行 `vercel deploy` 手动部署一次；想恢复每个 PR 自动预览，删掉 `git.deploymentEnabled` 即可。下文关于预览部署的说明在手动或恢复自动预览时适用。
-- `vercel.json` 的 `ignoreCommand`：自上次部署以来只改了 `docs/` 或 `*.md` 时跳过构建，节省部署次数（Hobby 套餐每天 100 次，账号内所有项目共用）。
-- 如果导入时找不到仓库：到 GitHub → Settings → Applications → Vercel → Configure，在 Repository access 里加上这个仓库。
+- Import the GitHub repository in Vercel. `vercel.json` at the repository root already sets the Framework to Next.js; leave everything else at the defaults. The Node version comes from `engines` in `package.json` (24.x), and the pnpm version from `packageManager`.
+- After the import, only `main` deploys automatically, to production: `git.deploymentEnabled` in `vercel.json` turns off automatic preview deployments for other branches and PRs, which saves the Hobby plan's deployment quota (there is a daily cap; once you hit it you wait 24 hours). When you need a preview, run `vercel deploy` locally to deploy once by hand; to get automatic previews for every PR back, delete `git.deploymentEnabled`. The notes about preview deployments below apply when you deploy previews by hand or turn automatic previews back on.
+- `ignoreCommand` in `vercel.json`: if only `docs/` or `*.md` changed since the last deployment, the build is skipped to save deployments (the Hobby plan allows 100 per day, shared by every project in the account).
+- If you can't find the repository during import: go to GitHub → Settings → Applications → Vercel → Configure and add the repository under Repository access.
 
-### 2. 域名与 DNS
+### 2. Domain and DNS
 
-- Vercel 项目 → Settings → Domains 添加生产域名（与 `site.config.ts` 的 `domain` 保持一致）。
-- 在 DNS 服务商处添加 Vercel 给出的记录：
-  - 子域名：`CNAME` 指向 Vercel 提供的目标（形如 `xxxx.vercel-dns-017.com`）
-  - 根域名：`A` 记录指向 Vercel 提供的 IP
-  - 如果域名已被其他 Vercel 账号使用过，还要按提示添加 `_vercel` 的 `TXT` 验证记录
-- 使用 Cloudflare 时，这些记录要设为 **DNS only**（灰色云朵）。开启代理会干扰 Vercel 签发证书。
-- 验证通过后，Vercel 会自动签发 HTTPS 证书。用浏览器访问 `https://<domain>`，确认证书有效、`/sitemap.xml` 和 `/robots.txt` 能打开。
-- 域名确定之后开启 HSTS：在 `src/core/security/headers.ts` 的 `staticSecurityHeaders()` 里加一条 `{ key: "Strict-Transport-Security", value: "max-age=63072000" }`（所有子域名都走 HTTPS 的话可以再加 `; includeSubDomains`）。模板默认不下发这个头：HSTS 会被浏览器按域名记住，域名没定就下发等于把自己锁住。要提交 `preload` 列表的话先确认满足它的条件 —— 进了浏览器内置列表之后撤销很慢。
+- In the Vercel project → Settings → Domains, add your production domain (it must match `domain` in `site.config.ts`).
+- At your DNS provider, add the records Vercel gives you:
+  - Subdomain: a `CNAME` pointing to the target Vercel provides (something like `xxxx.vercel-dns-017.com`)
+  - Apex domain: an `A` record pointing to the IP Vercel provides
+  - If the domain was used by another Vercel account before, also add the `_vercel` `TXT` verification record when prompted
+- If you use Cloudflare, set these records to **DNS only** (gray cloud). Proxying interferes with Vercel issuing the certificate.
+- Once verification passes, Vercel issues the HTTPS certificate automatically. Open `https://<domain>` in a browser and confirm the certificate is valid and `/sitemap.xml` and `/robots.txt` load.
+- Turn on HSTS once the domain is settled: add `{ key: "Strict-Transport-Security", value: "max-age=63072000" }` to `staticSecurityHeaders()` in `src/core/security/headers.ts` (if every subdomain is served over HTTPS you can append `; includeSubDomains`). The template doesn't send this header by default: browsers remember HSTS per domain, so sending it before the domain is settled locks you in. If you want to submit to the `preload` list, first confirm you meet its requirements — once you're in the browsers' built-in list, getting removed is slow.
 
-### 3. 环境变量
+### 3. Environment variables
 
-在 Vercel 项目 → Settings → Environment Variables 中按环境（Production / Preview）填写。变量清单以 `src/core/env.ts` 为准，缺少必需变量时构建会直接失败。
+In the Vercel project → Settings → Environment Variables, fill these in per environment (Production / Preview). `src/core/env.ts` is the source of truth for the list; the build fails outright when a required variable is missing.
 
-| 变量                                                                                        | 说明                                                                                                                                                                                                                                        |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                                              | Postgres 连接地址。Production 和各个预览部署由 Neon 的 Vercel 集成自动注入（见下文）。                                                                                                                                                      |
-| `RESEND_API_KEY`                                                                            | Resend API key（`re_` 开头）。Production 和 Preview 都要填：Vercel 上两者都是生产构建。                                                                                                                                                     |
-| `EMAIL_TRANSPORT`                                                                           | 通常不填，生产环境默认 `resend`。生产运行时（Vercel 或 `NODE_ENV=production`）设成 `console` / `file` 会启动失败。                                                                                                                          |
-| `ALLOW_NON_RESEND_EMAIL`                                                                    | 可选，默认关闭。设为 `1` / `true` 时放行生产运行时的 `console` / `file`（CI 的 e2e 需要）。                                                                                                                                                 |
-| `BETTER_AUTH_SECRET`                                                                        | 必填，Production 和 Preview 都要填（`openssl rand -base64 32`）。两个环境用不同的值。                                                                                                                                                       |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                                 | Production 必填（见下文"登录（Google）"）。预览部署不提供 Google 登录，Preview 可以不填。                                                                                                                                                   |
-| `BETTER_AUTH_URL`                                                                           | 通常不填：生产环境自动取 `site.config.ts` 的 `domain`，预览取本次部署的地址。                                                                                                                                                               |
-| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                                    | 生效服务商是 Creem 且站点有付费套餐时 Production 必填（见下文"支付（Creem / Stripe）"）。Preview 可以不填，此时结账返回 503。                                                                                                               |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                                               | 生效服务商是 Stripe 且有付费套餐时 Production 必填（见下文"支付（Creem / Stripe）"）。两组密钥只填**生效服务商**那一组。                                                                                                                    |
-| `WAFFO_MERCHANT_ID` / `WAFFO_PRIVATE_KEY`                                                   | 生效服务商是 Waffo Pancake 且有付费套餐时 Production 必填（见下文"支付（Waffo Pancake）"）。`WAFFO_MODE` 默认 `test`，真实收款设 `prod`。                                                                                                   |
-| `LEMONSQUEEZY_API_KEY` / `LEMONSQUEEZY_WEBHOOK_SECRET` / `LEMONSQUEEZY_STORE_ID`            | 生效服务商是 Lemon Squeezy 且有付费套餐时 Production 必填（见下文"支付（Lemon Squeezy）"）。Preview 可以不填，此时结账返回 503。                                                                                                            |
-| `CREEM_MODE`                                                                                | 只在用 Creem 时有意义：`test`（默认）或 `live`。上线真实收款前必须显式设为 `live`。                                                                                                                                                         |
-| `BILLING_PROVIDER`                                                                          | 不填时用 `site.config.ts` 的 `billing.provider`（出厂 `creem`）。可选 `creem` / `stripe` / `lemonsqueezy` / `waffo` / `fake`；`fake` 只用于本地和 CI 的 e2e，生产运行时、Vercel、`CREEM_MODE=live` 或 live 的 Stripe 密钥下设置会启动失败。 |
-| `ALLOW_FAKE_BILLING`                                                                        | 可选，默认关闭。设为 `1` / `true` 时放行 fake（CI 的 e2e 需要）；Vercel、`CREEM_MODE=live` 和 live 的 Stripe 密钥下无效。                                                                                                                   |
-| `BILLING_SUCCESS_TIMEOUT_MS`                                                                | 可选，成功页等待 webhook 的时长，默认 `60000`。                                                                                                                                                                                             |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`                                       | 开启 `features.ai`、`upload` 或 `rateLimit` 时 Production 必填（见下文"限流（Upstash）"）。Preview 不填时跳过限流。                                                                                                                         |
-| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET`                 | 开启 `features.upload` 时 Production 必填（见下文"文件上传（Cloudflare R2）"）。Preview 不填时上传接口返回 503。                                                                                                                            |
-| `R2_PUBLIC_URL`                                                                             | bucket 的公开域名（`https://files.example.com`），只在 `upload.public` 为 true 时需要。                                                                                                                                                     |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `ALIBABA_API_KEY` | 开启 `features.ai` 时，Production 必须填上 `ai.models` 用到的每家服务商的 key（见下文"AI 服务商"）。Preview 不填时对应模型返回 503。                                                                                                        |
-| `ADMIN_EMAILS`                                                                              | 开启 `features.admin` 时 Production 必填：逗号分隔的邮箱，用这些邮箱登录即成为管理员（见"配置"里的后台）。Preview 可以不填。                                                                                                                |
-| `CRON_SECRET`                                                                               | 建议 Production 填（`openssl rand -hex 32`，至少 16 个字符）：恢复入口 `/api/cron/recovery` 的密钥，Vercel 的 cron 会自动带上。不填时入口返回 404，悬着的 AI 任务只靠用户访问时顺带扫描（见下文「恢复扫描」）。                             |
-| `ALIBABA_BASE_URL`                                                                          | 可选。百炼 key 所在地域的地址，不填是国际站；北京地域填 `https://dashscope.aliyuncs.com/compatible-mode/v1`。                                                                                                                               |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                               | 可选。开启 `observability.otel` 且不用 Vercel 的 trace 集成时，trace 导出到这个 OTLP 地址（见下文"日志与追踪"）。                                                                                                                           |
-| `NEXT_PUBLIC_SENTRY_DSN`                                                                    | 开启 `observability.sentry` 时必填（Production 和 Preview 都要）：Sentry 项目的 DSN（见下文"错误追踪（Sentry）"）。                                                                                                                         |
-| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT`                                       | 可选。三项都填时构建会上传 source map，Sentry 里的堆栈显示源码位置；上传后从产物里删掉。                                                                                                                                                    |
+| Variable                                                                                    | Notes                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                              | Postgres connection string. Injected automatically for Production and each preview deployment by Neon's Vercel integration (see below).                                                                                                                                                                                                                       |
+| `RESEND_API_KEY`                                                                            | Resend API key (starts with `re_`). Fill it in for both Production and Preview: on Vercel, both are production builds.                                                                                                                                                                                                                                        |
+| `EMAIL_TRANSPORT`                                                                           | Usually left empty; production defaults to `resend`. Setting it to `console` / `file` in a production runtime (Vercel or `NODE_ENV=production`) makes startup fail.                                                                                                                                                                                           |
+| `ALLOW_NON_RESEND_EMAIL`                                                                    | Optional, off by default. Setting it to `1` / `true` allows `console` / `file` in a production runtime (needed by CI's e2e).                                                                                                                                                                                                                                  |
+| `BETTER_AUTH_SECRET`                                                                        | Required for both Production and Preview (`openssl rand -base64 32`). Use a different value for each environment.                                                                                                                                                                                                                                             |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                                 | Required for Production (see "Google sign-in" below). Preview deployments don't offer Google sign-in, so you can leave them empty for Preview.                                                                                                                                                                                                                |
+| `BETTER_AUTH_URL`                                                                           | Usually left empty: production uses `domain` from `site.config.ts` automatically, and previews use the current deployment's URL.                                                                                                                                                                                                                              |
+| `CREEM_API_KEY` / `CREEM_WEBHOOK_SECRET`                                                    | Required for Production when the active provider is Creem and the site has paid plans (see "Payments (Creem / Stripe)" below). You can leave them empty for Preview; checkout then returns 503.                                                                                                                                                               |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`                                               | Required for Production when the active provider is Stripe and there are paid plans (see "Payments (Creem / Stripe)" below). Fill in only the pair for the **active provider**.                                                                                                                                                                               |
+| `WAFFO_MERCHANT_ID` / `WAFFO_PRIVATE_KEY`                                                   | Required for Production when the active provider is Waffo Pancake and there are paid plans (see "Payments (Waffo Pancake)" below). `WAFFO_MODE` defaults to `test`; set it to `prod` for real payments.                                                                                                                                                       |
+| `LEMONSQUEEZY_API_KEY` / `LEMONSQUEEZY_WEBHOOK_SECRET` / `LEMONSQUEEZY_STORE_ID`            | Required for Production when the active provider is Lemon Squeezy and there are paid plans (see "Payments (Lemon Squeezy)" below). You can leave them empty for Preview; checkout then returns 503.                                                                                                                                                           |
+| `CREEM_MODE`                                                                                | Only meaningful with Creem: `test` (default) or `live`. You must set it to `live` explicitly before taking real payments.                                                                                                                                                                                                                                     |
+| `BILLING_PROVIDER`                                                                          | When empty, `billing.provider` from `site.config.ts` is used (`creem` out of the box). One of `creem` / `stripe` / `lemonsqueezy` / `waffo` / `fake`; `fake` is only for local and CI e2e, and setting it in a production runtime, on Vercel, with `CREEM_MODE=live`, or with a live Stripe key makes startup fail.                                           |
+| `ALLOW_FAKE_BILLING`                                                                        | Optional, off by default. Setting it to `1` / `true` allows fake (needed by CI's e2e); it has no effect on Vercel, with `CREEM_MODE=live`, or with a live Stripe key.                                                                                                                                                                                         |
+| `BILLING_SUCCESS_TIMEOUT_MS`                                                                | Optional. How long the success page waits for the webhook; defaults to `60000`.                                                                                                                                                                                                                                                                               |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`                                       | Required for Production when `features.ai`, `upload`, or `rateLimit` is on (see "Rate limiting (Upstash)" below). When empty on Preview, rate limiting is skipped.                                                                                                                                                                                            |
+| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET`                 | Required for Production when `features.upload` is on (see "File uploads (Cloudflare R2)" below). When empty on Preview, the upload endpoints return 503.                                                                                                                                                                                                      |
+| `R2_PUBLIC_URL`                                                                             | The bucket's public domain (`https://files.example.com`); only needed when `upload.public` is true.                                                                                                                                                                                                                                                           |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` / `ALIBABA_API_KEY` | When `features.ai` is on, Production must have a key for every provider that `ai.models` uses (see "AI providers" below). When empty on Preview, the corresponding models return 503.                                                                                                                                                                         |
+| `ADMIN_EMAILS`                                                                              | Required for Production when `features.admin` is on: comma-separated emails; signing in with one of them makes you an admin (see the admin part of "Configuration"). You can leave it empty for Preview.                                                                                                                                                      |
+| `CRON_SECRET`                                                                               | Recommended for Production (`openssl rand -hex 32`, at least 16 characters): the secret for the recovery endpoint `/api/cron/recovery`; Vercel's cron sends it automatically. When empty, the endpoint returns 404 and the recovery sweep (stuck AI jobs, unsent emails) only runs opportunistically when users use AI features (see "Recovery sweep" below). |
+| `ALIBABA_BASE_URL`                                                                          | Optional. The endpoint for the region your Model Studio key belongs to; empty means the international site. For the Beijing region, use `https://dashscope.aliyuncs.com/compatible-mode/v1`.                                                                                                                                                                  |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                               | Optional. When `observability.otel` is on and you don't use Vercel's trace integration, traces are exported to this OTLP endpoint (see "Logs and tracing" below).                                                                                                                                                                                             |
+| `NEXT_PUBLIC_SENTRY_DSN`                                                                    | Required when `observability.sentry` is on (for both Production and Preview): your Sentry project's DSN (see "Error tracking (Sentry)" below).                                                                                                                                                                                                                |
+| `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT`                                       | Optional. When all three are set, the build uploads source maps so Sentry stack traces show source locations; the maps are deleted from the build output after upload.                                                                                                                                                                                        |
 
-> 少数变量在**构建期**读取：`next.config.ts` 的 `headers()` 用 `GOOGLE_CLIENT_ID` 和 `R2_PUBLIC_URL` 生成 CSP 白名单。Vercel 上构建和运行用同一套变量，不用管；自托管或 Docker 若只在运行时注入这两项，会出现「页面有按钮、脚本却被 CSP 静默拦掉」。
+> A few variables are read at **build time**: `headers()` in `next.config.ts` uses `GOOGLE_CLIENT_ID` and `R2_PUBLIC_URL` to build the CSP allowlist. On Vercel, build and runtime share the same variables, so you don't need to do anything; if you self-host or use Docker and inject these two only at runtime, you get "the page shows the button, but CSP silently blocks the script."
 
-### 4. 按已开启的模块准备外部账号
+### 4. External accounts for the modules you enabled
 
-| 模块                                   | 外部服务                       | 什么时候需要           |
-| -------------------------------------- | ------------------------------ | ---------------------- |
-| 数据库                                 | Neon Postgres                  | 登录功能上线时         |
-| 邮件                                   | Resend（并配置 SPF / DKIM）    | 登录功能上线时         |
-| 登录                                   | Google Cloud OAuth 客户端      | 登录功能上线时         |
-| 支付                                   | Creem、Stripe 或 Lemon Squeezy | 开始收款时             |
-| `features.rateLimit` / `ai` / `upload` | Upstash Redis                  | 生产环境开启任一模块时 |
-| `features.ai`                          | AI 模型服务商                  | 开启 AI 时             |
-| `features.upload`                      | Cloudflare R2                  | 开启上传时             |
-| `features.admin`                       | 无（只需 `ADMIN_EMAILS`）      | 开启后台时             |
-| `observability.sentry`                 | Sentry                         | 开启错误追踪时         |
+| Module                                 | External service                | When you need it                      |
+| -------------------------------------- | ------------------------------- | ------------------------------------- |
+| Database                               | Neon Postgres                   | When sign-in goes live                |
+| Email                                  | Resend (with SPF / DKIM set up) | When sign-in goes live                |
+| Sign-in                                | Google Cloud OAuth client       | When sign-in goes live                |
+| Payments                               | Creem, Stripe, or Lemon Squeezy | When you start taking payments        |
+| `features.rateLimit` / `ai` / `upload` | Upstash Redis                   | When any of these is on in production |
+| `features.ai`                          | AI model provider               | When AI is on                         |
+| `features.upload`                      | Cloudflare R2                   | When uploads are on                   |
+| `features.admin`                       | None (only `ADMIN_EMAILS`)      | When the admin is on                  |
+| `observability.sentry`                 | Sentry                          | When error tracking is on             |
 
-各模块的变量名和申请步骤见下面各分节。
+The subsections below give each module's variable names and sign-up steps.
 
-#### 数据库（Neon）
+#### Database (Neon)
 
-1. 在 Neon 创建项目，默认分支作为生产库。
-2. Vercel 项目 → Integrations，从 Marketplace 安装 **Neon**，关联上一步的 Neon 项目，并开启 **Create a branch for each preview deployment**。集成会为 Production 注入主分支的 `DATABASE_URL`，为每个预览部署创建独立的数据库分支并注入对应的 `DATABASE_URL`，预览不会连到生产库。
-3. 迁移随部署自动执行：`vercel.json` 的构建命令是 `pnpm db:migrate && pnpm build`，预览部署迁移自己的分支，生产部署迁移主分支。迁移失败时本次部署会失败，线上仍是上一个版本。
-   - 迁移会在新代码上线前执行，线上旧代码会短暂面对新表结构。所以迁移应保持向后兼容：先加列或加表，删列放到下一次发布。
+1. Create a project in Neon; its default branch is your production database.
+2. In the Vercel project → Integrations, install **Neon** from the Marketplace, link it to the Neon project from the previous step, and turn on **Create a branch for each preview deployment**. The integration injects the main branch's `DATABASE_URL` into Production and creates a separate database branch for each preview deployment, injecting its `DATABASE_URL`, so previews never connect to the production database.
+3. Migrations run automatically with each deployment: the build command in `vercel.json` is `pnpm db:migrate && pnpm build`, so preview deployments migrate their own branch and production deployments migrate the main branch. If a migration fails, that deployment fails and the previous version stays live.
+   - Migrations run before the new code goes live, so the old code in production briefly faces the new schema. Keep migrations backward compatible: add columns or tables first, and drop columns in the next release.
 
-#### 邮件（Resend）
+#### Email (Resend)
 
-1. 在 Resend → Domains 添加发信域名，与 `site.config.ts` 的 `email.fromAddress` 的域名一致（比如发件人填 `noreply@mail.acme.com`，就添加 `mail.acme.com`）。建议用子域名发信，不影响根域名的邮件信誉。
-2. 在 DNS 服务商处添加 Resend 给出的记录：
-   - SPF：`send` 子域名下的 `MX` 和 `TXT`（具体取值以 Resend 面板给出的为准）
-   - DKIM：`resend._domainkey` 的 `TXT`
-   - DMARC（建议）：`_dmarc` 的 `TXT`，例如 `v=DMARC1; p=none; rua=mailto:<你的邮箱>`
-   - 使用 Cloudflare 时，这些记录都设为 **DNS only**。
-3. 等 Resend 显示域名已验证，然后在 API Keys 创建一个只有发送权限（Sending access）的 key，填到 Vercel 的 `RESEND_API_KEY`。
-4. 部署后触发一次真实发信（比如登录验证码），确认邮件进了收件箱而不是垃圾箱。
+1. In Resend → Domains, add your sending domain; it must match the domain of `email.fromAddress` in `site.config.ts` (for example, if the sender is `noreply@mail.acme.com`, add `mail.acme.com`). Sending from a subdomain is recommended so it doesn't affect your apex domain's email reputation.
+2. At your DNS provider, add the records Resend gives you:
+   - SPF: `MX` and `TXT` under the `send` subdomain (use the exact values shown in the Resend dashboard)
+   - DKIM: a `TXT` record for `resend._domainkey`
+   - DMARC (recommended): a `TXT` record for `_dmarc`, for example `v=DMARC1; p=none; rua=mailto:<your email>`
+   - If you use Cloudflare, set all of these records to **DNS only**.
+3. Wait until Resend shows the domain as verified, then under API Keys create a key with only Sending access and put it in `RESEND_API_KEY` on Vercel.
+4. After deploying, trigger a real email (a sign-in code, for example) and confirm it lands in the inbox, not spam.
 
-#### 登录（Google）
+#### Google sign-in
 
-1. Google Cloud Console → APIs & Services：
-   - OAuth consent screen：填写应用名称、支持邮箱、`site.config.ts` 的域名和隐私政策 / 服务条款地址（`https://<domain>/privacy`、`/terms`），发布状态设为 In production。
-   - Credentials → Create credentials → OAuth client ID，类型选 **Web application**。
-     - Authorized JavaScript origins：`https://<domain>`、`http://localhost:3000`
-       - 这一项**必须登记**：登录页的 Google One Tap 提示会校验当前 origin，端口也要对得上（换了端口跑 e2e 就再加一条）。没登记的表现是**完全静默** —— 提示不弹、页面不报错，只有浏览器 console 里一条 `The given origin is not allowed for the given client ID`，开发环境下模板会额外打印 One Tap 放弃显示的原因。
-       - 它与下面的 redirect URIs 是**两个独立的清单**，各管一段流程，不要只填一个。
-     - Authorized redirect URIs：`https://<domain>/api/auth/callback/google`、`http://localhost:3000/api/auth/callback/google`
-2. 把 Client ID 和 Client secret 填到 Vercel Production 的 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`；本地需要测试 Google 登录时填到 `.env.local`。
-3. 预览部署的地址每次都不同，既无法登记为回调地址，也无法登记为 JavaScript origin，所以预览只提供邮箱验证码登录。以后需要时可以接入 Better Auth 的 `oauth-proxy` 插件。
-4. 账户关联：同一邮箱先用验证码注册、再用 Google 登录，会进入同一个账户（`google` 是可信 provider）。
+1. Google Cloud Console → APIs & Services:
+   - OAuth consent screen: fill in the app name, support email, the domain from `site.config.ts`, and the privacy policy / terms of service URLs (`https://<domain>/privacy`, `/terms`); set the publishing status to In production.
+   - Credentials → Create credentials → OAuth client ID, type **Web application**.
+     - Authorized JavaScript origins: `https://<domain>`, `http://localhost:3000`
+       - You **must register** this: the Google One Tap prompt on the sign-in page checks the current origin, including the port (add another entry if you run e2e on a different port). When it's missing, the failure is **completely silent** — no prompt, no error on the page, just one line in the browser console, `The given origin is not allowed for the given client ID`. In development, the template also logs why One Tap declined to show.
+       - These and the redirect URIs below are **two separate lists**, each covering a different part of the flow; don't fill in only one.
+     - Authorized redirect URIs: `https://<domain>/api/auth/callback/google`, `http://localhost:3000/api/auth/callback/google`
+2. Put the Client ID and Client secret into `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on Vercel Production; put them in `.env.local` when you need to test Google sign-in locally.
+3. Preview deployment URLs change every time, so they can't be registered as redirect URIs or JavaScript origins; previews therefore offer only email-code sign-in. If you need it later, you can add Better Auth's `oauth-proxy` plugin.
+4. Account linking: if the same email first signs up with a code and then signs in with Google, both land in the same account (`google` is a trusted provider).
 
-#### 支付（Creem / Stripe）
+#### Payments (Creem / Stripe)
 
-两个服务商二选一。生效的是 `site.config.ts` 的 `billing.provider`（出厂 `creem`），运行时可以用 `BILLING_PROVIDER` 覆盖 —— 改这个字段而不是只设环境变量：套餐产品 ID 的环境变量前缀跟着生效的服务商走（Creem `CREEM_PRODUCT_ID_*`、Stripe `STRIPE_PRICE_ID_*`），`site.config.ts` 里没配产品 ID 时读的是对应前缀的变量。
+Pick one of the two providers. The active one is `billing.provider` in `site.config.ts` (`creem` out of the box), which you can override at runtime with `BILLING_PROVIDER` — change the field rather than only setting the environment variable: the prefix of the plan product ID environment variables follows the active provider (Creem `CREEM_PRODUCT_ID_*`, Stripe `STRIPE_PRICE_ID_*`), and when `site.config.ts` has no product ID configured, the variable with the matching prefix is read.
 
-两边共通的：
+What both have in common:
 
-- 一次付款对应一个订单：一次性付款用支付意图 / 结账会话当订单号，订阅的首期由第一张发票记，结账会话本身不记；订阅每期都用发票 ID 当订单号，重试成功会和失败事件合并成同一单。订单表、积分账本和后台统计都不区分服务商。
-- 两条 webhook 路由都在（`/api/webhooks/creem`、`/api/webhooks/stripe`），只处理**生效服务商**的那条，另一条返回 503（`{"error":"billing_not_configured"}`）。
-- 客户门户：账单页的"管理订阅"跳服务商托管的门户，在那边换卡、看发票、取消订阅。
-- 删除账户时先取消仍在计费的订阅；取消失败时删除中止。
-- 自托管（Docker / `next start`，没有 `VERCEL_ENV`）时同样的闸门按 `NODE_ENV` 生效：生产运行时把 `BILLING_PROVIDER` 设成 `fake` 会启动失败，fake 的结账页、客户门户和 webhook 路由也一律 404。只有显式设 `ALLOW_FAKE_BILLING=1` 才放行，它只用于本地/CI 的 e2e 或明确的模拟支付环境 —— 开了之后任何人都能走假结账免费拿到套餐和积分，别在对外环境开。
+- One payment maps to one order: one-time payments use the payment intent / checkout session as the order ID; a subscription's first period is recorded from its first invoice, not from the checkout session itself; every subscription period uses the invoice ID as the order ID, and a successful retry is merged with the failure event into the same order. The orders table, the credit ledger, and the admin stats don't distinguish between providers.
+- Both webhook routes exist (`/api/webhooks/creem`, `/api/webhooks/stripe`); only the **active provider's** route is processed, and the other returns 503 (`{"error":"billing_not_configured"}`).
+- Customer portal: "Manage subscription" on the billing page goes to the provider-hosted portal, where customers change cards, view invoices, and cancel subscriptions.
+- Deleting an account first cancels any subscription that is still billing; if the cancellation fails, the deletion is aborted.
+- When self-hosting (Docker / `next start`, no `VERCEL_ENV`), the same gate applies based on `NODE_ENV`: setting `BILLING_PROVIDER` to `fake` in a production runtime makes startup fail, and the fake checkout page, customer portal, and webhook routes all return 404. Only an explicit `ALLOW_FAKE_BILLING=1` lets it through, and that is only for local/CI e2e or a deliberate simulated-payments environment — once it's on, anyone can go through the fake checkout and get plans and credits for free, so never turn it on in a public-facing environment.
 
 ##### Creem
 
-1. 在 Creem 后台用左下角的开关切到 **Test Mode**，创建产品：订阅套餐选 recurring（每月或每年，与 `site.config.ts` 的 `interval` 一致），一次性套餐选 one-time。把产品 ID（`prod_...`）填进 `site.config.ts` 对应套餐的 `providerProductId`。占位值 `prod_placeholder_*` 不允许结账。
-2. Developers 里拿 API key 和 webhook secret，填到 Vercel Production 的 `CREEM_API_KEY`、`CREEM_WEBHOOK_SECRET`；`CREEM_MODE` 不填（默认 `test`）。
-3. Developers → Webhooks 添加地址 `https://<domain>/api/webhooks/creem`。
-   - Vercel 的预览部署默认开启 Deployment Protection，外部请求会被拦截，所以 webhook 不能指向预览地址。测试模式的 webhook 也指向生产域名；本地调试用 [Creem CLI](https://docs.creem.io/code/cli) 的本地转发或 ngrok 之类的隧道。
-   - 用了 Cloudflare 代理或 WAF 时，给 webhook 路径放行，不要被 Bot Fight Mode 拦住。
-4. 测试卡 `4111 1111 1111 1111`（任意未来日期和 CVV）完成一次订阅和一次一次性付款，检查 `subscriptions`、`orders`、`credit_transactions` 表。
-5. 切到生产模式（真实收款）：
-   - Creem 后台关掉 Test Mode，重新创建同样的产品，把生产模式的产品 ID 换进 `site.config.ts`。
-   - 换成生产模式的 `CREEM_API_KEY` 和 `CREEM_WEBHOOK_SECRET`，并把 `CREEM_MODE` 设为 `live`。
-   - 在生产模式的 Developers → Webhooks 重新添加同一个 webhook 地址。
-6. 退款会按已退金额的比例回收集分（`refund.created` 钩子，见"配置"一节），回收不走 Creem 的退款接口 —— 退款操作仍然只在 Creem 后台做。
+1. In the Creem dashboard, switch to **Test Mode** with the toggle in the bottom left and create products: recurring for subscription plans (monthly or yearly, matching `interval` in `site.config.ts`) and one-time for one-time plans. Put each product ID (`prod_...`) into `providerProductId` of the matching plan in `site.config.ts`. The placeholder `prod_placeholder_*` can't be checked out.
+2. Get the API key and webhook secret under Developers and put them into `CREEM_API_KEY` and `CREEM_WEBHOOK_SECRET` on Vercel Production; leave `CREEM_MODE` empty (defaults to `test`).
+3. Under Developers → Webhooks, add `https://<domain>/api/webhooks/creem`.
+   - Vercel preview deployments have Deployment Protection on by default, which blocks outside requests, so the webhook can't point at a preview URL. Point test-mode webhooks at the production domain too; for local debugging, use the [Creem CLI](https://docs.creem.io/code/cli)'s local forwarding or a tunnel such as ngrok.
+   - If you use a Cloudflare proxy or WAF, allow the webhook path so Bot Fight Mode doesn't block it.
+4. With test card `4111 1111 1111 1111` (any future date and CVV), complete one subscription and one one-time payment, then check the `subscriptions`, `orders`, and `credit_transactions` tables.
+5. Switching to live mode (real payments):
+   - Turn off Test Mode in the Creem dashboard, recreate the same products, and swap the live product IDs into `site.config.ts`.
+   - Switch to the live `CREEM_API_KEY` and `CREEM_WEBHOOK_SECRET`, and set `CREEM_MODE` to `live`.
+   - Add the same webhook URL again under Developers → Webhooks in live mode.
+6. Refunds reclaim credits in proportion to the amount refunded (the `refund.created` hook; see "Configuration"). Reclaiming doesn't go through Creem's refund API — you still issue refunds only in the Creem dashboard.
 
 ##### Stripe
 
-1. Stripe 后台先切到 **Test mode**，Products 里创建产品，每个套餐加一个价格：订阅套餐用按月循环（recurring）的价格，买断套餐用一次性（one-time）的价格。填进 `site.config.ts` 的是 **Price ID（`price_...`）**，不是 Product ID（`prod_...`）；也可以用 `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME` 覆盖。占位值 `prod_placeholder_*` 不允许结账。
-2. Developers → API keys 拿 `sk_test_...` 填到 Vercel Production 的 `STRIPE_SECRET_KEY`；受限密钥（`rk_...`，只能改指定资源）同样可用。
-3. Developers → Webhooks 添加端点 `https://<domain>/api/webhooks/stripe`，订阅 `checkout.session.completed`、`invoice.paid`、`invoice.payment_failed`、`customer.subscription.updated`、`customer.subscription.deleted` 这几类事件（其余事件收到也忽略，不影响记账），把签名密钥（`whsec_...`）填到 `STRIPE_WEBHOOK_SECRET`。它和 Creem 的 webhook secret 不通用。
-   - 本地调试：`stripe listen --forward-to localhost:3000/api/webhooks/stripe`，CLI 会打印一个临时的 `whsec_...`，用 `stripe trigger checkout.session.completed` 之类的命令发测试事件。
-   - webhook 地址和 Cloudflare / Deployment Protection 的注意事项和 Creem 那节一样：指向生产域名，别指向预览地址。
-4. 测试卡 `4242 4242 4242 4242`（任意未来日期和 CVV）走一次订阅和一次一次性付款，检查 `subscriptions`、`orders`、`credit_transactions` 表。
-5. 切到生产（真实收款）：关掉 Test mode，重新建产品和价格（测试模式的价格不能用于 live），把 live 的价格 ID 换进 `site.config.ts`，换成 `sk_live_...` 和 live 端点的 `whsec_...`，并在 live 模式重新添加 webhook 端点。配了 live 密钥（`sk_live_` / `rk_live_`）后 `BILLING_PROVIDER=fake` 一律被拒。
-6. 客户门户（Billing Portal）用的是 Stripe 的默认配置：如果创建门户会话时报 "default configuration has not been created"，去 Settings → Billing → Customer portal 保存一次配置。
-7. **退款不回收积分**：Stripe 的退款对象（`Refund`）上没有发票字段，`Charge` / `PaymentIntent` 也不再暴露 `invoice`，想把退款对应回订单只能靠自定义 metadata，或者 Invoice Payment API（`invoice_payment.payment.payment_intent`，只对 2019-03-15 之后 finalize 的发票可用）—— 那条路会把 Stripe 特有的结构漏进订单表和后台营收统计。所以 v1 直接忽略退款事件：退款仍然在 Stripe 后台做，但已发放的积分不会自动回收，需要人工处理。
+1. Switch the Stripe dashboard to **Test mode** first, create products under Products, and add one price per plan: a monthly recurring price for subscription plans and a one-time price for lifetime plans. What goes into `site.config.ts` is the **Price ID (`price_...`)**, not the Product ID (`prod_...`); you can also override it with `STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_LIFETIME`. The placeholder `prod_placeholder_*` can't be checked out.
+2. Under Developers → API keys, get `sk_test_...` and put it into `STRIPE_SECRET_KEY` on Vercel Production; a restricted key (`rk_...`, limited to specific resources) works too.
+3. Under Developers → Webhooks, add the endpoint `https://<domain>/api/webhooks/stripe`, subscribe to the `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, and `customer.subscription.deleted` events (any other events received are ignored and don't affect bookkeeping), and put the signing secret (`whsec_...`) into `STRIPE_WEBHOOK_SECRET`. It is not interchangeable with Creem's webhook secret.
+   - Local debugging: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`; the CLI prints a temporary `whsec_...`, and you send test events with commands like `stripe trigger checkout.session.completed`.
+   - The webhook URL and the Cloudflare / Deployment Protection caveats are the same as in the Creem section: point it at the production domain, not a preview URL.
+4. With test card `4242 4242 4242 4242` (any future date and CVV), go through one subscription and one one-time payment, then check the `subscriptions`, `orders`, and `credit_transactions` tables.
+5. Switching to live (real payments): turn off Test mode, recreate the products and prices (test-mode prices can't be used in live), swap the live price IDs into `site.config.ts`, switch to `sk_live_...` and the live endpoint's `whsec_...`, and add the webhook endpoint again in live mode. Once a live key (`sk_live_` / `rk_live_`) is configured, `BILLING_PROVIDER=fake` is always rejected.
+6. The customer portal (Billing Portal) uses Stripe's default configuration: if creating a portal session fails with "default configuration has not been created", go to Settings → Billing → Customer portal and save the configuration once.
+7. **Refunds don't reclaim credits**: Stripe's refund object (`Refund`) has no invoice field, and `Charge` / `PaymentIntent` no longer expose `invoice` either. Mapping a refund back to an order would take custom metadata or the Invoice Payment API (`invoice_payment.payment.payment_intent`, only available for invoices finalized after 2019-03-15) — and that path would leak Stripe-specific structure into the orders table and the admin revenue stats. So v1 simply ignores refund events: you still issue refunds in the Stripe dashboard, but credits already granted aren't reclaimed automatically and need manual handling.
 
-#### 支付（Lemon Squeezy）
+#### Payments (Lemon Squeezy)
 
-把 `site.config.ts` 的 `billing.provider` 设为 `lemonsqueezy`（也可以只设环境变量 `BILLING_PROVIDER=lemonsqueezy`，它以环境变量优先），套餐的 `providerProductId` 填 Lemon Squeezy 的**变体（variant）ID**，不是产品 ID —— 变体在产品页的 Variants 里建，建结账会话时也只会用到变体。
+Set `billing.provider` in `site.config.ts` to `lemonsqueezy` (or just set the environment variable `BILLING_PROVIDER=lemonsqueezy`, which takes precedence), and fill each plan's `providerProductId` with the Lemon Squeezy **variant ID**, not the product ID — variants are created under Variants on the product page, and checkout sessions only ever use the variant.
 
-1. 在 LS 后台建店铺，拿 `LEMONSQUEEZY_STORE_ID`（数字的店铺 ID；建结账会话必须带上 store 关系）。用左下角的开关切到 **Test mode**，建产品并在产品页的 Variants 里建变体：订阅套餐的变体选 subscription（计费周期与 `site.config.ts` 的 `interval` 一致），一次性套餐选 one-time。把变体 ID 填进 `site.config.ts` 对应套餐的 `providerProductId`（或者设 `LEMONSQUEEZY_VARIANT_ID_PRO` / `LEMONSQUEEZY_VARIANT_ID_LIFETIME` 覆盖）。占位值 `prod_placeholder_*` 不允许结账。
-2. Settings → API 里建 API key 填 `LEMONSQUEEZY_API_KEY`；Settings → Webhooks 里建下面这个 webhook，拿签名密钥填 `LEMONSQUEEZY_WEBHOOK_SECRET`。三项都填到 Vercel Production。
-3. Webhook 地址填 `https://<domain>/api/webhooks/lemonsqueezy`（签名在 `X-Signature` 头里，HMAC-SHA256）。
-   - 事件**要勾这一组**：`order_created`、`subscription_created`、`subscription_updated`、`subscription_resumed`、`subscription_unpaused`、`subscription_cancelled`、`subscription_expired`、`subscription_payment_success`、`subscription_payment_failed`、`order_refunded`、`subscription_payment_refunded`。**少订阅一个事件就会漏账**：漏了 `subscription_payment_success` 就永远不记续费、不发积分，漏了退款事件就永远不回收积分 —— 这两种情况都不报错、界面也照常，只有对账时才发现。
-   - 多勾的会被安全忽略（`subscription_paused`、`subscription_payment_recovered`、`license_key_created` 等都不映射成任何事件），所以宁可多勾。
-   - Vercel 的预览部署默认开启 Deployment Protection，外部请求会被拦截，webhook 不能指向预览地址：测试模式的 webhook 也指向生产域名。本地调试用 ngrok 之类的隧道，或先用 LS 后台的 Send test webhook 验证签名通不通。
-   - 用了 Cloudflare 代理或 WAF 时，给 webhook 路径放行，不要被 Bot Fight Mode 拦住。
-4. 用测试模式的店铺（银行卡填 `4242 4242 4242 4242`，任意未来日期和 CVV）买一次订阅和一次一次性付款，检查 `subscriptions`、`orders`、`credit_transactions` 三张表。
-5. 客户门户（`/billing` 的「管理订阅」）走 `GET /v1/customers/:id` 返回的 `customer_portal` 地址。LS 只在客户**有生效订阅**时给这个地址，没有订阅（例如只买过一次性的）时字段是 `null`，此时拿门户地址会直接报错 —— 这是 LS 的行为，不是配置漏项。
-6. 已知缺口：**部分退款不回收积分**。LS 的订单 / invoice 上只有「累计已退金额」，而站内 `refund.created` 的约定是「这一次退了多少钱」（会累加到订单上）；把累计值当成新增值发出去，同一张订单第二次部分退款就会重复计数、多回收积分。所以 adapter 只在能证明是**全额**退款时（状态为 `refunded` 且累计已退不少于总额）才发事件：全额退款只触发一次，不受影响；部分退款一律不发事件，钱和积分都**不会**自动对上，需要人工核对后处理。宁可不回收，也不猜金额。
-7. 切到真实收款：关掉后台的 Test mode，用生产店铺的 API key、webhook secret、store ID 和变体 ID 把 `LEMONSQUEEZY_*` 全部换新（不是改一个开关的事），并在生产模式下重建 webhook，重新部署。LS 没有 `CREEM_MODE` 那样的环境变量，测试与真收是店铺上的一个开关。
-8. 退款仍然只在 LS 后台操作，站内不调用 LS 的退款接口；删除账户时会先取消该用户仍在计费的 LS 订阅（`DELETE /v1/subscriptions/:id`），取消失败时删除中止。
+1. Create a store in the LS dashboard and get `LEMONSQUEEZY_STORE_ID` (the numeric store ID; creating a checkout session requires the store relationship). Switch to **Test mode** with the toggle in the bottom left, create products, and create variants under Variants on each product page: subscription for subscription plans (billing interval matching `interval` in `site.config.ts`) and one-time for one-time plans. Put each variant ID into `providerProductId` of the matching plan in `site.config.ts` (or override with `LEMONSQUEEZY_VARIANT_ID_PRO` / `LEMONSQUEEZY_VARIANT_ID_LIFETIME`). The placeholder `prod_placeholder_*` can't be checked out.
+2. Under Settings → API, create an API key for `LEMONSQUEEZY_API_KEY`; under Settings → Webhooks, create the webhook below and put its signing secret into `LEMONSQUEEZY_WEBHOOK_SECRET`. Put all three on Vercel Production.
+3. Set the webhook URL to `https://<domain>/api/webhooks/lemonsqueezy` (the signature is in the `X-Signature` header, HMAC-SHA256).
+   - **Check this set** of events: `order_created`, `subscription_created`, `subscription_updated`, `subscription_resumed`, `subscription_unpaused`, `subscription_cancelled`, `subscription_expired`, `subscription_payment_success`, `subscription_payment_failed`, `order_refunded`, `subscription_payment_refunded`. **Missing even one event means missing bookkeeping**: without `subscription_payment_success`, renewals are never recorded and credits never granted; without the refund events, credits are never reclaimed — neither case raises an error and the UI looks normal, so you only find out when you reconcile.
+   - Extra events are safely ignored (`subscription_paused`, `subscription_payment_recovered`, `license_key_created`, and so on don't map to any event), so err on the side of checking more.
+   - Vercel preview deployments have Deployment Protection on by default, which blocks outside requests, so the webhook can't point at a preview URL: point test-mode webhooks at the production domain too. For local debugging, use a tunnel such as ngrok, or first use Send test webhook in the LS dashboard to check that the signature verifies.
+   - If you use a Cloudflare proxy or WAF, allow the webhook path so Bot Fight Mode doesn't block it.
+4. Using the test-mode store (card `4242 4242 4242 4242`, any future date and CVV), buy one subscription and make one one-time payment, then check the `subscriptions`, `orders`, and `credit_transactions` tables.
+5. The customer portal ("Manage subscription" on `/billing`) uses the `customer_portal` URL returned by `GET /v1/customers/:id`. LS only provides this URL when the customer **has an active subscription**; without one (for example, someone who only made a one-time purchase) the field is `null`, and fetching the portal URL fails outright — that is LS's behavior, not a missing setting.
+6. Known gap: **partial refunds don't reclaim credits**. LS orders / invoices only carry the "total refunded so far", while the in-app `refund.created` contract is "how much was refunded this time" (which gets added up on the order); sending the running total as if it were a new amount would double-count the second partial refund on the same order and reclaim too many credits. So the adapter emits the event only when it can prove a **full** refund (status is `refunded` and the total refunded is at least the order total): a full refund fires exactly once and works fine; partial refunds never emit an event, so money and credits **won't** line up automatically and need manual reconciliation. Better to reclaim nothing than to guess an amount.
+7. Switching to real payments: turn off Test mode in the dashboard, replace every `LEMONSQUEEZY_*` value with the live store's API key, webhook secret, store ID, and variant IDs (it's not a single toggle), recreate the webhook in live mode, and redeploy. LS has no environment variable like `CREEM_MODE`; test vs. live is a toggle on the store.
+8. Refunds are still issued only in the LS dashboard; the app never calls LS's refund API. Deleting an account first cancels the user's LS subscriptions that are still billing (`DELETE /v1/subscriptions/:id`); if the cancellation fails, the deletion is aborted.
 
-#### 支付（Waffo Pancake）
+#### Payments (Waffo Pancake)
 
-把 `billing.provider` 设为 `waffo`（或只设环境变量 `BILLING_PROVIDER=waffo`），套餐的 `providerProductId` 填 Pancake 的产品 ID（`PROD_…`，也可以用 `WAFFO_PRODUCT_ID_PRO` / `WAFFO_PRODUCT_ID_LIFETIME` 覆盖）。Pancake（[pancake.waffo.ai](https://pancake.waffo.ai)，文档 [docs.waffo.ai](https://docs.waffo.ai)）是 MoR，和 Creem 一样替你当卖方；选它之前先看 [docs/billing.md 的 Waffo Pancake 一节](docs/billing.md#waffo-pancake) —— **提现目前只能到中国大陆的人民币银行卡或支付宝**，税费代收也还没开启。
+Set `billing.provider` to `waffo` (or just set the environment variable `BILLING_PROVIDER=waffo`), and fill each plan's `providerProductId` with the Pancake product ID (`PROD_…`; you can also override with `WAFFO_PRODUCT_ID_PRO` / `WAFFO_PRODUCT_ID_LIFETIME`). Pancake ([pancake.waffo.ai](https://pancake.waffo.ai), docs at [docs.waffo.ai](https://docs.waffo.ai)) is an MoR that acts as the seller for you, like Creem; before choosing it, read [the Waffo Pancake section of docs/billing.md](docs/billing.md#waffo-pancake) — **payouts currently go only to RMB bank cards or Alipay in mainland China**, and tax collection isn't enabled yet.
 
-1. 注册 Pancake，建店铺。Dashboard → Integration 里点 **Create API Key**：Key 在创建时绑定 **Test** 或 **Live** 环境，私钥**只能下载一次**。把商户 ID（`MER_…`）填 `WAFFO_MERCHANT_ID`、私钥填 `WAFFO_PRIVATE_KEY`（PEM、一行 Base64、带字面 `\n` 的都行）。测试环境 `WAFFO_MODE` 不填（默认 `test`）。
-2. Products 里建产品：订阅套餐建 subscription 产品（周期和 `site.config.ts` 的 `interval` 一致：`month` → monthly、`year` → yearly），一次性套餐建 one-time 产品；价格按 `billing.currency` 填。把产品 ID 填进对应套餐的 `providerProductId`。
-3. Webhooks 里加 `https://<domain>/api/webhooks/waffo`，**勾上全部订阅和退款事件**（`order.completed`、`subscription.*`、`refund.*`）。验签用 SDK 内置的 Waffo 平台公钥，不用配密钥；站内按 `WAFFO_MODE` 的环境验，另一个环境的事件一律拒收（生产站点不会因为测试卡的付款发积分）。
-4. 用 Test 模式测：成功卡 `4576 7500 0000 0110`（Visa）/ `2226 9000 0000 0110`（Mastercard），失败卡把末尾 `0110` 换成 `0220`，任意未来日期和 CVC。本地收 webhook 用 ngrok 之类的隧道（没有 CLI 转发）；Dashboard 的 Subscriptions 抽屉里能「模拟续费成功 / 失败」。买一次订阅、一次一次性付款，检查 `subscriptions`、`orders`、`credit_transactions` 三张表。
-5. 结账页付款成功后，买家点「Done」才回到你的成功页（不会自动跳转）；Pancake 不支持取消地址，买家关掉页面即可。放弃结账、一次性付款被拒都**没有** webhook。
-6. 客户门户（`/billing` 的「管理订阅」）跳到 Pancake 的托管门户登录页：买家用付款时的邮箱收魔法链接登录，能查订单、下发票、取消 / 恢复订阅、申请退款。官方还没有「预登录」链接的接口，所以多一步登录。
-7. 取消订阅（删号时）是**用到当期结束**：订阅变成 canceling，到期后 Pancake 发 `subscription.canceled`。续费失败一次进 `past_due`（站内记付款失败），再失败一次订阅终止。
-8. 退款在 Dashboard 里发起（**付款后 14 天内**，可部分退款），`refund.succeeded` 按被退的那笔付款比例回收积分 —— 一次性订单和订阅的某一期都能对上。
-9. 切到真实收款：店铺要先过 Pancake 的审核（1–3 个工作日，需要能访问的产品页、价格、服务条款、隐私政策和支持邮箱）；建一把 **Live** 的 API Key 换上，设 `WAFFO_MODE=prod`（设了它 fake 支付就被硬锁拒绝），产品发布到生产，webhook 在 Live 环境再配一次，重新部署。
+1. Sign up for Pancake and create a store. Under Dashboard → Integration, click **Create API Key**: the key is bound to the **Test** or **Live** environment when created, and the private key **can be downloaded only once**. Put the merchant ID (`MER_…`) into `WAFFO_MERCHANT_ID` and the private key into `WAFFO_PRIVATE_KEY` (PEM, single-line Base64, or with literal `\n` all work). For the test environment, leave `WAFFO_MODE` empty (defaults to `test`).
+2. Create products under Products: a subscription product for subscription plans (period matching `interval` in `site.config.ts`: `month` → monthly, `year` → yearly) and a one-time product for one-time plans; set prices in `billing.currency`. Put each product ID into the matching plan's `providerProductId`.
+3. Under Webhooks, add `https://<domain>/api/webhooks/waffo` and **check all subscription and refund events** (`order.completed`, `subscription.*`, `refund.*`). Signatures are verified with the Waffo platform public key built into the SDK, so there's no secret to configure; the app verifies against the environment set by `WAFFO_MODE` and rejects every event from the other environment (so a production site never grants credits for a test-card payment).
+4. Test in Test mode: success cards `4576 7500 0000 0110` (Visa) / `2226 9000 0000 0110` (Mastercard); for a failing card, replace the trailing `0110` with `0220`; any future date and CVC. To receive webhooks locally, use a tunnel such as ngrok (there's no CLI forwarding); the Subscriptions drawer in the Dashboard can "simulate renewal success / failure". Buy one subscription and make one one-time payment, then check the `subscriptions`, `orders`, and `credit_transactions` tables.
+5. After a successful payment on the checkout page, the buyer returns to your success page only after clicking "Done" (there's no automatic redirect); Pancake doesn't support a cancel URL — the buyer just closes the page. Abandoned checkouts and declined one-time payments send **no** webhook.
+6. The customer portal ("Manage subscription" on `/billing`) goes to the sign-in page of Pancake's hosted portal: the buyer signs in with a magic link sent to the email used at payment, and can view orders, download invoices, cancel / resume subscriptions, and request refunds. There's no official API for a "pre-signed-in" link yet, hence the extra sign-in step.
+7. Canceling a subscription (on account deletion) **runs until the end of the current period**: the subscription becomes canceling, and Pancake sends `subscription.canceled` when it expires. One failed renewal moves it to `past_due` (the app records a failed payment); a second failure ends the subscription.
+8. Refunds are issued in the Dashboard (**within 14 days of payment**, partial refunds allowed); `refund.succeeded` reclaims credits in proportion to the refunded payment — this works for both one-time orders and individual subscription periods.
+9. Switching to real payments: the store must first pass Pancake's review (1–3 business days; you need a reachable product page, pricing, terms of service, privacy policy, and support email). Create a **Live** API key and swap it in, set `WAFFO_MODE=prod` (once it's set, fake billing is hard-locked out), publish the products to production, configure the webhook again in the Live environment, and redeploy.
 
-#### AI 服务商
+#### AI providers
 
-1. 在用到的服务商后台创建 API key：[OpenAI](https://platform.openai.com/api-keys)、[Anthropic](https://console.anthropic.com/settings/keys)、[Google AI Studio](https://aistudio.google.com/apikey)、[阿里云百炼](https://bailian.console.aliyun.com/?tab=model#/api-key)，并设置用量上限。
-2. 填到 Vercel Production 的 `OPENAI_API_KEY`、`ANTHROPIC_API_KEY`、`GOOGLE_GENERATIVE_AI_API_KEY`、`ALIBABA_API_KEY`（只填 `ai.models` 用到的）。
-   - 百炼（`provider: "alibaba"`）除了 Qwen，还能调百炼上托管的 DeepSeek、Kimi 等模型，`model` 填百炼的模型名（如 `deepseek-v4-flash`）。
-   - 百炼的 key 分地域，默认地址是国际站（新加坡）。北京地域的 key 要把 `ALIBABA_BASE_URL` 设为 `https://dashscope.aliyuncs.com/compatible-mode/v1`，否则返回 401。
-3. 按模型的实际成本调整 `creditCost` 和 `maxOutputTokens`：按次固定扣费，`maxOutputTokens` 决定单次调用成本的上限。默认开思考的模型（如百炼上的 `deepseek-v4-*`）可以设 `reasoning: "none"` 关掉思考，省下思考的 token。
-4. 上线后在 `/playground` 调用一次，检查 `ai_usage` 有记录、积分流水里有对应的扣减。
-5. 图片生成（`ai.imageModels`）：还需要开启 `features.upload` 并配好 R2，生成的图片存进 bucket，`files` 和 `ai_usage`（`kind = image`）各有一条记录。百炼的 `qwen-image-*` 每张约 7 秒，`wan*-image*` 约 30 秒，接口同步返回，`/api/ai/image` 的 `maxDuration` 是 120 秒。在 `/playground` 的「Image」标签页生成一张，确认图片能打开、最近生成里能看到。
-6. 视频生成（`ai.videoModels`）：同样需要 `features.upload` 和 R2。`input: "text"` 是文生视频，`"image"` 是图生视频（首帧用用户自己的图片，百炼通过公开地址或签名地址读取）。时长和分辨率写在配置里，按次扣费。任务是异步的：前端每 5 秒查询一次 `GET /api/ai/video/:id`，查询时完成的视频转存 R2，失败的退款；提交后 30 分钟仍未完成按失败退款。没有后台任务扫描，用户离开后再回到 Playground 时才会结算。
+1. Create API keys in the dashboards of the providers you use — [OpenAI](https://platform.openai.com/api-keys), [Anthropic](https://console.anthropic.com/settings/keys), [Google AI Studio](https://aistudio.google.com/apikey), [Alibaba Cloud Model Studio](https://bailian.console.aliyun.com/?tab=model#/api-key) — and set usage limits.
+2. Put them into `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, and `ALIBABA_API_KEY` on Vercel Production (only the ones `ai.models` uses).
+   - Besides Qwen, Model Studio (`provider: "alibaba"`) can call models hosted there such as DeepSeek and Kimi; set `model` to the Model Studio model name (for example `deepseek-v4-flash`).
+   - Model Studio keys are regional, and the default endpoint is the international site (Singapore). For a Beijing-region key, set `ALIBABA_BASE_URL` to `https://dashscope.aliyuncs.com/compatible-mode/v1`, or you'll get 401.
+3. Adjust `creditCost` and `maxOutputTokens` to each model's real cost: billing is a flat charge per call, and `maxOutputTokens` caps the cost of a single call. For models that think by default (such as `deepseek-v4-*` on Model Studio), you can set `reasoning: "none"` to turn thinking off and save the thinking tokens.
+4. After launch, make one call in `/playground` and check that `ai_usage` has a record and the credit ledger has the matching deduction.
+5. Image generation (`ai.imageModels`): also requires `features.upload` and a configured R2; generated images are stored in the bucket, with one record each in `files` and `ai_usage` (`kind = image`). Model Studio's `qwen-image-*` takes about 7 seconds per image and `wan*-image*` about 30 seconds; the endpoint responds synchronously, and `maxDuration` for `/api/ai/image` is 120 seconds. Generate one image in the "Image" tab of `/playground` and confirm it opens and shows up under recent generations.
+6. Video generation (`ai.videoModels`): also requires `features.upload` and R2. `input: "text"` is text-to-video and `"image"` is image-to-video (the first frame is the user's own image, which Model Studio reads via a public or signed URL). Duration and resolution are set in the config, and each call is charged a flat fee. Jobs are asynchronous: the frontend polls `GET /api/ai/video/:id` every 5 seconds; on a poll, finished videos are copied to R2 and failed ones are refunded; a job still unfinished 30 minutes after submission is treated as failed and refunded. Jobs nobody polls anymore (the user left the page) are settled by the recovery sweep (see "Recovery sweep" below).
 
-#### 限流（Upstash）
+#### Rate limiting (Upstash)
 
-1. 在 [Upstash](https://console.upstash.com) 创建一个 Redis 数据库，区域选离 Vercel 函数最近的（默认 `iad1` 对应 US East）。
-2. 把 REST API 的 URL 和 token 填到 Vercel Production 的 `UPSTASH_REDIS_REST_URL`、`UPSTASH_REDIS_REST_TOKEN`；也可以从 Vercel Marketplace 安装 Upstash 集成自动注入（变量名相同）。
-3. 阈值在 `site.config.ts` 的 `rateLimit.policies` 调整，默认 `ai` 每分钟 20 次、`upload` 每分钟 10 次。
+1. Create a Redis database in [Upstash](https://console.upstash.com), in the region closest to your Vercel functions (the default `iad1` is US East).
+2. Put the REST API URL and token into `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` on Vercel Production; alternatively, install the Upstash integration from the Vercel Marketplace to inject them automatically (same variable names).
+3. Tune the thresholds in `rateLimit.policies` in `site.config.ts`; the defaults are 20 per minute for `ai` and 10 per minute for `upload`.
 
-#### 文件上传（Cloudflare R2）
+#### File uploads (Cloudflare R2)
 
-1. Cloudflare 后台 → R2 创建 bucket（生产和预览可以分开建）。`R2_ACCOUNT_ID` 是 R2 概览页右侧的 Account ID（32 位十六进制）。
-2. R2 → Manage API tokens 创建一个 **Object Read & Write** 权限、只作用于这个 bucket 的 token，把 Access Key ID 和 Secret Access Key 填到 `R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`，bucket 名填到 `R2_BUCKET`。
-3. 浏览器直传需要 CORS。bucket → Settings → CORS Policy 填入（把域名换成自己的；本地调试再加 `http://localhost:3000`）：
+1. In the Cloudflare dashboard → R2, create a bucket (you can create separate ones for production and preview). `R2_ACCOUNT_ID` is the Account ID on the right side of the R2 overview page (32 hex characters).
+2. Under R2 → Manage API tokens, create a token with **Object Read & Write** permission scoped to this bucket only, put its Access Key ID and Secret Access Key into `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, and the bucket name into `R2_BUCKET`.
+3. Direct uploads from the browser need CORS. Under bucket → Settings → CORS Policy, enter the following (replace the domain with yours; add `http://localhost:3000` for local debugging):
 
    ```json
    [
@@ -621,169 +621,169 @@ grep -rn "<Suspense" src/ | wc -l      # 0（手写的 JSX 边界，注释里提
    ]
    ```
 
-4. 公开访问（`upload.public: true`）：bucket → Settings → Custom Domains 绑定一个子域名（例如 `files.<domain>`），填到 `R2_PUBLIC_URL`。不要用 `r2.dev` 地址上线，它有限速。私有文件（默认）不需要这一步。
-5. 开启 `features.upload` 后登录 Dashboard，用首页的上传示例传一个文件，检查 `files` 表里的状态变成 `uploaded`，并能打开文件链接。
+4. Public access (`upload.public: true`): under bucket → Settings → Custom Domains, attach a subdomain (for example `files.<domain>`) and put it into `R2_PUBLIC_URL`. Don't go live with the `r2.dev` URL; it's rate limited. Private files (the default) don't need this step.
+5. With `features.upload` on, sign in to the Dashboard, upload a file with the upload example on the home page, and check that its status in the `files` table becomes `uploaded` and the file link opens.
 
-#### 日志与追踪（可选）
+#### Logs and tracing (optional)
 
-1. `site.config.ts` 里开启 `features.observability`，按需把 `observability.logLevel` 调成 `debug`。部署后在 Vercel → Logs 里搜 `"event":"ai.usage"`、`"event":"billing.webhook"`，或者按某条日志的 `traceId` 找到同一个请求的所有日志。
-2. 需要 trace 时再开启 `observability.otel`：
-   - 在 Vercel 上：项目 → Observability 里开启 Tracing，或者在 Integrations 里接入 Datadog、Honeycomb 等 OTel 集成，不需要额外的变量。
-   - 其他后端：填 `OTEL_EXPORTER_OTLP_ENDPOINT`（需要鉴权时加 `OTEL_EXPORTER_OTLP_HEADERS`，例如 `x-honeycomb-team=<key>`）。两者都没有时不导出 trace，日志照常输出。
-3. 日志字段写出前会脱敏（`src/core/observability/logger.ts`）：字段名以 `email` / `token` / `password` / `secret` / `apikey` / `otp` / `pin` 结尾，或者字段名本身是 `authorization` / `cookie` / `code`，值都替换成 `[redacted]`。验证码的常见写法（`verificationCode`、`verification_code`、`otpCode`、`smsCode`、`pinCode`……）按「前缀是凭据词」判定；`statusCode`、`errorCode`、`countryCode`、`zipCode` 这类诊断字段**不**脱敏 —— 故意不做「以 `code` 结尾就脱敏」的一刀切，否则排障时这些值会静默消失。要记新的凭据字段时，在 `SENSITIVE_SUFFIXES` / `VERIFICATION_CODE_PREFIXES` 里补词并加测试。
+1. Turn on `features.observability` in `site.config.ts`, and set `observability.logLevel` to `debug` if you need it. After deploying, search Vercel → Logs for `"event":"ai.usage"` or `"event":"billing.webhook"`, or use a log line's `traceId` to find every log from the same request.
+2. Turn on `observability.otel` when you need traces:
+   - On Vercel: turn on Tracing under project → Observability, or connect an OTel integration such as Datadog or Honeycomb under Integrations; no extra variables needed.
+   - Other backends: set `OTEL_EXPORTER_OTLP_ENDPOINT` (add `OTEL_EXPORTER_OTLP_HEADERS` when auth is required, for example `x-honeycomb-team=<key>`). With neither, traces aren't exported and logs are written as usual.
+3. Log fields are redacted before they're written (`src/core/observability/logger.ts`): if a field name ends with `email` / `token` / `password` / `secret` / `apikey` / `otp` / `pin`, or the name itself is `authorization` / `cookie` / `code`, the value is replaced with `[redacted]`. Common ways of naming verification codes (`verificationCode`, `verification_code`, `otpCode`, `smsCode`, `pinCode`, …) are matched by "the prefix is a credential word"; diagnostic fields like `statusCode`, `errorCode`, `countryCode`, and `zipCode` are **not** redacted — a blanket "redact anything ending in `code`" rule is deliberately avoided, because those values would silently vanish when you're troubleshooting. To log a new kind of credential field, add the word to `SENSITIVE_SUFFIXES` / `VERIFICATION_CODE_PREFIXES` and add a test.
 
-#### 错误追踪（Sentry，可选）
+#### Error tracking (Sentry, optional)
 
-1. 在 Sentry 新建一个 Next.js 项目，复制 DSN，在 Vercel 的 Production 和 Preview 都填上 `NEXT_PUBLIC_SENTRY_DSN`。
-2. `site.config.ts` 里开启 `features.observability` 和 `observability.sentry`。性能追踪按 `observability.sentryTracesSampleRate` 采样（默认 `0.1`）；同时开了 `otel` 时追踪交给 OpenTelemetry，Sentry 只收错误，并关联到同一个 trace。
-3. 可选：在 Sentry → Settings → Auth Tokens 创建 Organization Token，连同组织和项目的 slug 填进 `SENTRY_AUTH_TOKEN`、`SENTRY_ORG`、`SENTRY_PROJECT`，构建时会上传 source map。
-4. 建议在 Sentry 项目 → Settings → Security & Privacy 里开启 **Prevent Storing of IP Addresses**：SDK 不发 IP，但 Sentry 默认会记录上报请求的来源 IP。
-5. 浏览器事件经本站的 `/monitoring` 转发给 Sentry，减少被广告拦截插件拦掉。这个路径不要再用作页面（`src/proxy.ts` 的 matcher 跳过了它）。
-6. 部署后在浏览器控制台执行 `setTimeout(() => { throw new Error("sentry test") })`，几秒后 Sentry 的 Issues 里应能看到这条错误，带 release 和登录用户的 ID。
+1. Create a Next.js project in Sentry, copy the DSN, and set `NEXT_PUBLIC_SENTRY_DSN` for both Production and Preview on Vercel.
+2. Turn on `features.observability` and `observability.sentry` in `site.config.ts`. Performance tracing is sampled at `observability.sentryTracesSampleRate` (default `0.1`); when `otel` is also on, tracing is handed to OpenTelemetry and Sentry only collects errors, linked to the same trace.
+3. Optional: create an Organization Token under Sentry → Settings → Auth Tokens and put it, along with the organization and project slugs, into `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT`; the build then uploads source maps.
+4. We recommend turning on **Prevent Storing of IP Addresses** under the Sentry project → Settings → Security & Privacy: the SDK doesn't send IPs, but by default Sentry records the source IP of the reporting request.
+5. Browser events are forwarded to Sentry through the site's own `/monitoring` path, so ad blockers are less likely to block them. Don't use that path for a page (the matcher in `src/proxy.ts` skips it).
+6. After deploying, run `setTimeout(() => { throw new Error("sentry test") })` in the browser console; within a few seconds the error should appear under Issues in Sentry, with the release and the signed-in user's ID.
 
-#### 流量与性能（可选）
+#### Traffic and performance (optional)
 
-1. Vercel 项目 → Analytics 里点 Enable；需要页面性能时在 Speed Insights 里也点 Enable。不需要额外的变量。
-2. `site.config.ts` 里开启 `features.observability`，再开启 `observability.analytics` / `observability.speedInsights`，重新部署。
-3. 自定义事件（`sign_up`、`checkout_started`、`purchase`）需要 Pro 或 Enterprise 计划，Hobby 只统计页面浏览。开启了 Deployment Protection 的预览环境，服务端事件需要在项目里创建 Protection Bypass for Automation（`VERCEL_AUTOMATION_BYPASS_SECRET`）。
-4. `purchase` 由 webhook 触发，没有访客上下文，所以在 Analytics 里看不到它的来源和设备；按 `plan` 筛选即可。
+1. In the Vercel project → Analytics, click Enable; if you want page performance, click Enable under Speed Insights as well. No extra variables needed.
+2. Turn on `features.observability` in `site.config.ts`, then `observability.analytics` / `observability.speedInsights`, and redeploy.
+3. Custom events (`sign_up`, `checkout_started`, `purchase`) require a Pro or Enterprise plan; Hobby only counts page views. On preview environments with Deployment Protection on, server-side events need a Protection Bypass for Automation (`VERCEL_AUTOMATION_BYPASS_SECRET`) created in the project.
+4. `purchase` is triggered by the webhook and has no visitor context, so Analytics can't show its source or device; filter by `plan` instead.
 
-### 5. 恢复扫描（悬着的 AI 任务、没发出去的邮件）
+### 5. Recovery sweep (stuck AI jobs, unsent emails)
 
-视频生成是异步的：提交后服务商在后台生成，结果要有人去问、下载、存进 R2 并结算。前端轮询会做这件事，但用户关掉页面、换了设备、或者函数在结算前被回收（重新部署、超时）之后，就没人推进了 —— 那一行停在 `pending`，积分一直扣着，视频明明生成好了也拿不到。
+Video generation is asynchronous: after submission the provider generates in the background, and someone has to ask for the result, download it, store it in R2, and settle it. Frontend polling does this, but once the user closes the page, switches devices, or the function is reclaimed before settling (a redeploy, a timeout), nobody moves the job forward — the row stays `pending`, the credits stay deducted, and the video is unreachable even though it was generated.
 
-同一个扫描还负责补发没发出去的关键事务邮件（付款、余额提醒、验证码；机制见「配置」里账单邮件那一条），日志事件是 `notifications.recovery`。
+The same sweep also resends critical transactional emails that didn't go out (payments, balance alerts, verification codes; see the billing emails item under "Configuration" for how it works). Its log event is `notifications.recovery`.
 
-恢复扫描负责兜底：找出没人推进的 `pending` 任务，**先去服务商那边核对**，能拿到结果就先保存结果（不退款），服务商明确失败或长期没有结果才退款，`error` 里写明原因。和前端轮询同时结算同一条任务时只结算一次、只退一次。
+The recovery sweep is the safety net: it finds `pending` jobs nobody is moving forward and **checks with the provider first**. If it can get the result, it saves the result (no refund); it refunds only when the provider has clearly failed or has had no result for a long time, and writes the reason into `error`. When the sweep and frontend polling settle the same job at the same time, it is settled once and refunded at most once.
 
-| 情况                                                  | 扫描怎么处理                                              |
-| ----------------------------------------------------- | --------------------------------------------------------- |
-| 视频：服务商已完成                                    | 下载、存 R2、记为成功，不退款                             |
-| 视频：服务商明确失败                                  | 记为失败并退款                                            |
-| 视频：服务商还在生成                                  | 留着，下次再看；提交 30 分钟后仍没结果才退款              |
-| 视频：服务商已完成，但下载 / 存储失败、或查询接口出错 | 留着重试，不退款；24 小时（服务商结果失效）后仍不行才退款 |
-| 视频：提交时进程中断，没记下服务商的任务 id           | 没有能核对的任务，30 分钟后退款                           |
-| 文本 / 图片：请求结束前没来得及结算                   | 结果只存在于那次请求里，没有可核对的东西，15 分钟后退款   |
+| Situation                                                                          | What the sweep does                                                                                              |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Video: the provider has finished                                                   | Download, store in R2, mark as succeeded, no refund                                                              |
+| Video: the provider has clearly failed                                             | Mark as failed and refund                                                                                        |
+| Video: the provider is still generating                                            | Leave it and check next time; refund only if there is still no result 30 minutes after submit                    |
+| Video: the provider has finished, but download / storage fails or the query errors | Leave it for retry, no refund; refund only if it still fails after 24 hours (when the provider's result expires) |
+| Video: the process died during submission, so the provider's job id wasn't saved   | There is no job to check; refund after 30 minutes                                                                |
+| Text / image: the request ended before it could settle                             | The result only existed in that request and there is nothing to check; refund after 15 minutes                   |
 
-**触发**：入口与频率解耦，同一时刻只会有一个扫描在跑（数据库租约），重复触发是安全的。
+**Triggers**: the entry points are decoupled from the frequency, only one sweep runs at a time (a database lease), and triggering it repeatedly is safe.
 
-- **机会式（默认就有，什么都不用配）**：用户使用 AI 功能时，响应之后顺带扫一次（每次最多 3 条，距上次不足 5 分钟就跳过）。站点有流量时，悬着的任务几分钟内就会被处理。
-- **定时入口**：`GET /api/cron/recovery`，带 `Authorization: Bearer $CRON_SECRET`，每次最多处理 20 条。按部署方式选：
+- **Opportunistic (on by default, nothing to configure)**: when a user uses an AI feature, a sweep piggybacks after the response (at most 3 items each time, skipped if the last one was less than 5 minutes ago). As long as the site has traffic, stuck jobs get handled within minutes.
+- **Scheduled entry point**: `GET /api/cron/recovery` with `Authorization: Bearer $CRON_SECRET`, handling at most 20 items per call. Pick by deployment:
 
-| 部署         | 怎么配                                                                                                                                                                                                         |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vercel Pro   | 在 Vercel 上设 `CRON_SECRET`，把 `vercel.json` 里 `crons` 的 `schedule` 改成每 5 分钟：`*/5 * * * *`。                                                                                                         |
-| Vercel Hobby | 设 `CRON_SECRET`，`vercel.json` 保持出厂的每天一次（`0 3 * * *`）。**Hobby 只允许每天一次的 cron，更频繁的表达式会让部署直接失败**，且触发时间在那个小时内浮动。白天靠机会式扫描，每天那一次兜住没流量的时段。 |
-| 自托管       | 设 `CRON_SECRET`，用任何调度器每几分钟调一次入口（`vercel.json` 的 `crons` 在 Vercel 之外不生效）：                                                                                                            |
+| Deployment   | How to set it up                                                                                                                                                                                                                                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vercel Pro   | Set `CRON_SECRET` on Vercel and change the `schedule` of `crons` in `vercel.json` to every 5 minutes: `*/5 * * * *`.                                                                                                                                                                                                                          |
+| Vercel Hobby | Set `CRON_SECRET` and keep the default once-a-day schedule in `vercel.json` (`0 3 * * *`). **Hobby only allows once-a-day crons; a more frequent expression makes the deployment fail outright**, and the trigger time floats within that hour. The opportunistic sweep covers the daytime, and the daily run covers periods with no traffic. |
+| Self-hosted  | Set `CRON_SECRET` and call the entry point every few minutes from any scheduler (`crons` in `vercel.json` has no effect outside Vercel):                                                                                                                                                                                                      |
 
-自托管的调度示例（系统 cron；systemd timer、Docker 里的 cron 容器同理，调的都是这一条）：
+A scheduling example for self-hosting (system cron; a systemd timer or a cron container in Docker works the same way — they all call this one line):
 
 ```bash
-# crontab -e：每 5 分钟一次
-*/5 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<你的域名>/api/cron/recovery > /dev/null
+# crontab -e: every 5 minutes
+*/5 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/recovery > /dev/null
 ```
 
-每次扫描记一条结构化日志 `ai.recovery`（触发源、扫描条数、成功 / 失败 / 仍挂起的计数），在 Vercel 的 Logs 里按它搜。没设 `CRON_SECRET` 时入口返回 404，Vercel 的 cron 调到它也只是一次 404，不影响站点。
+Each sweep writes one structured log `ai.recovery` (trigger, number of items scanned, and counts of succeeded / failed / still pending); search for it in Vercel's Logs. Without `CRON_SECRET` the entry point returns 404; if Vercel's cron calls it, that's just one 404 and doesn't affect the site.
 
 ### 6. GitHub
 
-- `main` 开启分支保护：必须通过 PR 合入，`ci` 为必需检查，禁止 force push。
+- Turn on branch protection for `main`: merges must go through a PR, `ci` is a required check, and force pushes are blocked.
 
-### 7. 可用性监控
+### 7. Uptime monitoring
 
-- 站点可用性可以用外部服务盯着，比如 UptimeRobot 或 Better Stack 的免费版：监控 `https://<domain>`，间隔 5 分钟（Better Stack 免费版是 3 分钟），告警走邮件。注意免费版都不提供证书到期告警。
-- 证书到期由仓库自带的 `tls-expiry` 工作流兜底：每天 01:00 UTC 跑一次 `scripts/check-tls-expiry.mjs`，检查 `site.config.ts` 里 `domain` 的证书剩余有效期，不足 30 天就开一条 issue，并让这次运行失败（GitHub 会发失败通知）。本地也可以随时手动跑：
+- You can watch site availability with an external service, such as the free tier of UptimeRobot or Better Stack: monitor `https://<domain>` every 5 minutes (3 minutes on Better Stack's free tier), with alerts by email. Note that none of the free tiers offer certificate-expiry alerts.
+- Certificate expiry is covered by the repository's own `tls-expiry` workflow: every day at 01:00 UTC it runs `scripts/check-tls-expiry.mjs`, which checks how long the certificate for the `domain` in `site.config.ts` has left. If fewer than 30 days remain, it opens an issue and fails the run (GitHub sends a failure notification). You can also run it by hand locally at any time:
 
   ```bash
   node scripts/check-tls-expiry.mjs --days 14
   node scripts/check-tls-expiry.mjs --hosts a.example.com,b.example.com
   ```
 
-  Vercel 托管的证书是自动续期的，所以这条检查主要是发现"续期卡住了"这种静默失败。
+  Certificates managed by Vercel renew automatically, so this check is mainly there to catch silent failures like "renewal got stuck".
 
-### 8. 自托管（自己的服务器 / Docker）
+### 8. Self-hosting (your own server / Docker)
 
-不用 Vercel 时，生产闸门由 `NODE_ENV=production` 触发 —— 邮件只允许 Resend、`SKIP_ENV_VALIDATION` 失效、fake 支付与占位哨兵都在构建期拦人，判断逻辑和 Vercel 上完全一样。所以：
+Without Vercel, the production gates are triggered by `NODE_ENV=production` — email allows only Resend, `SKIP_ENV_VALIDATION` has no effect, and fake billing and the placeholder sentinels are all stopped at build time, with exactly the same logic as on Vercel. So:
 
-- 用 `pnpm build` + `pnpm start` 跑，别用 `pnpm dev`；启动前先 `pnpm db:migrate`。
-- 环境变量照上面「环境变量」一节配齐；没有 Vercel 的自动推断，`BETTER_AUTH_URL` 要自己填成对外地址。
-- **仓库不带 Dockerfile，容器化要自己接**（出厂配置是给 Vercel 的，`next.config.ts` 没有 `output: "standalone"`）。Next 官方有现成的 [`with-docker` 示例](https://github.com/vercel/next.js/tree/canary/examples/with-docker) 可以抄，接的时候注意三点：
-  - **`output: "standalone"` 得自己加。** 产物在 `.next/standalone`，容器里跑 `node server.js` 而不是 `next start`，并且**显式设 `HOSTNAME=0.0.0.0`** —— Docker 默认把 `HOSTNAME` 设成容器 ID，`server.js` 拿它当监听地址，不设就直接起不来（`EADDRNOTAVAIL`）。`public/` 和 `.next/static` 不在产物里，要自己拷进去才会被伺服。
-  - **`pnpm db:migrate` 别指望在镜像里跑。** 迁移用的是 `drizzle-kit`（devDependency），standalone 产物只带生产依赖，迁移目录也不在里面。把迁移做成应用启动前独立的一步：同一个镜像里另装 devDependencies，或者直接用仓库 checkout 跑。
-  - **构建期和运行期要用同一套环境变量。** `next build` 在 `NODE_ENV=production` 下强制校验必填项，缺一个就构建失败；`GOOGLE_CLIENT_ID` 和 `R2_PUBLIC_URL` 还会被写进 CSP 白名单（见上面「环境变量」）。只在运行时注入这两项，登录页的 One Tap 和 R2 的图片会被 CSP 静默拦掉。
-- **限流必须有 Redis，否则生产环境直接拒绝请求。** 自托管时没有 Vercel 那套变量校验兜底，漏配 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` 的部署**不会**静默放行：AI、上传和结账接口统一返回 503（`{"error":"unavailable"}`，带 `Retry-After: 30`），启动日志里也有一条 error 级的 `ratelimit.unconfigured`（开着 Sentry 时同样会上报）。要么按上面「限流（Upstash）」配好这两个变量，要么明确接受「这个部署不做限流」—— 后者设 `ALLOW_UNRATELIMITED=1`，此时请求照常放行，启动日志里降为一条 warn。本地开发、CI 和 Vercel 预览不受影响，照旧跳过限流。
-- **时间一律按 UTC 处理。** 库里所有 `timestamp` 列都按 UTC 墙钟存取：客户端连接时会把**会话时区**强制成 UTC（`src/core/db/client.ts`，Neon 本来就是 UTC），`defaultNow()` 这类数据库侧默认值因此不会受服务器时区影响。自建 Postgres 时不用再自己确认服务器时区 —— 会话时区不是 UTC 的话，`defaultNow()` 写进去的时间会被整体读偏（+8 就是 8 小时，视频任务的超时判定、后台统计窗口都会算错）。
+- Run with `pnpm build` + `pnpm start`, not `pnpm dev`; run `pnpm db:migrate` before starting.
+- Set every environment variable as described in the "Environment variables" section above; there's no automatic inference from Vercel, so you have to set `BETTER_AUTH_URL` to the public URL yourself.
+- **The repository ships no Dockerfile; containerizing is up to you** (the default configuration targets Vercel, and `next.config.ts` has no `output: "standalone"`). Next.js has a ready-made [`with-docker` example](https://github.com/vercel/next.js/tree/canary/examples/with-docker) you can copy. Watch for three things when you wire it up:
+  - **You have to add `output: "standalone"` yourself.** The output goes to `.next/standalone`; in the container you run `node server.js`, not `next start`, and you must **explicitly set `HOSTNAME=0.0.0.0`** — Docker sets `HOSTNAME` to the container ID by default, `server.js` uses it as the listen address, and without the override it won't start (`EADDRNOTAVAIL`). `public/` and `.next/static` aren't in the output; copy them in yourself or they won't be served.
+  - **Don't count on running `pnpm db:migrate` inside the image.** Migrations use `drizzle-kit` (a devDependency); the standalone output only carries production dependencies, and the migrations directory isn't in it either. Make migration a separate step before the app starts: install devDependencies separately in the same image, or just run it from a repository checkout.
+  - **Build time and run time need the same environment variables.** `next build` enforces the required variables under `NODE_ENV=production`, and a single missing one fails the build; `GOOGLE_CLIENT_ID` and `R2_PUBLIC_URL` are also written into the CSP allowlist (see "Environment variables" above). If you inject those two only at run time, One Tap on the sign-in page and R2 images are silently blocked by the CSP.
+- **Rate limiting requires Redis, or production rejects requests outright.** Self-hosting has no Vercel-style variable validation as a backstop, so a deployment missing `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` does **not** silently let requests through: the AI, upload, and checkout endpoints all return 503 (`{"error":"unavailable"}`, with `Retry-After: 30`), and the startup log has an error-level `ratelimit.unconfigured` (also reported to Sentry if it's on). Either set these two variables as described in "Rate limiting (Upstash)" above, or explicitly accept that this deployment does no rate limiting — for the latter, set `ALLOW_UNRATELIMITED=1`; requests then go through as usual, and the startup log drops to a warn. Local development, CI, and Vercel previews are unaffected and skip rate limiting as before.
+- **All times are handled in UTC.** Every `timestamp` column in the database is stored and read as UTC wall-clock time: the client forces the **session time zone** to UTC when it connects (`src/core/db/client.ts`; Neon is UTC anyway), so database-side defaults like `defaultNow()` aren't affected by the server's time zone. When you run your own Postgres you don't need to check the server time zone yourself — if the session time zone weren't UTC, times written by `defaultNow()` would all read back shifted (+8 means 8 hours off, and video job timeouts and admin stats windows would be computed wrong).
 
-**反向代理必须自己写对 `X-Forwarded-For`。** 限流按 IP 计数（`getClientIp` 取 XFF 的第一跳），如果反代把客户端自带的 XFF 原样透传，任何人加一个请求头就能冒充别的 IP、把限流绕过去。要点是用**连接的对端地址覆盖**，而不是在后面追加：
+**Your reverse proxy must set `X-Forwarded-For` correctly.** Rate limiting counts by IP (`getClientIp` takes the first hop of XFF). If the proxy passes the client's own XFF through unchanged, anyone can add a request header to impersonate another IP and bypass rate limiting. The key is to **overwrite it with the connection's peer address**, not append to it:
 
 ```nginx
 location / {
   proxy_pass http://127.0.0.1:3000;
   proxy_set_header Host $host;
-  # 覆盖客户端传进来的 X-Forwarded-For，只留真实对端地址
+  # Overwrite the X-Forwarded-For sent by the client; keep only the real peer address
   proxy_set_header X-Forwarded-For $remote_addr;
   proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
 
-Caddy 不用额外配置：`reverse_proxy` 默认就丢弃客户端自带的 `X-Forwarded-*` 并按连接重写（[文档](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)）。前面还有一层 CDN 或负载均衡时，用 Caddy 的 `trusted_proxies` 信任那一层，否则真实 IP 会被丢掉。
+Caddy needs no extra configuration: `reverse_proxy` drops the client's own `X-Forwarded-*` by default and rewrites them from the connection ([docs](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)). If there's another CDN or load balancer layer in front, trust that layer with Caddy's `trusted_proxies`, or the real IP gets dropped.
 
-反代前面挂了 Cloudflare 之类的 CDN 时，Nginx 侧用 `real_ip` 模块恢复真实 IP（`set_real_ip_from <CDN 回源段>` + `real_ip_header CF-Connecting-IP`），再把恢复后的 `$remote_addr` 写进 XFF。
+If a CDN such as Cloudflare sits in front of the reverse proxy, use Nginx's `real_ip` module to restore the real IP (`set_real_ip_from <CDN origin ranges>` + `real_ip_header CF-Connecting-IP`), then write the restored `$remote_addr` into XFF.
 
-### 渠道归因
+### Channel attribution
 
-`site.config.ts` 的 `acquisition.attribution.enabled` 默认 `false`。先运行 `pnpm db:migrate`，再开启并重新构建部署；无需新增 env 或外部服务。控件通过配置派生的内部构建常量裁剪，默认关闭时不会下发其客户端脚本。留资见下节，邀请链接见「邀请链接」一节：两者各写各的上下文，接受邀请不会改动这里的来源记录。
+`acquisition.attribution.enabled` in `site.config.ts` defaults to `false`. Run `pnpm db:migrate` first, then turn it on and rebuild and redeploy; no new env vars or external services are needed. The control is stripped out through an internal build constant derived from the config, so while it's off by default its client script isn't shipped. Lead capture is covered in the next section, and referral links in the "Referral links" section: each writes its own context, and accepting an invite doesn't change the source record here.
 
-开启后页面提供 **Source preferences**：访客明确允许后才写来源 Cookie；拒绝不影响注册、登录或付款。仅记录白名单 `utm_source` / `utm_medium` / `utm_campaign` / `utm_term` / `utm_content`、外部来源 hostname、落地 pathname 和捕获时间，字段有字符和长度限制。完整 URL、任意查询参数、IP 和指纹不会进入这份记录；也不要主动把邮箱等个人信息放入营销标签或路径。
+When on, pages offer **Source preferences**: the source cookie is written only after the visitor explicitly allows it; declining doesn't affect sign-up, sign-in, or payment. Only the allowlisted `utm_source` / `utm_medium` / `utm_campaign` / `utm_term` / `utm_content`, the external referrer hostname, the landing pathname, and the capture time are recorded, with character and length limits on each field. Full URLs, arbitrary query parameters, IPs, and fingerprints never enter this record; also, don't put personal information such as email addresses into marketing tags or paths yourself.
 
-- first-touch 窗口固定 30 天，直接回访或新活动链接不会覆盖有效来源，也不会延长期限。过期后需重新允许才捕获新来源。
-- 来源优先级：`utm_source` → 外部域名 → direct。缺失、拒绝、过期或篡改时为 unknown，旧用户不会被补填来源。
-- 邮箱验证码、Google OAuth 和 One Tap 共用 Better Auth 的 `user.create.after` 钩子，在首次创建用户时冻结来源。后续登录不会重写。签名只保证上下文未被改动，营销标签本身仍是访客提供的提示，不能拿来证明奖励资格。
-- `acquisition_source` 是 HttpOnly、SameSite=Lax、生产 Secure 的第一方 Cookie，使用现有 `BETTER_AUTH_SECRET` 做带用途隔离的 HMAC；更换 secret 会使现有来源 Cookie 失效。
-- 归因写入失败记录 `acquisition.freeze_failed`，不阻断注册；签发 24 小时的 `acquisition_registration` 重试 Cookie，后续页面在登录身份匹配时幂等重试。超过 24 小时、Cookie 被清除或用户不再回来则可能保留 unknown；不会从新的访问来源猜测补填。日志不包含来源载荷。
-- 拒绝/撤回使用 `source_preference=declined` 必要偏好 Cookie（30 天，不含来源）阻止注册时恢复已确认线索来源；再次接受会清除该偏好。撤回会清理两个获客 Cookie；已登录时同时清空账户来源，保留无来源的撤回标记，防止迟到重试恢复数据。未登录时只能清理该浏览器；跨设备需要登录原账户后再撤回。写库失败时匿名 Cookie 仍被清除，页面提示重试账户清理。删除账户通过外键级联删除记录并清理当前浏览器的来源 Cookie。
-- 来源快照在数据库中保留到用户撤回或删除账户；localStorage 只记拒绝偏好、不存来源。停用模块会停止捕获并隐藏入口，数据库记录保留，运营者仍可按用户请求执行数据清理。
-- Vercel Analytics 是独立开关，这个偏好控件不控制它。开启归因后，管理员在**渠道报表** `/admin/acquisition` 看每个来源的表现：最近 7 / 30 / 90 天（UTC）按注册时冻结的来源分组，列出注册数、付费人数、净收入、待核对退款、确认留资和转化率，可按来源 / 媒介 / 活动筛选（留空 = 全部）。净收入与待核对退款的口径见「收入口径」一节（和 `/admin/metrics` 是同一份定义）；没有付费套餐时收入两列不显示（和 `/admin/metrics` 同一判定）。关掉 `acquisition.attribution.enabled` 并重新构建后该页 404。
+- The first-touch window is fixed at 30 days; direct return visits or new campaign links don't overwrite a valid source or extend the window. After it expires, the visitor must allow it again before a new source is captured.
+- Source priority: `utm_source` → external domain → direct. Missing, declined, expired, or tampered context counts as unknown, and existing users are not backfilled with a source.
+- Email verification codes, Google OAuth, and One Tap share Better Auth's `user.create.after` hook, which freezes the source when the user is first created. Later sign-ins don't rewrite it. The signature only guarantees that the context hasn't been tampered with; the marketing tags themselves are still hints supplied by the visitor and can't be used to prove reward eligibility.
+- `acquisition_source` is a first-party cookie that is HttpOnly, SameSite=Lax, and Secure in production, using an HMAC with purpose separation keyed by the existing `BETTER_AUTH_SECRET`; rotating the secret invalidates existing source cookies.
+- A failed attribution write logs `acquisition.freeze_failed` and doesn't block sign-up; it issues a 24-hour `acquisition_registration` retry cookie, and later pages retry idempotently when the signed-in identity matches. Past 24 hours, if the cookie is cleared, or if the user never comes back, the source may stay unknown; it is never guessed from a new visit's source. Logs don't include the source payload.
+- Declining / withdrawing uses a `source_preference=declined` essential preference cookie (30 days, no source) to stop a confirmed lead's source from being restored at sign-up; accepting again clears that preference. Withdrawing clears both acquisition cookies; when signed in, it also clears the account's source and keeps a source-less withdrawal marker so a late retry can't restore the data. When signed out, only that browser can be cleared; across devices, sign in to the original account and withdraw again. If the database write fails, the anonymous cookies are still cleared and the page prompts to retry the account cleanup. Deleting the account removes the record via a foreign-key cascade and clears the source cookies in the current browser.
+- The source snapshot stays in the database until the user withdraws or deletes their account; localStorage only stores the decline preference, never the source. Disabling the module stops capture and hides the entry point; database records are kept, and operators can still run data cleanup on user request.
+- Vercel Analytics has its own switch; this preference control doesn't govern it. With attribution on, admins see how each source performs in the **channel report** at `/admin/acquisition`: for the last 7 / 30 / 90 days (UTC), grouped by the source frozen at sign-up, it lists sign-ups, paying users, net revenue, refunds pending reconciliation, confirmed leads, and conversion rates, filterable by source / medium / campaign (empty = all). For how net revenue and refunds pending reconciliation are defined, see the "Revenue definition" section (the same definition as `/admin/metrics`); without paid plans the two revenue columns are hidden (the same check as `/admin/metrics`). Turn off `acquisition.attribution.enabled` and rebuild, and the page returns 404.
 
-验证：`pnpm test` 覆盖上下文校验、签名/过期、接口、重试和数据库并发；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本启用归因，覆盖桌面及 375px 的接受 → 注册 → 撤回和拒绝路径，不改模板默认配置。普通 e2e 同时锁定关闭时没有控件、Cookie 或获客请求。Google 两种方式的真实账号端到端登录需在配置了 OAuth origin/回调的环境人工验证。
+Verification: `pnpm test` covers context validation, signing / expiry, the endpoints, retries, and database concurrency; `EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` enables attribution in a temporary copy and covers the accept → sign up → withdraw and decline paths on desktop and at 375px, without changing the template's default config. The regular e2e suite also locks in that when it's off there is no control, no cookie, and no acquisition request. End-to-end sign-in with a real Google account, for both methods, has to be verified by hand in an environment with the OAuth origin / callback configured.
 
-### 邮箱留资
+### Email lead capture
 
-运行 `pnpm db:migrate` 后，在 `site.config.ts` 设置 `acquisition.leads.enabled: true` 并重新构建。默认关闭时 `/waitlist`、确认/撤回页和 `/api/acquisition/leads` 返回 404，表单脚本不下发；关闭不会自动删除旧数据，清理命令与账户删除仍清理旧数据。
+After running `pnpm db:migrate`, set `acquisition.leads.enabled: true` in `site.config.ts` and rebuild. While off by default, `/waitlist`, the confirm / withdraw pages, and `/api/acquisition/leads` return 404 and the form script isn't shipped; turning it off doesn't delete existing data automatically, and the cleanup command and account deletion still clean up old data.
 
-- `acquisition.leads.lists` 默认 `[{ id: "waitlist", consentVersion: "1" }]`，可配置多个唯一名单。每个名单在语言文件 `Leads.lists.<id>` 配置 `title`、`description`、`consent`；改变用途或同意文案时同时更新版本。页面 `/waitlist?list=<id>` 选择名单，也可在营销页面嵌入服务端 `<LeadCapture listId="waitlist" />`（`src/core/acquisition/leads/capture.tsx`）。
-- 邮箱与名单唯一，邮箱 trim/lowercase；明确勾选同意才提交，存当时文案、版本、时间。留资只发送确认邮件，不创建账户，也不订阅营销群发。已确认的同邮箱在首次注册且邮箱验证后关联，后补留资不会关联老账户；已有来源或撤回标记优先。
-- 确认链接 24 小时有效，GET 只显示页面，点击按钮 POST 才改变状态；重复确认不延长保留期。链接 token 仅哈希存库，原文放 URL fragment，避免进入请求日志；邮件域名取站点配置。重发轮换链接，旧邮件链接失效；同邮箱/名单 60 秒冷却，发送失败释放当前冷却以便重试。相同提交返回统一结果。
-- 复用现有 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`，提交/重发按 IP 每小时 10 次、邮箱每小时 3 次，确认/撤回按 IP 每小时 30 次。IP/邮箱以 HMAC 摘要作为 Redis 键，不写入线索。缺少客户端 IP、缺少 Redis 配置或 Redis 故障返回 503（超限 429），不写入、不发信；非 Vercel 部署必须由可信代理覆盖 `x-forwarded-for`。请求体上限 4 KiB，带蜜罐和同源校验。
-- 邮件撤回按钮清除该线索的邮箱、来源、同意载荷、token 和注册关联；如果账户来源继承自它，也一并清除并保留撤回标记，独立账户来源不受影响。账户删除清理同邮箱线索。匿名计数仅保留记录 ID、名单和生命周期时间。
-- **部署后至少每日调度一次 `pnpm leads:cleanup`**（在项目目录、Node 环境执行，使用 `DATABASE_URL`；可用现有外部定时任务）。命令清理 pending 满 7 天、confirmed 自确认起满 180 天的数据及继承来源，幂等可重跑；重新提交不延长既有记录期限。关闭模块后仍需执行。清理事务失败会非零退出，应由调度器告警。
+- `acquisition.leads.lists` defaults to `[{ id: "waitlist", consentVersion: "1" }]`; you can configure several lists with unique ids. Each list sets `title`, `description`, and `consent` under `Leads.lists.<id>` in the language files; when you change the purpose or the consent copy, bump the version too. The page `/waitlist?list=<id>` selects a list, or you can embed the server component `<LeadCapture listId="waitlist" />` (`src/core/acquisition/leads/capture.tsx`) in a marketing page.
+- Email plus list is unique, and emails are trimmed / lowercased; submission requires explicitly ticking consent, and the copy, version, and time at that moment are stored. Lead capture only sends a confirmation email; it doesn't create an account or subscribe the address to marketing campaigns. A confirmed lead with the same email is linked when that email first signs up and is verified; leaving a lead afterward doesn't link it to an existing account, and an existing source or withdrawal marker takes precedence.
+- Confirmation links are valid for 24 hours; GET only shows the page, and the state changes only on the POST from clicking the button; confirming again doesn't extend retention. The link token is stored only as a hash, with the original in the URL fragment so it stays out of request logs; the email's domain comes from the site config. Resending rotates the link, invalidating the old email's link; there's a 60-second cooldown per email / list, and a failed send releases the current cooldown so it can be retried. Identical submissions return the same result.
+- It reuses the existing `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`: submit / resend is limited to 10 per hour per IP and 3 per hour per email, confirm / withdraw to 30 per hour per IP. IPs / emails are used as Redis keys in HMAC-digest form and are not written into the lead. A missing client IP, missing Redis config, or a Redis failure returns 503 (429 when over the limit), with nothing written and no email sent; non-Vercel deployments must have a trusted proxy overwrite `x-forwarded-for`. The request body is capped at 4 KiB, with a honeypot and a same-origin check.
+- The withdraw button in the email clears the lead's email, source, consent payload, token, and sign-up link; if the account's source was inherited from it, that is cleared too and a withdrawal marker is kept, while an independent account source is untouched. Account deletion cleans up leads with the same email. Anonymous counts keep only the record ID, list, and lifecycle timestamps.
+- **After deploying, schedule `pnpm leads:cleanup` at least once a day** (run it in the project directory in a Node environment, using `DATABASE_URL`; an existing external scheduled job works). The command cleans up data that has been pending for 7 days, or confirmed for 180 days since confirmation, along with inherited sources; it's idempotent and safe to rerun, and resubmitting doesn't extend an existing record's period. It still needs to run after the module is turned off. If the cleanup transaction fails it exits non-zero, which your scheduler should alert on.
 
-验证：`pnpm test` 覆盖限流失败关闭、去重并发、发送失败重试、token/到期、关联与撤回；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本启用归因与留资，文件邮件走通桌面/375px 留资 → 确认 → 注册 → 撤回及拒绝来源路径。该浏览器测试只在临时副本替换 Redis 限流器，不验证真实 Upstash 或邮件投递；上线前需验证真实服务凭据与域名配置。
+Verification: `pnpm test` covers rate limiting failing closed, deduplication under concurrency, retry after a failed send, tokens / expiry, linking, and withdrawal; `EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` enables attribution and lead capture in a temporary copy and, with file-based email, walks through lead → confirm → sign up → withdraw and the decline-source path on desktop / at 375px. That browser test replaces the Redis rate limiter only in the temporary copy and doesn't verify real Upstash or email delivery; before launch, verify the real service credentials and domain setup.
 
-### 邀请链接
+### Referral links
 
-先运行 `pnpm db:migrate`，在 `site.config.ts` 设置 `acquisition.referrals.enabled: true` 并重新构建。默认关闭时 `/referrals`、`/invite/<code>` 和 `/api/acquisition/referrals` 都返回 404，侧栏也没有入口；关闭不会删除已有数据。`/referrals` 在 `(app)` 下，未登录访客**不会**被送去登录页：模块关着时 proxy 在渲染前就返回 404（判定留在页面里的话，`(app)` 的 layout 会先跳登录页，同一个地址对未登录是 307、对已登录是 404）。除下面那条接受接口的限流外，无需新增 env 或外部服务。该开关要求 `features.credits` 已开启（配置校验会拦下不满足的组合），所以邀请码随积分账本一起上线，而不是一套独立的奖励系统。
+Run `pnpm db:migrate` first, then set `acquisition.referrals.enabled: true` in `site.config.ts` and rebuild. While off by default, `/referrals`, `/invite/<code>`, and `/api/acquisition/referrals` all return 404 and there's no sidebar entry; turning it off doesn't delete existing data. `/referrals` lives under `(app)`, but signed-out visitors are **not** sent to the sign-in page: when the module is off, the proxy returns 404 before rendering (if the check lived in the page, the `(app)` layout would redirect to sign-in first, and the same URL would be a 307 for signed-out visitors and a 404 for signed-in ones). Apart from the rate limit on the accept endpoint below, no new env vars or external services are needed. This switch requires `features.credits` to be on (config validation rejects the combination otherwise), so referral codes ship alongside the credit ledger rather than as a separate reward system.
 
-- `/referrals` 给登录用户一个专属邀请码和 `/invite/<code>` 链接，可一键复制（复制失败时退回手动复制）。码是 12 位、取自 32 个无易混字符（不含 `i`/`l`/`o`/`u`）的随机串，一人一码、首次进入该页时生成后一直复用；生成函数不接收任何用户信息，码里推不出用户 ID，空间也不可枚举。
-- 邀请落地页在注册前展示邀请提示、链接是否有效和接受的含义（可选、可拒绝、可清除、只存码、不向邀请人展示邮箱）。**接受之前不写任何东西**；接受后只在 `acquisition_referral` Cookie 里存码和接受时间，有效期 30 天，可随时在同一页面清除。清除或过期后可以再接受别的邀请，但已经建立的账号关系不受影响。已经接受过一份邀请时，再打开别的邀请链接只提供「清除已有邀请」（首个邀请胜出、服务端不会换），不给点了也没有效果的接受按钮；清除后给一句明确反馈，这一页随即变成可以接受的状态。
-- 邀请人自己那页的受邀记录条数是真实总数，列表只渲染最近 50 条：超过时页面写明「只显示最近 50 条」，不会让人以为数字和列表对不上。
-- 接受接口是未登录也能调的公开写入点，按 `site.config.ts` 的 `rateLimit.policies.referralAccept`（默认每 IP 每小时 30 次）计数，超限返回 429（Redis 故障按 `failMode`）。和其余限流一样用 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`：没配 Redis 时本地、CI 和预览放行，自托管生产返回 503，显式跳过用 `ALLOW_UNRATELIMITED=1`。前端对 429 有专门文案，不是笼统的「出错了」。
-- 邀请上下文与渠道归因分开存放：接受邀请不写 `acquisition_source`，也没有 `?ref=` 参数参与归因，营销来源记录不会被邀请链接覆盖或改写。反过来，归因关闭、只开邀请时绑定照常工作。
-- 绑定只发生在**首次创建账号**时（Better Auth 的 `user.create.after` 钩子，与来源冻结、留资关联同一处），邮箱验证码、Google OAuth、One Tap 三条注册路径共用。关系对受邀人唯一（数据库主键），首个已接受的邀请码胜出，之后不能更换；跨登录跳转注册、并发注册或重复回调都只会留下一条关系。邀请人自己在服务端按码重新解析，客户端只提交码，提交不了也决定不了任何发奖用户 ID。
-- 拒绝的情形：自邀（邀请页只提示分享给他人）、码格式不对或邀请人不存在、邀请人已被封禁（未过期的封禁）——都按同一种「链接无效」处理，不区分原因。已登录账号不会再被邀请关系覆盖：邀请页对已有账号只说明邀请在创建账号时记录，不提供接受按钮；老账号无论怎么点都不会获得关系。
-- 关系状态目前只有 `awaiting_payment`（等待首次付款）。**奖励结算尚未实现**（后续任务），所以页面明确写出本站没有开启邀请奖励、接受邀请不承诺任何积分或回报；配置奖励之前不要向用户承诺额度。邀请人在 `/referrals` 只看到受邀记录的状态和时间，看不到受邀人的邮箱或其他身份信息。
-- 绑定失败不影响注册：自邀、老账号、无效或封禁邀请人只记 `referrals.bind_rejected`，存储故障记 `referrals.bind_failed`，注册流程照常完成。删除账号由外键级联清掉其邀请码与关系。
+- `/referrals` gives a signed-in user a personal referral code and a `/invite/<code>` link that can be copied in one click (falling back to manual copy if copying fails). The code is a random 12-character string drawn from 32 unambiguous characters (no `i`/`l`/`o`/`u`), one per user, generated the first time the user opens the page and reused from then on; the generator takes no user information, so the code reveals nothing about the user ID, and the space can't be enumerated.
+- Before sign-up, the invite landing page shows the invite notice, whether the link is valid, and what accepting means (optional, declinable, clearable, stores only the code, never shows your email to the inviter). **Nothing is written before accepting**; after accepting, only the code and the acceptance time are stored in the `acquisition_referral` cookie, valid for 30 days, and clearable at any time on the same page. After clearing or expiry, the visitor can accept another invite, but an account relationship that already exists is unaffected. When one invite has already been accepted, opening another invite link offers only "Clear the accepted invitation" (the first invite wins, and the server won't switch), with no accept button that would do nothing when clicked; after clearing, there's clear feedback and the page becomes acceptable right away.
+- The count of invited users on the inviter's own page is the real total, but the list renders only the latest 50: when there are more, the page says "The list shows the 50 most recent." so no one thinks the number and the list disagree.
+- The accept endpoint is a public write point callable while signed out, counted by `rateLimit.policies.referralAccept` in `site.config.ts` (default 30 per hour per IP), returning 429 over the limit (Redis failures follow `failMode`). Like the other rate limits it uses `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`: without Redis, local, CI, and previews let requests through, self-hosted production returns 503, and you skip explicitly with `ALLOW_UNRATELIMITED=1`. The frontend has dedicated copy for 429 rather than a generic "something went wrong".
+- The invite context is stored separately from channel attribution: accepting an invite doesn't write `acquisition_source`, there's no `?ref=` parameter involved in attribution, and invite links never overwrite or change marketing source records. Conversely, with attribution off and only referrals on, binding works as usual.
+- Binding happens only when **the account is first created** (Better Auth's `user.create.after` hook, the same place as source freezing and lead linking), shared by all three sign-up paths: email verification code, Google OAuth, and One Tap. The relationship is unique per invitee (database primary key); the first accepted code wins and can't be changed later, and a sign-up that redirects through sign-in, concurrent sign-ups, or repeated callbacks all leave exactly one relationship. The inviter is re-resolved from the code on the server; the client only submits the code and can neither submit nor decide any user ID that would receive a reward.
+- Rejected cases: self-invites (the invite page just suggests sharing with others), a malformed code or nonexistent inviter, and an inviter who is banned (an unexpired ban) — all are treated the same as "invalid link", without distinguishing the reason. A signed-in account is never overwritten by an invite relationship: for an existing account, the invite page only explains that invites are recorded at account creation and offers no accept button; an existing account never gets a relationship no matter what it clicks.
+- Right now the only relationship status is `awaiting_payment` (waiting for the first payment). **Reward settlement isn't implemented yet** (planned), so the page states plainly that this site has no referral rewards turned on and that accepting an invite promises no credits or other returns; don't promise users any amounts before you configure rewards. On `/referrals`, the inviter sees only the status and time of each invited record, never the invitee's email or other identity information.
+- A failed binding doesn't affect sign-up: self-invites, existing accounts, and invalid or banned inviters only log `referrals.bind_rejected`, storage failures log `referrals.bind_failed`, and the sign-up flow completes as usual. Deleting an account removes its referral code and relationships via a foreign-key cascade.
 
-验证：`pnpm test` 覆盖码的解析/归一化/不可枚举、上下文签名与 30 天窗口、接口的同源、限流与拒绝路径（超限 429、Redis 缺失 503、坏请求不占配额）、资格判定（自邀、无效、封禁、封禁已过期）、邀请码与关系的唯一性和并发绑定、受邀记录的截断与总数；`EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` 在临时副本同时开启归因、留资与邀请，走通复制 → 接受 → 跨登录跳转注册 → 关系展示（并确认邀请人看不到受邀人邮箱）、拒绝、过期上下文、无效链接、自邀与老账号路径，以及已接受过一份邀请时第二份只给清除、51 条记录时条数与列表的说明。普通 e2e 锁定关闭时三个入口都 404（`/referrals` 对未登录和已登录是同一种响应，且不跳登录页）、且不会给账号生成邀请码。
+Verification: `pnpm test` covers code parsing / normalization / non-enumerability, context signing and the 30-day window, the endpoint's same-origin check, rate limiting and rejection paths (429 over the limit, 503 without Redis, bad requests don't consume quota), eligibility (self-invite, invalid, banned, expired ban), uniqueness of codes and relationships and concurrent binding, and truncation and totals of invited records; `EMAIL_TRANSPORT=file pnpm test:e2e:acquisition` turns on attribution, lead capture, and referrals together in a temporary copy and walks through copy → accept → sign up via a sign-in redirect → relationship display (confirming the inviter can't see the invitee's email), declining, an expired context, an invalid link, self-invite and existing-account paths, plus offering only "clear" for a second invite after one has been accepted and the count-vs-list note at 51 records. The regular e2e suite locks in that when it's off all three entry points return 404 (`/referrals` gives the same response signed out and signed in, without redirecting to sign-in) and that no referral code is generated for accounts.
 
-### 灰度开关
+### Feature flags
 
-`site.config.ts` 的 `userFlags.enabled` 默认 `false`。改成 `true` 重新部署即可开启，**不需要迁移、env 或外部服务**：v1 纯配置驱动，flag 状态不在数据库里，改了配置要重新部署一次（所以后台页只读，见下）。总开关关着时 `isEnabled()` 恒为 `false`、`<FeatureFlag>` 不渲染任何东西、后台页和侧栏入口都不存在。
+`userFlags.enabled` in `site.config.ts` defaults to `false`. Change it to `true` and redeploy to turn it on — **no migration, env vars, or external services needed**: v1 is purely config-driven, flag state isn't in the database, and config changes need a redeploy (which is why the admin page is read-only; see below). While the master switch is off, `isEnabled()` is always `false`, `<FeatureFlag>` renders nothing, and neither the admin page nor the sidebar entry exists.
 
-- `userFlags.definitions` 的每一项是一个 flag：`description`（后台列表里显示的说明）、`enabled`（这个 flag 自己的开关）、`rollout`（0–100 的灰度百分比）、`adminOnly`（只给管理员）。名字用小写字母数字加 `.` `_` `-`。出厂留了三个示例定义（50% 灰度、只给管理员、关掉的），换成自己的即可。
-- 判定顺序（`isEnabledFor`，`src/core/flags/evaluate.ts`）：总开关 → 该 flag 的 `enabled` → `adminOnly` → 灰度分桶。`rollout` 1–100 的 flag 对**管理员恒可见**（不参与分桶，方便自己先看）；**`rollout: 0` 是硬关闭**，对所有人都是 `false`，「只给管理员看」要配 `adminOnly: true`，不能靠把 rollout 写成 0；未登录（没有用户 ID）时为 `false`，因为没有身份就没法分桶。
-- 分桶是确定性的：`sha256(userId + flagName)` 的前 8 位十六进制换算成 [0, 1)，同一用户看同一个 flag 的结果永远一样（刷新、换设备、重新登录都不变）；调大 `rollout` 只会让更多用户进桶，已经在桶里的不会被踢出去。
-- 服务端用 `isEnabled(userId, flagName, { isAdmin })`；客户端用 `<FeatureFlag name="…">` 或 `useFlag("…")`（`src/core/flags/components.tsx`）。判定在服务端算好，经 `FlagsProvider` 下发（挂在登录后的外框上）：浏览器拿到的是 true/false 快照，`site.config.ts` 和 zod 不会进客户端产物。**没挂 provider 的页面（营销页、未登录页面）`useFlag` 一律返回 `false`**，所以别拿 flag 做营销内容的开关。Dashboard 上有一段示例（`src/core/flags/flag-example.tsx`），照它接自己的功能。
-- 后台 `/admin/flags` 列出全部定义、开关、灰度和可见范围，**只读**：v1 不能在运行时改写配置，要改就改 `site.config.ts` 再重新部署，页面底部写着这一点。总开关关着、或访问者不是管理员时该页返回 404。
+- Each entry in `userFlags.definitions` is one flag: `description` (the explanation shown in the admin list), `enabled` (this flag's own switch), `rollout` (a 0–100 rollout percentage), and `adminOnly` (admins only). Names use lowercase letters and digits plus `.` `_` `-`. Three example definitions ship by default (50% rollout, admins only, and off); replace them with your own.
+- Evaluation order (`isEnabledFor`, `src/core/flags/evaluate.ts`): master switch → the flag's `enabled` → `adminOnly` → rollout bucketing. A flag with `rollout` 1–100 is **always visible to admins** (they skip bucketing, so you can look at it first); **`rollout: 0` is a hard off** and is `false` for everyone — for "admins only", set `adminOnly: true` rather than setting rollout to 0; signed-out visitors (no user ID) get `false`, because there's no identity to bucket.
+- Bucketing is deterministic: the first 8 hex digits of `sha256(userId + flagName)` are mapped to [0, 1), so a given user always gets the same result for a given flag (across refreshes, devices, and sign-ins); raising `rollout` only adds more users to the bucket and never kicks out anyone already in it.
+- On the server use `isEnabled(userId, flagName, { isAdmin })`; on the client use `<FeatureFlag name="…">` or `useFlag("…")` (`src/core/flags/components.tsx`). Evaluation happens on the server and is delivered through `FlagsProvider` (mounted on the signed-in shell): the browser gets a true/false snapshot, and neither `site.config.ts` nor zod ends up in the client bundle. **On pages without the provider (marketing pages, signed-out pages) `useFlag` always returns `false`**, so don't use flags to switch marketing content. The Dashboard has an example block (`src/core/flags/flag-example.tsx`); wire up your own features the same way.
+- The admin page `/admin/flags` lists every definition, its switch, rollout, and visibility, and is **read-only**: v1 can't rewrite config at runtime, so to change anything you edit `site.config.ts` and redeploy, as the bottom of the page notes. The page returns 404 when the master switch is off or the visitor isn't an admin.
 
-验证：`pnpm test` 覆盖分桶的确定性、均匀性与单调性，判定顺序的每个分支（总开关、flag 开关、`adminOnly`、`rollout: 0`、管理员、未登录），以及 `useFlag` / `<FeatureFlag>` 在有无 provider 下的行为；`EMAIL_TRANSPORT=file pnpm test:e2e:flags` 在临时副本打开总开关，覆盖管理员恒可见、普通用户按分桶拿到新区块或 fallback（含刷新后不变）、后台列表与 375px 不溢出；普通 e2e 锁定关闭状态下 Dashboard 没有区块、后台 404。
+Verification: `pnpm test` covers determinism, uniformity, and monotonicity of bucketing, every branch of the evaluation order (master switch, flag switch, `adminOnly`, `rollout: 0`, admin, signed out), and how `useFlag` / `<FeatureFlag>` behave with and without the provider; `EMAIL_TRANSPORT=file pnpm test:e2e:flags` turns on the master switch in a temporary copy and covers admins always seeing flags, regular users getting the new block or the fallback by bucket (unchanged after refresh), the admin list, and no overflow at 375px; the regular e2e suite locks in that when it's off the Dashboard has no block and the admin page is 404.

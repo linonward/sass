@@ -1,208 +1,208 @@
-# 升级到模板的新版本
+# Upgrading to a new template version
 
-业务项目是从这个模板复制出来的仓库，模板之后的更新（修 bug、新模块、依赖升级）要合进来。两条路：
+Your product is a repository copied from this template, and later template updates (bug fixes, new modules, dependency upgrades) need to be merged into it. There are two ways to do that:
 
-- **差量更新包**（推荐）：卖家发布新版本时会给你一个 `sass-template-update-<旧版本>-to-<新版本>.zip`，里面只有这两个版本之间**随包交付的文件**的变动。应用脚本逐文件三路合并：你没动过的直接取新版，两边都改过的自动合、合不上就留下冲突标记等你处理。这条路不需要模板仓库的访问权，也不需要和它有共同的 Git 历史。
-- **`git merge`**（可选）：把模板仓库加成 `upstream`，直接合并它的 `main`。只有从 GitHub「Use this template」起步、与模板有共同 Git 历史的项目成立；代价和限制见[用 git merge 合并](#用-git-merge-合并可选)。
+- **Update package** (recommended): when the seller publishes a new version, you get a `sass-template-update-<old version>-to-<new version>.zip` that contains only the changes to **shipped files** between those two versions. The apply script does a three-way merge file by file: files you never touched simply take the new version, files changed on both sides are merged automatically, and anything that can't be merged is left with conflict markers for you to resolve. This path needs no access to the template repository and no shared Git history with it.
+- **`git merge`** (optional): add the template repository as `upstream` and merge its `main` directly. This only works for projects that started from GitHub's "Use this template" and share Git history with the template; for the costs and limits, see [Merging with git merge](#merging-with-git-merge-optional).
 
-两条路都建立在同一件事上：业务代码守住目录边界。
+Both paths rest on the same thing: your app code stays within the directory boundaries.
 
-## 目录边界
+## Directory boundaries
 
-| 路径                                            | 归属 | 说明                                                |
-| ----------------------------------------------- | ---- | --------------------------------------------------- |
-| `src/core/**`                                   | 模板 | 业务项目尽量不改；改了，合并上游时就要自己解决冲突  |
-| `src/app/[locale]/(marketing)/**`、`(admin)/**` | 模板 | 落地页、定价、法律页、博客、后台的路由              |
-| `src/app/api/**`                                | 模板 | 登录、支付、上传、AI 的接口                         |
-| `drizzle/`                                      | 两边 | 迁移文件，两边都会新增，见下文"迁移冲突"            |
-| `src/app/[locale]/(app)/**`                     | 业务 | 登录后的业务页面（模板自带的 dashboard 等页面除外） |
-| `src/features/**`                               | 业务 | 业务逻辑、组件、表（`src/features/*/schema.ts`）    |
-| `site.config.ts`                                | 业务 | 品牌、域名、功能开关、套餐、限流阈值、侧边栏菜单    |
-| `messages/**`、`content/**`、`public/**`        | 业务 | 文案、法律页正文、博客文章、图片                    |
+| Path                                            | Owner    | Notes                                                                                         |
+| ----------------------------------------------- | -------- | --------------------------------------------------------------------------------------------- |
+| `src/core/**`                                   | Template | Avoid changing it in your project; if you do, you resolve the conflicts when merging upstream |
+| `src/app/[locale]/(marketing)/**`, `(admin)/**` | Template | Routes for the landing page, pricing, legal pages, blog, and admin                            |
+| `src/app/api/**`                                | Template | API routes for sign-in, payments, uploads, and AI                                             |
+| `drizzle/`                                      | Both     | Migration files; both sides add them, see "Migration conflicts" below                         |
+| `src/app/[locale]/(app)/**`                     | App      | Signed-in product pages (except the dashboard and other pages the template ships)             |
+| `src/features/**`                               | App      | Business logic, components, tables (`src/features/*/schema.ts`)                               |
+| `site.config.ts`                                | App      | Brand, domain, feature toggles, plans, rate limit thresholds, sidebar menu                    |
+| `messages/**`, `content/**`, `public/**`        | App      | Copy, legal page text, blog posts, images                                                     |
 
-写业务时：
+When writing app code:
 
-- 新功能放在 `src/features/<name>/`，路由文件放在 `src/app/[locale]/(app)/<name>/page.tsx`，只转发到 feature 里的页面（参考 `src/features/example/`）。
-- 需要的东西从 `src/core` 导入（`runAI`、`deductCredits`、`getSession`、`buildMetadata`、`@/core/ui/*` 等），不要复制一份再改。
-- 侧边栏菜单写在 `site.config.ts` 的 `dashboard.nav`，这些路径自动需要登录。
-- 真的需要改 `src/core` 时，改动尽量小，并在提交信息里写清楚原因。能做成配置项或钩子的，优先提给模板仓库。
+- Put new features in `src/features/<name>/` and the route file in `src/app/[locale]/(app)/<name>/page.tsx`, which only forwards to the page in the feature (see `src/features/example/`).
+- Import what you need from `src/core` (`runAI`, `deductCredits`, `getSession`, `buildMetadata`, `@/core/ui/*`, and so on) instead of copying it and editing the copy.
+- Sidebar menu items go in `dashboard.nav` in `site.config.ts`; those paths require sign-in automatically.
+- When you really do need to change `src/core`, keep the change as small as possible and explain why in the commit message. If it could be a config option or a hook, prefer proposing it to the template repository.
 
-## 用差量更新包升级（推荐）
+## Upgrading with an update package (recommended)
 
-### 更新包里有什么
+### What's in an update package
 
-一个 zip，解压后是：
+A zip that unpacks to:
 
-| 路径                | 是什么                                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------------------ |
-| `update.json`       | 机器可读的变动清单：`from` / `to` 版本、每个文件的变动类型（`added` / `modified` / `deleted`）与权限位 |
-| `new/`              | 新版本的文件                                                                                           |
-| `base/`             | 变动文件在**上一版**里的样子 —— 三路合并的基线，平时不用看                                             |
-| `new/template.json` | 新版本的版本基线，应用成功后由脚本接手（见下）                                                         |
+| Path                | What it is                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `update.json`       | Machine-readable change list: `from` / `to` versions, and each file's change type (`added` / `modified` / `deleted`) and mode bits   |
+| `new/`              | Files from the new version                                                                                                           |
+| `base/`             | The changed files as they were in the **previous version** — the base for the three-way merge; you normally don't need to look at it |
+| `new/template.json` | The new version's baseline, which the script takes over once the update applies cleanly (see below)                                  |
 
-包里没有模板作者的内部文档，也没有卖家的域名和测试凭据：更新包和发行包用的是同一份排除清单、同一套自检。
+The package contains none of the template author's internal docs and none of the seller's domains or test credentials: update packages and release packages use the same exclusion list and the same self-checks.
 
-### 版本连续性：`template.json`
+### Version continuity: `template.json`
 
-发行包（和每个更新包）里都带着一份 `template.json`：版本号、对应的提交、构建时间，以及**每个随包文件的 sha256**。两个作用：
+The release package (and every update package) includes a `template.json`: the version number, the matching commit, the build time, and **the sha256 of every shipped file**. It does two jobs:
 
-- **校验起点**：应用脚本拿你的 `template.json` 的 `version` 和更新包的 `from` 比对，对不上就拒绝并提示补齐中间版本。所以更新包要**按顺序应用**（先 `v1.0.0 → v1.1.0`，再 `v1.1.0 → v1.2.0`）。
-- **判断迁移有没有被动过**：脚本拿清单里的哈希和 `drizzle/` 下的现状比，就能知道哪些迁移是你新增的、你改的、你删的。
+- **Checking the starting point**: the apply script compares the `version` in your `template.json` with the update package's `from`; if they don't match, it refuses and tells you to apply the versions in between. So update packages must be **applied in order** (first `v1.0.0 → v1.1.0`, then `v1.1.0 → v1.2.0`).
+- **Detecting whether migrations were touched**: by comparing the hashes in the manifest with what's currently under `drizzle/`, the script knows which migrations you added, changed, or deleted.
 
-版本号是卖家在其仓库上打的 tag；还没有 tag 的版本用 `package.json` 的版本加提交短号（例如 `0.1.0-9806e3b`）。
+Version numbers are tags the seller puts on their repository; a version without a tag uses the `package.json` version plus the short commit hash (for example `0.1.0-9806e3b`).
 
-### 步骤
+### Steps
 
 ```bash
-# 0. 先提交或备份当前改动 —— 脚本直接改工作区，不碰 git 历史
+# 0. Commit or back up your current changes first — the script edits the working tree directly and doesn't touch git history
 git status
 
-# 1. 应用更新包（zip 或解压后的目录都行）
+# 1. Apply the update package (a zip or an unpacked directory both work)
 scripts/apply-template-update.sh ~/Downloads/sass-template-update-v1.0.0-to-v1.1.0.zip
 
-# 2. 按脚本打印的结果处理冲突与迁移（见下两节）；脚本非零退出时不要跳过
+# 2. Handle conflicts and migrations based on what the script prints (see the next two sections); don't skip this when the script exits non-zero
 
-# 3. 依赖与验证
+# 3. Dependencies and verification
 pnpm install
 pnpm test
-pnpm db:migrate      # 这次更新带新迁移时才需要
+pnpm db:migrate      # only needed when this update brings new migrations
 
-# 4. 自己提交（脚本不碰 git 历史，提交信息你定）
+# 4. Commit yourself (the script doesn't touch git history; the commit message is up to you)
 git add -A && git commit -m "chore: apply template update"
 ```
 
-> 仓库里还没有 `scripts/apply-template-update.sh`？它是随某次更新才进包的。第一次更新时先把包里的 `new/scripts/apply-template-update.sh` 复制到你的 `scripts/` 目录，再照上面的步骤跑。
+> No `scripts/apply-template-update.sh` in your repository yet? It entered the package with a particular update. For your first update, copy `new/scripts/apply-template-update.sh` from the package into your `scripts/` directory, then follow the steps above.
 
-脚本对每个变动文件做的事：
+What the script does with each changed file:
 
-| 你的文件 | 模板 | 结果                                       |
-| -------- | ---- | ------------------------------------------ |
-| 没动过   | 改了 | 直接取新版                                 |
-| 改了     | 改了 | 三路合并；合得上自动合，合不上留下冲突标记 |
-| 删了     | 改了 | 跳过，不替你恢复（清单里会列出来）         |
-| 在       | 删了 | 只提示，不替你删                           |
+| Your file | Template | Result                                                                             |
+| --------- | -------- | ---------------------------------------------------------------------------------- |
+| Untouched | Changed  | Takes the new version                                                              |
+| Changed   | Changed  | Three-way merge; merges automatically if it can, otherwise leaves conflict markers |
+| Deleted   | Changed  | Skipped, not restored for you (it's listed in the output)                          |
+| Present   | Deleted  | Only reported, not deleted for you                                                 |
 
-全部干净时，脚本把 `template.json` 更新到新版本 —— 下一次更新就从这里接上。
+When everything is clean, the script updates `template.json` to the new version — the next update picks up from there.
 
-### 冲突：脚本留下的标记
+### Conflicts: the markers the script leaves
 
-两边都改了同一处时，文件里会留下：
+When both sides changed the same spot, the file ends up with:
 
 ```
-<<<<<<< 你现在的版本
-你的内容
+<<<<<<< yours (current)
+your content
 =======
-模板新版的内容
->>>>>>> 模板新版
+content from the new template version
+>>>>>>> template (new)
 ```
 
-脚本会列出所有冲突文件并以非零退出。模板的新版在更新包的 `new/<路径>` 下，你的原版在 `base/<路径>` 下，可以直接对着看。
+The script lists every conflicted file and exits non-zero. The new template version is at `new/<path>` in the update package and the previous template version is at `base/<path>`, so you can compare them directly.
 
-解决完冲突之后，把解决过的路径告诉脚本，用同一个更新包重跑一次：已经应用过的文件会跳过，所以重复跑是安全的。
+Once you've resolved the conflicts, tell the script which paths you resolved and rerun it with the same update package: files that were already applied are skipped, so rerunning is safe.
 
 ```bash
 scripts/apply-template-update.sh --resolved site.config.ts --resolved messages/en.json \
   ~/Downloads/sass-template-update-v1.0.0-to-v1.1.0.zip
 ```
 
-**没处理完的冲突不会让版本基线推进**：这次没落地的改动，靠不推进的基线下次还能补上。在冲突和迁移处理干净之前，下一个更新包会被版本校验挡住 —— 这是故意的。
+**Unresolved conflicts don't advance the version baseline**: because the baseline stays put, the changes that didn't land this time can still be picked up later. Until the conflicts and migrations are cleared, the next update package is blocked by the version check — this is intentional.
 
-### 迁移冲突
+### Migration conflicts
 
-`drizzle/` 是唯一不能机械合并的目录：迁移的文件名（编号）在全库唯一，快照链还要闭合。所以规则是**你自上个版本以来动过迁移、模板这次又带了迁移变动，脚本就整块停下**，`drizzle/` 下一个文件都不动，并打印处理步骤：
+`drizzle/` is the only directory that can't be merged mechanically: migration file names (numbers) are unique across the whole database, and the snapshot chain has to stay closed. So the rule is: **if you've touched migrations since the last version and this template update also changes migrations, the script stops for the whole block**, leaves every file under `drizzle/` untouched, and prints the steps to follow:
 
-1. 你自己的迁移保留原编号，模板的迁移文件按原名放进 `drizzle/`。
-2. 编号撞车时保留模板那条的编号，重新生成你自己的那一条：
+1. Keep your own migrations at their original numbers; copy the template migration files into `drizzle/` under their original names.
+2. If numbers collide, keep the number of the template migration and regenerate your own:
    ```bash
-   pnpm db:generate --name <你原来那条的名字>
+   pnpm db:generate --name <your original migration name>
    ```
-   生成的迁移只应包含你自己的表。
-3. 验证：
+   The generated migration should only contain your own tables.
+3. Verify:
    ```bash
-   pnpm migrations:check   # 编号连续、when 严格递增、快照链闭合
-   pnpm db:migrate         # 先在一个 Neon 分支或本地库上验证
+   pnpm migrations:check   # numbers contiguous, when strictly increasing, snapshot chain closed
+   pnpm db:migrate         # verify on a Neon branch or a local database first
    ```
-4. 处理完加 `--migrations-done`，用同一个更新包重跑一次，基线才会推进：
+4. When done, rerun with `--migrations-done` (same update package); only then does the baseline advance:
    ```bash
    scripts/apply-template-update.sh --migrations-done ~/Downloads/sass-template-update-v1.0.0-to-v1.1.0.zip
    ```
 
-已经跑在生产库上的迁移不要删掉重建：先在 Neon 分支上执行 `pnpm db:migrate` 确认结果（分支是写时复制的，不会影响主线）再决定怎么处理。
+Don't delete and recreate migrations that have already run on your production database: first run `pnpm db:migrate` on a Neon branch to check the result (branches are copy-on-write and don't affect the main branch), then decide how to handle it.
 
-## 用 git merge 合并（可选）
+## Merging with git merge (optional)
 
-这条路只对**与模板有共同 Git 历史**的项目成立 —— 从 GitHub「Use this template」建仓库、或从模板仓库 fork 出来的项目。购买后拿到 zip 的项目没有这层历史，走[差量更新包](#用差量更新包升级推荐)。
+This path only works for projects that **share Git history with the template** — repositories created with GitHub's "Use this template" or forked from the template repository. Projects that started from the zip you receive after purchase don't have that history; use the [update package](#upgrading-with-an-update-package-recommended) instead.
 
-第一次，添加模板仓库为 `upstream`：
+The first time, add the template repository as `upstream`:
 
 ```bash
 git remote add upstream https://github.com/linonward/sass.git
 ```
 
-之后每次合并：
+Then for each merge:
 
 ```bash
 git checkout -b chore/merge-upstream
 git fetch upstream
-scripts/core-drift.sh            # 先看冲突范围，见下文
+scripts/core-drift.sh            # check the conflict surface first, see below
 git merge upstream/main
 pnpm install
-pnpm db:generate                  # 检查迁移是否需要重新生成，见下文
+pnpm db:generate                  # check whether migrations need regenerating, see below
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-合并完用一个 PR 提交，跑过 CI 再合入 `main`。部署时 Vercel 会先执行 `pnpm db:migrate`（见 `vercel.json`）。
+Submit the merge as one PR and merge it into `main` after CI passes. On deploy, Vercel runs `pnpm db:migrate` first (see `vercel.json`).
 
-模板的 README 和 `.env.example` 会记录新增的环境变量和外部服务，合并后对照检查一遍 Vercel 上的环境变量。
+The template's README and `.env.example` record new environment variables and external services; after merging, check the environment variables on Vercel against them.
 
-### 为什么不是 `git merge --allow-unrelated-histories`
+### Why not `git merge --allow-unrelated-histories`
 
-zip 起步的项目与模板没有共同历史，直接 `git merge upstream/main` 会被 git 拒绝（`refusing to merge unrelated histories`），`--allow-unrelated-histories` 就是关掉这道保险的开关。它能让合并跑起来，但**不是完整的升级方案**：
+A project that started from the zip shares no history with the template, so a plain `git merge upstream/main` is refused by git (`refusing to merge unrelated histories`), and `--allow-unrelated-histories` is the switch that turns off that safeguard. It gets the merge to run, but it is **not a complete upgrade path**:
 
-- **模板的每一处改动都拿空树当共同祖先**，git 无从判断「买家改的」和「模板改的」。结果不是「谁改了什么」的合并，而是：两边内容不同的文件**一律成为 add/add 冲突**，买家改过的每一个文件都得人工逐个决定（实测里连 `package.json` 都是这么冲的）；模板删掉的文件不会从买家那边删掉（空祖先下表达不出「删除」），买家删掉、模板还留着的文件会被重新加回来。
-- **模板的整棵树都会落进你的仓库**，包括模板作者的内部文档和全部历史。实测：一个只有 2 个跟踪文件的 zip 起步仓库，跑一次 `git merge --allow-unrelated-histories upstream/main` 之后变成 718 个文件。
+- **Every template change uses the empty tree as the common ancestor**, so git can't tell "what the buyer changed" from "what the template changed". The result isn't a merge of who changed what. Instead, every file whose content differs between the two sides **becomes an add/add conflict**, and every file the buyer changed has to be decided by hand, one by one (in our tests even `package.json` conflicted this way). Files the template deleted aren't deleted on the buyer's side (with an empty ancestor there's no way to express "deleted"), and files the buyer deleted but the template still has are added back.
+- **The template's entire tree lands in your repository**, including the template author's internal docs and the full history. In our tests, a zip-started repository with only 2 tracked files grew to 718 files after one `git merge --allow-unrelated-histories upstream/main`.
 
-合并完你还得自己把混进来的内部文档再删一遍，而删掉的那些文件会在下一次合并时再次出现。差量更新包正是为了避开这些：它只带两个版本之间随包交付的文件，用**上一版的真实内容**当合并基线，而不是空树。
+After merging you'd still have to delete the internal docs that came along, and those deleted files come back on the next merge. The update package exists to avoid all of this: it carries only the shipped files that changed between two versions, and uses **the real content of the previous version** as the merge base instead of the empty tree.
 
-### 看冲突范围：`scripts/core-drift.sh`
+### Checking the conflict surface: `scripts/core-drift.sh`
 
 ```bash
-scripts/core-drift.sh                  # 默认比较 upstream main
-scripts/core-drift.sh origin main      # 指定其他远程和分支
+scripts/core-drift.sh                  # compares against upstream main by default
+scripts/core-drift.sh origin main      # use a different remote and branch
 CORE_PATHS="src/core src/app/api" scripts/core-drift.sh
 ```
 
-输出三部分，都相对于本项目与上游的分叉点：本项目改过的套件文件（含未提交的改动）、上游改过的套件文件、两边都改过的文件。第三部分就是合并时最可能冲突的地方。第一部分为空时，直接合并即可。
+The output has three parts, all relative to the point where this project and upstream diverged: kit files this project changed (including uncommitted changes), kit files upstream changed, and files changed on both sides. The third part is where merge conflicts are most likely. When the first part is empty, you can merge directly.
 
-## 常见冲突
+## Common conflicts
 
-**`pnpm-lock.yaml`**：不要手工合并。先解决 `package.json` 的冲突，然后：
+**`pnpm-lock.yaml`**: don't merge it by hand. Resolve the `package.json` conflict first, then:
 
 ```bash
-git checkout --theirs pnpm-lock.yaml     # 走差量更新包时：删掉它，下面这行会重新生成
+git checkout --theirs pnpm-lock.yaml     # with an update package: delete it instead; the next line regenerates it
 pnpm install --no-frozen-lockfile
 git add pnpm-lock.yaml
 ```
 
-**迁移冲突**（`drizzle/meta/_journal.json`、`drizzle/meta/*_snapshot.json`）：两边各自新增了迁移，编号撞了。以上游为准，重新生成本项目的迁移（走差量更新包时脚本会自己停下并打印同一套步骤，见[迁移冲突](#迁移冲突)）：
+**Migration conflicts** (`drizzle/meta/_journal.json`, `drizzle/meta/*_snapshot.json`): both sides added migrations and the numbers collided. Take upstream's version and regenerate this project's migration (with an update package, the script stops by itself and prints the same steps; see [Migration conflicts](#migration-conflicts)):
 
 ```bash
-git checkout --theirs drizzle/meta/_journal.json drizzle/meta/<冲突的快照>.json
-git rm drizzle/<本项目那条冲突的迁移>.sql     # 例如 0012_projects.sql
-pnpm db:generate --name <原来的名字>           # 生成新编号的迁移，内容只含本项目的表
+git checkout --theirs drizzle/meta/_journal.json drizzle/meta/<conflicting snapshot>.json
+git rm drizzle/<this project's conflicting migration>.sql     # for example 0012_projects.sql
+pnpm db:generate --name <original name>           # generates a migration with a new number, containing only this project's tables
 git add drizzle
 ```
 
-如果本项目那条迁移已经在生产数据库执行过，不要删除重建：先在一个 Neon 分支上执行 `pnpm db:migrate` 确认结果，再决定怎么处理。
+If this project's migration has already run on the production database, don't delete and recreate it: first run `pnpm db:migrate` on a Neon branch to check the result, then decide how to handle it.
 
-**`src/core/db/schema/auth.ts`**：这个文件由 `pnpm auth:generate` 生成。冲突时取上游的版本，再运行 `pnpm auth:generate` 和 `pnpm db:generate`。
+**`src/core/db/schema/auth.ts`**: this file is generated by `pnpm auth:generate`. On conflict, take upstream's version, then run `pnpm auth:generate` and `pnpm db:generate`.
 
-**`site.config.ts`、`messages/en.json`**：通常是上游加了新字段或新文案，保留本项目的值，同时加上上游新增的 key。`pnpm test` 会检查 messages 的 key 是否齐全，`defineConfig()` 会指出配置里缺的字段。
+**`site.config.ts`, `messages/en.json`**: usually upstream added new fields or new copy. Keep this project's values and add the keys upstream added. `pnpm test` checks that the messages keys are complete, and `defineConfig()` points out missing config fields.
 
-**快照测试**（`*.snap`）：改了域名、路由或文章后，运行 `pnpm test -u` 更新快照，检查一下 diff 再提交。
+**Snapshot tests** (`*.snap`): after changing the domain, routes, or posts, run `pnpm test -u` to update the snapshots, and review the diff before committing.
 
-**`<Card>` 的默认外观**（模板改版后，见 `docs/design.md` §4.5）：不传 `tone` 时不再是原来那圈 `ring`，而是 `.panel`——1px `--border` 描边、和画布几乎同色的平面。业务页面里的 `<Card>` 会因此多出一根描边（改动很小，但确实会冲突）。`tone` 的行为没变，仍然是营销面的贴纸。
+**Default `<Card>` look** (after the template redesign; see §4.5 of `docs/design.md`): without `tone`, it's no longer the old `ring` but `.panel` — a 1px `--border` outline on a flat surface nearly the same color as the canvas. `<Card>`s on your product pages gain an outline as a result (a small change, but it does conflict). `tone` behaves the same as before and is still the marketing-surface sticker.
 
-**`src/core/ui/page-header.tsx`、`empty-state.tsx`**（模板新增，见 `docs/design.md` §4.5）：产品面/后台的页头和空状态。业务页面如果自己写了 `text-2xl font-semibold tracking-tight` 的标题块，可以换成 `<PageHeader>` 跟上语域；不换也不会坏。
+**`src/core/ui/page-header.tsx`, `empty-state.tsx`** (new in the template; see §4.5 of `docs/design.md`): the page header and empty state for the product surface and admin. If your product pages have their own `text-2xl font-semibold tracking-tight` title block, you can switch to `<PageHeader>` to match the register; nothing breaks if you don't.
 
-**界面上没有模糊投影**（模板改版后，见 `docs/design.md` §6）：`shadow-sm/md/lg` 在 `src/` 里一处都不该有。加新的浮动层时用 `.sticker`（物件：1px 描边 + 零模糊唇边）或退一档背景，不要加投影。
+**No blurred shadows in the UI** (after the template redesign; see §6 of `docs/design.md`): `shadow-sm/md/lg` should not appear anywhere in `src/`. For new floating layers, use `.sticker` (an object: 1px outline + zero-blur lip) or step the background back one level; don't add a shadow.

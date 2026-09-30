@@ -139,10 +139,10 @@
 
 **验收**
 
-- [ ] 范围内文件不含中文（示例里展示中文界面的片段除外）
-- [ ] 随包文档之间、代码指向文档的链接和锚点全部可达
-- [ ] `scripts/check-notices.mjs` 不再含中文，`pnpm notices:check` 绿
-- [ ] `pnpm format:check` 绿
+- [x] 范围内文件不含中文（示例里展示中文界面的片段除外）—— 只剩 `docs/i18n.md` 以「中文」举例语言自称
+- [x] 随包文档之间、代码指向文档的链接和锚点全部可达：标题按统一的对照表翻译，49 处锚点按对照表机械改写，全仓链接逐条校验可达
+- [x] `scripts/check-notices.mjs` 不再含中文，`pnpm notices:check` 绿（改错版本号仍会报错）
+- [x] `pnpm format:check` 绿
 
 ---
 
@@ -158,7 +158,7 @@
 **做**
 
 - 加一个检查脚本（挂成 `pnpm` 命令并进 CI 的 `static` job）：扫描**随包文件集合**（与 `scripts/release-package.sh` 的排除清单同源，不另写一份），发现汉字即失败，输出文件和行号。
-- 白名单尽量窄：`messages/zh.json`、中文 locale 的内容目录、以及显式标注的行。标注方式在脚本开头说明。T2601–T2604 实际留下、需要白名单的只有这些：`drizzle/0000_init.sql`（已执行过的迁移，不改）、`src/core/blog/blog.test.ts` 与 `src/core/blog/posts.ts` 的非 ASCII 标签样例 `中文`、`src/core/i18n/locale-switcher.tsx` 的自称样例、`src/core/marketing/sections/hero.tsx` 按全角逗号切中文标题的那一行、`src/features/invoices/invoices.test.ts` 的全角数字输入。
+- 白名单尽量窄：`messages/zh.json`、中文 locale 的内容目录、以及显式标注的行。标注方式在脚本开头说明。T2601–T2604 实际留下、需要白名单的只有这些：`drizzle/0000_init.sql`（已执行过的迁移，不改）、`src/core/blog/blog.test.ts` 与 `src/core/blog/posts.ts` 的非 ASCII 标签样例 `中文`、`src/core/i18n/locale-switcher.tsx` 的自称样例、`src/core/marketing/sections/hero.tsx` 按全角逗号切中文标题的那一行、`src/features/invoices/invoices.test.ts` 的全角数字输入、`docs/i18n.md` 以「中文」举例语言自称的那一行。
 - 扫描要按 Unicode 读文件并跳过二进制（`public/` 下的图片会让逐行解码报错；T2604 盘点时就因此漏掉过一批文件）。
 - 对脚本本身写单测：随包文件里的中文会被抓到、白名单生效、不随包的文件不扫。
 - `docs/workflow.md` 的提交前检查补上这一条。

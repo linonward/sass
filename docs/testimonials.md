@@ -1,12 +1,14 @@
-# Landing 用户故事配置
+# Configuring landing page testimonials
 
-在 `site.config.ts` 的 `landing.sections` 中加入 `testimonials`，建议放在 features 与 delivery 之间。移除该 ID 或将 `landing.testimonials.items` 设为空数组即可关闭；卡片按 items 顺序向下、再向右阅读，窄屏保持相同顺序。
+Add `testimonials` to `landing.sections` in `site.config.ts`; we recommend placing it between features and delivery. To turn it off, remove that ID or set `landing.testimonials.items` to an empty array. Cards read in `items` order, down and then across, and narrow screens keep the same order.
 
-默认六项均为示例文案，`example: true` 会逐条显示「示例评价」，区块也会提示非真实用户评价。图片是既有产品摄影，不是客户成果。替换成获得授权的真实文案与素材后逐条删除 example。没有真实内容时可清空 items，不用编造人数或评分。
+The six default items are all sample copy: `example: true` shows a "Sample quote" label on each card, and the section also notes that these are not real customer testimonials. The images are existing product photography, not customer results. After replacing them with authorized real copy and assets, remove `example` from each item. If you don't have real content, you can empty `items` — don't make up user counts or ratings.
 
 ```ts
 // site.config.ts → landing
-// 卡片的作者名称、素材和原始出处在这里；正文与身份介绍按 key 查 messages。
+// Body text, author identity, and image alt text live in Landing.testimonials.items.<key> in
+// messages. Put image/video assets and avatars in public/; a video must have a poster,
+// dimensions, and captions.
 testimonials: {
   items: [
     { key: "focus", type: "quote", author: { name: "Your customer" } },
@@ -35,18 +37,18 @@ testimonials: {
 },
 ```
 
-素材先放进 `public/testimonials/` 再填写路径，宽高填写实际尺寸。图片默认按 16:10 裁切，视频保留配置比例；视频使用浏览器原生播放/暂停/音量/字幕控件，支持键盘操作，不自动播放、不预加载视频正文。每个视频至少配置一个 WebVTT 字幕文件。这里只接受本站素材路径，不接受第三方 iframe。出处链接必须为 HTTPS。
+Put the assets in `public/testimonials/` before filling in the paths, and enter the actual width and height. Images are cropped to 16:10 by default; videos keep the configured aspect ratio. Videos use the browser's native play/pause/volume/captions controls, work with the keyboard, don't autoplay, and don't preload the video itself. Every video needs at least one WebVTT captions file. Only asset paths on your own site are accepted, not third-party iframes. Source links must be HTTPS.
 
-在 `messages/en.json` 与 `messages/zh.json` 的 `Landing.testimonials.items` 为每个 key 添加：
+In `messages/en.json` and `messages/zh.json`, add the following under `Landing.testimonials.items` for each key:
 
 ```json
 {
   "launch": {
-    "quote": "用户的原话，<highlight>重点句</highlight>。",
-    "role": "身份 / 产品名称",
-    "imageAlt": "截图中可见的产品及内容"
+    "quote": "The customer's own words, <highlight>the key sentence</highlight>.",
+    "role": "Role / product name",
+    "imageAlt": "The product and content visible in the screenshot"
   }
 }
 ```
 
-`quote` 与 `role` 每项必填；`imageAlt` 仅图片卡必填；高亮标签可省略。作者头像使用空 alt，避免与旁边姓名重复朗读。区块标题、说明、示例提示及视频可访问名称也在同一个翻译命名空间。新增语言时同步这些字段。
+`quote` and `role` are required for every item; `imageAlt` is required only for image cards; the highlight tag is optional. Author avatars use an empty alt so screen readers don't repeat the name next to them. The section title, description, sample notice, and the video's accessible name live in the same translation namespace. Update these fields when you add a language.
