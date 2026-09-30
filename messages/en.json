@@ -771,6 +771,8 @@
       "description": "Your plan, purchases and credits.",
       "planTitle": "Plan",
       "freePlan": "You're on the free plan.",
+      "purchasedOnly": "No subscription. Your one-time purchases are listed below.",
+      "noPlan": "You haven't bought a plan yet.",
       "viewPlans": "View plans",
       "status": {
         "active": "Active",

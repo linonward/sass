@@ -1,3 +1,4 @@
+import type { Plan } from "@/core/config/schema";
 import type { PlaceholderIssue } from "@/core/config/sentinels";
 
 /**
@@ -37,8 +38,11 @@ export type OnboardingInput = {
   brandColor: string;
   /** Factory placeholders still unchanged in siteConfig (src/core/config/sentinels). */
   placeholders: readonly PlaceholderIssue[];
-  /** Provider product IDs configured in siteConfig.billing.plans. */
-  planProductIds: readonly string[];
+  /**
+   * siteConfig.billing.plans. Hidden plans are skipped: they can't be bought, so a placeholder
+   * product ID left on one (e.g. `SITE_HIDDEN_PLANS=pro`) is not an unfinished step.
+   */
+  plans: readonly Pick<Plan, "providerProductId" | "hidden">[];
   /** features.blog: when off, the "write your first post" step doesn't appear. */
   blogEnabled: boolean;
   /** Whether we're running on Vercel: lets the deploy step be detected automatically. */
@@ -57,8 +61,12 @@ export type OnboardingInput = {
 export function onboardingSteps(input: OnboardingInput): OnboardingStep[] {
   const brandColorDone =
     input.brandColor.trim().toLowerCase() !== FACTORY_BRAND_COLOR;
-  const placeholderPlans = input.planProductIds.filter((id) =>
-    PLACEHOLDER_PRODUCT.test(id),
+  const placeholderPlans = input.plans.flatMap((plan) =>
+    !plan.hidden &&
+    plan.providerProductId &&
+    PLACEHOLDER_PRODUCT.test(plan.providerProductId)
+      ? [plan.providerProductId]
+      : [],
   );
 
   return [

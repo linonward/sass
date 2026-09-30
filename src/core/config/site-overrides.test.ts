@@ -33,6 +33,13 @@ describe("site plan overrides (SITE_PRICE_* / SITE_HIDDEN_PLANS)", () => {
     expect(getPlan("pro")).toMatchObject({ id: "pro", hidden: true });
   });
 
+  test("the free plan can be hidden too (a deployment that only sells one-time plans)", async () => {
+    vi.stubEnv("SITE_HIDDEN_PLANS", "pro,free");
+    await loadConfig();
+    const { listedPlans } = await import("../billing/plans");
+    expect(listedPlans().map((p) => p.id)).toEqual(["lifetime"]);
+  });
+
   test("a malformed price fails at startup instead of silently using the default", async () => {
     vi.stubEnv("SITE_PRICE_LIFETIME", "ninety-nine");
     await expect(loadConfig()).rejects.toThrow(

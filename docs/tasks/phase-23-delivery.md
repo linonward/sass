@@ -897,6 +897,35 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 - [x] `lib.test.mjs` 7 项通过（新增自动链接还原、非自动链接保留、富文本数组、非字符串）
 - [x] 新脚本对真实表格核对：local、ci in sync，输出与改动前一致
 
+## T2325 one-time-plans
+
+- 分支 / worktree：`fix/one-time-plans` → `../sass-one-time-plans`
+- 依赖：无；起点 `c0a3b68`。
+
+**问题**
+
+生产站只卖一个一次性的 `lifetime`，没有订阅也没有免费版，设了 `SITE_HIDDEN_PLANS=pro,free`。由此冒出三处和「只有一次性套餐」不符的地方：
+
+- 账单页：没有订阅就显示 `Billing.page.freePlan`「你当前使用免费套餐」，买了 `lifetime` 的人（一次性购买不产生订阅）也这么显示；免费版被隐藏时同样。
+- 引导清单：`planProductIds` 把隐藏套餐也算进去，隐藏的 `pro` 留着占位产品 ID，「定价」那步永远是 todo。
+- `site.config.ts` 里 `free` 套餐没有 `hidden: isHidden("free")`，`SITE_HIDDEN_PLANS` 里写 `free` 不生效，定价页和首页照样列出免费卡片。
+
+**决定**
+
+- `src/core/billing/overview.ts` 加纯函数 `planSummary(overview, listedPlans())`：有订阅 → 订阅行（不变）；无订阅但有一次性购买 → 新文案 `purchasedOnly`；都没有且免费版（价格 0）在列 → `freePlan`；否则 → 新文案 `noPlan`。中英文案同步加。
+- `onboardingSteps` 的输入由 `planProductIds` 改为 `plans`（`providerProductId` + `hidden`），隐藏套餐的占位 ID 不算未完成，判断留在 `src/core/onboarding/steps.ts` 这个纯函数里，便于单测。
+- `free` 套餐补上 `hidden: isHidden("free")`，与 `pro` / `lifetime` 一致。
+- 不扩范围，留作后续：无订阅的一次性买家看到的门户按钮仍叫「管理订阅」（`Billing.page.manage`）；定价页副标题、FAQ 等营销文案仍写「免费开始」「免费版每月 100 积分」，免费版隐藏时不符（生产首页由 `SITE_OVERLAY_DIR` 覆盖，定价页不覆盖）。
+
+**验收**
+
+- [x] `overview.test.ts`：订阅优先；一次性买家为 `purchased`；都没有时免费版在列为 `free`、不在列为 `none`
+- [x] `steps.test.ts`：隐藏套餐上的占位产品 ID 不让「定价」变 todo
+- [x] `site-overrides.test.ts`：`SITE_HIDDEN_PLANS=pro,free` 时 `listedPlans()` 只剩 `lifetime`
+- [x] `e2e/pricing.spec.ts`：买完 `lifetime` 后账单页显示 `purchasedOnly`、不出现 `freePlan`
+- [x] `SITE_HIDDEN_PLANS=pro,free` 起 dev：`/pricing`、`/`、`/zh/pricing` 都只列 `lifetime`
+- [x] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm english:check`；`ui-shell` / `landing` / `billing` / `onboarding` / `pricing` 五个 e2e 套件通过
+
 ## T2326 audit-next
 
 - 分支 / worktree：`fix/audit-next` → `../sass-audit-next`

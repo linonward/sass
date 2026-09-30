@@ -304,6 +304,7 @@ const config = defineConfig({
       {
         id: "free",
         price: 0,
+        hidden: isHidden("free"),
         interval: "month",
         features: ["credits100", "coreFeatures", "communitySupport"],
         credits: 100,
