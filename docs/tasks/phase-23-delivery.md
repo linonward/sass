@@ -827,3 +827,28 @@ T2319 在 production（https://sass.linonward.com）验证时发现：用 Google
 - [x] 配置 Google 时 `img-src` 含 `https://lh3.googleusercontent.com`，未配置时不含（单测）
 - [x] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm english:check`、`prettier --check` 通过
 - [x] CI 绿
+
+## T2322 env-sync
+
+- 分支 / worktree：`chore/env-sync` → `../sass-env-sync`
+- 依赖：无；起点 `41167d5`。
+
+**问题**
+
+环境变量散在三处：本地 `.env.local`、`ci.yml`、Vercel production，没有一处能看全；改了一处容易忘另一处，生产缺什么（例如 T2408 要补的 `SITE_OVERLAY_DIR`）只能靠记忆。
+
+**决定**
+
+- 飞书多维表格「sass 环境变量」是唯一来源：每个变量一行，Local / CI / Prod 三列存值。
+- 同步脚本 `.claude/skills/env-sync/scripts/sync.mjs`（Node，放在 skill 目录里，`.claude` 不随包）：默认核对三处并只打印变量名；`--apply local` 写 `.env.local`，`--apply prod` 写 Vercel production（值经 stdin 传入，不进 argv）。
+- CI 列只核对不写：`ci.yml` 随包交付、全是测试值。空单元格跳过只报告，脚本从不删除变量。Vercel 敏感变量读不出值，默认跳过，`--include-sensitive` 才覆盖。
+
+**验收**
+
+- [x] `node --test .claude/skills/env-sync/scripts/lib.test.mjs`：解析、差异分类（含不删除）、`.env.local` 原位改写与引号往返，4 项通过
+- [x] 核对模式对真实表格：CI、Prod 一致（16 个敏感变量标为无法比对）
+- [x] `--apply local` 在空 worktree 生成的 `.env.local` 与主 checkout 的逐项相同，文件权限 600
+- [x] 无差异时 `--apply prod` 不写 Vercel；临时目录退出即删
+- [x] Claude Code skill `.claude/skills/env-sync/`，`release-package.sh` 排除 `.claude`
+- [x] 按 skill 流程完整走一遍：改表格 → 核对报出 2 个缺失 → 确认后 `--apply prod --only SITE_OVERLAY_DIR,SITE_DESCRIPTION` → 复核 in sync；两者按表格「敏感」未勾存为 Config（T2408 的生产变量就此补上，重新部署后生效）
+- [x] 走查中修正：`+record-search` 需 `--format json` 且为子串匹配；新变量不再一律存为敏感（否则以后无法核对），改按表格「敏感」列

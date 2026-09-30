@@ -30,6 +30,7 @@ cd "$root"
 exclude_paths=(
   AGENTS.md
   CLAUDE.md
+  .claude
   docs/plan.md
   docs/workflow.md
   docs/tasks

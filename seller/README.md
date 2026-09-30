@@ -15,3 +15,7 @@ SITE_DESCRIPTION=The starter kit for your AI business.
 - `messages/<locale>.json` 深合并到 `messages/<locale>.json` 上，只写要覆盖的 key。
 
 改售卖站首页文案或区块，只改这里，不要改 `site.config.ts` / `messages/` 的默认值。本地预览：`SITE_OVERLAY_DIR=seller pnpm dev`。
+
+## 环境变量
+
+环境变量以飞书多维表格为准，同步脚本和用法都在 Claude Code skill [`.claude/skills/env-sync/`](../.claude/skills/env-sync/SKILL.md) 里（同样不随包）。
