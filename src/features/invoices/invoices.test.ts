@@ -35,7 +35,7 @@ describe("parseAmountToCents", () => {
     ["19.999", "three decimal places"],
     ["1.2.3", "two decimal points"],
     ["1e3", "scientific notation"],
-    ["１２３", "full-width digits"],
+    ["１２３", "full-width digits"], // english-check-allow: full-width digits are the test input
     ["12 34", "space in the middle"],
     ["1000000.01", "over the maximum"],
   ])("%s → null (%s)", (value) => {

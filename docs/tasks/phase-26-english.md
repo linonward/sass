@@ -165,6 +165,12 @@
 
 **验收**
 
-- [ ] 在 `main` 上跑通过
-- [ ] 往任意随包 `.ts` 文件加一行中文注释，检查失败并指出位置
-- [ ] CI 汇总闸门 `ci` 覆盖这一步
+- [x] 在 `main` 上跑通过（778 个随包文件）
+- [x] 往任意随包 `.ts` 文件加一行中文注释，检查失败并指出位置（在真仓库里试过后还原；单测里也有）
+- [x] CI 汇总闸门 `ci` 覆盖这一步（`static` job 的一步，`ci` 依赖 `static`）
+
+**实现时定下的**
+
+- 买家项目里只查 `src/core/`：`ci.yml` 和脚本都随包，买家的 CI 也会跑；`docs/agent-guide.md` 说买家自己的业务代码用什么语言都行，全量扫会让买家的 CI 因为自己的中文注释失败。模板仓库与买家项目按 `docs/tasks/` 是否存在区分（它从不随包，README 也让走 GitHub 模板的买家删掉）。
+- 白名单实际只剩三条路径：`messages/zh.json`、`content/<集合>/zh/`、`drizzle/0000_init.sql`。注释和文档里只是举例的中文改成了别的语言（`posts.ts`、`locale-switcher.tsx`、`docs/i18n.md`）；真正需要中文的三处（`blog.test.ts` 的非 ASCII 标签收成一个 `vi.hoisted` 常量、`hero.tsx` 按全角逗号切标题、`invoices.test.ts` 的全角数字）在行尾标注。
+- 脚本和它的单测本身也随包，里面的中文样例一律写成 `\u` 转义。

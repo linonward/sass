@@ -97,6 +97,7 @@ jobs:
       # dependencies weekly and the notices file doesn't follow on its own, so this step compares
       # it entry by entry against pnpm-lock.yaml and pnpm licenses list and fails on drift.
       - run: pnpm notices:check
+      - run: pnpm english:check
 
       # Release package self-check: zero hits for credentials / seller domains / internal docs,
       # and all required files present. It used to run only when a package was built by hand

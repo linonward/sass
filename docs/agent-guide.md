@@ -39,7 +39,7 @@ That reminder is correct: the Next.js version this project uses differs from man
 5. **UI follows `docs/design.md`:** colors derive from the configured color, no blurred shadows (don't write `shadow-sm/md/lg`), components come from `@/core/ui/*`.
 6. **Before handing off, run at least `pnpm lint`, `pnpm typecheck`, and `pnpm test`.** If you changed a page, also run the matching e2e (see [Testing](#testing)).
 7. **Commit messages use Conventional Commits** (`feat: …` / `fix: …`); a hook checks them on `git commit`.
-8. **The kit's code, comments and docs are in English; keep your changes under `src/core/` in English too** so template updates merge cleanly. Your own product code can use any language.
+8. **The kit's code, comments and docs are in English; keep your changes under `src/core/` in English too** so template updates merge cleanly. Your own product code can use any language. `pnpm english:check` (also run in CI) checks `src/core/` for Chinese text.
 
 ## Directory boundaries
 
@@ -259,6 +259,7 @@ pnpm db:migrate                  # 4. Apply to the database DATABASE_URL points 
 | `pnpm typecheck`                         | After changing routes, `site.config.ts`, or types                                      |
 | `pnpm test`                              | Before every commit                                                                    |
 | `pnpm migrations:check`                  | After touching `drizzle/`                                                              |
+| `pnpm english:check`                     | After touching `src/core/` (kit code stays English)                                    |
 | `npx playwright test e2e/<name>.spec.ts` | After changing a page (full command below)                                             |
 | `pnpm build`                             | Before launch; unchanged placeholder values and missing copy keys are both caught here |
 

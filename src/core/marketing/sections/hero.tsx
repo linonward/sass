@@ -49,7 +49,7 @@ export function Hero({
   const title = t("title");
   const accent = t("titleAccent");
   const accentAt = title.lastIndexOf(accent);
-  const clauseAt = title.indexOf("，") + 1;
+  const clauseAt = title.indexOf("，") + 1; // english-check-allow: zh headlines split at the full-width comma
   return (
     <div>
       <Section

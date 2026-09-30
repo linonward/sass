@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/core/ui/dropdown-menu";
 
-/** A locale's name for itself, e.g. zh → 中文, de → Deutsch. */
+/** A locale's name for itself, e.g. de → Deutsch, fr → Français. */
 export function nativeName(locale: string) {
   return (
     new Intl.DisplayNames([locale], { type: "language" }).of(locale) ?? locale

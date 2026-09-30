@@ -23,6 +23,10 @@ import { blogSitemap } from "./sitemap";
 
 const origin = `https://${siteConfig.domain}`;
 
+// A non-ASCII tag: tag URLs must be percent-encoded exactly once. vi.hoisted so the mock factories
+// below can use it too.
+const nonAsciiTag = vi.hoisted(() => "中文"); // english-check-allow: the non-ASCII test tag
+
 // Simulates a multilingual site: en has 13 posts (paginated) and 1 draft, de has only 1
 // translation, fr is not enabled. All 13 carry the guides tag, so the tag page itself paginates too
 // (/blog/tags/guides/page/2).
@@ -66,7 +70,7 @@ vi.mock("content-collections", () => {
       ),
       post("en", "hello", "2026-02-01", {
         title: "Hello <world>",
-        tags: ["news", "guides", "中文"],
+        tags: ["news", "guides", nonAsciiTag],
       }),
       post("en", "secret", "2026-03-01", {
         draft: true,
@@ -93,14 +97,14 @@ describe("posts", () => {
   });
 
   test("tags come only from visible posts", () => {
-    expect(getTags("en")).toEqual(["guides", "news", "中文"]);
+    expect(getTags("en")).toEqual(["guides", "news", nonAsciiTag]);
     expect(getTags("de")).toEqual(["news"]);
     // sitemap passes drafts: false (the default) — tags used only by drafts have no page in production.
     expect(getTags("en", { drafts: true })).toEqual([
       "drafts-only",
       "guides",
       "news",
-      "中文",
+      nonAsciiTag,
     ]);
   });
 
@@ -113,16 +117,18 @@ describe("posts", () => {
 describe("paths", () => {
   test("tag paths are encoded once: non-ASCII and / stay inside a single route segment", () => {
     expect(tagPath("guides")).toBe("/blog/tags/guides");
-    expect(tagPath("中文")).toBe("/blog/tags/%E4%B8%AD%E6%96%87");
+    expect(tagPath(nonAsciiTag)).toBe("/blog/tags/%E4%B8%AD%E6%96%87");
     expect(tagPath("a/b")).toBe("/blog/tags/a%2Fb");
 
     // canonical, og, sitemap, internal links, and pagination are all built on tagPath: there is only
     // one encoding, so pages and machine-readable listings can't disagree on percent-encoding.
-    expect(pagePath(tagPath("中文"), 1)).toBe("/blog/tags/%E4%B8%AD%E6%96%87");
-    expect(pagePath(tagPath("中文"), 2)).toBe(
+    expect(pagePath(tagPath(nonAsciiTag), 1)).toBe(
+      "/blog/tags/%E4%B8%AD%E6%96%87",
+    );
+    expect(pagePath(tagPath(nonAsciiTag), 2)).toBe(
       "/blog/tags/%E4%B8%AD%E6%96%87/page/2",
     );
-    expect(absoluteUrl("en", tagPath("中文"))).toBe(
+    expect(absoluteUrl("en", tagPath(nonAsciiTag))).toBe(
       `${origin}/blog/tags/%E4%B8%AD%E6%96%87`,
     );
   });
@@ -178,8 +184,12 @@ describe("sitemap", () => {
 
     // Tag paths are encoded: canonical uses the same tagPath, so the two can't disagree on
     // percent-encoding.
-    expect(urls).toContain(`${origin}/blog/tags/${encodeURIComponent("中文")}`);
-    expect(urls.some((url) => url.includes("/blog/tags/中文"))).toBe(false);
+    expect(urls).toContain(
+      `${origin}/blog/tags/${encodeURIComponent(nonAsciiTag)}`,
+    );
+    expect(urls.some((url) => url.includes(`/blog/tags/${nonAsciiTag}`))).toBe(
+      false,
+    );
   });
 
   test("excludes drafts and tags used only by drafts", () => {
