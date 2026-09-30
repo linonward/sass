@@ -15,6 +15,10 @@ export type PlaceholderIssue = {
  * "Acme", example.com, an example.com sender address, and support@example.com as the contact
  * address on the legal pages (and as the Reply-To of every transactional email).
  *
+ * `email.fromName` is not checked on its own: site.config.ts derives it from `name` (siteName), so
+ * the "Acme" sender name goes away exactly when the `name` check passes. A buyer who gives it a
+ * separate literal has already chosen a sender name on purpose.
+ *
  * All of these fields can be overridden by environment variables (see the top of site.config.ts),
  * so a demo site doesn't have to commit real values to the repo — and they don't end up in the
  * package shipped to buyers.

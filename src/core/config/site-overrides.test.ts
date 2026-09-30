@@ -85,3 +85,28 @@ describe("contact address (SITE_CONTACT_EMAIL)", () => {
     await expect(loadConfig()).rejects.toThrow(/contactEmail/);
   });
 });
+
+describe("email sender name follows the site name (SITE_NAME)", () => {
+  test("without it, both keep the shipped placeholder, which the name check reports", async () => {
+    vi.stubEnv("SITE_NAME", "");
+    const config = await loadConfig();
+    expect(config.name).toBe("Acme");
+    expect(config.email.fromName).toBe("Acme");
+    // No separate fromName check: the "name" issue covers the sender name too.
+    const { placeholderIssues } = await import("./sentinels");
+    expect(placeholderIssues(config).map((issue) => issue.path)).toContain(
+      "name",
+    );
+  });
+
+  test("SITE_NAME renames the site and the email sender together", async () => {
+    vi.stubEnv("SITE_NAME", "Example Corp");
+    const config = await loadConfig();
+    expect(config.name).toBe("Example Corp");
+    expect(config.email.fromName).toBe("Example Corp");
+    const { placeholderIssues } = await import("./sentinels");
+    expect(placeholderIssues(config).map((issue) => issue.path)).not.toContain(
+      "name",
+    );
+  });
+});
