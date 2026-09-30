@@ -39,6 +39,8 @@ pnpm install   # T101 合入之后才有
 
 钩子只挡本地提交，CI 仍然完整跑一遍 lint、format、typecheck、test。临时跳过用 `git commit --no-verify`，但 CI 不会放过。
 
+随包文件（代码、注释、测试标题、脚本输出、买家文档）不许有中文：提交前跑 `pnpm english:check`，CI 的 `static` job 也跑。范围按 `scripts/release-package.sh` 的 `exclude_paths` 取，界面中文只放 `messages/zh.json`；确实需要中文的那一行（测试数据、处理中文的代码）行尾加 `english-check-allow: <原因>`，写法见 `scripts/check-english.mjs` 开头。买家项目里这条只查 `src/core/`（按有没有 `docs/tasks/` 区分）。
+
 ### 改数据库 schema
 
 改 `src/core/db/schema/` 之后用 `pnpm db:generate` 生成迁移，生成的 SQL 文件不要手工改内容

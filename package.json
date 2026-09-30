@@ -28,7 +28,8 @@
     "leads:cleanup": "node scripts/cleanup-leads.mjs",
     "downloads:publish": "node scripts/downloads-publish.mjs",
     "migrations:check": "node scripts/check-migrations.mjs",
-    "notices:check": "node scripts/check-notices.mjs"
+    "notices:check": "node scripts/check-notices.mjs",
+    "english:check": "node scripts/check-english.mjs"
   },
   "dependencies": {
     "@ai-sdk/alibaba": "^2.0.56",

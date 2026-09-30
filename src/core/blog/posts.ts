@@ -17,12 +17,12 @@ export const postPath = (slug: string) => `${blogPath}/${slug}`;
 /** Post share image (src/app/[locale]/(marketing)/blog/[slug]/og/route.tsx). */
 export const postOgPath = (slug: string) => `${postPath(slug)}/og`;
 /**
- * Site-relative path of a tag page. Tags come from frontmatter and may contain non-ASCII (`中文`)
+ * Site-relative path of a tag page. Tags come from frontmatter and may contain non-ASCII characters
  * or `/`, so encoding happens at the layer that builds URLs: canonical, og, sitemap, llms.txt, and
  * internal links all take it from here, so there is only one encoding.
  *
  * This encodes the URL, not the route param — the params `[tag]` receives are already decoded by
- * Next (`/blog/tags/%E4%B8%AD%E6%96%87` maps to `tag === "中文"`), and `generateStaticParams` also
+ * Next (`/blog/tags/caf%C3%A9` arrives as `tag === "café"`), and `generateStaticParams` also
  * returns raw values, so looking up posts with the result of `tagPath()` finds nothing.
  */
 export const tagPath = (tag: string) =>
