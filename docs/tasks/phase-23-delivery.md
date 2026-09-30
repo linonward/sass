@@ -658,6 +658,29 @@ T2605 翻译随包文档时，逐段对照了代码，发现几处文档与代�
 
 ---
 
+## T2316 pr-template
+
+- 分支 / worktree：`chore/pr-template` → `../sass-pr-template`
+- 依赖：—
+
+**问题**
+
+仓库没有 PR 模板，PR 描述的语言和结构全靠各个会话自觉。#186 先用英文写了 Why / What / Verification，rebase 后又在末尾追加了一节中文，读起来中英混排。
+
+**做**
+
+- 新增 `.github/pull_request_template.md`：英文，结构对齐 `docs/workflow.md`「提交 PR」的要求（关联的 issue / 任务、为什么、改动、验收勾选、验证、仍未验证、新增 env）。
+- 模板随包交付：买家项目开 PR 也会预填它，所以内容写成通用的，不含任务 ID（发行包自检禁止 `T###`）和内部文档链接；`english:check` 覆盖它。
+- `docs/workflow.md`：PR 标题和描述统一用英文，描述按模板填，后补内容并进原有各节；PR 标题示例换成英文。
+
+**验收**
+
+- [x] 新开 PR 时 GitHub 预填英文模板
+- [x] `scripts/release-package.sh` 出的包里包含 `.github/pull_request_template.md`，自检通过（无内部任务 ID）
+- [x] `pnpm english:check`、`pnpm format:check`、`pnpm test` 绿
+
+---
+
 ## T2317 pre-walk-docs
 
 - 分支 / worktree：`docs/pre-walk-docs` → `../sass-pre-walk-docs`
