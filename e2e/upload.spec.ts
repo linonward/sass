@@ -1,4 +1,10 @@
-import { expect, type Page, test } from "@playwright/test";
+import {
+  expect,
+  type FileChooser,
+  type Locator,
+  type Page,
+  test,
+} from "@playwright/test";
 
 import messages from "../messages/en.json";
 import { signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
@@ -53,6 +59,30 @@ const png = {
   ),
 };
 
+/**
+ * Opens the file chooser from the drop zone, by keyboard or by click. Before hydration the button
+ * has no handler and nothing opens, so retry until a chooser really appears. Every step is bounded
+ * (see openUserMenu in auth-helpers.ts): one unbounded wait would burn the whole toPass budget.
+ */
+async function openChooser(
+  page: Page,
+  zone: Locator,
+  via: "keyboard" | "click",
+): Promise<FileChooser> {
+  let chooser: FileChooser | undefined;
+  await expect(async () => {
+    const opened = page.waitForEvent("filechooser", { timeout: 1000 });
+    if (via === "keyboard") {
+      await zone.focus({ timeout: 1000 });
+      await page.keyboard.press("Enter");
+    } else {
+      await zone.click({ timeout: 1000 });
+    }
+    chooser = await opened;
+  }).toPass({ timeout: 15_000 });
+  return chooser!;
+}
+
 async function openDashboard(page: Page) {
   await signIn(page, uniqueEmail("upload"));
   await expect(page).toHaveURL("/onboarding");
@@ -66,10 +96,7 @@ test("choosing a file with the keyboard uploads it and links the result", async 
   const seen = await fakeUploadApi(page);
   const zone = await openDashboard(page);
 
-  await zone.focus();
-  const chooser = page.waitForEvent("filechooser");
-  await page.keyboard.press("Enter");
-  await (await chooser).setFiles(png);
+  await (await openChooser(page, zone, "keyboard")).setFiles(png);
 
   await expect(page.getByRole("status")).toHaveText(
     u.done.replace("{name}", png.name),
@@ -87,10 +114,8 @@ test("a disallowed file type is rejected before any request", async ({
   const seen = await fakeUploadApi(page);
   const zone = await openDashboard(page);
 
-  const chooser = page.waitForEvent("filechooser");
-  await zone.click();
   await (
-    await chooser
+    await openChooser(page, zone, "click")
   ).setFiles({
     name: "notes.txt",
     mimeType: "text/plain",
@@ -108,9 +133,7 @@ test("canceling mid-upload never confirms the file", async ({ page }) => {
   const seen = await fakeUploadApi(page, { holdPut: true });
   const zone = await openDashboard(page);
 
-  const chooser = page.waitForEvent("filechooser");
-  await zone.click();
-  await (await chooser).setFiles(png);
+  await (await openChooser(page, zone, "click")).setFiles(png);
 
   await expect(page.getByRole("status")).toHaveText(
     u.uploading.replace("{name}", png.name),
