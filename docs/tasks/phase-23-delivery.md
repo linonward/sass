@@ -864,7 +864,7 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 
 **决定**
 
-- 表格覆盖目标：`--apply prod` 写入表格里所有有值的 Prod 格子，值已相同的跳过；敏感变量无法比对，每次都重写。去掉 `--include-sensitive` 和占位文本。
+- 表格覆盖目标：`--apply prod` 写入表格里所有有值的 Prod 格子，值已相同的跳过；敏感变量读不出值，按「不同」处理、每次都重写（核对里总显示为 differs）。去掉 `--include-sensitive`、占位文本和 `[SENSITIVE]` 特判。
 - 存储类型按表格「敏感」列，不再沿用 Vercel 现有类型。
 - 表格里 16 个占位格子清空（空格子跳过，不会把占位文本写进生产），等填真实值。
 - `--apply local` 每次写后 `chmod 600`。
@@ -872,7 +872,7 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 
 **验收**
 
-- [x] `lib.test.mjs` 4 项通过（敏感变量归为 `sensitive`、空格子为 `untracked`）
+- [x] `lib.test.mjs` （敏感变量按 `change`、空格子为 `untracked`）
 - [x] 清空占位后核对：16 个敏感变量显示为「表格为空、跳过」，`--apply prod` 不会碰它们
 - [x] 本地、CI 仍 in sync
 - [x] key 核对：`.env.example` 的 key 在表格里都有；表格多出的 `DATABASE_URL_UNPOOLED`（Neon 集成）、`POSTGRES_PASSWORD`（仅 CI）只报告；`--apply keys` 无缺失时不写表格；`lib.test.mjs` 增至 6 项

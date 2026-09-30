@@ -1,12 +1,6 @@
 // Pure helpers for sync.mjs: parsing, diffing and rewriting. No I/O here, so it can be
 // tested with `node --test .claude/skills/env-sync/scripts/lib.test.mjs`.
 
-/**
- * What `vercel env pull` writes instead of a sensitive variable's value. Such a value can't be
- * compared, so the table's value is simply written again on every `--apply prod`.
- */
-export const VERCEL_SENSITIVE = "[SENSITIVE]";
-
 /** Variables Vercel injects itself; not managed in the table. */
 export const isVercelSystemVar = (name) =>
   /^(VERCEL|TURBO|NX)_/.test(name) || name === "VERCEL";
@@ -76,7 +70,7 @@ const blank = (v) => v === undefined || v === null || v === "";
  * Compares one table column with what a target environment actually has.
  *
  * - table has a value, target differs → `change` (or `add` when the target lacks it)
- * - table has a value, target's value can't be read (Vercel sensitive) → `sensitive`
+ *   (a Vercel sensitive variable pulls as a placeholder, so it always counts as `change`)
  * - table is empty, target has a value → `untracked` (reported, never deleted)
  * - target has a variable the table doesn't list at all → `missing_row`
  */
@@ -90,8 +84,7 @@ export function diffColumn({ table, target, rows }) {
       if (!blank(have)) result.push({ name, kind: "untracked" });
       continue;
     }
-    if (have === VERCEL_SENSITIVE) result.push({ name, kind: "sensitive" });
-    else if (blank(have)) result.push({ name, kind: "add" });
+    if (blank(have)) result.push({ name, kind: "add" });
     else if (have !== want) result.push({ name, kind: "change" });
   }
   for (const name of Object.keys(target)) {

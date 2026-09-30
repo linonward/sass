@@ -160,8 +160,6 @@ const labels = {
   add: "missing in target",
   change: "differs",
   untracked: "set in target, empty in table (skipped)",
-  sensitive:
-    "sensitive on Vercel, can't compare (rewritten on every --apply prod)",
   missing_row: "set in target, no row in table",
 };
 
@@ -283,10 +281,10 @@ if (args.apply === "local") {
   process.exit(0);
 }
 
-// --apply prod: the table wins. Every non-empty Prod cell that differs, is missing, or can't be
-// compared (Vercel sensitive) is written; values already equal are left alone.
+// --apply prod: the table wins. Every non-empty Prod cell that differs or is missing is written
+// (sensitive variables can't be read back, so they always differ); equal values are left alone.
 const writable = filter(prodDiff).filter((d) =>
-  ["add", "change", "sensitive"].includes(d.kind),
+  ["add", "change"].includes(d.kind),
 );
 if (writable.length === 0) {
   console.log("Vercel production already matches the table.");

@@ -8,7 +8,6 @@ import {
   parseKeys,
   parseWorkflowEnv,
   updateDotenv,
-  VERCEL_SENSITIVE,
 } from "./lib.mjs";
 
 test("parseDotenv reads plain, quoted and empty values", () => {
@@ -66,8 +65,8 @@ test("diffColumn classifies every case and never proposes deletions", () => {
     SAME: "a",
     CHANGED: "old",
     UNTRACKED: "present",
-    SECRET: VERCEL_SENSITIVE,
-    SECRET_EMPTY: VERCEL_SENSITIVE,
+    SECRET: "[SENSITIVE]",
+    SECRET_EMPTY: "[SENSITIVE]",
     EXTRA: "1",
     VERCEL_ENV: "production",
   };
@@ -75,8 +74,8 @@ test("diffColumn classifies every case and never proposes deletions", () => {
     { name: "CHANGED", kind: "change" },
     { name: "NEW", kind: "add" },
     { name: "UNTRACKED", kind: "untracked" },
-    // Can't be compared: --apply prod writes the table's value again.
-    { name: "SECRET", kind: "sensitive" },
+    // A Vercel sensitive value pulls as a placeholder, so it always differs and is rewritten.
+    { name: "SECRET", kind: "change" },
     // Empty in the table: left alone, only reported.
     { name: "SECRET_EMPTY", kind: "untracked" },
     { name: "EXTRA", kind: "missing_row" },

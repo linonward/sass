@@ -24,7 +24,7 @@ node --test .claude/skills/env-sync/scripts/lib.test.mjs       # 脚本自身的
 - **表格覆盖目标**：`--apply` 时，表格里有值的变量一律以表格为准写入；值已相同的跳过。
 - 空单元格跳过、只报告，**脚本从不删除变量**。
 - CI 列只核对：`.github/workflows/ci.yml` 随包交付给买家、里面全是测试值，改它走正常 PR。
-- Vercel 敏感变量读不出值、无法比对：核对时单独列出、不算差异；`--apply prod` 每次都用表格的值重写一遍。
+- Vercel 敏感变量读不出值：只要表格里有值，核对时就总显示为 `differs`（核对不会全绿），`--apply prod` 每次都用表格的值重写一遍。
 - 写 Vercel 时存储类型（Config / Sensitive）也按表格「敏感」勾选。敏感变量以后读不回来、只能每次重写，非敏感的就别勾。值经 stdin 传入，不进 argv。
 - 临时文件（表格导出、拉下来的 production 值）在 `/tmp/env-sync-*`，脚本退出即删。
 
