@@ -62,7 +62,10 @@ export default async function DashboardPage({
         </EmptyState>
       </section>
       {siteConfig.features.upload && (
-        <UploadExample accept={siteConfig.upload.allowedMimeTypes} />
+        <UploadExample
+          accept={siteConfig.upload.allowedMimeTypes}
+          maxSize={siteConfig.upload.maxFileSize}
+        />
       )}
       {/* Not rendered at all when the master switch is off (same pattern as the upload example). */}
       {flagsEnabled() && <FlagExample />}

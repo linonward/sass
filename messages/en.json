@@ -494,20 +494,7 @@
     },
     "upload": {
       "title": "Upload a file",
-      "description": "Files go straight from your browser to storage. Use this to check that uploads are configured.",
-      "choose": "Choose a file",
-      "uploading": "Uploading…",
-      "done": "Uploaded:",
-      "errors": {
-        "invalid_type": "This file type isn't allowed.",
-        "invalid_size": "This file is empty or its size can't be read.",
-        "too_large": "This file is too large.",
-        "rate_limited": "Too many uploads. Try again in a minute.",
-        "upload_not_configured": "Uploads aren't configured yet.",
-        "put_failed": "The upload to storage failed. Check the bucket's CORS settings.",
-        "mismatch": "The uploaded file didn't match what was requested.",
-        "unknown": "Something went wrong. Please try again."
-      }
+      "description": "Files go straight from your browser to storage. Use this to check that uploads are configured."
     },
     "flags": {
       "title": "Feature flags",
@@ -518,6 +505,28 @@
       "preview": "beta-preview is admin-only, so only admins see this line.",
       "soonOn": "beta-soon is on and rolled out to everyone with an account.",
       "soonOff": "beta-soon is disabled in site.config.ts, so it evaluates to false for everyone."
+    }
+  },
+  "Upload": {
+    "choose": "Choose a file",
+    "dropHint": "or drag it here",
+    "maxSize": "up to {size}",
+    "uploading": "Uploading {name}…",
+    "progress": "Upload progress for {name}",
+    "done": "Uploaded {name}.",
+    "canceled": "Upload canceled.",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "remove": "Remove",
+    "errors": {
+      "invalid_type": "This file type isn't allowed.",
+      "invalid_size": "This file is empty or its size can't be read.",
+      "too_large": "This file is too large.",
+      "rate_limited": "Too many uploads. Try again in a minute.",
+      "upload_not_configured": "Uploads aren't configured yet.",
+      "put_failed": "The upload to storage failed. Check the bucket's CORS settings.",
+      "mismatch": "The uploaded file didn't match what was requested.",
+      "unknown": "Something went wrong. Please try again."
     }
   },
   "Demo": {
@@ -840,8 +849,7 @@
       "useImage": "Use image: {prompt}",
       "uploaded": "Uploaded image",
       "upload": "Upload",
-      "remove": "Remove",
-      "uploadFailed": "The image couldn't be uploaded. Try a PNG, JPEG or WebP file."
+      "remove": "Remove"
     },
     "video": {
       "model": "Model",

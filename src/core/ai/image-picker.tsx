@@ -2,15 +2,19 @@
 
 import { CheckIcon, Loader2Icon, UploadIcon, XIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 import { cn } from "@/core/lib/utils";
 import { Button } from "@/core/ui/button";
-import { uploadFile } from "@/core/upload/client";
+import { useUpload } from "@/core/upload/use-upload";
 
 import type { Generation } from "./image";
 
 export type PickedImage = { fileId: string; url: string };
+
+// What the image models accept as input; the upload itself is still checked against
+// `upload.allowedMimeTypes` on the server.
+const imageTypes = ["image/png", "image/jpeg", "image/webp"];
 
 /**
  * Picks one of the user's images as model input: a recent generation or a fresh upload. Used for
@@ -34,25 +38,14 @@ export function ImagePicker({
   removable?: boolean;
 }) {
   const t = useTranslations("Playground.picker");
-  const [uploading, setUploading] = useState(false);
-  const [uploadFailed, setUploadFailed] = useState(false);
+  const tUpload = useTranslations("Upload");
   const fileInput = useRef<HTMLInputElement>(null);
-
-  async function upload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setUploading(true);
-    setUploadFailed(false);
-    try {
-      const uploaded = await uploadFile(file);
-      onChange({ fileId: uploaded.id, url: uploaded.url });
-    } catch {
-      setUploadFailed(true);
-    } finally {
-      setUploading(false);
-    }
-  }
+  const { state, select, cancel, retry } = useUpload({
+    accept: imageTypes,
+    onUploaded: (uploaded) =>
+      onChange({ fileId: uploaded.id, url: uploaded.url }),
+  });
+  const uploading = state.status === "uploading";
 
   return (
     <fieldset className="space-y-2" disabled={disabled}>
@@ -103,8 +96,21 @@ export function ImagePicker({
           ) : (
             <UploadIcon aria-hidden />
           )}
-          {t("upload")}
+          {uploading && state.progress !== null
+            ? `${Math.round(state.progress * 100)}%`
+            : t("upload")}
         </Button>
+        {uploading && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="size-16 flex-col gap-1 text-xs"
+            onClick={cancel}
+          >
+            <XIcon aria-hidden />
+            {tUpload("cancel")}
+          </Button>
+        )}
         {removable && value && (
           <Button
             type="button"
@@ -119,17 +125,28 @@ export function ImagePicker({
         <input
           ref={fileInput}
           type="file"
-          accept="image/png,image/jpeg,image/webp"
+          accept={imageTypes.join(",")}
           className="sr-only"
           tabIndex={-1}
           aria-hidden
-          onChange={upload}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) select(file);
+          }}
         />
       </div>
-      {uploadFailed && (
-        <p role="alert" className="text-destructive text-sm">
-          {t("uploadFailed")}
-        </p>
+      {state.status === "error" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <p role="alert" className="text-destructive text-sm">
+            {tUpload(`errors.${state.code}`)}
+          </p>
+          {state.retryFile && (
+            <Button type="button" variant="outline" size="sm" onClick={retry}>
+              {tUpload("retry")}
+            </Button>
+          )}
+        </div>
       )}
     </fieldset>
   );
