@@ -29,6 +29,7 @@
     "downloads:publish": "node scripts/downloads-publish.mjs",
     "migrations:check": "node scripts/check-migrations.mjs",
     "notices:check": "node scripts/check-notices.mjs",
+    "notices:fix": "node scripts/check-notices.mjs --fix",
     "english:check": "node scripts/check-english.mjs"
   },
   "dependencies": {

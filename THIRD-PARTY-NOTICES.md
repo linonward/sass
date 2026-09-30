@@ -212,6 +212,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 ```bash
 pnpm install --frozen-lockfile   # make sure the lockfile versions are installed
 pnpm notices:check               # check whether this file has drifted from the lockfile (CI runs this too)
+pnpm notices:fix                 # rewrite only drifted versions in the direct-dependency table to the lockfile, then run prettier (the dependabot-notices workflow does this on Dependabot PRs)
 pnpm licenses list               # full distribution (the first table in this file)
 pnpm licenses list --prod        # production dependencies only (the second table)
 pnpm licenses list --json        # machine-readable, for computing the distribution yourself

@@ -623,3 +623,35 @@ T2605 翻译随包文档时，逐段对照了代码，发现几处文档与代�
 - [x] 上面每一条都有对应修改：billing 的差异表加了 Waffo 一列，切换步骤、环境变量块、退款总结补上 Waffo，fake 的禁用条件按 `fakeBillingAllowed` 重写（哪些能被 `ALLOW_FAKE_BILLING` 放行、哪些不能）；`billing/env.ts` 两处注释补上 `WAFFO_MODE=prod`（`billingServerEnv` 的注释本来就列了 Waffo 变量，不用改）；i18n 的例子换成 `de`，加上 `openGraphLocales` 一步，「Testing」按 `e2e/i18n/serve.ts` 写清本地 / CI 的区别；README 四处支付方式列表补上 Waffo Pancake
 - [x] 文档里出现的变量名、判断条件逐条能在代码里找到（`.env.example`、`fakeBillingAllowed`、`openGraphLocales`、`serve.ts`）
 - [x] `pnpm format:check`、`pnpm english:check` 绿；代码只改了注释（AST 与 `main` 一致）
+
+---
+
+## T2315 dependabot-notices
+
+- 分支 / worktree：`chore/dependabot-notices` → `../sass-dependabot-notices`
+- 依赖：—
+
+**问题**
+
+每个 Dependabot 升级 PR 都会让 `pnpm notices:check` 失败（例如 #182）：Dependabot 只改 `package.json` 和 `pnpm-lock.yaml`，不改 `THIRD-PARTY-NOTICES.md` 里「直接依赖明细」的版本号，每周都要有人手改。
+
+**做**
+
+- `scripts/check-notices.mjs --fix`（`pnpm notices:fix`）：只把直接依赖表里已有行的版本号改成锁文件版本。新增 / 删除的依赖、没写进文件的许可仍然交给人（CI 继续失败）。
+- `.github/workflows/dependabot-notices.yml`，只在 `github.actor == 'dependabot[bot]'` 的 PR 上跑：
+  - `fix`（只读 token，`persist-credentials: false`）：`pnpm install --ignore-scripts` → `notices:fix` → prettier，把文件作为 artifact 上传。Dependabot 带来的依赖代码只在这里跑，碰不到写权限。
+  - `commit`（`contents: write` / `actions: write`，不跑任何依赖代码）：分支 head 没动才把这一个文件提交、推送，再 `gh workflow run ci.yml` 让必需检查 `ci` 落在新 head 上（`GITHUB_TOKEN` 推送不会触发 `pull_request`）。
+- `ci.yml` 加 `workflow_dispatch` 触发。
+
+**实施记录**
+
+- 合入前两次 rebase：#184（T2605）把 `THIRD-PARTY-NOTICES.md` 与 `check-notices.mjs` 译成英文、#188（T2606）加了 `english:check`。
+  - `THIRD-PARTY-NOTICES.md` 以 `main` 的英文版为准，维护命令块里新增的那行改写成英文。
+  - **语义冲突**：`check-notices.mjs` 文本上自动合并了，但 `--fix` 还按中文标题「## 直接依赖明细」找表格；找不到时静默返回「no version drift」、以 0 退出 —— workflow 会什么都不做而看起来成功。改为和检查共用 `DIRECT_DEPS_HEADING` 常量，找不到时报错退出。
+  - `package.json`：`notices:fix` 与 `english:check` 两个脚本都保留。
+
+**验收**
+
+- [x] 用 #182 升级前的 `package.json` / `pnpm-lock.yaml` 造出漂移：修前 `notices:check` 报 13 条版本漂移；`notices:fix` + prettier 后 13 条全部消失，改动恰好是这 13 行的版本格（剩下的 2 条 `Unknown` 许可来自本地 `node_modules` 没按旧锁文件重装，修前就有，与本改动无关）
+- [x] `pnpm english:check`、`pnpm notices:check`、`pnpm lint`、prettier、actionlint 绿
+- [ ] workflow 本身：派发的 `ci.yml` 是否满足必需检查 `ci`、Dependabot 遇到非它自己的提交时如何反应 —— 只能等下一个真实的 Dependabot PR 验证

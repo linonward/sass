@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # dependabot-notices.yml pushes to Dependabot branches with GITHUB_TOKEN, which doesn't trigger
+  # `pull_request`; it dispatches this workflow instead so the new head still gets a `ci` check.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}

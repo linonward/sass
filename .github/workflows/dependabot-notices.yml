@@ -1,0 +1,117 @@
+name: dependabot-notices
+
+# Keeps THIRD-PARTY-NOTICES.md in step with Dependabot's version bumps. Dependabot only updates
+# package.json and pnpm-lock.yaml, so every bump made `pnpm notices:check` fail in CI until someone
+# edited the version table by hand. This workflow does that edit on the PR branch.
+#
+# Only version drift is fixed (`pnpm notices:fix`). A new or removed direct dependency, or a license
+# the file doesn't document yet, still fails CI and needs a person — see the reproduce-and-maintain
+# section at the end of THIRD-PARTY-NOTICES.md.
+#
+# Two jobs, so Dependabot's proposed dependency code never runs next to a write token:
+#   - `fix` installs the PR's dependencies (prettier re-aligns the tables) with a read-only token
+#     and uploads the resulting file;
+#   - `commit` runs no dependency code: it copies that one file onto the branch and pushes.
+#
+# Pushes made with GITHUB_TOKEN don't trigger `pull_request` workflows, so after pushing, `commit`
+# dispatches ci.yml on the branch (workflow_dispatch is the documented exception). Its `ci` job
+# reports on the new head commit, which is what the required check on main looks at.
+#
+# If Dependabot later rebases the PR, it force-pushes its own commit and this workflow runs again.
+# Dependabot may refuse to rebase a PR that has commits it didn't make; comment
+# `@dependabot recreate` in that case.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-notices-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  fix:
+    # The actor check matters: Dependabot-triggered runs get Dependabot's restricted token, and a
+    # person pushing to a Dependabot branch shouldn't get bot commits on top of their work.
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      changed: ${{ steps.fix.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # --ignore-scripts: only prettier is needed here, no dependency needs to build.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - id: fix
+        run: |
+          pnpm notices:fix
+          pnpm exec prettier --write THIRD-PARTY-NOTICES.md
+          if git diff --quiet -- THIRD-PARTY-NOTICES.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.fix.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: third-party-notices
+          path: THIRD-PARTY-NOTICES.md
+          retention-days: 1
+
+  commit:
+    needs: fix
+    if: needs.fix.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: third-party-notices
+          path: ${{ runner.temp }}/notices
+
+      - id: push
+        name: Commit and push
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          # The branch moved since `fix` ran (a newer push has its own run): leave it to that run.
+          if [ "$(git rev-parse HEAD)" != "$HEAD_SHA" ]; then
+            echo "Branch head moved past $HEAD_SHA; skipping."
+            exit 0
+          fi
+          cp "$RUNNER_TEMP/notices/THIRD-PARTY-NOTICES.md" THIRD-PARTY-NOTICES.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(deps): sync THIRD-PARTY-NOTICES.md with bumped versions" -- THIRD-PARTY-NOTICES.md
+          git push origin "HEAD:$HEAD_REF"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - if: steps.push.outputs.pushed == 'true'
+        name: Run CI on the new head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$HEAD_REF"
