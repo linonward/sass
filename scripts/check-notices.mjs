@@ -33,7 +33,14 @@
 //      will never match on Linux CI (e.g. `@swc/core-darwin-arm64` is `Apache-2.0 AND MIT`, its Linux
 //      counterpart isn't). The counts are only printed for reference.
 //
-// Usage: node scripts/check-notices.mjs      same as pnpm notices:check
+// Usage: node scripts/check-notices.mjs        same as pnpm notices:check
+//        node scripts/check-notices.mjs --fix  same as pnpm notices:fix
+//
+// --fix only rewrites the version cell of rows already in the direct-dependency section to the
+// lockfile version, which is the whole drift a routine Dependabot bump causes (the
+// dependabot-notices workflow runs it on Dependabot PRs). It doesn't add or remove rows, touch the
+// distribution tables, or look at licenses: those need a person. It also doesn't re-align the
+// table, so run prettier on the file afterwards.
 //
 // How to fix after changing dependencies: run `pnpm licenses list` (full) and
 // `pnpm licenses list --prod` to update the two distribution tables, then fix the versions in the
@@ -43,7 +50,7 @@
 // wording changes, update the matching strings here in the same change.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -296,7 +303,45 @@ function checkLicenses(md) {
   );
 }
 
+// Rewrites only the version cell of rows in the direct-dependency section whose version drifted
+// from the lockfile; returns the new file text and the names that changed.
+function fixVersions(md, locked) {
+  const start = md.indexOf("## 直接依赖明细");
+  if (start === -1) return { text: md, changed: [] };
+  const changed = [];
+  const row = /^(\|\s*`([^`]+)`\s*\|\s*)([^|]+?)(\s*\|\s*(?:prod|dev)\s*\|)/;
+  const rest = md
+    .slice(start)
+    .split("\n")
+    .map((line) => {
+      const match = row.exec(line);
+      if (!match) return line;
+      const [whole, head, name, version, tail] = match;
+      const lockedVersion = locked.get(name)?.version;
+      if (!lockedVersion || lockedVersion === version.trim()) return line;
+      changed.push(`${name} ${version.trim()} -> ${lockedVersion}`);
+      return head + lockedVersion + tail + line.slice(whole.length);
+    })
+    .join("\n");
+  return { text: md.slice(0, start) + rest, changed };
+}
+
 // ---------------------------------------------------------------------------
+
+if (process.argv.includes("--fix")) {
+  const { text, changed } = fixVersions(read(NOTICES), lockfileDirectDeps());
+  if (changed.length === 0) {
+    console.log(`${NOTICES}: no version drift to fix.`);
+  } else {
+    writeFileSync(join(root, NOTICES), text);
+    console.log(`${NOTICES}: updated ${changed.length} version(s):`);
+    for (const line of changed) console.log(`- ${line}`);
+    console.log(
+      "Run prettier on the file to re-align the tables, then `pnpm notices:check`.",
+    );
+  }
+  process.exit(0);
+}
 
 const md = read(NOTICES);
 
