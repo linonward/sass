@@ -18,6 +18,13 @@ overrides:
   # Overriding outside the declared range needs evidence: after the change, pnpm db:generate /
   # db:migrate / notices:check were all verified to work.
   "@esbuild-kit/core-utils>esbuild": "^0.25.0"
+  # @react-email/ui (the dev-only `pnpm email:dev` preview server) pins next to an exact version,
+  # and 16.3.3 has a critical advisory (remote code execution in next/og ImageResponse, fixed in
+  # >= 16.3.6). 6.11.0 is the latest release, so there is no upstream fix yet. Pin it to the same
+  # next the app uses (16.3.6, already in the lockfile, no new downloads). Overriding outside the
+  # declared range needs evidence: after the change, `pnpm email:dev` started and rendered the
+  # templates. Drop this once @react-email/ui ships with next >= 16.3.6.
+  "@react-email/ui>next": "16.3.6"
   toml: ">=4.2.0"
   uuid: ">=11.1.1"
 

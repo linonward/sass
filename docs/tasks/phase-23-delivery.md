@@ -896,3 +896,22 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 
 - [x] `lib.test.mjs` 7 项通过（新增自动链接还原、非自动链接保留、富文本数组、非字符串）
 - [x] 新脚本对真实表格核对：local、ci in sync，输出与改动前一致
+
+## T2326 audit-next
+
+- 分支 / worktree：`fix/audit-next` → `../sass-audit-next`
+- 依赖：无；起点 `5851a39`。
+
+**问题**
+
+2026-10-01 起 CI 的 `static` job 在 `pnpm audit --audit-level=high` 失败（T2325 #202 首先撞上，`main` 同样会挂）：Next.js 新公布 critical 漏洞（next/og ImageResponse 远程代码执行，修复于 `>=16.3.6`）。应用直接依赖的 `next` 已是 16.3.6；报的是开发依赖 `@react-email/ui`（`pnpm email:dev` 预览服务）精确锁定的 `next@16.3.3`。`@react-email/ui` 6.11.0 已是最新，上游无修复。
+
+**决定**
+
+- `pnpm-workspace.yaml` 的 `overrides` 加 `"@react-email/ui>next": "16.3.6"`，与应用同版本（锁文件里已有，无新下载），注释写明原因、证据和移除条件（`@react-email/ui` 带上 next >= 16.3.6 后删掉）。
+
+**验收**
+
+- [x] `pnpm audit --audit-level=high`：No known vulnerabilities found；依赖树只剩 `next@16.3.6`
+- [x] `pnpm email:dev` 在 override 后启动，首页 200，`/preview/change-email-code` 200 且渲染出模板
+- [x] `pnpm install --frozen-lockfile`、`pnpm notices:check` 通过
