@@ -8,6 +8,7 @@ This file lists the third-party components the template uses and their licenses.
 - Method: `pnpm licenses list` (full) and `pnpm licenses list --prod` (production dependencies only). Both read the dependencies installed in the repository at the versions locked in `pnpm-lock.yaml`.
 - The numbers change when dependencies are upgraded, and this file does not update itself — when you change dependencies, rerun the commands above and update as needed. **The "Direct dependencies" section no longer relies on anyone remembering**: `pnpm notices:check` (`scripts/check-notices.mjs`) compares every version and dependency type against `pnpm-lock.yaml`, CI runs it on every PR, and it fails on any mismatch.
 - This file describes the situation; it is **not legal advice**. Have a lawyer review it before you sell commercially (see the "License" section of the README).
+- 2026-10-01: added a row for `streamdown` (2.6.0, prod, Apache-2.0) to "Direct dependencies" — renders Playground replies as markdown with copy buttons on code blocks. Both distribution tables were rerun on the same macOS machine. Measured on `main` before the change the tree was already off by one from the previous entry (full tree ISC 34, not 35; production tree 542 entries, not 541); on top of that `streamdown` adds 31 MIT + 2 Apache-2.0 packages to the full tree (1017 → 1050) and 34 to the production tree (542 → 576), all under licenses already listed.
 
 ## Full dependency tree
 
@@ -15,9 +16,9 @@ Includes `dependencies`, `devDependencies` and all of their transitive dependenc
 
 | License (SPDX)            | Packages |
 | ------------------------- | -------- |
-| MIT                       | 843      |
-| Apache-2.0                | 89       |
-| ISC                       | 35       |
+| MIT                       | 874      |
+| Apache-2.0                | 91       |
+| ISC                       | 34       |
 | BSD-2-Clause              | 16       |
 | BSD-3-Clause              | 12       |
 | BlueOak-1.0.0             | 6        |
@@ -33,7 +34,7 @@ Includes `dependencies`, `devDependencies` and all of their transitive dependenc
 | FSL-1.1-Apache-2.0        | 1        |
 | 0BSD                      | 1        |
 | (MIT OR CC0-1.0)          | 1        |
-| **Total**                 | 1018     |
+| **Total**                 | 1050     |
 
 How to read this: 1018 is the number of "package name × license" entries. On disk there are 1122 "package@version" entries (a package with several versions takes one line per version), and deduplicated by name there are 1014 packages.
 
@@ -45,8 +46,8 @@ How to read this: 1018 is the number of "package name × license" entries. On di
 
 | License (SPDX)            | Packages |
 | ------------------------- | -------- |
-| MIT                       | 435      |
-| Apache-2.0                | 60       |
+| MIT                       | 468      |
+| Apache-2.0                | 62       |
 | ISC                       | 18       |
 | BSD-3-Clause              | 7        |
 | BSD-2-Clause              | 7        |
@@ -60,7 +61,7 @@ How to read this: 1018 is the number of "package name × license" entries. On di
 | FSL-1.1-Apache-2.0        | 1        |
 | 0BSD                      | 1        |
 | (MIT OR CC0-1.0)          | 1        |
-| **Total**                 | 541      |
+| **Total**                 | 576      |
 
 Two things to note:
 
@@ -107,7 +108,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` → `@sentry/bundler-plugins@11.0.0` �
 
 ## Direct dependencies
 
-`package.json` has 46 `dependencies` + 32 `devDependencies`, 78 in total. The versions are the ones locked when this was counted.
+`package.json` has 47 `dependencies` + 32 `devDependencies`, 79 in total. The versions are the ones locked when this was counted.
 
 ### MIT (55)
 
@@ -162,6 +163,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` → `@sentry/bundler-plugins@11.0.0` �
 | `resend`                          | 6.30.0  | prod |
 | `shadcn`                          | 4.21.0  | dev  |
 | `sonner`                          | 2.0.8   | prod |
+| `streamdown`                      | 2.6.0   | prod |
 | `stripe`                          | 22.6.2  | prod |
 | `tailwindcss`                     | 4.3.3   | dev  |
 | `tw-animate-css`                  | 1.4.0   | prod |

@@ -811,6 +811,45 @@
     "send": "Send",
     "stop": "Stop",
     "buyCredits": "Get more credits",
+    "copyReply": "Copy reply",
+    "copied": "Copied",
+    "templates": {
+      "label": "Prompt templates",
+      "items": {
+        "summarize": {
+          "label": "Summarize text",
+          "prompt": "Summarize the following text in three bullet points: "
+        },
+        "translate": {
+          "label": "Translate",
+          "prompt": "Translate the following text into natural, fluent English: "
+        },
+        "code": {
+          "label": "Write code",
+          "prompt": "Write a TypeScript function that "
+        },
+        "email": {
+          "label": "Draft an email",
+          "prompt": "Draft a short, friendly email to "
+        }
+      }
+    },
+    "markdown": {
+      "copyCode": "Copy code",
+      "copied": "Copied",
+      "copyTable": "Copy table",
+      "copyTableAsMarkdown": "Copy table as Markdown",
+      "copyTableAsCsv": "Copy table as CSV",
+      "copyTableAsTsv": "Copy table as TSV",
+      "tableFormatMarkdown": "Markdown",
+      "tableFormatCsv": "CSV",
+      "tableFormatTsv": "TSV",
+      "openExternalLink": "Open external link?",
+      "externalLinkWarning": "You're about to leave this site.",
+      "openLink": "Open link",
+      "copyLink": "Copy link",
+      "close": "Close"
+    },
     "errors": {
       "insufficient_credits": "You don't have enough credits for this model.",
       "rate_limited": "You're sending messages too quickly. Please wait a moment.",

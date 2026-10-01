@@ -811,6 +811,45 @@
     "send": "发送",
     "stop": "停止",
     "buyCredits": "获取更多积分",
+    "copyReply": "复制回复",
+    "copied": "已复制",
+    "templates": {
+      "label": "提示词模板",
+      "items": {
+        "summarize": {
+          "label": "总结文本",
+          "prompt": "用三个要点总结下面这段文字："
+        },
+        "translate": {
+          "label": "翻译",
+          "prompt": "把下面这段文字翻译成自然流畅的中文："
+        },
+        "code": {
+          "label": "写代码",
+          "prompt": "用 TypeScript 写一个函数，"
+        },
+        "email": {
+          "label": "写邮件",
+          "prompt": "写一封简短友好的邮件给"
+        }
+      }
+    },
+    "markdown": {
+      "copyCode": "复制代码",
+      "copied": "已复制",
+      "copyTable": "复制表格",
+      "copyTableAsMarkdown": "复制为 Markdown",
+      "copyTableAsCsv": "复制为 CSV",
+      "copyTableAsTsv": "复制为 TSV",
+      "tableFormatMarkdown": "Markdown",
+      "tableFormatCsv": "CSV",
+      "tableFormatTsv": "TSV",
+      "openExternalLink": "打开外部链接？",
+      "externalLinkWarning": "即将离开本站。",
+      "openLink": "打开链接",
+      "copyLink": "复制链接",
+      "close": "关闭"
+    },
     "errors": {
       "insufficient_credits": "你没有足够的积分使用此模型。",
       "rate_limited": "你发送消息太快了，请稍等片刻。",

@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { simulateReadableStream, streamText } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
@@ -40,7 +41,11 @@ const FULL_TEXT = Array.from({ length: DELTA_COUNT }, (_, i) => i % 10).join(
   "",
 );
 
-function stubChatFetch() {
+function stubChatFetch(
+  deltas: string[] = Array.from({ length: DELTA_COUNT }, (_, i) =>
+    String(i % 10),
+  ),
+) {
   const result = streamText({
     model: new MockLanguageModelV4({
       doStream: async () => ({
@@ -48,10 +53,10 @@ function stubChatFetch() {
           _internal: { delay: async () => {} },
           chunks: [
             { type: "text-start", id: "t1" },
-            ...Array.from({ length: DELTA_COUNT }, (_, i) => ({
+            ...deltas.map((delta) => ({
               type: "text-delta" as const,
               id: "t1",
-              delta: String(i % 10),
+              delta,
             })),
             { type: "text-end", id: "t1" },
             {
@@ -68,8 +73,8 @@ function stubChatFetch() {
                 // (node_modules/@ai-sdk/provider/dist/index.d.ts:648). This mock only streams
                 // text, so reasoning is 0, not undefined.
                 outputTokens: {
-                  total: DELTA_COUNT,
-                  text: DELTA_COUNT,
+                  total: deltas.length,
+                  text: deltas.length,
                   reasoning: 0,
                 },
               },
@@ -193,6 +198,63 @@ describe("Playground streaming rendering", () => {
     });
     expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe(
       "typing while streaming",
+    );
+  });
+});
+
+describe("Playground replies and templates", () => {
+  test("renders the reply as markdown with a copy button on code blocks", async () => {
+    // Split mid-fence so the stream passes through an unclosed code block.
+    stubChatFetch(["Here is **bold** text.\n\n```ts\nconst a", " = 1;\n```\n"]);
+    renderPlayground();
+
+    typeAndSend("Show code");
+    const bold = await screen.findByText("bold", undefined, { timeout: 5000 });
+    expect(bold.tagName).not.toBe("P");
+    expect(bold.textContent).toBe("bold");
+    await waitFor(() => expect(screen.getByText("const a = 1;")).toBeTruthy());
+    // No raw markdown syntax left in the reply.
+    expect(screen.getByTestId("playground-reply").textContent).not.toMatch(
+      /\*\*|```/,
+    );
+    expect(screen.getByRole("button", { name: "Copy code" })).toBeTruthy();
+  });
+
+  test("copy reply writes the markdown source to the clipboard", async () => {
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    stubChatFetch(["Hello **there**"]);
+    renderPlayground();
+
+    typeAndSend("Hi");
+    const copy = await screen.findByRole(
+      "button",
+      { name: "Copy reply" },
+      { timeout: 5000 },
+    );
+    await act(async () => {
+      fireEvent.click(copy);
+    });
+    expect(writeText).toHaveBeenCalledWith("Hello **there**");
+    expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy();
+  });
+
+  test("a template fills the input without sending, and templates hide once the chat starts", async () => {
+    const fetchMock = stubChatFetch(["ok"]);
+    renderPlayground();
+
+    const group = screen.getByRole("group", { name: "Prompt templates" });
+    fireEvent.click(within(group).getByRole("button", { name: "Write code" }));
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe(
+      messages.Playground.templates.items.code.prompt,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("group", { name: "Prompt templates" }),
+      ).toBeNull(),
     );
   });
 });

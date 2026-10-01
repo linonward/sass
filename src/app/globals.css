@@ -5,6 +5,10 @@
 /* Blog post typography (prose) */
 @plugin "@tailwindcss/typography";
 
+/* Streamdown (markdown in Playground replies) ships Tailwind classes in its dist; scan them so the
+   code-block header, copy button and tables get styled. */
+@source "../../node_modules/streamdown/dist/*.js";
+
 @custom-variant dark (&:is(.dark *));
 
 /* --edge is the single switch for sticker surfaces: one variable drives both the 1px outline and

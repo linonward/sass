@@ -966,3 +966,27 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 - [x] `pnpm test` 通过
 - [x] `npx playwright test e2e/billing.spec.ts e2e/pricing.spec.ts e2e/ui-shell.spec.ts e2e/landing.spec.ts`（ci.yml 那组 env）通过
 - [x] 飞书表 CI 列改完后 `node .claude/skills/env-sync/scripts/sync.mjs` 的 ci 一项 in sync
+
+## T2328 playground-chat
+
+- 分支 / worktree：`feat/playground-chat` → `../sass-playground-chat`
+- 依赖：无；起点 `5b03dad`。（T2327 已被 #205 占用）
+
+**问题**
+
+Playground 的聊天把模型回复当纯文本输出：`**粗体**`、` ``` ` 代码块原样显示，代码没法一键复制；空对话时用户也不知道该问什么。
+
+**决定**
+
+- 助手回复用 `streamdown`（Vercel 出的流式 Markdown 渲染器，AI SDK 的 AI Elements 也用它）渲染：能容忍流式过程中没闭合的代码块和 `**`，内置链接/HTML 消毒，代码块和表格自带复制按钮。只装核心包，不装 `@streamdown/code`（Shiki 语法高亮，体积大），买家要高亮自己加插件。用户消息仍是纯文本。
+- 版本用 2.6.0 而不是 2.7.0：后者 2026-09-30 才发布，过不了 pnpm 的 `minimumReleaseAge`，不为它加豁免。
+- 控件只留代码块 / 表格复制；下载、全屏、mermaid 关掉。streamdown 的界面文案（复制、外链确认框）通过 `translations` 走 `Playground.markdown.*`，中英文都有。`globals.css` 加 `@source` 扫它 dist 里的 Tailwind 类。
+- 每条回复（流式结束后）下方加「复制回复」，复制 Markdown 原文。
+- 提示词模板：`PROMPT_TEMPLATES`（总结 / 翻译 / 写代码 / 写邮件）只在空对话时显示在输入框上方，点击只填入输入框、光标放到末尾，不直接发送。文案在 `Playground.templates.items.<id>`，买家改 id 列表和文案即可。
+- 正在流式输出的那条才传 `streaming=true`，已完成的消息仍靠 memo 不重渲染；原有的节流回归测试不变且通过。
+
+**验收**
+
+- [x] `playground.test.tsx`：回复渲染为 Markdown（无 `**` / ` ``` ` 残留，流在代码块中间断开也正确）且有「Copy code」；「复制回复」写入 Markdown 原文；模板填入不发送，开始对话后模板消失
+- [x] `e2e/playground.spec.ts`（stub `/api/ai/chat`，不需要模型 key）：模板填入并聚焦、发送后渲染出粗体 / 代码块 / 列表、375px 不横向溢出、代码块复制和整条复制写入剪贴板；desktop / mobile 均通过
+- [x] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm english:check`、`pnpm notices:check`；`ui-shell` / `landing` e2e 通过
