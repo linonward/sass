@@ -71,7 +71,7 @@
         "billing": {
           "title": "Payment received. Credits ready.",
           "description": "Subscriptions and one-time purchases, connected to a single credit ledger.",
-          "detail": "Creem / Stripe / Lemon Squeezy"
+          "detail": "Waffo Pancake / Creem / Stripe / Lemon Squeezy"
         },
         "ai": {
           "title": "Make AI your product.",

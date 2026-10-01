@@ -20,7 +20,7 @@ const d = messages.Dashboard;
  * Whether the out-of-the-box placeholders are all still there.
  *
  * CI overrides the site name and plan product IDs with branded values via SITE_NAME /
- * CREEM_PRODUCT_ID_* (see .github/workflows/ci.yml; it's so the placeholder guard in `pnpm build`
+ * WAFFO_PRODUCT_ID_* (see .github/workflows/ci.yml; it's so the placeholder guard in `pnpm build`
  * passes), while local dev keeps the defaults. The checklist's checks follow the config, so the
  * assertions branch too — both sides must pass.
  */

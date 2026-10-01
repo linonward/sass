@@ -42,8 +42,8 @@ env:
   # The paid plans in site.config.ts ship with placeholder product IDs, which checkout rejects with
   # plan_not_configured; CI uses non-placeholder fake IDs so the checkout flow can run. Production
   # sets the real IDs on Vercel.
-  CREEM_PRODUCT_ID_PRO: prod_ci_fake_pro
-  CREEM_PRODUCT_ID_LIFETIME: prod_ci_fake_lifetime
+  WAFFO_PRODUCT_ID_PRO: prod_ci_fake_pro
+  WAFFO_PRODUCT_ID_LIFETIME: prod_ci_fake_lifetime
   # How long the success page waits for the webhook; shortened so the timeout message can be tested.
   BILLING_SUCCESS_TIMEOUT_MS: 8000
   # e2e admin accounts (one per Playwright project, including the acquisition / status / flags

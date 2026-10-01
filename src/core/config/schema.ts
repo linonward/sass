@@ -259,7 +259,7 @@ export const billingSchema = z.strictObject({
   // implementations are in src/core/billing/providers/. The BILLING_PROVIDER variable overrides it
   // at runtime (its validated default is this value). How each plan's providerProductId below is
   // interpreted follows it too: a product ID for creem, a variant ID for lemonsqueezy.
-  provider: z.enum(billingProviderNames).default("creem"),
+  provider: z.enum(billingProviderNames).default("waffo"),
   currency: z
     .string()
     .regex(/^[A-Z]{3}$/, 'must be an ISO 4217 code such as "USD"')

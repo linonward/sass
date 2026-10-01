@@ -2,13 +2,13 @@ import { expect, test } from "@playwright/test";
 
 import { signIn, uniqueEmail, useRandomIp } from "./auth-helpers";
 
-// CI has no Creem credentials, so this only checks the endpoints' auth and "not configured"
-// behavior — no real payments. If Creem is configured locally in .env.local, it checks signature
-// verification and rejection of placeholder product IDs instead.
+// CI has no Waffo Pancake credentials (the shipped default provider), so this only checks the
+// endpoints' auth and "not configured" behavior — no real payments. If Waffo is configured locally
+// in .env.local, it checks signature verification and rejection of placeholder product IDs instead.
 const configured = Boolean(
-  process.env.CREEM_API_KEY && process.env.CREEM_WEBHOOK_SECRET,
+  process.env.WAFFO_MERCHANT_ID && process.env.WAFFO_PRIVATE_KEY,
 );
-// CI runs the full checkout flow with the fake provider (see pricing.spec.ts); the Creem routes
+// CI runs the full checkout flow with the fake provider (see pricing.spec.ts); the Waffo routes
 // then count as not configured.
 const fake = process.env.BILLING_PROVIDER === "fake";
 
@@ -31,8 +31,8 @@ test("checkout and customer portal return 401 when signed out", async ({
 });
 
 test("webhook rejects unsigned requests", async ({ request }) => {
-  const response = await request.post("/api/webhooks/creem", {
-    data: { id: "evt_x", eventType: "checkout.completed", object: {} },
+  const response = await request.post("/api/webhooks/waffo", {
+    data: { eventType: "PAYMENT_NOTIFICATION", result: {} },
   });
   if (configured && !fake) {
     expect(response.status()).toBe(401);
@@ -42,17 +42,17 @@ test("webhook rejects unsigned requests", async ({ request }) => {
   }
 });
 
-test("webhook route of an inactive provider (Waffo) returns 503 and doesn't claim another provider's events", async ({
+test("webhook route of an inactive provider (Creem) returns 503 and doesn't claim another provider's events", async ({
   request,
 }) => {
-  const response = await request.post("/api/webhooks/waffo", {
-    data: { eventType: "PAYMENT_NOTIFICATION", result: {} },
+  const response = await request.post("/api/webhooks/creem", {
+    data: { id: "evt_x", eventType: "checkout.completed", object: {} },
   });
   expect(response.status()).toBe(503);
   expect(await response.json()).toEqual({ error: "billing_not_configured" });
 });
 
-test("signed-in checkout: fake mode returns the on-site checkout page, 503 when Creem isn't configured", async ({
+test("signed-in checkout: fake mode returns the on-site checkout page, 503 when Waffo isn't configured", async ({
   page,
 }) => {
   await signIn(page, uniqueEmail("checkout"));
