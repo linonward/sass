@@ -258,3 +258,20 @@ describe("Playground replies and templates", () => {
     );
   });
 });
+
+describe("Playground composer keys", () => {
+  test("Enter sends, Shift+Enter and IME-confirming Enter do not", async () => {
+    const fetchMock = stubChatFetch(["ok"]);
+    renderPlayground();
+    const box = screen.getByRole("textbox");
+
+    fireEvent.change(box, { target: { value: "line one" } });
+    fireEvent.keyDown(box, { key: "Enter", shiftKey: true });
+    fireEvent.keyDown(box, { key: "Enter", isComposing: true });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(box, { key: "Enter" });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect((box as HTMLTextAreaElement).value).toBe("");
+  });
+});

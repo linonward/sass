@@ -169,7 +169,10 @@ export function ImageStudio({
           onChange={(event) => setPrompt(event.target.value)}
           placeholder={t("placeholder")}
           maxLength={2000}
+          // Grows with the prompt (templates are several lines) up to max-h, then scrolls;
+          // browsers without field-sizing keep the 3-row box.
           rows={3}
+          className="field-sizing-content max-h-60 min-h-20"
           disabled={busy}
         />
         <div className="flex items-center gap-3">

@@ -66,6 +66,13 @@ test("a template fills the input, and the reply renders as markdown with copy bu
   await expect(input).toHaveValue(p.templates.chat.code.prompt);
   await expect(input).toBeFocused();
 
+  // The box grows with its content instead of scrolling a single line.
+  const oneLine = (await input.boundingBox())!.height;
+  await input.press("Shift+Enter");
+  await input.press("Shift+Enter");
+  expect((await input.boundingBox())!.height).toBeGreaterThan(oneLine);
+  await input.fill(p.templates.chat.code.prompt);
+  await input.press("End");
   await input.pressSequentially("sorts by a key");
   await page.getByRole("button", { name: p.send }).click();
 

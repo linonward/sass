@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/core/ui/select";
 import { EmptyState } from "@/core/ui/empty-state";
-import { Input } from "@/core/ui/input";
+import { Textarea } from "@/core/ui/textarea";
 
 import { PromptTemplates, usePromptTemplate } from "./prompt-templates";
 
@@ -228,24 +228,42 @@ const Composer = memo(function Composer({
   const t = useTranslations("Playground");
   const [input, setInput] = useState("");
   const { ref: promptRef, apply: applyTemplate } =
-    usePromptTemplate<HTMLInputElement>(setInput);
+    usePromptTemplate<HTMLTextAreaElement>(setInput);
 
-  function submit(event: React.FormEvent) {
-    event.preventDefault();
+  function submit(event?: React.FormEvent) {
+    event?.preventDefault();
     const text = input.trim();
     if (!text || busy) return;
     onSend(text);
     setInput("");
   }
 
+  // Enter sends and Shift+Enter starts a new line. Enter that confirms an IME composition (picking
+  // Chinese or Japanese characters) must not send.
+  function onKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      submit();
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {showTemplates && <PromptTemplates kind="chat" onPick={applyTemplate} />}
-      <form onSubmit={submit} className="flex gap-2">
-        <Input
+      <form onSubmit={submit} className="flex items-end gap-2">
+        {/* Grows with its content (field-sizing) up to max-h, then scrolls. Browsers without
+            field-sizing keep a one-line box that scrolls. */}
+        <Textarea
           ref={promptRef}
           value={input}
           onChange={(event) => setInput(event.target.value)}
+          onKeyDown={onKeyDown}
+          rows={1}
+          className="field-sizing-content max-h-48 min-h-8 resize-none py-1"
           placeholder={t("placeholder")}
           aria-label={t("placeholder")}
           maxLength={4000}
