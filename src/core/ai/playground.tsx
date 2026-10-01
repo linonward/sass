@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { memo, useCallback, useId, useMemo, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import { Streamdown, type StreamdownTranslations } from "streamdown";
 
 import { Link } from "@/core/i18n/navigation";
@@ -27,6 +26,8 @@ import {
 } from "@/core/ui/select";
 import { EmptyState } from "@/core/ui/empty-state";
 import { Input } from "@/core/ui/input";
+
+import { PromptTemplates, usePromptTemplate } from "./prompt-templates";
 
 /**
  * Throttle window for streaming updates (ms). The server streams model deltas one by one
@@ -44,19 +45,6 @@ import { Input } from "@/core/ui/input";
  * of text is never dropped.
  */
 const STREAM_THROTTLE_MS = 50;
-
-/**
- * Prompt templates shown under an empty conversation. Each id maps to
- * `Playground.templates.<id>.label` / `.prompt` in `messages/*.json`; add or remove ids here and
- * there together. Picking one fills the input rather than sending, so the user can finish the
- * sentence first.
- */
-export const PROMPT_TEMPLATES = [
-  "summarize",
-  "translate",
-  "code",
-  "email",
-] as const;
 
 /**
  * Markdown controls kept in the playground: copy on code blocks and tables. Downloads, fullscreen
@@ -239,16 +227,8 @@ const Composer = memo(function Composer({
 }) {
   const t = useTranslations("Playground");
   const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  function applyTemplate(prompt: string) {
-    // Commit the value synchronously so the caret can go to the end right away; deferring it lets
-    // the first keystroke land before the caret moves.
-    flushSync(() => setInput(prompt));
-    const field = inputRef.current;
-    field?.focus();
-    field?.setSelectionRange(prompt.length, prompt.length);
-  }
+  const { ref: promptRef, apply: applyTemplate } =
+    usePromptTemplate<HTMLInputElement>(setInput);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -260,28 +240,10 @@ const Composer = memo(function Composer({
 
   return (
     <div className="flex flex-col gap-3">
-      {showTemplates && (
-        <div
-          role="group"
-          aria-label={t("templates.label")}
-          className="flex flex-wrap gap-2"
-        >
-          {PROMPT_TEMPLATES.map((id) => (
-            <Button
-              key={id}
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => applyTemplate(t(`templates.items.${id}.prompt`))}
-            >
-              {t(`templates.items.${id}.label`)}
-            </Button>
-          ))}
-        </div>
-      )}
+      {showTemplates && <PromptTemplates kind="chat" onPick={applyTemplate} />}
       <form onSubmit={submit} className="flex gap-2">
         <Input
-          ref={inputRef}
+          ref={promptRef}
           value={input}
           onChange={(event) => setInput(event.target.value)}
           placeholder={t("placeholder")}

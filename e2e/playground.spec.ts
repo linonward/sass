@@ -61,9 +61,9 @@ test("a template fills the input, and the reply renders as markdown with copy bu
   const input = page.getByRole("textbox", { name: p.placeholder });
   const templates = page.getByRole("group", { name: p.templates.label });
   await templates
-    .getByRole("button", { name: p.templates.items.code.label })
+    .getByRole("button", { name: p.templates.chat.code.label })
     .click();
-  await expect(input).toHaveValue(p.templates.items.code.prompt);
+  await expect(input).toHaveValue(p.templates.chat.code.prompt);
   await expect(input).toBeFocused();
 
   await input.pressSequentially("sorts by a key");

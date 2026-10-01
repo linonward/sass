@@ -815,7 +815,7 @@
     "copied": "Copied",
     "templates": {
       "label": "Prompt templates",
-      "items": {
+      "chat": {
         "summarize": {
           "label": "Summarize text",
           "prompt": "Summarize the following text in three bullet points: "
@@ -831,6 +831,50 @@
         "email": {
           "label": "Draft an email",
           "prompt": "Draft a short, friendly email to "
+        }
+      },
+      "image": {
+        "product": {
+          "label": "Studio product shot",
+          "prompt": "Studio product photograph of a matte stone-gray ceramic coffee mug on a seamless warm beige backdrop. Soft diffused key light from the upper left, a thin rim light tracing the edges, a gentle contact shadow under the base. 100mm macro lens at f/8, everything tack sharp. Minimal composition with generous negative space, true-to-life colors, premium e-commerce catalog quality."
+        },
+        "portrait": {
+          "label": "Editorial portrait",
+          "prompt": "Editorial portrait of a woman in her thirties in a tailored charcoal wool coat, standing beside a rain-streaked café window at dusk. Warm tungsten light from inside on one side of her face, cool blue street light on the other. 85mm lens at f/1.8, shallow depth of field, natural skin texture, calm and confident expression. Muted film color grade with fine grain, magazine cover quality."
+        },
+        "interior": {
+          "label": "Architectural interior",
+          "prompt": "Wide-angle architectural photograph of a Scandinavian living room: floor-to-ceiling windows, pale oak floors, a low linen sofa and one sculptural floor lamp. Late-afternoon sun casting long, soft shadows across the floor. Verticals perfectly straight, balanced symmetrical composition, calm neutral palette with a single deep green accent. Interior design magazine quality."
+        },
+        "landscape": {
+          "label": "Cinematic landscape",
+          "prompt": "Cinematic landscape of a lone lighthouse on a dark basalt cliff above a stormy sea at blue hour. A break in the clouds lights the horizon in pale gold; long exposure turns the waves into silky mist. Low camera angle, rule-of-thirds composition, dramatic but natural color grade, ultra-detailed, shot on a full-frame camera with a 24mm lens."
+        },
+        "illustration": {
+          "label": "Editorial illustration",
+          "prompt": "Clean vector-style editorial illustration of a small team collaborating around an oversized laptop, with charts and sticky notes floating around them. Flat shapes with a subtle grain texture, limited palette of navy, coral and cream, bold geometric composition, generous whitespace, no text. Suitable for a SaaS landing page hero."
+        },
+        "icon": {
+          "label": "3D app icon",
+          "prompt": "Glossy 3D app icon of a paper rocket taking off, soft clay-like materials with rounded edges, pastel peach-to-lavender gradient background. Soft studio lighting with gentle shadows, three-quarter isometric view, centered on a plain square canvas, crisp details, high-end 3D render."
+        }
+      },
+      "video": {
+        "product": {
+          "label": "Product reveal",
+          "prompt": "Slow cinematic product reveal: a sleek matte-black smartwatch turns on a glossy black pedestal while a thin line of light sweeps across its glass face. The camera dollies in slowly from a medium shot to a close-up of the dial. Shallow depth of field, dark moody studio with soft edge lighting, smooth motion, premium commercial look."
+        },
+        "drone": {
+          "label": "Drone flyover",
+          "prompt": "Aerial drone shot gliding low over a misty pine forest at sunrise, then slowly rising to reveal a winding river catching the golden light. Steady forward motion, volumetric fog and sun rays through the trees, natural color grade, stabilized footage, nature documentary style."
+        },
+        "street": {
+          "label": "Neon street at night",
+          "prompt": "A Tokyo side street at night just after rain: neon signs reflected in puddles, people with clear umbrellas crossing with soft motion blur. The camera tracks sideways at walking pace. Shallow depth of field, teal and magenta palette, anamorphic lens flares, light film grain, cinematic mood."
+        },
+        "craft": {
+          "label": "Documentary close-up",
+          "prompt": "Close-up of an elderly woodworker in a sunlit workshop carving a small wooden bird, dust drifting through a beam of window light. He pauses, turns the finished bird in his fingers and smiles quietly. Handheld camera with subtle natural movement, warm golden tones, shallow depth of field, intimate documentary feel."
         }
       }
     },

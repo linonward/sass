@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -84,5 +90,29 @@ describe("ImageStudio reference image", () => {
 
     fireEvent.click(screen.getByRole("button", { name: t.picker.remove }));
     expect(await generate(fetch)).not.toHaveProperty("imageFileId");
+  });
+});
+
+describe("ImageStudio prompt templates", () => {
+  test("a template fills the prompt, and Generate sends exactly that text", async () => {
+    const fetch = renderStudio("plain");
+    const group = screen.getByRole("group", { name: t.templates.label });
+    fireEvent.click(
+      within(group).getByRole("button", {
+        name: t.templates.image.product.label,
+      }),
+    );
+    const field = screen.getByPlaceholderText(t.image.placeholder);
+    expect((field as HTMLTextAreaElement).value).toBe(
+      t.templates.image.product.prompt,
+    );
+    expect(document.activeElement).toBe(field);
+    expect(fetch).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: t.image.generate }));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(JSON.parse(String(fetch.mock.calls[0]![1]!.body)).prompt).toBe(
+      t.templates.image.product.prompt,
+    );
   });
 });

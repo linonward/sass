@@ -246,7 +246,7 @@ describe("Playground replies and templates", () => {
     const group = screen.getByRole("group", { name: "Prompt templates" });
     fireEvent.click(within(group).getByRole("button", { name: "Write code" }));
     expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe(
-      messages.Playground.templates.items.code.prompt,
+      messages.Playground.templates.chat.code.prompt,
     );
     expect(fetchMock).not.toHaveBeenCalled();
 
