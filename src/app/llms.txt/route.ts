@@ -17,6 +17,7 @@ import { routing } from "@/core/i18n/routing";
 import { legalPages } from "@/core/legal/pages";
 import { buildLlmsTxt, type LlmsSection } from "@/core/seo/llms";
 import { marketingRoutes } from "@/core/seo/routes";
+import { blogNoIndex } from "@/core/config/overlay";
 import { absoluteUrl, siteUrl } from "@/core/seo/urls";
 
 import siteConfig from "../../../site.config";
@@ -28,6 +29,9 @@ import siteConfig from "../../../site.config";
 export const dynamic = "force-static";
 
 const locale = routing.defaultLocale;
+
+// A blog the site overlay marks noindex stays out of this index too, same as the sitemap.
+const blogListed = blogEnabled && !blogNoIndex();
 
 /**
  * Plan price. Same options as the marketing pricing section (whole numbers without decimals), so the
@@ -74,7 +78,7 @@ export async function GET() {
       items: [
         { title: t("homeTitle"), url: url("/"), note: t("homeNote") },
         { title: tn("pricing"), url: url("/pricing"), note: t("pricingNote") },
-        ...(blogEnabled
+        ...(blogListed
           ? [{ title: tn("blog"), url: url(blogPath), note: t("blogNote") }]
           : []),
         // marketingRoutes is the registry of public pages (the sitemap uses it too). Any registered
@@ -100,7 +104,7 @@ export async function GET() {
      * Blog: the index page plus the latest few posts. Listing every post would bloat this file as
      * content grows, and sitemap.xml already provides the full list.
      */
-    ...(blogEnabled
+    ...(blogListed
       ? [
           {
             title: tn("blog"),
@@ -134,7 +138,7 @@ export async function GET() {
           url: `${siteUrl}/robots.txt`,
           note: t("robotsNote"),
         },
-        ...(blogEnabled
+        ...(blogListed
           ? [
               {
                 title: "RSS",
@@ -153,7 +157,7 @@ export async function GET() {
     },
   ];
 
-  const tags = blogEnabled ? getTags(locale) : [];
+  const tags = blogListed ? getTags(locale) : [];
 
   const body = buildLlmsTxt({
     name: siteConfig.name,

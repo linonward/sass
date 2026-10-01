@@ -216,3 +216,36 @@ T2406 合入前修正：同步 main 的购买卡片配置，解决合并冲突�
 - [x] `pnpm test`（1689 passed，2 项按设计跳过：未设 `SITE_OVERLAY_DIR` 时的覆盖渲染）、`pnpm typecheck`、`pnpm lint`、`pnpm english:check`
 - [x] `ui-shell`、`landing`、`i18n/locale` e2e 通过；品牌色预览 e2e 在 `colorSwitcher` 关闭时跳过，开关由单测覆盖
 - [ ] 售卖站部署环境加 `SITE_OVERLAY_DIR=seller` 和 `SITE_DESCRIPTION`（合并后、下次部署前）
+
+## T2409 seller-seo
+
+- 分支 / worktree：`fix/seller-seo` → `../sass-seller-seo`
+- 依赖：T2408，已合入 `main`；起点 `5b03dad`。
+
+**问题**
+
+2026-10-01 以 Googlebot UA 审计生产站 `sass.linonward.com`：robots、canonical、hreflang、SSR 正文、alt 都没问题，问题在首页之外。
+
+- `/pricing` 还是模板默认产品的文案：「免费开始，需要更多时升级」、「每月 2,000 积分」、「终身更新」，meta description 也是。首页写的是 $199 一次性、一年更新加邮件支持，两边互相矛盾。T2408 的覆盖只换了首页和导航，没覆盖 `Landing.pricing` / `Billing.pricing`。
+- `/blog` 只有模板自带的 `hello-world` 示例文章和两个标签页，全部在 sitemap 里，对售卖站是薄内容。
+- 首页 title「Turn your AI product into a business | OnwardKit」里没有品类词，只有已经知道品牌的人能搜到。同类产品（NEXTY.DEV 等）的 title 都写了「Next.js SaaS Boilerplate」。
+
+**做**
+
+1. `seller/messages/{en,zh}.json` 覆盖 `/pricing`：标题、副标题、套餐名「OnwardKit template / OnwardKit 模板」、三条权益（完整源码、上手指南与示例、一年更新与邮件支持）、按钮「Buy {plan}」，以及与之一致的 meta description（不写价格，价格可由 `SITE_PRICE_LIFETIME` 改）。
+2. 覆盖机制加 `blog: { noIndex }`（`src/core/config/overlay.ts`）：博客页面输出 `noindex`，并从 sitemap 和 llms.txt 去掉，保持「可索引 ⇔ 在 sitemap」。售卖站 `seller/site.json` 打开；买家默认不受影响。导航里的博客入口保留。
+3. 首页 `Metadata.homeTitle` 改成「Next.js AI SaaS Starter with Payments & Credits」/「带收款和积分的 Next.js AI SaaS 模板」，H1 不变。这一条推翻了 T2402「title = Hero 主张」的做法：品牌词已经能搜到，title 用来接品类长尾词。
+
+**验收**
+
+- [x] `SITE_OVERLAY_DIR=seller SITE_HIDDEN_PLANS=free,pro` 本地：首页 / `/pricing` 中英 title、description 正确；`/pricing` 只有一张 $199 卡片，文案与首页交付卡一致；1440 / 375 无横向溢出
+- [x] 同一环境：`/blog`、`/blog/hello-world`、`/blog/tags/guides` 输出 `noindex, nofollow`；sitemap 和 llms.txt 里没有 `/blog`
+- [x] 单测：`blog.noIndex` 默认关、打开后生效、拼错字段报错；打开时博客 sitemap 为空；博客 sitemap 测试不再继承 shell 里的 `SITE_OVERLAY_DIR`
+- [x] `pnpm test`（1719 passed，2 项按设计跳过）、`SITE_OVERLAY_DIR=seller` 跑 `src/core/{marketing,config,blog}`（174 passed）、`pnpm typecheck`、`pnpm lint`、`pnpm english:check`
+- [x] `ui-shell`、`landing`、`seo` e2e：55 passed，3 项按设计跳过
+- [ ] 合并部署后在生产复查，并在 Search Console 提交 sitemap、请求重新抓取首页和 `/pricing`
+
+**不做**
+
+- `Product` + `Offer` 结构化数据：价值低，等这三项生效后再看。示例评价不进结构化数据。
+- 邮件里的套餐名走 `loadMessages`，不经过覆盖，仍显示「Lifetime」。另开任务。

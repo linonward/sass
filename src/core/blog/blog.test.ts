@@ -1,5 +1,9 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import type { Post } from "content-collections";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import sitemap from "@/app/sitemap";
 
@@ -160,6 +164,15 @@ describe("pagination", () => {
 });
 
 describe("sitemap", () => {
+  // The blog is indexed unless a site overlay says otherwise; don't inherit one from the shell
+  // (`SITE_OVERLAY_DIR=seller pnpm test`).
+  beforeEach(() => {
+    vi.stubEnv("SITE_OVERLAY_DIR", "");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   const entries = () => blogSitemap();
   const languages = (url: string) =>
     entries().find((entry) => entry.url === url)?.alternates?.languages;
@@ -228,6 +241,17 @@ describe("sitemap", () => {
       (entry) => entry.url === `${origin}/blog/tags/news`,
     );
     expect(tag?.lastModified).toBe("2026-02-01");
+  });
+
+  test("a site overlay with blog.noIndex leaves the blog out (noindex ⇔ not in sitemap)", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "site-overlay-"));
+    writeFileSync(
+      path.join(dir, "site.json"),
+      JSON.stringify({ blog: { noIndex: true } }),
+    );
+    vi.stubEnv("SITE_OVERLAY_DIR", dir);
+    expect(blogSitemap()).toEqual([]);
+    expect(sitemap().some((entry) => entry.url.includes("/blog"))).toBe(false);
   });
 
   test("is merged into app/sitemap.ts", () => {

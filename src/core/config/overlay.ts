@@ -11,8 +11,10 @@ import { landingSchema, navSchema, type SiteConfig } from "./schema";
  *
  * Set `SITE_OVERLAY_DIR` to a directory (relative to the project root) containing any of:
  *
- * - `site.json`: `{ "landing": {…}, "nav": {…} }`. Each key present replaces that whole section of
- *   site.config.ts and is validated with the same schema.
+ * - `site.json`: `{ "landing": {…}, "nav": {…}, "blog": {…} }`. `landing` / `nav` replace that whole
+ *   section of site.config.ts and are validated with the same schema. `blog: { "noIndex": true }`
+ *   keeps the blog reachable but out of search results, the sitemap and llms.txt (for a deployment
+ *   whose blog still holds the template's sample posts).
  * - `messages/<locale>.json`: deep-merged over `messages/<locale>.json`; keys you leave out keep the
  *   default copy.
  *
@@ -25,6 +27,7 @@ import { landingSchema, navSchema, type SiteConfig } from "./schema";
 const overlaySchema = z.strictObject({
   landing: landingSchema.optional(),
   nav: navSchema.optional(),
+  blog: z.strictObject({ noIndex: z.boolean() }).optional(),
 });
 
 type Overlay = z.infer<typeof overlaySchema>;
@@ -84,6 +87,11 @@ export function withOverlay<T extends Pick<SiteConfig, "landing" | "nav">>(
     ...(overlay.landing && { landing: overlay.landing }),
     ...(overlay.nav && { nav: overlay.nav }),
   };
+}
+
+/** True when the overlay asks search engines not to index the blog (see `blog` above). */
+export function blogNoIndex(env: OverlayEnv = process.env): boolean {
+  return readOverlay(env).blog?.noIndex === true;
 }
 
 function isPlainObject(value: unknown): value is Messages {

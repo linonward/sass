@@ -5,7 +5,12 @@ import path from "node:path";
 import { describe, expect, test } from "vitest";
 
 import siteConfig from "../../../site.config";
-import { deepMerge, withOverlay, withOverlayMessages } from "./overlay";
+import {
+  blogNoIndex,
+  deepMerge,
+  withOverlay,
+  withOverlayMessages,
+} from "./overlay";
 
 function overlayDir(files: Record<string, unknown>) {
   const dir = mkdtempSync(path.join(tmpdir(), "site-overlay-"));
@@ -63,6 +68,19 @@ describe("site overlay", () => {
     );
     const unknown = overlayDir({ "site.json": { billing: {} } });
     expect(() => withOverlay(siteConfig, env(unknown))).toThrow(/billing/);
+  });
+
+  test("blog.noIndex is off unless the overlay turns it on", () => {
+    expect(blogNoIndex(env())).toBe(false);
+    expect(
+      blogNoIndex(env(overlayDir({ "site.json": { nav: { header: [] } } }))),
+    ).toBe(false);
+    const dir = overlayDir({ "site.json": { blog: { noIndex: true } } });
+    expect(blogNoIndex(env(dir))).toBe(true);
+    // Only the blog flag is set: landing and nav keep the defaults.
+    expect(withOverlay(siteConfig, env(dir))).toEqual(siteConfig);
+    const invalid = overlayDir({ "site.json": { blog: { noindex: true } } });
+    expect(() => blogNoIndex(env(invalid))).toThrow(/blog/);
   });
 
   test("a directory that doesn't exist fails instead of falling back", () => {
