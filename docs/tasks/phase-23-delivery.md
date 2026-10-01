@@ -959,10 +959,10 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 - `billingProvider` 与 schema 默认值改为 `waffo`；`ci.yml` 与文档里的 e2e 命令改用 `WAFFO_PRODUCT_ID_*`（值不变）。
 - `e2e/billing.spec.ts`：「出厂默认商」与「未启用商」两个角色对调 —— 无签名请求打 `/api/webhooks/waffo`（配了 Waffo 凭据时期望 401），未启用商的 503 用 Creem 路由断言。
 - 文档：README、`docs/billing.md`、`.env.example`、`docs/starter-guide.md` 改成 Waffo 为出厂默认，并在选型处**写明 Waffo 目前只能人民币提现到中国大陆银行卡 / 支付宝**，大陆以外的卖家上线前换 Creem / Stripe / Lemon Squeezy。Landing 模块标题与 seller 页的支付商列表同步。
-- 飞书表 CI 列：`WAFFO_PRODUCT_ID_PRO` / `_LIFETIME` 填 CI 假 ID，清空 `CREEM_PRODUCT_ID_*` 的 CI 格（作者手动改表）。
+- 飞书表 CI 列：`WAFFO_PRODUCT_ID_PRO` / `_LIFETIME` 填 CI 假 ID，清空 `CREEM_PRODUCT_ID_*` 的 CI 格（作者手动改表，2026-10-01 已改）。
 
 **验收**
 
 - [x] `pnpm test` 通过
 - [x] `npx playwright test e2e/billing.spec.ts e2e/pricing.spec.ts e2e/ui-shell.spec.ts e2e/landing.spec.ts`（ci.yml 那组 env）通过
-- [ ] 飞书表 CI 列改完后 `node .claude/skills/env-sync/scripts/sync.mjs` 的 ci 一项 in sync
+- [x] 飞书表 CI 列改完后 `node .claude/skills/env-sync/scripts/sync.mjs` 的 ci 一项 in sync
