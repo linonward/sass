@@ -131,7 +131,7 @@ star 数为 2026-10-01 GitHub 数据。
 
 ### 一句话
 
-> **出海 AI SaaS 的完整基础设施——MoR 收款（Creem / Waffo）+ 积分计费 + 获客工具 + 一键换品牌，从拿到发行包到线上收款 ≤ 1 天**
+> **出海 AI SaaS 的完整基础设施——MoR 收款（Waffo 默认，Creem 可换）+ 积分计费 + 获客工具 + 一键换品牌，从拿到发行包到线上收款 ≤ 1 天**
 
 ### 独特差异点
 
@@ -144,7 +144,7 @@ star 数为 2026-10-01 GitHub 数据。
 本模板 **MoR-first**：
 
 - **无需海外公司主体**。Creem 与 Waffo Pancake 都是 Merchant of Record，作为法律卖方替买家处理全球税务合规。Stripe 要求有美国/欧洲公司主体——这是出海独立开发者的核心痛点。
-- 四个适配器共用 `PaymentProvider` 接口：Creem、Stripe、Lemon Squeezy（T1801 / T1802）、Waffo Pancake（T2309）。法律页按生效的支付商写名称与 MoR 角色（T2404）。
+- 出厂默认是 **Waffo Pancake**（T2327，此前是 Creem）。四个适配器共用 `PaymentProvider` 接口：Waffo Pancake（T2309）、Creem、Stripe、Lemon Squeezy（T1801 / T1802）。法律页按生效的支付商写名称与 MoR 角色（T2404）。
 - 「多家可换」本身已不是差异 —— MkSaaS 同样是 `PaymentProvider` 接口。差异在默认路径：README、上线指南、法律页都按 MoR 写，Stripe 是备选。
 - **真实测试环境验证仍待补**：T2319 正在 production 上用真实服务逐项验证，四家里 Waffo 必须验证（T2307）。
 
@@ -224,8 +224,8 @@ star 数为 2026-10-01 GitHub 数据。
 
 | 能力                |  本模板   | ShipFast |  MakerKit   | NextBase |  SaasRock   | MuseMVP | MkSaaS | 开源 |
 | ------------------- | :-------: | :------: | :---------: | :------: | :---------: | :-----: | :----: | :--: |
-| **Creem (MoR)**     |  ✅ 一等  |    ❌    |     ❌      |    ❌    |     ❌      |   ✅    |   ✅   |  ❌  |
-| **Waffo (MoR)**     |    ✅     |    ❌    |     ❌      |    ❌    |     ❌      |   ✅    |   ✅   |  ❌  |
+| **Creem (MoR)**     |    ✅     |    ❌    |     ❌      |    ❌    |     ❌      |   ✅    |   ✅   |  ❌  |
+| **Waffo (MoR)**     |  ✅ 默认  |    ❌    |     ❌      |    ❌    |     ❌      |   ✅    |   ✅   |  ❌  |
 | **Stripe**          |    ✅     |    ✅    |     ✅      |    ✅    |     ✅      |   ✅    |   ✅   |  ✅  |
 | **积分/账本**       |    ✅     |    ❌    | Stripe 计量 |    ❌    | Stripe 计量 |   ❌    |   ？   |  ❌  |
 | **渠道归因**        |    ✅     |    ❌    |     ❌      |    ❌    |     ❌      |   ❌    |   ❌   |  ❌  |
@@ -251,15 +251,16 @@ star 数为 2026-10-01 GitHub 数据。
 ### 本模板的劣势与风险
 
 1. **MoR 审核严格**。Creem / Waffo 比 Stripe 更难通过，买家可能卡在审核上——需要文档说明如何准备审核材料。
-2. **真实测试环境未验证完**。四个适配器（Creem / Stripe / Lemon Squeezy / Waffo）都有代码和单测；T2319 正在 production 上逐项验证，T2306 / T2307 按买家路径再走一遍并记录结果。假服务商（`BILLING_PROVIDER=fake`）的 e2e 通过**不算**验证。
-3. **升级通道只在演练仓库里跑过**。差量更新包已落地（见差异点 7），但还没在真实的正式版本之间跑过 —— T2307 的 `rc.1 → rc.2` 演练通过前，不对外承诺更新频率。
-4. **市场知名度为零**。ShipFast 8400+ 买家、Marc Lou 135K 粉丝；本模板还没发布。
-5. **最近的竞品在追**。MkSaaS 与本模板同为 Better Auth + Drizzle + Creem + Waffo，价格只高 $30；MuseMVP 创始价同为 $99，也有 Waffo 和 i18n。MakerKit 也提供 Drizzle + Better Auth 栈，且有完整 i18n 和博客。单靠「出海 + MoR」或「现代栈」已经讲不出差异，要靠积分、获客、恢复能力和品牌系统这几项的组合。
-6. **Neon 绑定**。Postgres 标准，但可分支数据库特性是 Neon 专有。买家换 Supabase 或自建 Postgres 需要迁移 Drizzle 连接层。
-7. **v1 不做多租户**。MakerKit 的核心卖点就是多租户，SaasRock 也做。需要团队/组织功能的买家要自己写。
-8. **单栈 (Node/TypeScript)**。如果买家之后想加 Python 后端或多语言运行时，架构不允许。
+2. **出厂默认商只适合大陆卖家**。Waffo 目前只能人民币提现到中国大陆银行卡 / 支付宝，大陆以外的买家拿到模板后必须先换成 Creem / Stripe / Lemon Squeezy 才能收款。文档在选型处写明了，但对海外买家来说，「开箱即用的收款」这句话不成立；对外文案要么按受众分开讲，要么不把默认商当卖点。
+3. **真实测试环境未验证完**。四个适配器（Creem / Stripe / Lemon Squeezy / Waffo）都有代码和单测；T2319 正在 production 上逐项验证，T2306 / T2307 按买家路径再走一遍并记录结果。假服务商（`BILLING_PROVIDER=fake`）的 e2e 通过**不算**验证。
+4. **升级通道只在演练仓库里跑过**。差量更新包已落地（见差异点 7），但还没在真实的正式版本之间跑过 —— T2307 的 `rc.1 → rc.2` 演练通过前，不对外承诺更新频率。
+5. **市场知名度为零**。ShipFast 8400+ 买家、Marc Lou 135K 粉丝；本模板还没发布。
+6. **最近的竞品在追**。MkSaaS 与本模板同为 Better Auth + Drizzle + Creem + Waffo，价格只高 $30；MuseMVP 创始价同为 $99，也有 Waffo 和 i18n。MakerKit 也提供 Drizzle + Better Auth 栈，且有完整 i18n 和博客。单靠「出海 + MoR」或「现代栈」已经讲不出差异，要靠积分、获客、恢复能力和品牌系统这几项的组合。
+7. **Neon 绑定**。Postgres 标准，但可分支数据库特性是 Neon 专有。买家换 Supabase 或自建 Postgres 需要迁移 Drizzle 连接层。
+8. **v1 不做多租户**。MakerKit 的核心卖点就是多租户，SaasRock 也做。需要团队/组织功能的买家要自己写。
+9. **单栈 (Node/TypeScript)**。如果买家之后想加 Python 后端或多语言运行时，架构不允许。
 
-原第 8 条「中文文档」已解决：阶段 26 把随包的代码注释、脚本输出与买家文档全部英文化，并由 `pnpm english:check` 在 CI 里守住；界面仍有 en / zh 两套文案。
+原「中文文档」一条已解决：阶段 26 把随包的代码注释、脚本输出与买家文档全部英文化，并由 `pnpm english:check` 在 CI 里守住；界面仍有 en / zh 两套文案。
 
 ### 定位空间
 
