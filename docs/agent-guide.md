@@ -292,7 +292,7 @@ EMAIL_TRANSPORT=file E2E_PORT=3100 npx playwright test e2e/projects.spec.ts --pr
 EMAIL_TRANSPORT=file E2E_PORT=3100 \
   ADMIN_EMAILS=e2e-admin-desktop@example.com,e2e-admin-mobile@example.com,e2e-admin-acquisition-desktop@example.com,e2e-admin-acquisition-mobile@example.com,e2e-admin-status-desktop@example.com,e2e-admin-status-mobile@example.com,e2e-admin-flags-desktop@example.com,e2e-admin-flags-mobile@example.com \
   BILLING_PROVIDER=fake BILLING_SUCCESS_TIMEOUT_MS=8000 \
-  CREEM_PRODUCT_ID_PRO=prod_ci_fake_pro CREEM_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
+  WAFFO_PRODUCT_ID_PRO=prod_ci_fake_pro WAFFO_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
   SITE_NAME="CI Site" SITE_DOMAIN=ci.example.test \
   SITE_LEGAL_NAME="CI Legal Entity" SITE_EMAIL_FROM=noreply@ci.example.test \
   SITE_CONTACT_EMAIL=support@ci.example.test \

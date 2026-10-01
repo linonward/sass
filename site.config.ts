@@ -81,7 +81,7 @@ const downloadsEnabled = envOverride("SITE_DOWNLOADS") === "1";
  * used for type checking); at runtime `BILLING_PROVIDER` overrides it, and the environment
  * variable wins.
  */
-const billingProvider: BillingProviderName = "creem";
+const billingProvider: BillingProviderName = "waffo";
 
 /**
  * The active provider: the provider above can be overridden at runtime by `BILLING_PROVIDER`,

@@ -45,7 +45,7 @@ describe("billingServerEnv", () => {
     expect(check({ VERCEL_ENV: "production" })).toThrow(
       "- CREEM_WEBHOOK_SECRET: ",
     );
-    // Only the credentials of the provider in effect (here the site config's default, creem) are
+    // Only the credentials of the provider in effect (here the config passed to check, creem) are
     // required; setting another provider's doesn't matter.
     expect(check({ VERCEL_ENV: "production", ...creem })).not.toThrow();
   });
@@ -89,7 +89,7 @@ describe("billingServerEnv", () => {
   });
 
   test("only the keys of the provider in effect are required", () => {
-    // The provider in effect is creem (the site.config.ts default): having Stripe keys set doesn't make
+    // The provider in effect is creem (the config passed to check): having Stripe keys set doesn't make
     // anything beyond Creem's required, and vice versa — a site using Creem shouldn't be forced to set
     // Stripe keys, or the deployment won't start at all.
     expect(check({ VERCEL_ENV: "production" }, { provider: "stripe" })).toThrow(

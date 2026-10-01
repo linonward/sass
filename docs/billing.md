@@ -1,25 +1,27 @@
 # Payment providers
 
-The template ships with **Creem**, and also implements **Stripe**, **Lemon Squeezy** and **Waffo Pancake** (see the [Waffo Pancake](#waffo-pancake) section below). They all implement the same `PaymentProvider` interface (`src/core/billing/provider.ts`) and share the same checkout, webhooks, orders table, credit grants and admin stats — switching providers doesn't touch app code: you change two fields in `site.config.ts` and set a group of environment variables.
+The template ships with **Waffo Pancake** (see the [Waffo Pancake](#waffo-pancake) section below), and also implements **Creem**, **Stripe** and **Lemon Squeezy**. They all implement the same `PaymentProvider` interface (`src/core/billing/provider.ts`) and share the same checkout, webhooks, orders table, credit grants and admin stats — switching providers doesn't touch app code: you change two fields in `site.config.ts` and set a group of environment variables.
 
-This doc covers only **which to pick, how to switch, and how to add another one**. The step-by-step setup for each provider, from zero to real payments, is in the README's [Launch checklist](../README.md#launch-checklist) ([Payments: pick a provider](../README.md#payments-pick-a-provider), then [Creem / Stripe](../README.md#payments-creem--stripe), [Lemon Squeezy](../README.md#payments-lemon-squeezy) or [Waffo Pancake](../README.md#payments-waffo-pancake)); this doc doesn't repeat it.
+This doc covers only **which to pick, how to switch, and how to add another one**. The step-by-step setup for each provider, from zero to real payments, is in the README's [Launch checklist](../README.md#launch-checklist) ([Payments: pick a provider](../README.md#payments-pick-a-provider), then [Waffo Pancake](../README.md#payments-waffo-pancake), [Creem / Stripe](../README.md#payments-creem--stripe) or [Lemon Squeezy](../README.md#payments-lemon-squeezy)); this doc doesn't repeat it.
 
 > External facts such as fees, supported regions and MoR status can change at any time. This doc was checked in **2026-09**; it gives structure, orders of magnitude and the reasoning behind the choice. For exact numbers, the official pages linked in each section are authoritative.
 
 ## How to choose
 
-The three differ more in positioning than in fees:
+The four differ more in positioning than in fees:
 
-- **Creem** (the shipped default): an MoR. Sellers in mainland China can sign up, payouts include an Alipay option, and review usually takes 1–2 days. Its fees sit in the middle (3.9% + $0.40, higher than Stripe, lower than Lemon Squeezy), and what you pay for is the MoR handling tax, refunds and chargebacks for you — the fastest path to real payments for individuals and small teams.
+- **Waffo Pancake** (the shipped default): an MoR whose payouts currently go **only to RMB bank cards or Alipay in mainland China**, so it fits individual sellers in mainland China. Fees 3.9% + $0.50, tax collection not switched on yet; details in the [Waffo Pancake](#waffo-pancake) section. If you can't receive RMB payouts, pick one of the three below before launch.
+- **Creem**: an MoR. Sellers in mainland China can sign up, payouts include an Alipay option, and review usually takes 1–2 days. Its fees sit in the middle (3.9% + $0.40, higher than Stripe, lower than Lemon Squeezy), and what you pay for is the MoR handling tax, refunds and chargebacks for you — the fastest path to real payments for individuals and small teams.
 - **Stripe**: the lowest fees (2.9% + 30¢ in the US) and the most complete toolchain (Billing, Tax, Invoicing, Radar), but **in standard mode it is not an MoR** — you register for, file and pay VAT / sales tax yourself. It suits teams that already have an overseas entity (Hong Kong / Singapore / US, etc.) and want to own their payments stack.
-- **Lemon Squeezy**: an MoR with the most payment methods for your customers (including Alipay, WeChat Pay and UnionPay). Its fees are the highest of the three (5% + 50¢). Stripe acquired it in 2024, though, and the official line as of January 2026 is that "the goal is to migrate Lemon Squeezy users to Stripe Managed Payments," while acknowledging slower support responses and product updates. Choosing it today is fine, but plan on "this may be folded into something else within a few years" — fortunately, switching providers only takes two config changes (see below).
+- **Lemon Squeezy**: an MoR with the most payment methods for your customers (including Alipay, WeChat Pay and UnionPay). Its fees are the highest of the four (5% + 50¢). Stripe acquired it in 2024, though, and the official line as of January 2026 is that "the goal is to migrate Lemon Squeezy users to Stripe Managed Payments," while acknowledging slower support responses and product updates. Choosing it today is fine, but plan on "this may be folded into something else within a few years" — fortunately, switching providers only takes two config changes (see below).
 
-| Your situation                                                                              | Choose                                                                                   |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Individual / small team, don't want to deal with tax compliance, want real payments fastest | Creem                                                                                    |
-| Seller in mainland China                                                                    | Creem (payouts can go to Alipay)                                                         |
-| Already have an overseas entity, want to control your payments stack, want the lowest fees  | Stripe                                                                                   |
-| Want customers to be able to pay with PayPal / Alipay / WeChat Pay / UnionPay               | Lemon Squeezy (note: subscriptions only support cards, Apple Pay, Google Pay and PayPal) |
+| Your situation                                                                             | Choose                                                                                   |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Individual seller in mainland China with an RMB bank card or Alipay                        | Waffo Pancake (the shipped default)                                                      |
+| Individual / small team outside mainland China, don't want to deal with tax compliance     | Creem                                                                                    |
+| Seller in mainland China who wants payouts outside RMB, or a company account               | Creem (payouts can also go to Alipay)                                                    |
+| Already have an overseas entity, want to control your payments stack, want the lowest fees | Stripe                                                                                   |
+| Want customers to be able to pay with PayPal / Alipay / WeChat Pay / UnionPay              | Lemon Squeezy (note: subscriptions only support cards, Apple Pay, Google Pay and PayPal) |
 
 ## Comparison
 
@@ -79,7 +81,7 @@ The thing most easily overlooked when choosing is that "under the same interface
 
 ## Waffo Pancake
 
-The fourth provider, integrated by following the "Adding another provider" path (`src/core/billing/providers/waffo.ts`, official SDK `@waffo/pancake-ts`). It's an MoR (Waffo.com Limited, Hong Kong), has a product catalog, and integrates most like Creem / Lemon Squeezy. Things to know before choosing it (checked in **2026-09**, source: [docs.waffo.ai](https://docs.waffo.ai)):
+The shipped default, integrated by following the "Adding another provider" path (`src/core/billing/providers/waffo.ts`, official SDK `@waffo/pancake-ts`). It's an MoR (Waffo.com Limited, Hong Kong), has a product catalog, and integrates most like Creem / Lemon Squeezy. Things to know before choosing it (checked in **2026-09**, source: [docs.waffo.ai](https://docs.waffo.ai)):
 
 - **Payouts are currently RMB only**: to a mainland China bank card or Alipay (Alipay is capped at 50,000 per payout and 300,000 per year), with identity verification by mainland ID card or passport; payouts to company accounts are "coming soon." In practice it's for **individual sellers in mainland China** — sellers without a mainland bank card / Alipay can't get paid.
 - **An MoR, but tax collection isn't switched on yet**: the official webhook docs state that the tax rate on every order is currently 0. It takes on the seller-of-record role and chargebacks; for tax, check again as it progresses.
@@ -102,7 +104,7 @@ Prerequisite: the account and products at the target provider are already set up
    const billingProvider: BillingProviderName = "stripe";
    ```
 
-   `billingProvider` can also be overridden at runtime by `BILLING_PROVIDER`; changing both is the least likely to be forgotten. The environment variable prefix for product IDs follows the provider **in effect**, so with Stripe selected, `CREEM_PRODUCT_ID_*` is ignored.
+   `billingProvider` can also be overridden at runtime by `BILLING_PROVIDER`; changing both is the least likely to be forgotten. The environment variable prefix for product IDs follows the provider **in effect**, so with Stripe selected, `WAFFO_PRODUCT_ID_*` is ignored.
 
 2. **Set environment variables**. After switching you need a whole new set of variables (`.env.example` is authoritative for variable names):
 
@@ -126,7 +128,7 @@ Prerequisite: the account and products at the target provider are already set up
    ```
 
    ```bash
-   # Creem: the shipped default. When switching back, remember CREEM_MODE must be set to live before real payments
+   # Creem: remember CREEM_MODE must be set to live before real payments
    BILLING_PROVIDER=creem
    CREEM_API_KEY=...
    CREEM_WEBHOOK_SECRET=...
@@ -136,7 +138,7 @@ Prerequisite: the account and products at the target provider are already set up
    ```
 
    ```bash
-   # Waffo Pancake: merchant ID + API private key; set WAFFO_MODE=prod for real payments. Private keys and
+   # Waffo Pancake (the shipped default): merchant ID + API private key; set WAFFO_MODE=prod for real payments. Private keys and
    # product IDs belong to one environment (test or prod) and don't carry over
    BILLING_PROVIDER=waffo
    WAFFO_MERCHANT_ID=MER_...
@@ -160,7 +162,7 @@ Prerequisite: the account and products at the target provider are already set up
    # The full flow (checkout → webhook → credit grant) runs against the built-in fake provider and is independent of any specific provider:
    EMAIL_TRANSPORT=file E2E_PORT=3100 \
      BILLING_PROVIDER=fake BILLING_SUCCESS_TIMEOUT_MS=8000 \
-     CREEM_PRODUCT_ID_PRO=prod_ci_fake_pro CREEM_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
+     WAFFO_PRODUCT_ID_PRO=prod_ci_fake_pro WAFFO_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
      npx playwright test e2e/pricing.spec.ts
    ```
 
@@ -191,7 +193,7 @@ The path is already well worn: a new provider = one adapter + one webhook route 
    # Note: don't leave out a single env var
    EMAIL_TRANSPORT=file E2E_PORT=3100 \
      BILLING_PROVIDER=fake BILLING_SUCCESS_TIMEOUT_MS=8000 \
-     CREEM_PRODUCT_ID_PRO=prod_ci_fake_pro CREEM_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
+     WAFFO_PRODUCT_ID_PRO=prod_ci_fake_pro WAFFO_PRODUCT_ID_LIFETIME=prod_ci_fake_lifetime \
      npx playwright test e2e/billing.spec.ts
    ```
 
