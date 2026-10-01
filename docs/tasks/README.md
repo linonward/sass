@@ -185,6 +185,7 @@
 | T2406                       | landing-testimonials    | `feat/landing-testimonials`    | T2403                         | done |
 | T2407                       | landing-conversion      | `feat/landing-conversion`      | T2404                         | done |
 | T2408                       | seller-landing          | `feat/seller-landing`          | T2407                         | done |
+| T2409                       | seller-seo              | `fix/seller-seo`               | T2408                         | done |
 | **阶段 25：基础组件**       |                         |                                |                               |      |
 | T2500                       | foundation-components   | `docs/foundation-components`   | —                             | done |
 | T2501                       | form-fields             | `feat/form-fields`             | T2500                         | done |

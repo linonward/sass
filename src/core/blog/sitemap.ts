@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { blogNoIndex } from "@/core/config/overlay";
 import { absoluteUrl, languageAlternates } from "@/core/seo/urls";
 
 import {
@@ -48,7 +49,7 @@ function listEntries(
 
 /**
  * Blog sitemap entries: the index, its pages, tag pages (including their pages), and every
- * published post. Empty when blog is off; drafts are excluded.
+ * published post. Empty when blog is off or the site overlay marks it noindex; drafts are excluded.
  *
  * "Indexable blog pages ⇔ sitemap entries": none of the pages listed here are noindex (see
  * blogIndexMetadata / tagMetadata in pages.tsx), and nothing is missed the other way — every
@@ -57,6 +58,7 @@ function listEntries(
  */
 export function blogSitemap(): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = [];
+  if (blogNoIndex()) return entries;
 
   for (const locale of blogLocales()) {
     // Drafts are excluded: lists, pages, and tags only count published posts.

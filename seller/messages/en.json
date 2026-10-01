@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "homeTitle": "Turn your AI product into a business",
+    "homeTitle": "Next.js AI SaaS Starter with Payments & Credits",
     "description": "Next.js SaaS starter with auth, payments, credits and AI already connected. Launch your AI product and start charging, then spend your time on the product."
   },
   "Footer": {
@@ -203,6 +203,22 @@
       "deliveryCta": "See what’s included",
       "buyCta": "Buy now · {price}",
       "showcaseCta": "See a live product"
+    },
+    "pricing": {
+      "title": "One payment. The whole starter kit.",
+      "subtitle": "Buy the complete source once. Updates and email support for a year.",
+      "cta": "Buy {plan}",
+      "plans": {
+        "lifetime": {
+          "name": "OnwardKit template",
+          "description": "Source, docs and examples, yours to keep."
+        }
+      },
+      "features": {
+        "credits2000": "Complete source: auth, payments, credits, AI and admin",
+        "coreFeatures": "Getting started guide and business examples",
+        "lifetimeUpdates": "One year of updates and email support"
+      }
     }
   },
   "Downloads": {
@@ -210,6 +226,11 @@
       "template": {
         "name": "OnwardKit template"
       }
+    }
+  },
+  "Billing": {
+    "pricing": {
+      "metaDescription": "One-time payment for the complete Next.js AI SaaS starter: source, docs and examples, with a year of updates and email support. No subscription."
     }
   }
 }

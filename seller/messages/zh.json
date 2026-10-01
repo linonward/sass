@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "homeTitle": "把你的 AI 产品做成可以收费的生意",
+    "homeTitle": "带收款和积分的 Next.js AI SaaS 模板",
     "description": "登录、收款、积分与 AI 已经接好的 Next.js SaaS 模板。把 AI 产品上线并开始收费，把时间留给产品本身。"
   },
   "Footer": {
@@ -203,6 +203,22 @@
       "deliveryCta": "查看交付内容",
       "buyCta": "立即购买 · {price}",
       "showcaseCta": "看真实案例"
+    },
+    "pricing": {
+      "title": "一次付款，拿走完整模板。",
+      "subtitle": "一次买断完整源码，含一年更新和邮件支持。",
+      "cta": "购买 {plan}",
+      "plans": {
+        "lifetime": {
+          "name": "OnwardKit 模板",
+          "description": "源码、文档和示例，买断归你。"
+        }
+      },
+      "features": {
+        "credits2000": "完整源码：登录、收款、积分、AI 与后台",
+        "coreFeatures": "上手指南与业务示例",
+        "lifetimeUpdates": "一年更新与邮件支持"
+      }
     }
   },
   "Downloads": {
@@ -210,6 +226,11 @@
       "template": {
         "name": "OnwardKit 模板"
       }
+    }
+  },
+  "Billing": {
+    "pricing": {
+      "metaDescription": "一次付款，获得完整的 Next.js AI SaaS 模板：源码、文档和示例，含一年更新与邮件支持，无订阅。"
     }
   }
 }

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { blogNoIndex } from "@/core/config/overlay";
 import { buildMetadata } from "@/core/seo/metadata";
 import { ogImageSize } from "@/core/seo/og-image-size";
 import { localizedPath } from "@/core/seo/urls";
@@ -68,7 +69,7 @@ export async function blogIndexMetadata(locale: string, page: number) {
     // lives in listLocales, which the sitemap also uses).
     locales: listLocales(locale, page),
     // Locales without posts yet don't get an empty list indexed.
-    noIndex: getPosts(locale, { drafts: false }).length === 0,
+    noIndex: blogNoIndex() || getPosts(locale, { drafts: false }).length === 0,
     feeds: feeds(locale, t("feedTitle", { name: siteConfig.name })),
   });
 }
@@ -106,6 +107,7 @@ export async function tagMetadata(locale: string, tag: string, page: number) {
     // Tags may differ between locales, so only the current locale is emitted.
     locales: [locale],
     feeds: feeds(locale, t("feedTitle", { name: siteConfig.name })),
+    noIndex: blogNoIndex(),
   });
 }
 
@@ -149,7 +151,7 @@ export async function postMetadata(locale: string, slug: string) {
     },
     locales: postLocales(slug),
     article: { publishedTime: post.date, tags: post.tags },
-    noIndex: post.draft,
+    noIndex: post.draft || blogNoIndex(),
   });
 }
 
