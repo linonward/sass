@@ -2,9 +2,17 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { Loader2Icon, SendIcon, SparklesIcon, SquareIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CopyIcon,
+  Loader2Icon,
+  SendIcon,
+  SparklesIcon,
+  SquareIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-import { memo, useCallback, useId, useState } from "react";
+import { memo, useCallback, useId, useMemo, useRef, useState } from "react";
+import { Streamdown, type StreamdownTranslations } from "streamdown";
 
 import { Link } from "@/core/i18n/navigation";
 import { cn } from "@/core/lib/utils";
@@ -17,7 +25,9 @@ import {
   SelectValue,
 } from "@/core/ui/select";
 import { EmptyState } from "@/core/ui/empty-state";
-import { Input } from "@/core/ui/input";
+import { Textarea } from "@/core/ui/textarea";
+
+import { PromptTemplates, usePromptTemplate } from "./prompt-templates";
 
 /**
  * Throttle window for streaming updates (ms). The server streams model deltas one by one
@@ -35,6 +45,17 @@ import { Input } from "@/core/ui/input";
  * of text is never dropped.
  */
 const STREAM_THROTTLE_MS = 50;
+
+/**
+ * Markdown controls kept in the playground: copy on code blocks and tables. Downloads, fullscreen
+ * and mermaid are off, so their strings never show up untranslated.
+ */
+const MARKDOWN_CONTROLS = {
+  code: { copy: true, download: false },
+  table: { copy: true, download: false, fullscreen: false },
+  mermaid: false,
+  image: false,
+} as const;
 
 const knownErrors = [
   "insufficient_credits",
@@ -68,34 +89,120 @@ export function chatErrorCode(
 }
 
 /**
+ * Streamdown's UI strings that can appear with MARKDOWN_CONTROLS: code/table copy and the
+ * confirmation dialog it shows before opening an external link.
+ */
+function useMarkdownTranslations(): Partial<StreamdownTranslations> {
+  const t = useTranslations("Playground.markdown");
+  return useMemo(
+    () => ({
+      copyCode: t("copyCode"),
+      copied: t("copied"),
+      copyTable: t("copyTable"),
+      copyTableAsMarkdown: t("copyTableAsMarkdown"),
+      copyTableAsCsv: t("copyTableAsCsv"),
+      copyTableAsTsv: t("copyTableAsTsv"),
+      tableFormatMarkdown: t("tableFormatMarkdown"),
+      tableFormatCsv: t("tableFormatCsv"),
+      tableFormatTsv: t("tableFormatTsv"),
+      openExternalLink: t("openExternalLink"),
+      externalLinkWarning: t("externalLinkWarning"),
+      openLink: t("openLink"),
+      copyLink: t("copyLink"),
+      close: t("close"),
+    }),
+    [t],
+  );
+}
+
+/** Copies a whole reply as its markdown source. */
+function CopyMessageButton({ text }: { text: string }) {
+  const t = useTranslations("Playground");
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // No clipboard permission or insecure context: leave the label alone rather than claim it
+      // worked. The text is still selectable in the bubble.
+      return;
+    }
+    setCopied(true);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      onClick={() => void copy()}
+      aria-label={copied ? t("copied") : t("copyReply")}
+      title={copied ? t("copied") : t("copyReply")}
+      data-testid="playground-copy-reply"
+    >
+      {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
+    </Button>
+  );
+}
+
+/**
  * A single message. memo works because on write-back only the changed message gets a new object:
  * the SDK's ReactChatState.replaceMessage is
  * `[...messages.slice(0, index), snapshot(message), ...messages.slice(index + 1)]`
  * (`@ai-sdk/react/dist/index.js:208-215`), and snapshot clones parts, so during streaming only the
  * message being written re-renders, and diffing finished messages doesn't get costlier as the
  * conversation grows.
+ *
+ * User messages stay plain text (what they typed is what they see). Assistant replies render as
+ * markdown through Streamdown, which tolerates half-written syntax mid-stream (an unclosed code
+ * fence or `**`) and sanitizes links and HTML. `streaming` is only true for the reply being
+ * written, so finished replies keep their memo.
  */
 const MessageBubble = memo(function MessageBubble({
   message,
+  streaming,
 }: {
   message: UIMessage;
+  streaming: boolean;
 }) {
   const t = useTranslations("Playground");
+  const markdownTranslations = useMarkdownTranslations();
+  const isUser = message.role === "user";
+  const text = message.parts
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join("");
+
+  if (isUser) {
+    return (
+      <div className="bg-primary text-primary-foreground ml-auto w-fit max-w-[85%] rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap">
+        <span className="sr-only">{t("you")}: </span>
+        {text}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={cn(
-        "max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap",
-        message.role === "user"
-          ? "bg-primary text-primary-foreground ml-auto"
-          : "bg-background border",
-      )}
-    >
-      <span className="sr-only">
-        {message.role === "user" ? t("you") : t("assistant")}:{" "}
-      </span>
-      {message.parts.map((part, index) =>
-        part.type === "text" ? <span key={index}>{part.text}</span> : null,
-      )}
+    <div className="flex max-w-[85%] flex-col items-start gap-1">
+      <div
+        className="bg-background w-full min-w-0 rounded-lg border px-3 py-2 text-sm"
+        data-testid="playground-reply"
+      >
+        <span className="sr-only">{t("assistant")}: </span>
+        <Streamdown
+          className="space-y-3 break-words [&_pre]:overflow-x-auto"
+          isAnimating={streaming}
+          controls={MARKDOWN_CONTROLS}
+          lineNumbers={false}
+          translations={markdownTranslations}
+        >
+          {text}
+        </Streamdown>
+      </div>
+      {!streaming && text && <CopyMessageButton text={text} />}
     </div>
   );
 });
@@ -108,45 +215,72 @@ const MessageBubble = memo(function MessageBubble({
  */
 const Composer = memo(function Composer({
   busy,
+  showTemplates,
   onSend,
   onStop,
 }: {
   busy: boolean;
+  /** Offer the prompt templates (only while the conversation is empty). */
+  showTemplates: boolean;
   onSend: (text: string) => void;
   onStop: () => Promise<void>;
 }) {
   const t = useTranslations("Playground");
   const [input, setInput] = useState("");
+  const { ref: promptRef, apply: applyTemplate } =
+    usePromptTemplate<HTMLTextAreaElement>(setInput);
 
-  function submit(event: React.FormEvent) {
-    event.preventDefault();
+  function submit(event?: React.FormEvent) {
+    event?.preventDefault();
     const text = input.trim();
     if (!text || busy) return;
     onSend(text);
     setInput("");
   }
 
+  // Enter sends and Shift+Enter starts a new line. Enter that confirms an IME composition (picking
+  // Chinese or Japanese characters) must not send.
+  function onKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      submit();
+    }
+  }
+
   return (
-    <form onSubmit={submit} className="flex gap-2">
-      <Input
-        value={input}
-        onChange={(event) => setInput(event.target.value)}
-        placeholder={t("placeholder")}
-        aria-label={t("placeholder")}
-        maxLength={4000}
-      />
-      {busy ? (
-        <Button type="button" variant="outline" onClick={() => void onStop()}>
-          <SquareIcon aria-hidden />
-          {t("stop")}
-        </Button>
-      ) : (
-        <Button type="submit" disabled={!input.trim()}>
-          <SendIcon aria-hidden />
-          {t("send")}
-        </Button>
-      )}
-    </form>
+    <div className="flex flex-col gap-3">
+      {showTemplates && <PromptTemplates kind="chat" onPick={applyTemplate} />}
+      <form onSubmit={submit} className="flex items-end gap-2">
+        {/* Grows with its content (field-sizing) up to max-h, then scrolls. Browsers without
+            field-sizing keep a one-line box that scrolls. */}
+        <Textarea
+          ref={promptRef}
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={onKeyDown}
+          rows={1}
+          className="field-sizing-content max-h-48 min-h-8 resize-none py-1"
+          placeholder={t("placeholder")}
+          aria-label={t("placeholder")}
+          maxLength={4000}
+        />
+        {busy ? (
+          <Button type="button" variant="outline" onClick={() => void onStop()}>
+            <SquareIcon aria-hidden />
+            {t("stop")}
+          </Button>
+        ) : (
+          <Button type="submit" disabled={!input.trim()}>
+            <SendIcon aria-hidden />
+            {t("send")}
+          </Button>
+        )}
+      </form>
+    </div>
   );
 });
 
@@ -224,8 +358,14 @@ export function Playground({
         {messages.length === 0 ? (
           <EmptyState size="sm" icon={<SparklesIcon />} title={t("empty")} />
         ) : (
-          messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+          messages.map((message, index) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              streaming={
+                status === "streaming" && index === messages.length - 1
+              }
+            />
           ))
         )}
         {status === "submitted" && (
@@ -250,7 +390,12 @@ export function Playground({
         </p>
       )}
 
-      <Composer busy={busy} onSend={sendText} onStop={stop} />
+      <Composer
+        busy={busy}
+        showTemplates={messages.length === 0}
+        onSend={sendText}
+        onStop={stop}
+      />
     </div>
   );
 }

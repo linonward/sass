@@ -966,3 +966,34 @@ T2322 对 Vercel 敏感变量有保留：读不出值就不比对、默认不写
 - [x] `pnpm test` 通过
 - [x] `npx playwright test e2e/billing.spec.ts e2e/pricing.spec.ts e2e/ui-shell.spec.ts e2e/landing.spec.ts`（ci.yml 那组 env）通过
 - [x] 飞书表 CI 列改完后 `node .claude/skills/env-sync/scripts/sync.mjs` 的 ci 一项 in sync
+
+## T2328 playground-chat
+
+- 分支 / worktree：`feat/playground-chat` → `../sass-playground-chat`
+- 依赖：无；起点 `5b03dad`。（T2327 已被 #205 占用）
+
+**问题**
+
+Playground 的聊天把模型回复当纯文本输出：`**粗体**`、` ``` ` 代码块原样显示，代码没法一键复制；空对话时用户也不知道该问什么。
+
+**决定**
+
+- 助手回复用 `streamdown`（Vercel 出的流式 Markdown 渲染器，AI SDK 的 AI Elements 也用它）渲染：能容忍流式过程中没闭合的代码块和 `**`，内置链接/HTML 消毒，代码块和表格自带复制按钮。只装核心包，不装 `@streamdown/code`（Shiki 语法高亮，体积大），买家要高亮自己加插件。用户消息仍是纯文本。
+- 版本用 2.6.0 而不是 2.7.0：后者 2026-09-30 才发布，过不了 pnpm 的 `minimumReleaseAge`，不为它加豁免。
+- 控件只留代码块 / 表格复制；下载、全屏、mermaid 关掉。streamdown 的界面文案（复制、外链确认框）通过 `translations` 走 `Playground.markdown.*`，中英文都有。`globals.css` 加 `@source` 扫它 dist 里的 Tailwind 类。
+- 每条回复（流式结束后）下方加「复制回复」，复制 Markdown 原文。
+- 提示词模板：`src/core/ai/prompt-templates.tsx` 的 `PROMPT_TEMPLATES` 按标签页分组，聊天、图片、视频三处共用 `PromptTemplates` 组件和 `usePromptTemplate`。点击只填入输入框、聚焦并把光标放到末尾（`flushSync` 同步提交，避免第一个按键先于光标落下），不直接发送。文案在 `Playground.templates.<kind>.<id>`，买家改 id 列表和文案即可。
+  - 聊天（总结 / 翻译 / 写代码 / 写邮件）：只在空对话时显示，是让用户接着写的句子开头。
+  - 图片（棚拍产品图 / 杂志人像 / 建筑室内 / 电影感风景 / 扁平插画 / 3D 应用图标）、视频（产品揭幕 / 航拍掠过 / 雨夜霓虹街 / 纪录片特写）：始终显示，是可直接生成的完整提示词，写明主体、光线、镜头、构图和调色，顺带示范高质量提示词的写法。中文版按中文习惯重写，不是逐字翻译。
+- 输入框随内容自动变高：图片 / 视频提示词框用 CSS `field-sizing: content`（`min-h-20`，`max-h-60` 后滚动）；聊天输入由单行 `Input` 改为同样自增高的 `Textarea`（`max-h-48`），Enter 发送、Shift+Enter 换行、输入法选字时的 Enter 不发送。不支持 `field-sizing` 的浏览器（目前是 Firefox）退回原来的固定高度加滚动，不另写 JS。
+- 正在流式输出的那条才传 `streaming=true`，已完成的消息仍靠 memo 不重渲染；原有的节流回归测试不变且通过。
+
+**验收**
+
+- [x] `playground.test.tsx`：回复渲染为 Markdown（无 `**` / ` ``` ` 残留，流在代码块中间断开也正确）且有「Copy code」；「复制回复」写入 Markdown 原文；模板填入不发送，开始对话后模板消失
+- [x] `image-studio.test.tsx`：图片模板填入并聚焦，生成请求里的 prompt 与模板完全一致
+- [x] `prompt-templates.test.tsx`：中英文案与 `PROMPT_TEMPLATES` 的 id 一一对应、非空、不超过 2000 字符
+- [x] `playground.test.tsx`：Enter 发送，Shift+Enter 与 `isComposing` 的 Enter 不发送；e2e 断言聊天输入框换行后变高
+- [x] 图片 / 视频标签页桌面与 375px 截图目检，无横向溢出
+- [x] `e2e/playground.spec.ts`（stub `/api/ai/chat`，不需要模型 key）：模板填入并聚焦、发送后渲染出粗体 / 代码块 / 列表、375px 不横向溢出、代码块复制和整条复制写入剪贴板；desktop / mobile 均通过
+- [x] `pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm english:check`、`pnpm notices:check`；`ui-shell` / `landing` e2e 通过

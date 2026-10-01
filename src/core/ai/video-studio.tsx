@@ -19,6 +19,7 @@ import { useGenerations } from "./generations-context";
 import { imageErrorCode, type ImageErrorCode } from "./errors";
 import { ImagePicker, type PickedImage } from "./image-picker";
 import type { VideoJob } from "./video";
+import { PromptTemplates, usePromptTemplate } from "./prompt-templates";
 
 const aspectRatios = ["16:9", "9:16", "1:1", "4:3", "3:4"] as const;
 
@@ -64,6 +65,8 @@ export function VideoStudio({
   const modelSelectId = useId();
   const ratioSelectId = useId();
   const promptId = useId();
+  const { ref: promptRef, apply: applyTemplate } =
+    usePromptTemplate<HTMLTextAreaElement>(setPrompt);
   const model = models.find((m) => m.id === modelId) ?? models[0]!;
 
   async function submit(event: React.FormEvent) {
@@ -167,16 +170,25 @@ export function VideoStudio({
           />
         )}
 
+        <PromptTemplates
+          kind="video"
+          onPick={applyTemplate}
+          disabled={submitting}
+        />
         <label htmlFor={promptId} className="sr-only">
           {t("placeholder")}
         </label>
         <Textarea
+          ref={promptRef}
           id={promptId}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           placeholder={t("placeholder")}
           maxLength={2000}
+          // Grows with the prompt (templates are several lines) up to max-h, then scrolls;
+          // browsers without field-sizing keep the 3-row box.
           rows={3}
+          className="field-sizing-content max-h-60 min-h-20"
           disabled={submitting}
         />
         <div>

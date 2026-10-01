@@ -19,6 +19,7 @@ import { imageErrorCode, type ImageErrorCode } from "./errors";
 import { useGenerations } from "./generations-context";
 import { ImagePicker, type PickedImage } from "./image-picker";
 import type { Generation } from "./image";
+import { PromptTemplates, usePromptTemplate } from "./prompt-templates";
 
 const aspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4"] as const;
 
@@ -50,6 +51,8 @@ export function ImageStudio({
   const modelSelectId = useId();
   const ratioSelectId = useId();
   const promptId = useId();
+  const { ref: promptRef, apply: applyTemplate } =
+    usePromptTemplate<HTMLTextAreaElement>(setPrompt);
   const model = models.find((m) => m.id === modelId);
   const cost = model?.creditCost ?? 0;
   // Only sent when the selected model takes one; switching models keeps the pick for later.
@@ -155,16 +158,21 @@ export function ImageStudio({
             </p>
           </div>
         )}
+        <PromptTemplates kind="image" onPick={applyTemplate} disabled={busy} />
         <label htmlFor={promptId} className="sr-only">
           {t("placeholder")}
         </label>
         <Textarea
+          ref={promptRef}
           id={promptId}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           placeholder={t("placeholder")}
           maxLength={2000}
+          // Grows with the prompt (templates are several lines) up to max-h, then scrolls;
+          // browsers without field-sizing keep the 3-row box.
           rows={3}
+          className="field-sizing-content max-h-60 min-h-20"
           disabled={busy}
         />
         <div className="flex items-center gap-3">
