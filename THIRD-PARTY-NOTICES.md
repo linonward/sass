@@ -122,7 +122,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `@content-collections/next`       | 0.2.11  | dev  |
 | `@neondatabase/serverless`        | 1.1.0   | prod |
 | `@react-email/ui`                 | 6.11.0  | dev  |
-| `@sentry/nextjs`                  | 11.0.0  | prod |
+| `@sentry/nextjs`                  | 11.1.0  | prod |
 | `@t3-oss/env-nextjs`              | 0.13.11 | prod |
 | `@tailwindcss/postcss`            | 4.3.3   | dev  |
 | `@tailwindcss/typography`         | 0.5.20  | dev  |
@@ -132,7 +132,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `@types/pg`                       | 8.23.1  | dev  |
 | `@types/react`                    | 19.3.0  | dev  |
 | `@types/react-dom`                | 19.3.0  | dev  |
-| `@types/ws`                       | 8.18.1  | dev  |
+| `@types/ws`                       | 8.18.2  | dev  |
 | `@upstash/ratelimit`              | 2.2.0   | prod |
 | `@upstash/redis`                  | 1.39.0  | prod |
 | `@vercel/analytics`               | 2.0.1   | prod |
@@ -152,7 +152,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `jsdom`                           | 30.1.1  | dev  |
 | `lint-staged`                     | 17.6.0  | dev  |
 | `next`                            | 16.3.6  | prod |
-| `next-intl`                       | 4.14.7  | prod |
+| `next-intl`                       | 4.14.8  | prod |
 | `next-themes`                     | 0.4.6   | prod |
 | `pg`                              | 8.23.0  | prod |
 | `prettier`                        | 3.9.9   | dev  |
@@ -160,7 +160,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `react`                           | 19.3.0  | prod |
 | `react-dom`                       | 19.3.0  | prod |
 | `react-email`                     | 6.11.0  | prod |
-| `resend`                          | 6.30.0  | prod |
+| `resend`                          | 6.31.0  | prod |
 | `shadcn`                          | 4.21.0  | dev  |
 | `sonner`                          | 2.0.8   | prod |
 | `streamdown`                      | 2.6.0   | prod |
@@ -175,14 +175,14 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 
 | Package                          | Version  | Type |
 | -------------------------------- | -------- | ---- |
-| `@ai-sdk/alibaba`                | 2.0.56   | prod |
-| `@ai-sdk/anthropic`              | 4.0.65   | prod |
-| `@ai-sdk/google`                 | 4.0.82   | prod |
-| `@ai-sdk/openai`                 | 4.0.78   | prod |
-| `@ai-sdk/provider`               | 4.0.18   | prod |
-| `@ai-sdk/react`                  | 4.0.119  | prod |
-| `@aws-sdk/client-s3`             | 3.1141.0 | prod |
-| `@aws-sdk/s3-request-presigner`  | 3.1141.0 | prod |
+| `@ai-sdk/alibaba`                | 2.0.59   | prod |
+| `@ai-sdk/anthropic`              | 4.0.69   | prod |
+| `@ai-sdk/google`                 | 4.0.86   | prod |
+| `@ai-sdk/openai`                 | 4.0.82   | prod |
+| `@ai-sdk/provider`               | 4.0.20   | prod |
+| `@ai-sdk/react`                  | 4.0.126  | prod |
+| `@aws-sdk/client-s3`             | 3.1143.0 | prod |
+| `@aws-sdk/s3-request-presigner`  | 3.1143.0 | prod |
 | `@opentelemetry/api`             | 1.9.1    | prod |
 | `@opentelemetry/api-logs`        | 0.222.0  | prod |
 | `@opentelemetry/instrumentation` | 0.222.0  | prod |
@@ -192,7 +192,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `@opentelemetry/sdk-trace-base`  | 2.11.0   | prod |
 | `@playwright/test`               | 1.63.0   | dev  |
 | `@vercel/speed-insights`         | 2.0.0    | prod |
-| `ai`                             | 7.0.116  | prod |
+| `ai`                             | 7.0.123  | prod |
 | `class-variance-authority`       | 0.7.1    | prod |
 | `drizzle-orm`                    | 0.45.3   | prod |
 | `typescript`                     | 6.0.3    | dev  |
@@ -201,7 +201,7 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 
 | Package        | Version | Type |
 | -------------- | ------- | ---- |
-| `lucide-react` | 1.48.0  | prod |
+| `lucide-react` | 1.49.0  | prod |
 
 ### No `license` field (1)
 
