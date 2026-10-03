@@ -146,12 +146,12 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `creem`                           | 1.13.0  | prod |
 | `drizzle-kit`                     | 0.31.11 | dev  |
 | `eslint`                          | 9.39.5  | dev  |
-| `eslint-config-next`              | 16.3.6  | dev  |
+| `eslint-config-next`              | 16.3.7  | dev  |
 | `eslint-config-prettier`          | 10.1.8  | dev  |
 | `husky`                           | 9.1.7   | dev  |
 | `jsdom`                           | 30.1.1  | dev  |
 | `lint-staged`                     | 17.6.0  | dev  |
-| `next`                            | 16.3.6  | prod |
+| `next`                            | 16.3.7  | prod |
 | `next-intl`                       | 4.14.7  | prod |
 | `next-themes`                     | 0.4.6   | prod |
 | `pg`                              | 8.23.0  | prod |
