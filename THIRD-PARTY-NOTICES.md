@@ -140,8 +140,8 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `@vitejs/plugin-react`            | 6.1.1   | dev  |
 | `@vitest/coverage-v8`             | 5.0.2   | dev  |
 | `@waffo/pancake-ts`               | 0.25.0  | prod |
-| `auth`                            | 1.7.6   | dev  |
-| `better-auth`                     | 1.7.6   | prod |
+| `auth`                            | 1.7.7   | dev  |
+| `better-auth`                     | 1.7.7   | prod |
 | `cn`                              | 0.4.0   | prod |
 | `creem`                           | 1.13.0  | prod |
 | `drizzle-kit`                     | 0.31.11 | dev  |
