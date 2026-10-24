@@ -157,8 +157,8 @@ Dependency chain: `@sentry/nextjs@11.0.0` â†’ `@sentry/bundler-plugins@11.0.0` â
 | `pg`                              | 8.23.0  | prod |
 | `prettier`                        | 3.9.9   | dev  |
 | `prettier-plugin-tailwindcss`     | 0.8.1   | dev  |
-| `react`                           | 19.3.0  | prod |
-| `react-dom`                       | 19.3.0  | prod |
+| `react`                           | 19.3.1  | prod |
+| `react-dom`                       | 19.3.1  | prod |
 | `react-email`                     | 6.11.0  | prod |
 | `resend`                          | 6.30.0  | prod |
 | `shadcn`                          | 4.21.0  | dev  |
